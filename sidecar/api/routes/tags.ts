@@ -1,5 +1,37 @@
 import { Hono } from "hono";
+import { z } from "zod";
+import { apiError } from "../../../shared/errors.js";
 import type { SidecarDeps } from "../deps.js";
 
-// Stub Task 7 — remplacé par la Task 9 (routes tags).
-export const tagsRoutes = (deps: SidecarDeps): Hono => new Hono();
+const manageBody = z.object({
+  operation: z.enum(["rename", "merge", "delete"]),
+  tags: z.array(z.string()).min(1),
+  new_name: z.string().min(1).optional(),
+  collection_id: z.number().int().optional(),
+}).refine((b) => b.operation === "delete" || b.new_name != null, {
+  message: "new_name requis pour rename/merge",
+});
+
+export function tagsRoutes(deps: SidecarDeps): Hono {
+  const app = new Hono();
+
+  app.get("/", async (c) => {
+    const collectionId = c.req.query("collection_id");
+    const args = collectionId ? { collection_id: Number(collectionId) } : {};
+    const out = await deps.mcp("get_tags", args);
+    if (!out.ok) return apiError(c, out.code, out.message, out.tool);
+    // format brut Raindrop {_id, count} → DTO Tag {name, count}
+    const raw = out.data as { items: { _id: string; count: number }[] };
+    return c.json({ items: raw.items.map((t) => ({ name: t._id, count: t.count })) });
+  });
+
+  app.post("/manage", async (c) => {
+    const body = manageBody.safeParse(await c.req.json().catch(() => null));
+    if (!body.success) return apiError(c, "INVALID_INPUT", z.prettifyError(body.error));
+    const out = await deps.mcp("manage_tags", body.data);
+    if (!out.ok) return apiError(c, out.code, out.message, out.tool);
+    return c.json(out.data);
+  });
+
+  return app;
+}

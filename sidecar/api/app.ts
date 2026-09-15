@@ -55,7 +55,7 @@ export function createApp(deps: SidecarDeps, opts: { localToken: string }): Hono
   app.route("/api/collections", collectionsRoutes(deps));
   app.route("/api/tags", tagsRoutes(deps));
   app.route("/api/highlights", highlightsRoutes(deps));
-  app.route("/api/user", userRoutes(deps));
+  app.route("/", userRoutes(deps)); // chemins complets internes : /api/user, /api/parse-url, /api/check-urls
   app.route("/api/maintenance", maintenanceRoutes(deps));
   app.route("/api/analysis", analysisRoutes(deps));
   app.route("/api/jobs", jobsRoutes(deps));

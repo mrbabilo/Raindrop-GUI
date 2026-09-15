@@ -1,0 +1,96 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import type { Hono } from "hono";
+import { createApp, type SidecarDeps } from "../app.js";
+import { connectFake } from "../../testing/fakeServer.js";
+import { McpConnection } from "../../mcp/connection.js";
+
+let conn: McpConnection;
+let app: Hono;
+const deps = (c: McpConnection): SidecarDeps => ({
+  mcp: (tool, args, t) => c.call(tool, args, t),
+  state: () => "connected",
+  restart: async () => undefined,
+  jobs: { get: () => undefined, list: () => [] } as unknown as SidecarDeps["jobs"],
+  cache: {} as SidecarDeps["cache"],
+  scanner: { startScan: () => "", isRunning: () => false },
+  direct: { updateRaindropUrl: async () => ({ ok: true as const, data: { id: 1 } }) },
+});
+
+// Adaptation brief : l'API locale est derrière l'auth Bearer (Task 7, spec §3.7)
+// → chaque requête du test fournit le token local (même motif que raindrops.test.ts).
+const TOKEN = "test-token";
+const req = (hono: Hono, path: string, init?: RequestInit, token: string = TOKEN): Promise<Response> =>
+  hono.request(path, { ...init, headers: { Authorization: `Bearer ${token}` } });
+
+beforeEach(async () => {
+  const fake = await connectFake({ raindropCount: 9 });
+  conn = McpConnection.fromClient(fake.client);
+  app = createApp(deps(conn), { localToken: "test-token" });
+});
+afterEach(async () => conn.close());
+
+describe("routes tags", () => {
+  it("GET / renvoie les tags avec compteurs", async () => {
+    const res = await req(app, "/api/tags");
+    const body = (await res.json()) as { items: { name: string; count: number }[] };
+    expect(body.items.length).toBeGreaterThan(0);
+    expect(body.items[0]).toMatchObject({ name: expect.any(String), count: expect.any(Number) });
+  });
+
+  it("POST /manage rename exige new_name (400 sinon)", async () => {
+    const res = await req(app, "/api/tags/manage", {
+      method: "POST",
+      body: JSON.stringify({ operation: "rename", tags: ["rust"] }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("routes user", () => {
+  it("GET /api/user renvoie le compte", async () => {
+    const res = await req(app, "/api/user");
+    expect(((await res.json()) as { email: string }).email).toBe("moi@example.com");
+  });
+
+  it("POST /api/parse-url préremplit un titre", async () => {
+    const res = await req(app, "/api/parse-url", {
+      method: "POST",
+      body: JSON.stringify({ url: "https://example.com/a" }),
+    });
+    expect(((await res.json()) as { title: string }).title).toContain("example.com");
+  });
+
+  it("POST /api/check-urls détecte les existants", async () => {
+    const list = (await (await req(app, "/api/raindrops?per_page=1")).json()) as { items: { url: string }[] };
+    const res = await req(app, "/api/check-urls", {
+      method: "POST",
+      body: JSON.stringify({ urls: [list.items[0]!.url, "https://absent.example"] }),
+    });
+    const body = (await res.json()) as { items: { url: string; exists: boolean }[] };
+    expect(body.items[0]!.exists).toBe(true);
+    expect(body.items[1]!.exists).toBe(false);
+  });
+});
+
+describe("routes maintenance", () => {
+  it("POST /api/maintenance/empty-trash exige confirm (400)", async () => {
+    const res = await req(app, "/api/maintenance/empty-trash", { method: "POST", body: "{}" });
+    expect(res.status).toBe(400);
+  });
+
+  it("POST /api/maintenance/empty-trash avec confirm exécute", async () => {
+    const res = await req(app, "/api/maintenance/empty-trash", {
+      method: "POST",
+      body: JSON.stringify({ confirm: true }),
+    });
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("routes highlights", () => {
+  it("GET /api/highlights/:id renvoie une liste (vide au fake)", async () => {
+    const res = await req(app, "/api/highlights/1000");
+    const body = (await res.json()) as { items: unknown[] };
+    expect(body.items).toEqual([]);
+  });
+});
