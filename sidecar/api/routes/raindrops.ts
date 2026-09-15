@@ -11,8 +11,9 @@ const searchQuery = z.object({
   sort: z.enum(["score", "-created", "created", "-title", "title", "-domain", "domain"]).optional(),
   page: z.coerce.number().int().min(0).default(0),
   per_page: z.coerce.number().int().min(1).max(50).default(50),
-  important: z.coerce.boolean().optional(),
-  notag: z.coerce.boolean().optional(),
+  // "false" doit DÉSACTIVER le filtre — z.coerce.boolean() piége (Boolean("false")===true)
+  important: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
+  notag: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
   domain: z.string().optional(),
   media: z.enum(["link", "article", "image", "video", "document", "audio"]).optional(),
   created_start: z.string().optional(),

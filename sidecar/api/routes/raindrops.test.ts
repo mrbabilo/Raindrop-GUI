@@ -43,6 +43,14 @@ describe("routes raindrops", () => {
     expect(body.items[0]!.id).toBeDefined();
   });
 
+  it("GET / : important=false désactive le filtre (piège du coerce booléen)", async () => {
+    const res = await req(app, "/api/raindrops?per_page=50&important=false");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Paginated<RaindropItem>;
+    // si Boolean("false")===true fuyait, seul le sous-ensemble important (~7) serait renvoyé
+    expect(body.count).toBe(32);
+  });
+
   it("GET /:id renvoie un DTO", async () => {
     const list = (await (await req(app, "/api/raindrops?per_page=1")).json()) as Paginated<RaindropItem>;
     const res = await req(app, `/api/raindrops/${list.items[0]!.id}`);
