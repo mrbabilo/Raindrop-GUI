@@ -1,0 +1,27 @@
+{
+  "name": "raindrop-gui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev:sidecar": "tsx watch sidecar/index.ts",
+    "build:sidecar": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@kud/mcp-raindrop-io": "1.3.1",
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@hono/node-server": "^1.14.0",
+    "hono": "^4.9.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}
