@@ -3548,10 +3548,12 @@ Ajouter à `linkchecker.ts` :
 export async function checkAll(
   targets: { raindropId: number; url: string }[],
   opts: CheckerOptions & {
+    checkImpl?: (url: string) => Promise<CheckOutcome>; // défaut : checkUrl — permet la réutilisation (scanner) et le test
     onUpdate(r: LinkCheckResult): void;
     isCancelled(): boolean;
   },
 ): Promise<{ stats: { checked: number; maxConcurrency: number } }> {
+  const check = opts.checkImpl ?? ((url: string) => checkUrl(url, opts));
   const results: LinkCheckResult[] = [];
   let index = 0;
   let inFlight = 0;
@@ -4102,6 +4104,7 @@ export class Scanner {
         timeoutMs: 10_000,
         concurrency,
         retry: 1,
+        checkImpl: (url) => check(url), // le check est injectable (tests), le pool reste unique
         onUpdate: (r) => {
           this.deps.cache.setResult(r);
           done++;
@@ -4114,7 +4117,7 @@ export class Scanner {
         },
         isCancelled: () => j.isCancelled(),
       });
-      this.deps.cache.markScanDone("links");
+      if (!j.isCancelled()) this.deps.cache.markScanDone("links"); // un scan annulé ne rafraîchit pas la fraîcheur
       await this.deps.cache.save();
       return out.stats;
     });
