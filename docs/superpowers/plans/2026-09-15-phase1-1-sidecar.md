@@ -160,13 +160,9 @@ export default defineConfig({
 
 - [ ] **Step 2: Compléter .gitignore**
 
-Ajouter à `.gitignore` existant :
-
-```
-node_modules/
-dist-sidecar/
-*.tsbuildinfo
-```
+`.gitignore` couvre déjà `node_modules/`, `dist-sidecar/` et `*.tsbuildinfo`
+(posé avec les conventions projet, avant l'exécution du plan) — vérifier et
+ajouter seulement ce qui manque.
 
 - [ ] **Step 3: Test de fumée Vitest**
 

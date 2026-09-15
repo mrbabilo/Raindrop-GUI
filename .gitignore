@@ -1,7 +1,9 @@
 # Dépendances et builds
 node_modules/
 dist/
+dist-sidecar/
 src-tauri/target/
+*.tsbuildinfo
 
 # Secrets et tokens — jamais commités
 .env
@@ -16,5 +18,9 @@ src-tauri/target/
 logs/
 *.log
 
+# Lanceurs personnels (config machine locale, cf. StarHubTH)
+glm.sh
+
 # macOS
 .DS_Store
+
