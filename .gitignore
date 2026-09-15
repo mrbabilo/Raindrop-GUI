@@ -12,6 +12,7 @@ src-tauri/target/
 .superpowers/
 .remember/
 .kilo/
+.playwright-mcp/
 logs/
 *.log
 
