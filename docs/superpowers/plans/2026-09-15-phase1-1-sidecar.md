@@ -1003,7 +1003,14 @@ export class McpConnection {
   ): Promise<McpConnection> {
     const client = new Client({ name: "raindrop-gui-sidecar", version: "0.1.0" });
     const transport = await factory.create();
-    await client.connect(transport);
+    try {
+      await client.connect(transport);
+    } catch (e) {
+      // handshake raté après spawn réussi : fermer le subprocess orphelin,
+      // sinon un crash-loop réel fuit un process par tentative
+      await transport.close().catch(() => undefined);
+      throw e;
+    }
     const conn = new McpConnection(client, true);
     conn.transport = transport;
     void opts; // le timeout est par appel (call())
@@ -1251,6 +1258,15 @@ await server.connect(transport);
 if (mode === "crash-after-connect") {
   setTimeout(() => process.exit(1), 200);
 }
+if (mode === "crash-once") {
+  // crash au premier connect uniquement : marqueur sur disque — le subprocess
+  // suivant voit le fichier et reste stable (test de restart déterministe)
+  const marker = join(process.env.FIXTURE_STATE_DIR ?? ".", "crashed");
+  if (!existsSync(marker)) {
+    writeFileSync(marker, process.pid.toString());
+    setTimeout(() => process.exit(1), 200);
+  }
+}
 if (mode === "slow-exit") {
   // reste vivant jusqu'au SIGTERM du test
 }
@@ -1262,7 +1278,9 @@ if (mode === "slow-exit") {
 
 ```ts
 import { describe, it, expect } from "vitest";
-import { spawn } from "node:child_process";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { McpLifecycle } from "./lifecycle.js";
@@ -1270,13 +1288,16 @@ import { McpLifecycle } from "./lifecycle.js";
 const here = fileURLToPath(new URL(".", import.meta.url));
 const tsx = fileURLToPath(new URL("../../../node_modules/.bin/tsx", import.meta.url));
 
-function fixtureFactory(mode: string, backoff = 50) {
+function fixtureFactory(mode: string, stateDir?: string) {
   return {
     create: async () => {
       const t = new StdioClientTransport({
         command: tsx,
         args: [`${here}../testing/fixtureStdio.ts`, mode],
-        env: { ...process.env } as Record<string, string>,
+        env: {
+          ...process.env,
+          ...(stateDir ? { FIXTURE_STATE_DIR: stateDir } : {}),
+        } as Record<string, string>,
         stderr: "pipe",
       });
       return t;
@@ -1296,9 +1317,14 @@ describe("McpLifecycle", () => {
   }, 20000);
 
   it("redémarre automatiquement après un crash du subprocess", async () => {
-    const lc = new McpLifecycle({ factory: fixtureFactory("crash-after-connect"), restartBackoffMs: 50 });
+    // crash-once : le 1er subprocess crash 200 ms après connect, le 2e (marqueur
+    // présent sur disque) reste stable — déterministe, sans fenêtre de timing étroite
+    const stateDir = mkdtempSync(join(tmpdir(), "lifecycle-"));
+    const lc = new McpLifecycle({
+      factory: fixtureFactory("crash-once", stateDir),
+      restartBackoffMs: 50,
+    });
     await lc.start();
-    // le fixture s'arrête 200 ms après connect → restart auto attendu
     await new Promise((r) => setTimeout(r, 1500));
     expect(lc.state).toBe("connected");
     const out = await lc.call<{ id: number }>("get_user", {});
