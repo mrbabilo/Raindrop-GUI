@@ -44,6 +44,10 @@ export class AnalysisCache {
   setResult(r: LinkCheckResult): void {
     this.data.links.results[r.url] = r;
   }
+  /** Tous les résultats de check (Task 14 : pagination GET /results/links). */
+  allResults(): LinkCheckResult[] {
+    return Object.values(this.data.links.results);
+  }
 
   getItemsIndex(): Record<number, { title: string; collectionId: number; url: string }> {
     return this.data.itemsIndex;
