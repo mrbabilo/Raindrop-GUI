@@ -29,7 +29,14 @@ export class McpConnection {
   ): Promise<McpConnection> {
     const client = new Client({ name: "raindrop-gui-sidecar", version: "0.1.0" });
     const transport = await factory.create();
-    await client.connect(transport);
+    try {
+      await client.connect(transport);
+    } catch (e) {
+      // Handshake manqué après un spawn réussi : refermer le subprocess,
+      // sinon chaque tentative d'un crash-loop orpheline un processus.
+      await transport.close().catch(() => undefined);
+      throw e;
+    }
     const conn = new McpConnection(client);
     conn.transport = transport;
     void opts; // le timeout est par appel (call())

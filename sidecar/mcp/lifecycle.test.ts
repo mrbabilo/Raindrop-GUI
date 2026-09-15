@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { spawn } from "node:child_process";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { McpLifecycle } from "./lifecycle.js";
@@ -7,13 +9,16 @@ import { McpLifecycle } from "./lifecycle.js";
 const here = fileURLToPath(new URL(".", import.meta.url));
 const tsx = fileURLToPath(new URL("../../node_modules/.bin/tsx", import.meta.url));
 
-function fixtureFactory(mode: string, backoff = 50) {
+function fixtureFactory(mode: string, stateDir?: string) {
   return {
     create: async () => {
       const t = new StdioClientTransport({
         command: tsx,
         args: [`${here}../testing/fixtureStdio.ts`, mode],
-        env: { ...process.env } as Record<string, string>,
+        env: {
+          ...process.env,
+          ...(stateDir ? { FIXTURE_STATE_DIR: stateDir } : {}),
+        } as Record<string, string>,
         stderr: "pipe",
       });
       return t;
@@ -33,7 +38,13 @@ describe("McpLifecycle", () => {
   }, 20000);
 
   it("redémarre automatiquement après un crash du subprocess", async () => {
-    const lc = new McpLifecycle({ factory: fixtureFactory("crash-after-connect"), restartBackoffMs: 50 });
+    // crash-once : seul le premier spawn crashe (marqueur dans stateDir) —
+    // la reconnexion suivante reste stable, le test est déterministe.
+    const stateDir = mkdtempSync(join(tmpdir(), "lifecycle-"));
+    const lc = new McpLifecycle({
+      factory: fixtureFactory("crash-once", stateDir),
+      restartBackoffMs: 50,
+    });
     await lc.start();
     // le fixture s'arrête 200 ms après connect → restart auto attendu
     await new Promise((r) => setTimeout(r, 1500));
@@ -76,7 +87,4 @@ describe("McpLifecycle", () => {
     expect(lc.state).toBe("connected");
     await lc.stop();
   }, 20000);
-
-  // nettoyage : spawn() importé seulement pour forcer le keep-alive du process
-  void spawn;
 });
