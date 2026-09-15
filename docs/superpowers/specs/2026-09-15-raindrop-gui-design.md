@@ -24,6 +24,7 @@ La GUI pilote Raindrop.io **via le serveur MCP `@kud/mcp-raindrop-io`** (exigenc
 | Front | React 18 + TypeScript + Vite + Tailwind, TanStack Query + TanStack Virtual |
 | Layout bibliothèque | **Trois panneaux** (navigation \| liste \| détail permanent) + palette ⌘K en complément |
 | Organisation nettoyage | **Hybride** : dashboard d'audit comme point d'entrée, vues standard pré-filtrées ensuite |
+| Analyse nettoyage | **Locale à l'app** : doublons, liens morts et redirections calculés par le sidecar — pas via Raindrop (exigence utilisateur) |
 | Actions destructrices | **Page dédiée « Revue de l'action »**, deux niveaux de gravité, corbeille par défaut |
 | Déploiement | Local uniquement (127.0.0.1) |
 | IA | **Phase 2** (hors de cette spec, voir §12) |
@@ -67,6 +68,7 @@ La GUI pilote Raindrop.io **via le serveur MCP `@kud/mcp-raindrop-io`** (exigenc
    - **Serveur HTTP** (Hono) : les 22 tools exposés en endpoints REST typés + SSE pour les opérations longues.
    - Cycle de vie du subprocess MCP : démarrage, health-check, redémarrage sur crash (retry ×3, back-off exponentiel).
    - **File d'attente avec throttle** pour respecter la limite Raindrop (120 req/min), back-off sur 429.
+   - **Moteur d'analyse local** (§5.1) : link checker HTTP (liens morts, redirections) + dédoublonnage, avec cache de résultats horodaté.
    - Bind **127.0.0.1 uniquement**, port attribué par l'OS (bind port 0).
 
 3. **Serveur MCP** — `@kud/mcp-raindrop-io` **épinglé comme dépendance npm du sidecar** (pas de `npx @latest` au runtime), lancé par : `node node_modules/@kud/mcp-raindrop-io/dist/index.js` avec `MCP_RAINDROPIO_TOKEN` en variable d'environnement.
@@ -96,7 +98,7 @@ Ces points sont **contraignants** pour l'implémentation :
 1. **MCP épinglé** : `@kud/mcp-raindrop-io` est une dépendance versionnée (`1.3.1`), spawn direct du JS. Pas de réseau requis au lancement, pas de dérive de version.
 2. **Prérequis Node** : le sidecar et le serveur MCP nécessitent **Node ≥ 20** présent dans le PATH. L'app vérifie sa présence au démarrage et affiche une erreur claire le cas échéant. (La compilation du sidecar en binaire autonome — Node SEA ou Bun — est repoussée en Phase 2.)
 3. **Abstraction de secours** : le front ne dépend que de l'API REST locale ; chaque tool est isolé derrière une fonction typée avec **timeout par appel**. Si le package MCP devient un blocage, chaque endpoint peut être rebranché sur des appels REST directs à Raindrop **sans toucher au front**.
-4. **Gros volumes** : UX recherche-d'abord. Pas de full scan côté front. Vue par défaut = page courante + infinite scroll (50 items/requête, maximum de l'API Raindrop). `library_audit` ne renvoie que des **compteurs** ; les listes des vues de nettoyage viennent des filtres serveur de `search_raindrops` (`broken`, `duplicates`, `untagged`).
+4. **Gros volumes** : UX recherche-d'abord. Pas de full scan côté front. Vue par défaut = page courante + infinite scroll (50 items/requête, maximum de l'API Raindrop). L'analyse de nettoyage (doublons, liens morts, redirections) est **calculée localement par l'app** (voir §5.1), pas par Raindrop ; seul le filtre trivial `untagged` passe par `search_raindrops`.
 5. **Bulk** : privilégier `bulk_raindrops` (1 appel = N bookmarks) plutôt que N appels unitaires ; les boucles nécessaires passent par des jobs SSE avec progression, jamais bloquants pour l'UI.
 6. **Cycle de vie sidecar** : le sidecar bind le port 0, écrit `{port, token, pid}` dans un **lockfile** du dossier app-data (`~/Library/Application Support/Raindrop-GUI/`). Tauri génère le token local et le transmet au sidecar par variable d'environnement au spawn, et au webview par commande Tauri. PID actif = réutilisation (pas de doublon lors des reloads webview/HMR). Crash = notification + bouton « Redémarrer la connexion ».
 7. **Superficie HTTP locale** : token Bearer éphémère généré par Tauri au lancement et transmis au webview via commande Tauri (jamais écrit en clair sur disque), vérification de l'`Origin: tauri://localhost` (et `http://localhost:*` en dev), CORS minimal. Résiduel assumé : un process du même utilisateur macOS peut lire l'env du subprocess — négligeable en mono-utilisateur.
@@ -111,14 +113,17 @@ Ces points sont **contraignants** pour l'implémentation :
 - **Panneau gauche (navigation)** : collections en arborescence (root + children), liste des tags (avec compteurs), vues fixes : Tous, Favoris, Non-lus, Corbeille. Section repliable.
 - **Panneau central (liste)** : bookmarks virtualisés — titre, domaine, extrait, tags, date. Tri (création, titre, domaine). Recherche serveur en entête avec filtres avancés (domaine, type de média, plage de dates, non-taggés, favoris…). Infinite scroll, 50/requête. Multi-sélection par cases à cocher → **barre d'actions en masse** en pied de liste (Corbeille, Déplacer, Tagger).
 - **Panneau droit (détail, permanent)** : suit la sélection (clic ou flèches clavier). Aperçu, édition inline (titre, extrait, note, tags, collection), lecture des highlights. Actions : favori, ouvrir l'URL, supprimer (→ corbeille).
-- **Palette ⌘K** : recherche universelle (bookmarks, collections, tags, commandes), navigation clavier complète (flèches, Entrée, Échap).
+- **Palette ⌘K** : recherche universelle (bookmarks, collections, tags, commandes, **accès direct aux vues de nettoyage**), navigation clavier complète (flèches, Entrée, Échap).
 
-**Ajout de bookmark** : formulaire d'ajout utilisant `parse_url` pour préremplir titre/description et `check_urls_exist` pour alerter si l'URL est déjà sauvegardée (avec lien vers l'existant).
+**Composer d'ajout permanent** (inspiration karakeep) : champ d'ajout toujours visible en tête de liste (raccourci ⌘+E) — collage d'URL, préremplissage via `parse_url` (titre/description) et alerte si l'URL est déjà sauvegardée via `check_urls_exist` (avec lien vers l'existant).
+
+**Affichages** : bascule **liste compacte ↔ mosaïque** avec vignettes (covers fournies par Raindrop). Les **tags sont cliquables** dans les items et lancent le filtre serveur correspondant.
 
 ### 4.2 Vue Nettoyage — hybride
 
-- **Dashboard (point d'entrée)** : compteurs issus de `library_audit` (liens cassés, doublons, non-taggés) + collections vides (`get_collections`/`get_child_collections` filtrage côté front) + corbeille. Bouton « Lancer/rafraîchir l'audit » (job SSE si long).
-- **Vues de traitement** : cliquer un compteur ouvre la **vue standard à trois panneaux pré-filtrée** (chip « Liens cassés (23) » en entête, filtre serveur actif). Même mécanique de sélection et de barre d'actions que la bibliothèque.
+- **Dashboard (point d'entrée)** : compteurs issus du **moteur d'analyse local** (§5.1) — liens morts, redirections, doublons — plus non-taggés (filtre serveur `untagged`), collections vides (filtrage côté front) et corbeille. Chaque compteur affiche la **fraîcheur de l'analyse** (date du dernier scan). L'analyse est un **job visible avec progression, annulable** (SSE), à la manière du scan de Bookmarks Organizer ; boutons « Lancer/relancer » par catégorie ou global.
+- **Vues de traitement** : cliquer un compteur ouvre la **vue standard à trois panneaux pré-filtrée** (chip « Liens cassés (23) » en entête ; résultats de l'analyse locale ou filtre serveur selon la catégorie). Même mécanique de sélection et de barre d'actions que la bibliothèque.
+- **Vue Redirections** : chaque item affiche l'URL sauvegardée → l'URL finale détectée ; action « **Remplacer par l'URL finale** » (individuelle ou en masse via la page Revue, niveau 1).
 - **Tags** : vue dédiée (liste avec compteurs) — renommer, fusionner, supprimer (`manage_tags`). Fusion = cas d'usage nettoyage majeur.
 - **Collections vides** : liste + suppression (`cleanup_collections`, mapping du `confirm: true` MCP sur le niveau de gravité 2 — voir §4.3).
 - **Corbeille** : liste consultable, restauration individuelle, « Vider la corbeille » (niveau 2, `empty_trash` avec `confirm: true`).
@@ -136,9 +141,25 @@ Toute action en masse ouvre une **page dédiée** remplaçant la liste :
 - Corbeille par défaut : toute suppression passe par la corbeille Raindrop ; seul le vidage de corbeille est définitif.
 - Note assumée : Raindrop n'offre pas d'undo API pour déplacements/tags — **l'aperçu est l'annulation**.
 
+### 4.4 Apparence
+
+Mode **clair/sombre suivant le système** (tokens Tailwind), choix manuel possible dans les réglages. Interface en **français** (l'app est mono-utilisateur — pas d'infrastructure i18n, mais les textes sont externalisés dans un fichier unique pour faciliter une future traduction).
+
 ---
 
 ## 5. Couche sidecar — API locale
+
+### 5.1 Moteur d'analyse local (nettoyage)
+
+L'analyse des doublons, liens morts et redirections est effectuée **par l'app** (sidecar), pas par Raindrop — exigence utilisateur. Le tool MCP `library_audit` n'est **pas utilisé** ; les filtres serveur `broken`/`duplicates` non plus.
+
+- **Récupération** : snapshot paginé de la bibliothèque via `search_raindrops` (50/requête, throttle), servi depuis le cache local une fois frais.
+- **Doublons** (calcul pur, instantané) : groupes par URL exacte, puis par URL **normalisée** (schéma http/https unifié, slash final, paramètres de tracking `utm_*` retirés) ; détection optionnelle « douce » (même domaine + titre identique) présentée séparément.
+- **Liens morts + redirections** (scan réseau) : requêtes HTTP depuis le sidecar — **concurrence 6, timeout 10 s, HEAD puis GET si 405/ambigu, 1 retry réseau** avant classification. Catégories : `ok` / `redirection` (permanente 301/308 ou temporaire, avec chaîne et URL finale) / `mort` (4xx/410, 5xx, DNS, timeout) / `indéterminé` (403 anti-bot, captcha → vérification manuelle).
+- **Résultats stockés localement** (`~/Library/Application Support/Raindrop-GUI/analysis.json`) avec horodatage par URL : les vues se consultent sans re-scanner ; les scans **incrémentaux** ne revérifient que les items nouveaux/modifiés ou expirés (TTL configurable, 30 j par défaut).
+- **Jobs SSE** : progression par URL, annulables, résultats partiels consultables pendant le scan.
+- **Endpoints** : `POST /api/analysis/scan {type: "links"|"duplicates"|"all"}`, `GET /api/analysis/results/:type` (paginé), `GET /api/analysis/status`.
+- **Correction des redirections** : « remplacer par l'URL finale » via `update_raindrop` — **à vérifier à l'implémentation** que l'outil MCP expose le champ `url` ; sinon, rebranchement direct sur l'API Raindrop via l'abstraction de secours (§3, point 3). Action de niveau 1, passe par la page Revue en masse.
 
 ### Surface REST (esprit : 1 endpoint ≈ 1 tool MCP)
 
@@ -188,7 +209,7 @@ Logs structurés (JSON) dans `~/Library/Application Support/Raindrop-GUI/logs/`,
 
 ## 8. Tests
 
-- **Sidecar** : tests unitaires du pont contre un **fake MCP server in-process** — typage des 22 endpoints, timeout, throttle 429, gestion du lockfile, cycle de vie subprocess. Tests d'intégration réels (vrai serveur MCP + vraie API) activés uniquement si `RAINDROP_TEST_TOKEN` est présent, sinon skippés.
+- **Sidecar** : tests unitaires du pont contre un **fake MCP server in-process** — typage des 22 endpoints, timeout, throttle 429, gestion du lockfile, cycle de vie subprocess. **Moteur d'analyse** testé contre un **serveur HTTP local de simulation** (200, 301→nouvelle URL, 404, 405, 403 anti-bot, timeout, DNS invalide) : classification, retry, normalisation d'URL pour les doublons. Tests d'intégration réels (vrai serveur MCP + vraie API) activés uniquement si `RAINDROP_TEST_TOKEN` est présent, sinon skippés.
 - **Front** : Vitest + Testing Library sur les pièces critiques — page Revue de l'action (compteur exact, désélection, case bloquante niveau 1, frappe « SUPPRIMER » niveau 2, export CSV), recherche avec filtres, multi-sélection, barre d'actions.
 - **Pas d'E2E Tauri en Phase 1** ; le webview tourne en pur navigateur en dev (Playwright possible en Phase 2).
 
@@ -201,6 +222,7 @@ Logs structurés (JSON) dans `~/Library/Application Support/Raindrop-GUI/logs/`,
 3. Zéro action irréversible exécutable sans frappe « SUPPRIMER » ; toute suppression passe par la corbeille Raindrop — seul le vidage de la corbeille (vue Corbeille) est définitif.
 4. Bibliothèque visible en moins de 5 s après le lancement de l'app (sidecar + MCP warm).
 5. Un crash du subprocess MCP se répare en un clic, sans perte de l'état de navigation.
+6. Un scan complet des liens (5 000+ URLs) affiche une progression en temps réel, est annulable, et ses résultats partiels sont consultables pendant le scan ; les re-scans incrémentaux ne revérifient que le nécessaire.
 
 ---
 
@@ -211,21 +233,25 @@ Logs structurés (JSON) dans `~/Library/Application Support/Raindrop-GUI/logs/`,
 | `@kud/mcp-raindrop-io` peu maintenu (v1.3.1, un seul fichier source, adoption faible) | Bugs non corrigés, blocages | Dépendance épinglée, abstraction tool-par-tool permettant un rebranchement direct sur l'API Raindrop sans toucher au front |
 | Limites API Raindrop (120 req/min, 50/page) | Lenteur perçue sur gros volumes | Recherche-d'abord, `bulk_raindrops`, jobs SSE, throttle |
 | stdio sérialise les appels MCP | Opérations en masse lentes | Jobs asynchrones + progression ; bulk côté serveur Raindrop |
+| Scan de liens externes (sites lents, anti-bot, réseau local) | Faux positifs, durée du scan | Catégorie `indéterminé` (vérification manuelle), retry + timeout, cache horodaté, scans incrémentaux, concurrence limitée |
 | Endpoint interne Stella indisponible | — | Hors Phase 1 (voir §12) |
 
 ---
 
 ## 11. Hors périmètre (Phase 1)
 
-Multi-utilisateur, auto-hébergement, réplication/sync locale des données (Raindrop reste la seule source de vérité), écriture des highlights (lecture seule en Phase 1), import/export autre que le CSV de revue.
+Multi-utilisateur, auto-hébergement, réplication/sync locale des données (Raindrop reste la seule source de vérité — le cache d'analyse §5.1 est un artefact recalculable, pas une réplique), écriture des highlights (lecture seule en Phase 1), import/export autre que le CSV de revue.
 
 ---
 
 ## 12. Phase 2 (aperçu, spec séparée à venir)
 
 - **Agent IA** : chat + multi-opérations (« range tout ce qui parle d'IA dans une collection dédiée ») avec **plan validé via la page Revue de l'action** avant exécution ; enrichissement (résumés, suggestions de tags). Usage validé avec l'utilisateur : les quatre cas (chat, nettoyage assisté, enrichissement, agent multi-opérations) sont souhaités.
-- Choix LLM à trancher en Phase 2 : Claude API et/ou modèles locaux (Ollama/LM Studio).
+- Choix LLM à trancher en Phase 2 : Claude API et/ou modèles locaux (Ollama/LM Studio) — karakeep et Linkwarden montrent les deux voies (API cloud et tagging local Ollama).
+- **Liste d'exclusions d'audit** (pattern Bookmarks Organizer) : petit état local d'items/URLs à ignorer lors des scans. (La détection des liens morts et redirections est passée en Phase 1 via le moteur d'analyse local, §5.1.)
+- **Moteur de règles** (inspiration karakeep/Linkwarden) : « si domaine X alors collection Y » appliqué en job.
 - **Spike Stella** optionnel : rétro-ingénierie de l'endpoint interne de l'app web (aucune API publique au 2026-09-15) pour la recherche sémantique ; réutilisation de l'abonnement Pro. Fragilité assumée.
+- Archivage de pages (link rot) : capacité **Pro côté Raindrop**, non exposée par le MCP actuel — à surveiller en cas d'évolution du serveur MCP ou de l'API.
 - Packaging du sidecar en binaire autonome, E2E (Playwright), écriture des highlights.
 
 ---
@@ -235,3 +261,4 @@ Multi-utilisateur, auto-hébergement, réplication/sync locale des données (Rai
 - Serveur MCP : `@kud/mcp-raindrop-io` (https://github.com/kud/mcp-raindrop-io) — 22 tools, transport stdio, auth `MCP_RAINDROPIO_TOKEN`.
 - API Raindrop.io : https://developer.raindrop.io (120 req/min, pagination 50, aucune API IA/Stella au 2026-09-15).
 - SDK MCP : `@modelcontextprotocol/sdk` (client), transport stdio.
+- Inspirations UX (analysées le 2026-09-15) : [karakeep](https://github.com/karakeep-app/karakeep) (composer d'ajout permanent, tags cliquables, vues, mode bulk), [Linkwarden](https://github.com/linkwarden/linkwarden) (confirmation collections/bulk/sombre), [Bookmarks Organizer](https://addons.mozilla.org/fr/firefox/addon/bookmarks-organizer/) (catégories d'audit, scan progressif, exclusions, redirections).
