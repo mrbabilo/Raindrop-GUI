@@ -1962,6 +1962,14 @@ describe("routes raindrops", () => {
     expect(body.items[0]!.id).toBeDefined();
   });
 
+  it("GET / : important=false désactive le filtre (piège du coerce booléen)", async () => {
+    const res = await app.request("/api/raindrops?per_page=50&important=false");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Paginated<RaindropItem>;
+    // si Boolean("false")===true fuyait, seul le sous-ensemble important (~7) serait renvoyé
+    expect(body.count).toBe(32);
+  });
+
   it("GET /:id renvoie un DTO", async () => {
     const list = (await (await app.request("/api/raindrops?per_page=1")).json()) as Paginated<RaindropItem>;
     const res = await app.request(`/api/raindrops/${list.items[0]!.id}`);
@@ -2080,8 +2088,9 @@ const searchQuery = z.object({
   sort: z.enum(["score", "-created", "created", "-title", "title", "-domain", "domain"]).optional(),
   page: z.coerce.number().int().min(0).default(0),
   per_page: z.coerce.number().int().min(1).max(50).default(50),
-  important: z.coerce.boolean().optional(),
-  notag: z.coerce.boolean().optional(),
+  // "false" doit DÉSACTIVER le filtre — z.coerce.boolean() piége (Boolean("false")===true)
+  important: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
+  notag: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
   domain: z.string().optional(),
   media: z.enum(["link", "article", "image", "video", "document", "audio"]).optional(),
   created_start: z.string().optional(),
