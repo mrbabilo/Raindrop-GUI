@@ -1,0 +1,38 @@
+import { describe, it, expect } from "vitest";
+import { mkdtempSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createLogger } from "./logger.js";
+
+const dir = () => mkdtempSync(join(tmpdir(), "logs-"));
+
+describe("createLogger", () => {
+  it("écrit une entrée JSONL avec ts/level/msg dans le fichier du jour", async () => {
+    const d = dir();
+    const logger = createLogger(d, { level: "info" });
+    logger.info("démarrage sidecar", { pid: process.pid });
+    logger.warn("attention", { code: 42 });
+    await logger.close();
+
+    const file = join(d, `sidecar-${new Date().toISOString().slice(0, 10)}.jsonl`);
+    expect(existsSync(file)).toBe(true);
+    const lines = readFileSync(file, "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    expect(lines).toMatchObject([
+      { level: "info", msg: "démarrage sidecar", pid: process.pid },
+      { level: "warn", msg: "attention", code: 42 },
+    ]);
+    expect(typeof lines[0]!.ts).toBe("string");
+  });
+
+  it("purge les logs plus vieux que retentionDays au boot", async () => {
+    const d = dir();
+    const old = join(d, "sidecar-2020-01-01.jsonl");
+    writeFileSync(old, '{"ts":"2020","level":"info","msg":"ancien"}\n', "utf8");
+    const logger = createLogger(d, { level: "info", retentionDays: 7 });
+    logger.info("nouveau");
+    await logger.close();
+    // laisse le toggle async de purge s'exécuter
+    await new Promise((r) => setTimeout(r, 50));
+    expect(existsSync(old)).toBe(false);
+  });
+});
