@@ -68,6 +68,11 @@ describe("checkUrl", () => {
     expect(r.httpStatus).toBe(404);
   });
 
+  it("Location malformé → dead (jamais un crash du scan)", async () => {
+    const r = await checkUrl(u("/bad-location"), fast);
+    expect(r.status).toBe("dead");
+  });
+
   it("boucle de redirection → dead (redirect_loop)", async () => {
     const r = await checkUrl(u("/loop"), fast);
     expect(r.status).toBe("dead");

@@ -35,6 +35,7 @@ export async function startTargetServer(): Promise<{ port: number; close(): Prom
       case "/slow": return setTimeout(() => finish(200), 500);
       case "/loop": { res.writeHead(301, { Location: "/loop" }); return res.end(); }
       case "/redirect-to-404": { res.writeHead(301, { Location: "/notfound" }); return res.end(); }
+      case "/bad-location": { res.writeHead(301, { Location: "http://[" }); return res.end(); }
       default: return finish(404);
     }
   });
