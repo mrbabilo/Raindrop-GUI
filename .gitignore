@@ -1,0 +1,19 @@
+# Dépendances et builds
+node_modules/
+dist/
+src-tauri/target/
+
+# Secrets et tokens — jamais commités
+.env
+.env.*
+*.token
+
+# Artefacts locaux
+.superpowers/
+.remember/
+.kilo/
+logs/
+*.log
+
+# macOS
+.DS_Store
