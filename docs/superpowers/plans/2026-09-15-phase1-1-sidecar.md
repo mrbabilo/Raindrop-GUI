@@ -3239,6 +3239,7 @@ export async function startTargetServer(): Promise<{ port: number; close(): Prom
       case "/server-error": return finish(500);
       case "/slow": return setTimeout(() => finish(200), 500);
       case "/loop": { res.writeHead(301, { Location: "/loop" }); return res.end(); }
+      case "/bad-location": { res.writeHead(301, { Location: "http://[" }); return res.end(); }
       case "/redirect-to-404": { res.writeHead(301, { Location: "/notfound" }); return res.end(); }
       default: return finish(404);
     }
@@ -3332,6 +3333,11 @@ describe("checkUrl", () => {
     const r = await checkUrl(u("/loop"), fast);
     expect(r.status).toBe("dead");
     expect(r.reason).toBe("redirect_loop");
+  });
+
+  it("Location malformé → dead (jamais un crash du scan)", async () => {
+    const r = await checkUrl(u("/bad-location"), fast);
+    expect(r.status).toBe("dead");
   });
 
   it("timeout → dead (timeout)", async () => {
@@ -3465,9 +3471,15 @@ export async function checkUrl(url: string, opts: Partial<CheckerOptions> = {}):
           return { url, status: "dead", httpStatus: res.status, redirectChain: chain, finalUrl: null, redirectKind: null, reason: "redirect_loop" };
         }
         redirectStatuses.push(res.status);
-        const next = new URL(loc, current).toString();
-        chain.push(next);
-        current = next;
+        let nextStr: string;
+        try {
+          nextStr = new URL(loc, current).toString();
+        } catch {
+          // Location malformé (serveur hostile/cassé) → dead, jamais un crash du scan
+          return { url, status: "dead", httpStatus: res.status, redirectChain: chain, finalUrl: null, redirectKind: null, reason: `http_${res.status}` };
+        }
+        chain.push(nextStr);
+        current = nextStr;
         continue;
       }
       if ((res.status === 405 || res.status === 501) && method === "HEAD") {

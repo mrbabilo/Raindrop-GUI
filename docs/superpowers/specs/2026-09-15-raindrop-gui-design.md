@@ -250,8 +250,11 @@ Multi-utilisateur, auto-hébergement, réplication/sync locale des données (Rai
 - Choix LLM à trancher en Phase 2 : Claude API et/ou modèles locaux (Ollama/LM Studio) — karakeep et Linkwarden montrent les deux voies (API cloud et tagging local Ollama).
 - **Liste d'exclusions d'audit** (pattern Bookmarks Organizer) : petit état local d'items/URLs à ignorer lors des scans. (La détection des liens morts et redirections est passée en Phase 1 via le moteur d'analyse local, §5.1.)
 - **Moteur de règles** (inspiration karakeep/Linkwarden) : « si domaine X alors collection Y » appliqué en job.
+- **Tag automatique des résultats d'analyse** (inspiration buku `--tag-error`/`--tag-redirect`, analysé le 2026-09-16) : taguer les bookmarks selon le verdict du scan (ex. `http:404`, `à-revoir`, `redirect`) — rend les résultats visibles dans Raindrop lui-même et depuis tout client ; complément de la liste d'exclusions d'audit. Toute écriture en masse passe par la page Revue.
+- **Quick win « Wayback Machine »** (inspiration buku `--cached`) : lien « Voir la copie archivée » sur les liens morts de la vue Liens cassés (`https://web.archive.org/web/*/<url>`) — pas d'API, un simple lien web.
+- **Correction de redirection : conserver l'ancienne URL** (inspiration buku, qui conserve l'ancienne URL en métadonnée) — option « noter l'ancienne URL » dans la note du bookmark lors du « Remplacer par l'URL finale ».
 - **Spike Stella** optionnel : rétro-ingénierie de l'endpoint interne de l'app web (aucune API publique au 2026-09-15) pour la recherche sémantique ; réutilisation de l'abonnement Pro. Fragilité assumée.
-- Archivage de pages (link rot) : capacité **Pro côté Raindrop**, non exposée par le MCP actuel — à surveiller en cas d'évolution du serveur MCP ou de l'API.
+- Archivage de pages (link rot) : capacité **Pro côté Raindrop**, non exposée par le MCP actuel — à surveiller en cas d'évolution du serveur MCP ou de l'API. Alternative locale si jamais exposée : un module type **ArchiveBox** piloté en job (piste relevée via gosuki).
 - Packaging du sidecar en binaire autonome, E2E (Playwright), écriture des highlights.
 
 ---
@@ -262,3 +265,4 @@ Multi-utilisateur, auto-hébergement, réplication/sync locale des données (Rai
 - API Raindrop.io : https://developer.raindrop.io (120 req/min, pagination 50, aucune API IA/Stella au 2026-09-15).
 - SDK MCP : `@modelcontextprotocol/sdk` (client), transport stdio.
 - Inspirations UX (analysées le 2026-09-15) : [karakeep](https://github.com/karakeep-app/karakeep) (composer d'ajout permanent, tags cliquables, vues, mode bulk), [Linkwarden](https://github.com/linkwarden/linkwarden) (confirmation collections/bulk/sombre), [Bookmarks Organizer](https://addons.mozilla.org/fr/firefox/addon/bookmarks-organizer/) (catégories d'audit, scan progressif, exclusions, redirections).
+- Autres sources analysées le 2026-09-16 : [buku](https://github.com/jarun/buku) (tags automatiques d'erreurs/redirections, conservation de l'ancienne URL à la correction, Wayback Machine, refresh multi-threadé — retenu partiellement, cf. §12), [GoSuki](https://gosuki.net) (agrégation multi-sources navigateurs/GitHub/Reddit, dossiers→tags, sync P2P — hors périmètre : Raindrop reste la source de vérité ; piste ArchiveBox pour l'archivage local).
