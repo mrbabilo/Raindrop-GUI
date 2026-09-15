@@ -181,7 +181,8 @@ describe("scaffold", () => {
 - [ ] **Step 4: Installer et vérifier**
 
 Run: `npm install && npm test && npm run typecheck`
-Expected: install OK (le dépôt doit contenir `node_modules/@kud/mcp-raindrop-io/dist/index.js`), test PASS, typecheck OK.
+Expected: install OK (le dépôt doit contenir `node_modules/@kud/mcp-raindrop-io/dist/index.js`), test PASS.
+Typecheck : **TS18003 « no inputs » est attendu à cette étape** — le seul fichier TS (smoke test) est exclu du build ; l'étape redevient verte dès la Task 2 (premiers inputs non exclus). Vérification équivalente : `echo "export {};" > sidecar/probe.ts && npm run typecheck && rm sidecar/probe.ts` → exit 0.
 
 - [ ] **Step 5: Vérifier le tool MCP listé par le package épinglé**
 
@@ -823,7 +824,6 @@ export function buildFakeRaindropServer(opts?: {
       if (g) return g;
       if (!confirm) return ok({ message: "Pass confirm: true" });
       const n = fx.raindrops.filter((r) => r.removed).length;
-      for (const r of fx.raindrops) if (r.removed) r.removed = false; // vidée = disparue
       fx.raindrops.splice(0, fx.raindrops.length, ...fx.raindrops.filter((r) => !r.removed));
       return ok({ deleted: n });
     },
@@ -862,7 +862,8 @@ describe("fake MCP server", () => {
     const res = await client.callTool({ name: "search_raindrops", arguments: { per_page: 10 } });
     const text = (res.content as [{ type: string; text: string }])[0]!.text;
     const data = JSON.parse(text) as { count: number; items: unknown[] };
-    expect(data.count).toBe(30);
+    // 30 demandés + 2 doublons fixture = 32 — le count du vrai package inclut tout
+    expect(data.count).toBe(32);
     expect(data.items).toHaveLength(10);
     expect(fixtures.raindrops.length).toBeGreaterThan(30);
   });
@@ -1929,7 +1930,7 @@ describe("routes raindrops", () => {
     const res = await app.request("/api/raindrops?per_page=10&collection_id=0");
     expect(res.status).toBe(200);
     const body = (await res.json()) as Paginated<RaindropItem>;
-    expect(body.count).toBe(30);
+    expect(body.count).toBe(32); // 30 demandés + 2 doublons fixture
     expect(body.items).toHaveLength(10);
     expect(body.items[0]).toMatchObject({ url: expect.stringContaining("https://"), collectionId: expect.any(Number), tags: expect.any(Array) });
     expect(body.items[0]!.id).toBeDefined();
