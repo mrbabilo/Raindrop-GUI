@@ -13,7 +13,7 @@ Raindrop.io est un gestionnaire de bookmarks en ligne (compte Pro de l'utilisate
 1. **Navigation/consultation enrichie** : une interface locale, en français, plus agréable pour sauvegarder, chercher et organiser.
 2. **Nettoyage de bibliothèque** : liens cassés, doublons, bookmarks non-taggés, collections vides, corbeille — avec vues dédiées et actions en masse sûres.
 
-La GUI pilote Raindrop.io **via le serveur MCP `@kud/mcp-raindrop-io`** (exigence explicite), qui expose 22 tools couvrant l'API Raindrop : bookmarks (6), collections (7), tags (2), highlights (2), user/import (3), utilitaires (2 : `library_audit`, `empty_trash`).
+La GUI pilote Raindrop.io **via le serveur MCP `@kud/mcp-raindrop-io`** (exigence explicite), qui expose 23 tools couvrant l'API Raindrop : bookmarks (7), collections (7), tags (2), highlights (2), user/import (3), utilitaires (2 : `library_audit`, `empty_trash`).
 
 ### Décisions structurantes (validées avec l'utilisateur)
 
@@ -170,9 +170,11 @@ L'analyse des doublons, liens morts et redirections est effectuée **par l'app**
 | Tags | `GET /api/tags`, `POST /api/tags/manage` (rename/merge/delete) |
 | Highlights | `GET /api/raindrops/:id/highlights`, `POST/PATCH/DELETE` sur `/highlights/:hid` |
 | User & import | `GET /api/user`, `POST /api/parse-url`, `POST /api/check-urls` |
-| Utilitaires | `POST /api/library-audit`, `POST /api/empty-trash` |
+| Utilitaires | `POST /api/empty-trash` |
 | Jobs | `GET /api/jobs/:id` (statut), `GET /api/jobs/:id/events` (SSE progression) |
 | Santé | `GET /api/health` (état MCP, version du serveur) |
+
+Note : `PATCH /api/raindrops/:id {url}` → REST direct (`update_raindrop` v1.3.1 n'expose pas `url`).
 
 ### Contrats
 
