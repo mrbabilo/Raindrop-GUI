@@ -43,6 +43,16 @@ les décisions structurantes.
 - Aucun test n'appelle l'API Raindrop hors des tests d'intégration explicites
   (gardés par variable d'environnement, skippés sinon).
 
+## Conventions de code
+
+- **Taille des fichiers : lisibles et testables.** Cible **≤ 300 lignes** par
+  fichier de code (tests compris), plafond dur **400** — comme le cliquet de
+  StarHubTH. Un fichier qui déborde se découpe selon ses frontières
+  naturelles (une responsabilité par fichier) ou se signale, il ne grossit
+  pas « en attendant ».
+- Une responsabilité par fichier ; les tests cohabitent avec le code qu'ils
+  couvrent (`*.test.ts` voisin), un fichier de test par unité testée.
+
 ## Contraintes architecturales (non négociables, spec §3)
 
 - `@kud/mcp-raindrop-io` **épinglé à 1.3.1** dans `package.json` — jamais de
