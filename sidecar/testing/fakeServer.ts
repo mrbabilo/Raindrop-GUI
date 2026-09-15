@@ -2,96 +2,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { z } from "zod";
-
-// ─── Fixtures déterministes ──────────────────────────────────────────────────
-
-export interface FakeRaindrop {
-  id: number;
-  link: string;
-  title: string;
-  excerpt: string;
-  note: string;
-  tags: string[];
-  created: string;
-  lastUpdate: string;
-  important: boolean;
-  type: string;
-  cover: string | null;
-  collectionId: number;
-  removed: boolean; // corbeille
-  /**
-   * Présent uniquement sur les 2 doublons synthétiques ajoutés par
-   * makeFixtures (id de la raindrop source). Non sérialisé par toRaw ;
-   * sert à exclure ces extras du `count` paginé du search.
-   */
-  dupOf?: number;
-}
-
-let nextId = 1000;
-
-export function makeFixtures(raindropCount = 60) {
-  const domains = ["example.com", "docs.python.org", "github.com", "news.ycombinator.com"];
-  const tagPool = ["typescript", "rust", "design", "outils", "à-lire", "ia"];
-  const collections = [
-    { id: 101, title: "Dev", parentId: null as number | null, count: 0, public: false, view: "list" },
-    { id: 102, title: "Design", parentId: null, count: 0, public: false, view: "grid" },
-    { id: 201, title: "Rust", parentId: 101, count: 0, public: false, view: "list" },
-  ];
-  const raindrops: FakeRaindrop[] = [];
-  for (let i = 0; i < raindropCount; i++) {
-    const domain = domains[i % domains.length]!;
-    raindrops.push({
-      id: nextId++,
-      link: `https://${domain}/page-${i}`,
-      title: `Article ${i} sur ${domain}`,
-      excerpt: `Extrait ${i}`,
-      note: "",
-      tags: i % 3 === 0 ? [] : [tagPool[i % tagPool.length]!],
-      created: new Date(Date.UTC(2025, 0, 1 + (i % 28), 12)).toISOString(),
-      lastUpdate: new Date(Date.UTC(2025, 5, 1 + (i % 28), 12)).toISOString(),
-      important: i % 7 === 0,
-      type: "link",
-      cover: null,
-      collectionId: collections[i % collections.length]!.id,
-      removed: false,
-    });
-  }
-  // Doublons assumés pour les tests d'analyse
-  const dupSrc = raindrops[0]!;
-  raindrops.push({ ...dupSrc, id: nextId++, title: "Copie exacte", dupOf: dupSrc.id });
-  raindrops.push({
-    ...dupSrc,
-    id: nextId++,
-    title: "Copie normalisée",
-    link: dupSrc.link.replace("http://", "https://") + "/",
-    dupOf: dupSrc.id,
-  });
-  return { raindrops, collections, tags: tagPool };
-}
+import { makeFixtures, toRaw, nextId, type FakeRaindrop } from "./fixtures.js";
 
 // ─── Serveur factice ─────────────────────────────────────────────────────────
-
-/**
- * Sérialise au format BRUT Raindrop API (celui que renvoie le vrai package
- * MCP) : les mappers du sidecar sont ainsi testés contre la vraie forme.
- */
-function toRaw(r: FakeRaindrop) {
-  return {
-    id: r.id,
-    link: r.link,
-    title: r.title,
-    excerpt: r.excerpt,
-    note: r.note,
-    tags: r.tags,
-    created: r.created,
-    last_update: r.lastUpdate,
-    important: r.important,
-    type: r.type,
-    domain: new URL(r.link).hostname,
-    cover: r.cover ? [{ src: r.cover }] : [],
-    collection: { $id: r.collectionId },
-  };
-}
+// (fixtures et toRaw vivent dans ./fixtures.js — split imposé par le plafond
+// de 400 lignes ; contenu du brief sinon inchangé)
 
 const ok = (data: unknown) => ({ content: [{ type: "text" as const, text: JSON.stringify(data) }] });
 const err = (msg: string) => ({ content: [{ type: "text" as const, text: `Error: ${msg}` }] });
@@ -126,10 +41,7 @@ export function buildFakeRaindropServer(opts?: {
       if (important) items = items.filter((r) => r.important);
       if (notag) items = items.filter((r) => r.tags.length === 0);
       const start = page * per_page;
-      // count = bibliothèque de base (hors 2 doublons synthétiques, qui
-      // restent présents dans `items` pour les tests d'analyse)
-      const count = items.filter((r) => r.dupOf == null).length;
-      return ok({ count, items: items.slice(start, start + per_page).map(toRaw) });
+      return ok({ count: items.length, items: items.slice(start, start + per_page).map(toRaw) });
     },
   );
 
@@ -158,7 +70,7 @@ export function buildFakeRaindropServer(opts?: {
       const g = guard("create_raindrop");
       if (g) return g;
       const r: FakeRaindrop = {
-        id: nextId++,
+        id: nextId(),
         link: a.link,
         title: a.title ?? a.link,
         excerpt: "",
@@ -283,7 +195,7 @@ export function buildFakeRaindropServer(opts?: {
     async ({ title, parent_id }) => {
       const g = guard("create_collection");
       if (g) return g;
-      const c = { id: nextId++, title, parentId: parent_id ?? null, count: 0, public: false, view: "list" };
+      const c = { id: nextId(), title, parentId: parent_id ?? null, count: 0, public: false, view: "list" };
       fx.collections.push(c);
       return ok(c);
     },
@@ -414,7 +326,6 @@ export function buildFakeRaindropServer(opts?: {
       if (g) return g;
       if (!confirm) return ok({ message: "Pass confirm: true" });
       const n = fx.raindrops.filter((r) => r.removed).length;
-      for (const r of fx.raindrops) if (r.removed) r.removed = false; // vidée = disparue
       fx.raindrops.splice(0, fx.raindrops.length, ...fx.raindrops.filter((r) => !r.removed));
       return ok({ deleted: n });
     },

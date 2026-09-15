@@ -10,7 +10,8 @@ describe("fake MCP server", () => {
     const res = await client.callTool({ name: "search_raindrops", arguments: { per_page: 10 } });
     const text = (res.content as [{ type: string; text: string }])[0]!.text;
     const data = JSON.parse(text) as { count: number; items: unknown[] };
-    expect(data.count).toBe(30);
+    // 30 demandés + 2 doublons fixture = 32 — le count du vrai package inclut tout
+    expect(data.count).toBe(32);
     expect(data.items).toHaveLength(10);
     expect(fixtures.raindrops.length).toBeGreaterThan(30);
   });
