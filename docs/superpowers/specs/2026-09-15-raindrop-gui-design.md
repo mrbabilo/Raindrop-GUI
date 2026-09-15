@@ -230,7 +230,7 @@ Logs structurés (JSON) dans `~/Library/Application Support/Raindrop-GUI/logs/`,
 
 | Risque | Impact | Mitigation |
 |---|---|---|
-| `@kud/mcp-raindrop-io` peu maintenu (v1.3.1, un seul fichier source, adoption faible) | Bugs non corrigés, blocages | Dépendance épinglée, abstraction tool-par-tool permettant un rebranchement direct sur l'API Raindrop sans toucher au front |
+| `@kud/mcp-raindrop-io` peu maintenu (v1.3.1, un seul fichier source, adoption faible) — **confirmé le 2026-09-16 : repo archivé upstream** (README redirige vers un serveur MCP officiel Raindrop, OAuth 2.1) | Bugs non corrigés, blocages | Dépendance épinglée + abstraction tool-par-tool (rebranchement REST direct sans toucher au front) — la mitigation prévue s'applique ; migration vers le serveur MCP officiel = option Phase 2 (cf. `check_sources.py` qui surveille les évolutions) |
 | Limites API Raindrop (120 req/min, 50/page) | Lenteur perçue sur gros volumes | Recherche-d'abord, `bulk_raindrops`, jobs SSE, throttle |
 | stdio sérialise les appels MCP | Opérations en masse lentes | Jobs asynchrones + progression ; bulk côté serveur Raindrop |
 | Scan de liens externes (sites lents, anti-bot, réseau local) | Faux positifs, durée du scan | Catégorie `indéterminé` (vérification manuelle), retry + timeout, cache horodaté, scans incrémentaux, concurrence limitée |

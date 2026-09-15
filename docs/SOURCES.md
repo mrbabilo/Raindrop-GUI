@@ -1,0 +1,86 @@
+# Sources externes de Raindrop-GUI
+
+> ⚠️ Ce fichier est la **carte** de tout ce qui vit hors du dépôt. L'état
+> courant se relève par `python3 tools/check_sources.py` (référence dans
+> `.sources-baseline.json`) — ne pas recopier de versions ici, elles
+> pourriraient. Ce document porte les *rôles* et le *raisonnement*, le script
+> porte les *valeurs*.
+
+## 1. Comment vérifier
+
+```bash
+python3 tools/check_sources.py            # relève et compare (sortie 1 s'il y a un écart)
+python3 tools/check_sources.py --report   # relève et affiche tout, sans juger
+python3 tools/check_sources.py --offline  # seulement les contrôles locaux
+python3 tools/check_sources.py --update   # assume l'état courant comme référence
+```
+
+Même patron que StarHubFR : un relevé, une référence, un `--update` explicite
+visible dans le diff. **Un écart n'est pas une faute** — c'est une chose à
+aller regarder. Les sources injoignables ne comptent **pas** comme un écart ;
+`--update` conserve leur référence au lieu de l'écraser par du vide. L'API
+GitHub anonyme plafonne à 60 req/h : le script passe par `gh` si présent
+(5 000/h) et rend un message clair sur épuisement du quota.
+
+## 2. Les sources sondées
+
+### 2.1 `@kud/mcp-raindrop-io` — le pont (`mcp/kud`)
+
+Toute l'accès à Raindrop passe par lui (spec §2). **Épinglé à une version
+exacte** dans `package.json` — jamais de `npx @latest` (spec §3.1) ; le pin
+est lu en direct par le script, jamais codé dedans.
+
+Découvert à l'installation de la sonde (2026-09-16) : le dépôt amont est
+**archivé** (le README redirige vers un MCP officiel Raindrop, OAuth 2.1) et
+**ne publie aucune release GitHub**. On suit donc : le dernier **tag** croisé
+au pin (un nouveau tag = désarchivage probable — LE signal), le statut
+`archived`, et l'**empreinte du README**, surface où apparaîtraient des tools
+nouveaux (`update_raindrop` gagnant `url`, archivage, Stella — §5.1, §12).
+Un README qui change peut valoir « on peut retirer le REST direct §5.1 » ou
+« le MCP officiel est mûr, à évaluer ».
+
+### 2.2 `@modelcontextprotocol/sdk` — le client MCP (`sdk-mcp`)
+
+Le client du sidecar (transport stdio). Le dépôt est un **monorepo par
+changesets** : les tags `@paquet@x.y.z` sont les nouveaux paquets 2.0 (core,
+client…), le tag **sans préfixe** est celui du paquet `sdk` — le filtre de la
+sonde. Son corps de release, compact, est stocké dans la référence :
+**l'écart affiche le changelog**. Montée majeure (2.0) = vérifier la compat
+du client avant upgrade.
+
+### 2.3 `hono` — le serveur HTTP local (`hono`)
+
+Les endpoints REST + SSE du sidecar (127.0.0.1), comparés à la version
+**résolue** du lockfile. Mineures : passent seules (plage `^4.9`) ;
+**majeure** = breaking API à lire avant upgrade.
+
+### 2.4 `zod` — la validation (`zod`)
+
+Schémas des entrées et types partagés front/sidecar. La v4 a déjà cassé
+l'API de la v3 : une mineure saute, une majeure se lit avant.
+
+### 2.5 developer.raindrop.io — la référence API (`api-raindrop/docs`)
+
+La doc de l'API REST de **repli** (§3.3) et l'endroit où sont posées les
+contraintes que notre throttle construit dessus (**120 req/min**,
+**pagination 50**). L'empreinte porte sur le contenu **utile** — `<script>`
+et `<link>` retirés avant hachage (noms de fichiers hashés par build). Un
+changement de doc = nouveau champ, limite ou dépréciation : à relire.
+
+### 2.6 `constantes-épinglées` — la sonde de `--offline`
+
+Releve sur le disque le pin du MCP et la présence du JS spawné
+(`node_modules/…/dist/index.js`). Elle ne sort pas de la machine : elle
+attrape **sans réseau** le commit qui remplacerait le pin exact par une plage
+`^x.y.z` (contrainte CLAUDE.md), ou un `npm install` manquant.
+
+## 3. Suivies à la main (pas de sonde)
+
+- **API Raindrop REST sous jeton** (`api.raindrop.io/rest/v1`) — la sonde
+  consommerait le quota du compte ; la page docs est le signal.
+- **MCP officiel Raindrop** — annoncé dans le README de kud (2026-08).
+  Candidat Phase 2, à évaluer quand il bougera.
+- **Stella** — endpoint interne de l'app web, aucune API publique au
+  2026-09-15 (spec §12). Fragile par construction, hors sonde.
+- **Inspirations UX** — karakeep, Linkwarden, Bookmarks Organizer, buku,
+  GoSuki (spec §13) : des idées reprises, pas des dépendances.

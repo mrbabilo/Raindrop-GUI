@@ -1,0 +1,49 @@
+{
+  "api-raindrop/docs": {
+    "http": 200,
+    "octets": 473886,
+    "sha256": "85fa82c6d8ee6fda"
+  },
+  "constantes-épinglées": {
+    "epinglee": "1.3.1",
+    "mcp_dist_presente": true
+  },
+  "hono": {
+    "installee": "4.13.8",
+    "release": "v4.13.8",
+    "released_at": "2026-09-15T07:31:42Z"
+  },
+  "mcp/kud": {
+    "archive": true,
+    "dernier_push": "2026-08-28T21:30:44Z",
+    "dernier_tag": "v1.3.1",
+    "readme_sha256": "fff1d4b1969ca523"
+  },
+  "sdk-mcp": {
+    "installee": "1.30.0",
+    "notes": [
+      "## What's Changed",
+      "* fix(server): prioritize zod issues and format them by @mozmo15 in https://github.com/modelcontextprotocol/typescript-sdk/pull/1503",
+      "* chore(ci): switch publish to OIDC trusted publishing by @felixweinberger in https://github.com/modelcontextprotocol/typescript-sdk/pull/1839",
+      "* Add end-to-end test suite by @felixweinberger in https://github.com/modelcontextprotocol/typescript-sdk/pull/2167",
+      "* v1 stdio buffer limit by @KKonstantinov in https://github.com/modelcontextprotocol/typescript-sdk/pull/2239",
+      "* fix: support Zod 3.25 method literals by @mattzcarey in https://github.com/modelcontextprotocol/typescript-sdk/pull/2368",
+      "* Validate Content-Type by parsed media type instead of substring match (v1.x) by @felixweinberger in https://github.com/modelcontextprotocol/typescript-sdk/pull/2444",
+      "* fix: send SSE keep-alive comment frames from Streamable HTTP server transport (v1.x) by @mattzcarey in https://github.com/modelcontextprotocol/typescript-sdk/pull/2538",
+      "* fix(deps): widen @hono/node-server past GHSA-frvp-7c67-39w9 by @arimu1 in https://github.com/modelcontextprotocol/typescript-sdk/pull/2549",
+      "* Fix SSE keep-alive timer lifecycle in Streamable HTTP server transport (v1.x) by @felixweinberger in https://github.com/modelcontextprotocol/typescript-sdk/pull/2547",
+      "* chore: bump version to 1.30.0 by @felixweinberger in https://github.com/modelcontextprotocol/typescript-sdk/pull/2563",
+      "## New Contributors",
+      "* @mozmo15 made their first contribution in https://github.com/modelcontextprotocol/typescript-sdk/pull/1503",
+      "* @arimu1 made their first contribution in https://github.com/modelcontextprotocol/typescript-sdk/pull/2549",
+      "**Full Changelog**: https://github.com/modelcontextprotocol/typescript-sdk/compare/v1.29.0...1.30.0"
+    ],
+    "release": "1.30.0",
+    "released_at": "2026-07-27T17:54:36Z"
+  },
+  "zod": {
+    "installee": "4.6.5",
+    "release": "v4.6.5",
+    "released_at": "2026-09-13T23:25:34Z"
+  }
+}

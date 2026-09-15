@@ -27,6 +27,10 @@ les décisions structurantes.
 - `docs/superpowers/plans/` — plans d'implémentation (3 plans séquentiels :
   sidecar → front React → shell Tauri). Chaque plan est autosuffisant.
 - `docs/DOMAINE.md` — vocabulaire métier Raindrop + catégories d'analyse.
+- `docs/SOURCES.md` — la carte de tout ce qui vit **hors** du dépôt (MCP kud
+  épinglé — **archivé upstream**, API Raindrop, SDK/hono/zod). Veille par
+  `python3 tools/check_sources.py` (`--report` / `--update` / `--offline`,
+  baseline `.sources-baseline.json`) — changelogs et bugs corrigés en amont.
 - `docs/ROADMAP.md` — ce qu'il reste à faire. ⚠️ Vérifier `git log` avant de
   croire une case « à faire ».
 
