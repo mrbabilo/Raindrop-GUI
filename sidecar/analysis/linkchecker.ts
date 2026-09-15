@@ -153,10 +153,13 @@ export function redirectKindFor(statuses: number[]): RedirectKind {
 export async function checkAll(
   targets: { raindropId: number; url: string }[],
   opts: CheckerOptions & {
+    /** Seam d'injection du check (tests) — défaut : checkUrl prod. */
+    checkImpl?: (url: string) => Promise<CheckOutcome>;
     onUpdate(r: LinkCheckResult): void;
     isCancelled(): boolean;
   },
 ): Promise<{ stats: { checked: number; maxConcurrency: number } }> {
+  const check = opts.checkImpl ?? ((url: string) => checkUrl(url, opts));
   const results: LinkCheckResult[] = [];
   let index = 0;
   let inFlight = 0;
@@ -171,7 +174,7 @@ export async function checkAll(
       maxConcurrency = Math.max(maxConcurrency, inFlight);
       try {
         const t = targets[i]!;
-        const outcome = await checkUrl(t.url, opts);
+        const outcome = await check(t.url);
         const full: LinkCheckResult = { ...outcome, raindropId: t.raindropId, checkedAt: new Date().toISOString() };
         results.push(full);
         opts.onUpdate(full);

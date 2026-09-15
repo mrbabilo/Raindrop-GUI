@@ -1,10 +1,10 @@
-import type { AnalysisType, LinkCheckResult } from "../../shared/types.js";
+import type { AnalysisType } from "../../shared/types.js";
 import type { CallOutcome } from "../../shared/errors.js";
 import type { JobStore } from "../jobs/store.js";
 import { runJob } from "../jobs/store.js";
 import type { AnalysisCache } from "./cache.js";
 import { fetchLibrarySnapshot } from "./snapshot.js";
-import { checkUrl } from "./linkchecker.js";
+import { checkAll, checkUrl } from "./linkchecker.js";
 import type { CheckOutcome } from "./linkchecker.js";
 import { findDuplicates } from "./duplicates.js";
 
@@ -69,48 +69,37 @@ export class Scanner {
         return next;
       };
 
-      // Pool maison (sémantiques de checkAll : workers = min(concurrency, n),
-      // annulation coopérative ENTRE checks, onUpdate par résultat) — checkAll
-      // n'offre pas de seam d'injection du check, requis par les tests.
-      let index = 0;
+      // aborted : après l'échec d'un job, les workers survivants du pool
+      // (fail() ne pose pas cancelled) ne doivent plus rien empiler.
+      let aborted = false;
       let done = 0;
-      let inFlight = 0;
-      let maxConcurrency = 0;
       let sinceSave = 0;
-      await Promise.all(
-        Array.from({ length: Math.min(concurrency, targets.length) }, async () => {
-          while (true) {
-            if (j.isCancelled()) return;
-            const i = index++;
-            if (i >= targets.length) return;
-            inFlight++;
-            maxConcurrency = Math.max(maxConcurrency, inFlight);
-            try {
-              const t = targets[i]!;
-              const outcome = await check(t.url);
-              const full: LinkCheckResult = {
-                ...outcome,
-                raindropId: t.raindropId,
-                checkedAt: new Date().toISOString(),
-              };
-              this.deps.cache.setResult(full);
-              done++;
-              sinceSave++;
-              j.progress(done, targets.length, full.url);
-              if (sinceSave >= SAVE_EVERY) {
-                sinceSave = 0;
-                void requestSave(); // persistance périodique (résultats partiels)
-              }
-            } finally {
-              inFlight--;
-            }
+      const out = await checkAll(targets, {
+        timeoutMs: TIMEOUT_MS,
+        concurrency,
+        retry: 1,
+        checkImpl: (url) => check(url), // seam de test — défaut : checkUrl prod
+        onUpdate: (r) => {
+          if (aborted) return;
+          this.deps.cache.setResult(r);
+          done++;
+          sinceSave++;
+          j.progress(done, targets.length, r.url);
+          if (sinceSave >= SAVE_EVERY) {
+            sinceSave = 0;
+            void requestSave(); // persistance périodique (résultats partiels)
           }
-        }),
-      );
+        },
+        isCancelled: () => j.isCancelled(),
+      }).catch((e) => {
+        aborted = true;
+        throw e;
+      });
 
-      this.deps.cache.markScanDone("links");
+      // un scan annulé ne rafraîchit pas la fraîcheur affichée du dashboard
+      if (!j.isCancelled()) this.deps.cache.markScanDone("links");
       await requestSave(); // attend aussi les saves périodiques déjà en file
-      return { checked: done, maxConcurrency };
+      return out.stats;
     });
 
     const handle = job;
