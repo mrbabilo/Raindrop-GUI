@@ -90,6 +90,18 @@ contraintes que notre throttle construit dessus (**120 req/min**,
 et `<link>` retirés avant hachage (noms de fichiers hashés par build). Un
 changement de doc = nouveau champ, limite ou dépréciation : à relire.
 
+**Relue le 2026-09-16** (signal de la veille : −86 octets). Constantes du
+projet toutes confirmées — 120 req/min, `perpage` 50 max, `-1`/`-99`, `link`
+modifiable par `PUT /raindrop/{id}`, suppression → corbeille puis définitive.
+Quatre écarts relevés, traités en spec §12, §4.2 et dans les traps de
+`CLAUDE.md` (dont `unrestore`, **absent de l'API publique**).
+
+> **À faire à la prochaine passe sur la veille** : sonder
+> `https://developer.raindrop.io/llms-full.txt` (toute la doc en ~115 ko de
+> texte) au lieu de hacher 474 ko de SPA. L'écart deviendrait **lisible** —
+> on verrait *quelle ligne* de la doc a changé, pas seulement *que* quelque
+> chose a bougé. Changement volontairement séparé : il réécrit la référence.
+
 ### 2.7 `constantes-épinglées` — la sonde de `--offline`
 
 Releve sur le disque le pin du MCP et la présence du JS spawné

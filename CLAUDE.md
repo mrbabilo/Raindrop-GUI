@@ -84,15 +84,27 @@ les décisions structurantes.
 - **Le 429 est indétectable via MCP** : `raindropFetch` aplatit toute erreur
   HTTP en `Error: failed to …`. Rate limiting **proactif** uniquement — file
   séquentielle espacée de 550 ms (≈ 109 req/min < 120), retry réseau sur les
-  lectures seulement, jamais sur les écritures.
+  lectures seulement, jamais sur les écritures. **Borne (relu 2026-09-16)** :
+  l'API *expose* `X-RateLimit-Limit/Remaining/Reset` — lisibles seulement par
+  `sidecar/direct/raindropRest.ts`, jamais à travers le MCP. Ne pas s'en servir
+  pour desserrer la file : elle est partagée avec les appels MCP, qui restent
+  aveugles. (La doc s'auto-contredit : tableau `RateLimit-Remaining`, exemple
+  429 `X-RateLimit-Remaining` — lire les deux.)
 - **Une erreur tool MCP est un TEXTE préfixé `Error: `**, pas un flag
   `isError` — parser le premier bloc de contenu, ne jamais se fier au statut.
-- **Pagination : 50 items max par requête** ; corbeille = collection `-99`,
-  Tous = `0`, non classés = `-1`.
+- **Pagination : 50 items max par requête** (création en masse : **100**
+  objets max) ; corbeille = collection `-99`, Tous = `0`, non classés = `-1`.
 - **Imports relatifs avec extension `.js`** (moduleResolution nodenext) —
   sinon le build `tsc` est cassé au runtime.
 - **Tags au format brut** : l'API renvoie `{_id, count}` → normaliser en
   `{name, count}` côté sidecar ; le front ne voit jamais le format brut.
+- **`POST /raindrops/unrestore` n'est PAS dans l'API publique** (relu le
+  2026-09-16) — `sidecar/direct/raindropRest.ts` l'appelle pourtant, et son
+  test ne vérifie que l'URL construite sur un `fetch` mocké : **rien ne prouve
+  que le serveur l'accepte**. La voie documentée est
+  `PUT /raindrops/-99 {ids, collection:{$id}}`, qui exige une collection cible
+  et ne sait donc pas restaurer « à l'origine ». Statut : **à vérifier en réel
+  avant les Tasks 8/13/15** du plan 2 (cf. spec §4.2).
 - **Ne jamais commiter** : `MCP_RAINDROPIO_TOKEN`, `RAINDROP_TEST_TOKEN`,
   lockfile `sidecar.json`, `analysis.json` — tout vit dans app-data ou le
   trousseau, hors du dépôt.
