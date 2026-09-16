@@ -130,7 +130,11 @@ Ces points sont **contraignants** pour l'implémentation :
 
 > ⛔ **Restauration — l'endpoint utilisé n'existe pas (vérifié en réel le 2026-09-16).** `POST /raindrops/unrestore`, appelé par `sidecar/direct/raindropRest.ts`, répond **404** sur le compte de test, exactement comme une route inventée (contrôle négatif effectué ; les routes documentées répondent 200 au même instant). `PUT` et `/raindrop/unrestore` : 404 également. **Le code livré en Task 0 ne peut donc pas fonctionner en production** — son test ne vérifiait que l'URL construite sur un `fetch` mocké.
 >
-> La seule voie est `PUT /raindrops/-99 {ids, collection:{"$id": N}}`, qui **impose une collection de destination** : restaurer « à l'origine » n'est pas offert par l'API. À trancher avant les Tasks 8/13/15 : l'interface demande la destination, ou le sidecar mémorise la collection d'avant-corbeille au moment où c'est **lui** qui met à la corbeille (il ne saura rien des éléments mis à la corbeille ailleurs).
+> La seule voie est `PUT /raindrops/-99 {ids, collection:{"$id": N}}`, qui **impose une collection de destination**.
+>
+> **Et l'API ne conserve pas l'origine** — vérifié le 2026-09-16 par une sonde jetable (collection temporaire, bookmark créé puis mis à la corbeille, compte remis dans son état initial) : une fois à la corbeille, `collectionId` vaut `-99`, `collection.$id` vaut `-99`, `removed` passe à `true`, et **aucun champ ne porte la collection d'avant**. Restaurer « à l'origine » est donc impossible à partir des seules données de l'API : l'information doit venir de nous, ou être demandée à l'utilisateur.
+>
+> À trancher avant les Tasks 8/13/15 (§4.2 « restauration individuelle »).
 
 ### 4.3 Page « Revue de l'action » (aperçu destructeur)
 

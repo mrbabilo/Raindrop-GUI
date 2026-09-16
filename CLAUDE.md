@@ -104,7 +104,10 @@ les décisions structurantes.
   pourtant : **ce code ne peut pas marcher en production**, son test ne vérifie
   que l'URL sur un `fetch` mocké. Seule voie :
   `PUT /raindrops/-99 {ids, collection:{"$id": N}}` — **une destination est
-  obligatoire**, restaurer « à l'origine » n'existe pas côté API (spec §4.2).
+  obligatoire**. Et la corbeille **ne garde pas l'origine** (vérifié : à la mise
+  en corbeille `collectionId` → `-99`, `removed` → `true`, rien d'autre) :
+  restaurer « à l'origine » suppose que **nous** ayons noté la collection
+  d'avant (spec §4.2).
 - **`cache` et `broken` arrivent dans la réponse de liste** (vérifié le
   2026-09-16) : la copie permanente Pro (`cache.status === "ready"`) et le
   verdict serveur sont **gratuits** dans le snapshot, sans requête par item.
