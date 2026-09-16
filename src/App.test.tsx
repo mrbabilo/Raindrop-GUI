@@ -3,6 +3,18 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, beforeEach } from "vitest";
 import App from "./App";
 
+// Reproduit le stub par défaut de src/test/setup.ts, mais avec
+// prefers-color-scheme: dark — le cas "aucune préférence enregistrée,
+// OS en sombre" (mode "system" stocké implicitement).
+function matchMediaPrefersDark() {
+  return ((query: string) => ({
+    matches: query.includes("dark"),
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as never;
+}
+
 describe("App", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -26,6 +38,18 @@ describe("App", () => {
     render(<App />);
     const toggle = screen.getByRole("button", { name: "Passer au thème sombre" });
     await user.click(toggle);
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "Passer au thème clair" }),
+    ).toBeInTheDocument();
+  });
+
+  it("annonce le thème clair dès le premier rendu quand le système préfère le sombre", () => {
+    window.matchMedia = matchMediaPrefersDark();
+    render(<App />);
+    // L'app est déjà sombre (mode "system" + OS sombre) : le bouton doit
+    // annoncer l'action inverse dès le premier rendu, pas seulement après
+    // un clic — DESIGN.md §10, « un bouton nomme ce qui va se produire ».
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(
       screen.getByRole("button", { name: "Passer au thème clair" }),

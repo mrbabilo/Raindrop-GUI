@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
 import { t } from "./i18n/fr";
-import { initTheme, setTheme, type ThemeMode } from "./lib/theme";
+import { useTheme } from "./lib/theme";
 
 // Icônes SVG (DESIGN.md §9 : jamais d'emoji), grille 16px, trait 1,7.
 function SunIcon() {
@@ -29,14 +28,10 @@ function MoonIcon() {
 }
 
 export default function App() {
-  const [mode, setMode] = useState<ThemeMode>("system");
-  useEffect(() => setMode(initTheme()), []);
-
-  const isDark = mode === "dark";
+  const { resolved, setMode } = useTheme();
+  const isDark = resolved === "dark";
   function toggleTheme() {
-    const next: ThemeMode = isDark ? "light" : "dark";
-    setTheme(next);
-    setMode(next);
+    setMode(isDark ? "light" : "dark");
   }
 
   return (
