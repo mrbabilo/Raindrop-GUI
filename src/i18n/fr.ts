@@ -16,6 +16,8 @@ export const fr = {
   "sort.domain-asc": "Domaine",
   "view.list": "Liste",
   "view.mosaic": "Mosaïque",
+  "list.select": "Sélectionner {title}",
+  "list.loadingMore": "…",
   "filter.sort": "Tri",
   "filter.domain": "Domaine",
   "filter.domainPlaceholder": "domaine",

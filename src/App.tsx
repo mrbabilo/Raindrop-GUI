@@ -3,6 +3,7 @@ import { useTheme } from "./lib/theme";
 import { useHealth } from "./hooks/useStaticData";
 import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
+import { ListPane } from "./components/ListPane";
 
 // Icônes SVG (DESIGN.md §9 : jamais d'emoji), grille 16px, trait 1,7.
 function SunIcon() {
@@ -62,7 +63,7 @@ export default function App() {
       <TopBar />
       <div className="border-b border-app-border bg-app" aria-hidden="true" />
       <Sidebar />
-      <main className="overflow-y-auto bg-app-panel p-2">liste</main>
+      <ListPane />
       <aside className="overflow-y-auto bg-app p-2">détail</aside>
     </div>
   );

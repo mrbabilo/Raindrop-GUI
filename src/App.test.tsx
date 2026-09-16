@@ -3,13 +3,28 @@ import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ReactNode } from "react";
+// fixtures AVANT App (TDZ — même remarque que Sidebar.test.tsx) : mockApi
+// les référence dans l'implémentation du mock.
+import { raindrop, collections, tags } from "./test/fixtures";
 import App from "./App";
 
-// App consomme useHealth() → provider + mock du module api (jamais de fetch
-// réseau). getMock est hissé pour être piloté par test (mcp connecté/déconnecté).
+// App consomme useHealth() et — depuis que ListPane est monté (Task 7) —
+// useRaindrops() : provider + mock du module api ROUTÉ PAR CHEMIN, chaque
+// endpoint recevant la forme de son DTO (jamais de fetch réseau). Seule la
+// réponse health est pilotée par test (mcp connecté/déconnecté).
 const getMock = vi.hoisted(() => vi.fn());
 
 vi.mock("./lib/api", () => ({ api: { get: getMock } }));
+
+function mockApi(mcp: string) {
+  getMock.mockReset().mockImplementation((path: string) => {
+    if (path === "/api/raindrops")
+      return Promise.resolve({ items: [raindrop()], count: 1, page: 0, perPage: 50 });
+    if (path === "/api/collections") return Promise.resolve({ items: collections });
+    if (path === "/api/tags") return Promise.resolve({ items: tags });
+    return Promise.resolve({ status: "ok", mcp });
+  });
+}
 
 function wrapper({ children }: { children: ReactNode }) {
   return (
@@ -35,7 +50,7 @@ describe("App", () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.className = "";
-    getMock.mockReset().mockResolvedValue({ status: "ok", mcp: "connected" });
+    mockApi("connected");
   });
 
   it("affiche le titre de l'app", () => {
@@ -74,7 +89,7 @@ describe("App", () => {
   });
 
   it("signale l'interruption MCP quand health le rapporte", async () => {
-    getMock.mockResolvedValue({ status: "ok", mcp: "disconnected" });
+    mockApi("disconnected");
     render(<App />, { wrapper });
     await waitFor(() =>
       expect(screen.getByText("Connexion Raindrop interrompue")).toBeInTheDocument(),
