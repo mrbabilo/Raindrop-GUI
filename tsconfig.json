@@ -13,5 +13,5 @@
     "rootDir": "."
   },
   "include": ["shared/**/*.ts", "sidecar/**/*.ts"],
-  "exclude": ["**/*.test.ts", "sidecar/testing/**"]
+  "exclude": ["**/*.test.ts", "sidecar/testing/**", "src", "index.html"]
 }
