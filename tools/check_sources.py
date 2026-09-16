@@ -16,6 +16,9 @@ empreinte du contenu utile) et `local` (l'épinglage du dépôt, lu sur le
 disque — la sonde de `--offline` : attrape sans réseau le commit qui remplace
 le pin exact par une plage).
 
+Le **registre** des sources (ce qu'on surveille et pourquoi) est dans
+`tools/sources_registry.py` ; ici vit la mécanique (sondes, comparaison, CLI).
+
 Usage :
     python3 tools/check_sources.py              # relève et compare (sortie 1 si écart)
     python3 tools/check_sources.py --report     # relève et affiche, sans juger
@@ -45,7 +48,9 @@ BASELINE = os.path.join(ROOT, ".sources-baseline.json")
 TIMEOUT = 30
 UA = "Raindrop-GUI-source-check/1.0 (+https://github.com/mrbabilo/Raindrop-GUI)"
 
-MCP_PACKAGE = "@kud/mcp-raindrop-io"
+# Le registre — ce qu'on surveille — vit à côté : un fichier de données,
+# lu depuis le dossier du script (usage : `python3 tools/check_sources.py`).
+from sources_registry import MCP_PACKAGE, SOURCES, UNPROBED  # noqa: E402
 
 
 # ── Sortie ────────────────────────────────────────────────────────────────────
@@ -201,67 +206,6 @@ def probe_pins(spec):
     if pin and not pin[0].isdigit():
         state["alerte"] = f"« {pin} » n'est pas une version exacte — l'épinglage est une contrainte (CLAUDE.md)"
     return state
-
-
-# ── Le registre ───────────────────────────────────────────────────────────────
-# L'ordre est celui de `docs/SOURCES.md` : pont MCP, dépendances, repli, local.
-
-SOURCES = [
-    {"key": "mcp/kud", "kind": "repo", "repo": "kud/mcp-raindrop-io",
-     "meta": True, "tags": True, "pin": MCP_PACKAGE,
-     "readme": "https://raw.githubusercontent.com/kud/mcp-raindrop-io/main/README.md",
-     "role": "le serveur MCP épinglé (1.3.1) — tout l'accès Raindrop passe par lui",
-     "used_by": "sidecar (spawn direct de node_modules/…/dist/index.js)",
-     "note": "dépôt ARCHIVÉ en amont, sans release GitHub : on suit le dernier "
-             "tag (croisé au pin, délibéré — spec §3.1), le statut d'archive et "
-             "l'empreinte du README. Un nouveau tag ou un désarchivage = LE "
-             "signal ; un README qui change veut dire nouveaux tools "
-             "(update_raindrop + url, archivage, Stella) — ou le MCP officiel "
-             "annoncé dans ce même README"},
-
-    {"key": "sdk-mcp", "kind": "repo", "repo": "modelcontextprotocol/typescript-sdk",
-     "release_filter": r"^\d", "notes": True, "lock": "@modelcontextprotocol/sdk",
-     "role": "le SDK MCP — le client du sidecar, transport stdio",
-     "used_by": "sidecar (client MCP)",
-     "note": "monorepo par changesets : les tags @paquet@x.y.z sont les nouveaux "
-             "paquets 2.0, le tag **sans** préfixe est le paquet sdk. Corps de "
-             "release stocké : l'écart affiche le changelog. Majeure → compat client"},
-
-    {"key": "hono", "kind": "repo", "repo": "honojs/hono", "lock": "hono",
-     "role": "le serveur HTTP local du sidecar (127.0.0.1, REST + SSE)",
-     "used_by": "sidecar (serveur API)",
-     "note": "plage ^4.9 : les mineures passent seules ; une majeure = breaking API"},
-
-    {"key": "zod", "kind": "repo", "repo": "colinhacks/zod", "lock": "zod",
-     "role": "la validation des schémas (entrées des endpoints, types partagés)",
-     "used_by": "sidecar (validation), types partagés front",
-     "note": "la v4 a déjà cassé l'API de la v3 : une mineure saute, une majeure se lit"},
-
-    {"key": "api-raindrop/docs", "kind": "page",
-     "url": "https://developer.raindrop.io", "hash_html": True,
-     "role": "la référence de l'API REST de repli — et ses contraintes (120 req/min, 50/page)",
-     "used_by": "sidecar/direct/raindropRest.ts (repli §3.3), file d'attente MCP",
-     "note": "l'empreinte détecte un changement de doc — nouveau champ, "
-             "nouvelle limite, dépréciation : à relire avant de coder"},
-
-    {"key": "constantes-épinglées", "kind": "local", "package": MCP_PACKAGE,
-     "role": "l'épinglage et le JS du MCP, tels que posés dans ce dépôt",
-     "used_by": "package.json, node_modules",
-     "note": "la sonde de --offline : elle ne sort pas de la machine"},
-]
-
-# Sources sans sonde automatique : les sonder consommerait le jeton/quota du
-# compte, ou n'a pas de sens avant Phase 2.
-UNPROBED = [
-    ("API Raindrop REST (sous jeton)", "api.raindrop.io/rest/v1 — consommerait "
-     "le quota du compte ; la page docs est le signal", "sidecar/direct/raindropRest.ts"),
-    ("MCP officiel Raindrop", "annoncé dans le README de kud (2026-08) — OAuth 2.1, "
-     "pas de token statique. À évaluer en Phase 2", "—"),
-    ("Stella", "endpoint interne de l'app web Raindrop, aucune API publique au "
-     "2026-09-15 — Phase 2, fragile par construction", "spec §12"),
-    ("Inspirations UX", "karakeep, Linkwarden, Bookmarks Organizer, buku, GoSuki — "
-     "des idées, pas des dépendances", "spec §13"),
-]
 
 
 # ── Comparaison ───────────────────────────────────────────────────────────────

@@ -153,6 +153,8 @@ Mode **clair/sombre suivant le système** (tokens Tailwind), choix manuel possib
 
 L'analyse des doublons, liens morts et redirections est effectuée **par l'app** (sidecar), pas par Raindrop — exigence utilisateur. Le tool MCP `library_audit` n'est **pas utilisé** ; les filtres serveur `broken`/`duplicates` non plus.
 
+> **Ce rejet ne dépend pas du pont utilisé.** Le candidat de reprise §10.1 expose lui aussi `library_audit`, `find_duplicates`, `remove_duplicates` et `organize_by_topic` : ils restent écartés pour la même raison, et `remove_duplicates` en ajoute une — c'est une suppression en masse **sans prévisualisation**, incompatible avec la page Revue de l'action (§4.3), par laquelle toute action de masse doit passer. Une migration du pont ne rouvre pas ce choix.
+
 - **Récupération** : snapshot paginé de la bibliothèque via `search_raindrops` (50/requête, throttle), servi depuis le cache local une fois frais.
 - **Doublons** (calcul pur, instantané) : groupes par URL exacte, puis par URL **normalisée** (schéma http/https unifié, slash final, paramètres de tracking `utm_*` retirés) ; détection optionnelle « douce » (même domaine + titre identique) présentée séparément.
 - **Liens morts + redirections** (scan réseau) : requêtes HTTP depuis le sidecar — **concurrence 6, timeout 10 s, HEAD puis GET si 405/ambigu, 1 retry réseau** avant classification. Catégories : `ok` / `redirection` (permanente 301/308 ou temporaire, avec chaîne et URL finale) / `mort` (4xx/410, 5xx, DNS, timeout) / `indéterminé` (403 anti-bot, captcha → vérification manuelle).
@@ -232,11 +234,37 @@ Logs structurés (JSON) dans `~/Library/Application Support/Raindrop-GUI/logs/`,
 
 | Risque | Impact | Mitigation |
 |---|---|---|
-| `@kud/mcp-raindrop-io` peu maintenu (v1.3.1, un seul fichier source, adoption faible) — **confirmé le 2026-09-16 : repo archivé upstream** (README redirige vers un serveur MCP officiel Raindrop, OAuth 2.1) | Bugs non corrigés, blocages | Dépendance épinglée + abstraction tool-par-tool (rebranchement REST direct sans toucher au front) — la mitigation prévue s'applique ; migration vers le serveur MCP officiel = option Phase 2 (cf. `check_sources.py` qui surveille les évolutions) |
+| `@kud/mcp-raindrop-io` peu maintenu (v1.3.1, un seul fichier source, adoption faible) — **confirmé le 2026-09-16 : repo archivé upstream** (README redirige vers un serveur MCP officiel Raindrop, OAuth 2.1) | Bugs non corrigés, blocages | Dépendance épinglée + abstraction tool-par-tool (rebranchement REST direct sans toucher au front) — la mitigation prévue s'applique ; migration = option Phase 2, candidat identifié et évalué en **§10.1** (cf. `check_sources.py`, source `mcp/adeze`) |
 | Limites API Raindrop (120 req/min, 50/page) | Lenteur perçue sur gros volumes | Recherche-d'abord, `bulk_raindrops`, jobs SSE, throttle |
 | stdio sérialise les appels MCP | Opérations en masse lentes | Jobs asynchrones + progression ; bulk côté serveur Raindrop |
 | Scan de liens externes (sites lents, anti-bot, réseau local) | Faux positifs, durée du scan | Catégorie `indéterminé` (vérification manuelle), retry + timeout, cache horodaté, scans incrémentaux, concurrence limitée |
 | Endpoint interne Stella indisponible | — | Hors Phase 1 (voir §12) |
+
+
+### 10.1 Reprise du pont MCP — candidat évalué (2026-09-16)
+
+Le pont épinglé étant archivé, l'écosystème a été passé en revue. Un seul
+serveur MCP Raindrop est encore vivant : **`adeze/raindrop-mcp` v2.4.5**
+(MIT, TypeScript, 185 étoiles, dernier push 2026-07). Constats établis **en
+lisant le JS publié** (`npm pack`), pas sa documentation :
+
+| Ce qu'il apporterait | Ce qu'il coûterait |
+|---|---|
+| `bookmark_manage` pose `link` dans la charge de mise à jour : **l'URL est modifiable** → supprime le trap n°1 et l'appel REST direct de correction des redirections (`sidecar/direct/raindropRest.ts`) | **Ses vingt tools portent des noms entièrement différents** de kud : réécriture de la couche d'appel MCP, du serveur MCP factice et des tests qui en dépendent |
+| Rate limiting réel embarqué (`rate-limiter-flexible`) là où le 429 nous est **invisible** à travers kud (trap n°2) | Tire **`openai`** (SDK LLM, dans une phase dont le périmètre exclut l'IA) et **`express`** (second serveur HTTP à côté de Hono) dans l'arbre de dépendances du sidecar |
+| Cache (`keyv`) et OAuth2 (`RAINDROP_CLIENT_ID/SECRET/REDIRECT_URI`) — cf. §12 | **Aucun tool `unrestore`** en 2.4.5 : l'appel REST direct reste nécessaire de toute façon |
+| Transport **stdio présent dans le binaire** (vérifié dans `build/index.js`, avec arrêt propre SIGINT/SIGTERM) : notre modèle de spawn (§2, §3.1) resterait valable | Un pont actif reste un pont tiers : le risque de §10 change de titulaire, il ne disparaît pas |
+
+**Décision : on ne migre pas en Phase 1.** Le pont épinglé fonctionne, il est
+couvert par des tests, et le seul manque qu'il nous impose (l'URL) est déjà
+contourné par une abstraction prévue pour ça. Migrer en cours de route
+casserait la couche testée pour un bénéfice que le contournement rend faible.
+
+**Ce qui ferait basculer** : une panne réelle du pont épinglé (l'API Raindrop
+change, un bug non corrigé), ou un besoin Phase 2 qui dépende de ce que kud
+n'a pas. La sonde `mcp/adeze` surveille les deux signaux utiles — une majeure
+(le coût de migration est dans les noms de tools) et l'apparition d'un
+`unrestore`.
 
 ---
 
@@ -257,6 +285,8 @@ Multi-utilisateur, auto-hébergement, réplication/sync locale des données (Rai
 - **Correction de redirection : conserver l'ancienne URL** (inspiration buku, qui conserve l'ancienne URL en métadonnée) — option « noter l'ancienne URL » dans la note du bookmark lors du « Remplacer par l'URL finale ».
 - **Spike Stella** optionnel : rétro-ingénierie de l'endpoint interne de l'app web (aucune API publique au 2026-09-15) pour la recherche sémantique ; réutilisation de l'abonnement Pro. Fragilité assumée.
 - Archivage de pages (link rot) : capacité **Pro côté Raindrop**, non exposée par le MCP actuel — à surveiller en cas d'évolution du serveur MCP ou de l'API. Alternative locale si jamais exposée : un module type **ArchiveBox** piloté en job (piste relevée via gosuki).
+- **OAuth2 à la place du token collé** (relevé le 2026-09-16 : supporté par `adeze/raindrop-mcp` via `RAINDROP_CLIENT_ID/SECRET/REDIRECT_URI`, et par `dedene/raindrop-cli` par redirect local) — supprimerait l'étape « coller un token » du premier lancement (**§6**). Dépend du pont : à trancher avec §10.1, pas avant.
+- **Formats d'export élargis** (inspiration `dedene/raindrop-cli` : CSV, HTML, ZIP, et import Netscape HTML) — à noter que c'est un **changement de périmètre**, pas un simple ajout : §11 exclut aujourd'hui tout import/export autre que le CSV de revue. À rouvrir explicitement si le besoin se confirme.
 - Packaging du sidecar en binaire autonome, E2E (Playwright), écriture des highlights.
 
 ---
@@ -267,4 +297,5 @@ Multi-utilisateur, auto-hébergement, réplication/sync locale des données (Rai
 - API Raindrop.io : https://developer.raindrop.io (120 req/min, pagination 50, aucune API IA/Stella au 2026-09-15).
 - SDK MCP : `@modelcontextprotocol/sdk` (client), transport stdio.
 - Inspirations UX (analysées le 2026-09-15) : [karakeep](https://github.com/karakeep-app/karakeep) (composer d'ajout permanent, tags cliquables, vues, mode bulk), [Linkwarden](https://github.com/linkwarden/linkwarden) (confirmation collections/bulk/sombre), [Bookmarks Organizer](https://addons.mozilla.org/fr/firefox/addon/bookmarks-organizer/) (catégories d'audit, scan progressif, exclusions, redirections).
+- **Revue de l'écosystème Raindrop (2026-09-16)** : [`adeze/raindrop-mcp`](https://github.com/adeze/raindrop-mcp) — v2.4.5, actif, MIT : **seul serveur MCP Raindrop encore maintenu**, retenu comme candidat de reprise (§10.1) et mis sous surveillance (`docs/SOURCES.md` §2.2). [`dedene/raindrop-cli`](https://github.com/dedene/raindrop-cli) — Go, v0.1.1, 11 étoiles, sans push depuis 2026-02 : trop jeune pour être une dépendance et étranger à un sidecar Node, retenu pour ses **idées** d'export/import (§12). Écartés : `raindropio/extensions` (archivé 2020), `raindrop-io-py` (mainteneur désengagé), diverses CLI tierces invérifiables — aucune n'apporte quoi que ce soit à une GUI Tauri à sidecar Node.
 - Autres sources analysées le 2026-09-16 : [buku](https://github.com/jarun/buku) (tags automatiques d'erreurs/redirections, conservation de l'ancienne URL à la correction, Wayback Machine, refresh multi-threadé — retenu partiellement, cf. §12), [GoSuki](https://gosuki.net) (agrégation multi-sources navigateurs/GitHub/Reddit, dossiers→tags, sync P2P — hors périmètre : Raindrop reste la source de vérité ; piste ArchiveBox pour l'archivage local).

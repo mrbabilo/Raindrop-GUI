@@ -21,6 +21,10 @@ logs/
 # Lanceurs personnels (config machine locale, cf. StarHubTH)
 glm.sh
 
+# Python (outils de veille : tools/check_sources.py importe le registre)
+__pycache__/
+*.pyc
+
 # macOS
 .DS_Store
 
