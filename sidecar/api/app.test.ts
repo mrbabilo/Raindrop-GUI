@@ -79,4 +79,43 @@ describe("app", () => {
     expect(res.status).toBe(200);
     expect(called).toBe(true);
   });
+
+  it("POST /api/mcp/restart en échec → 503 MCP_CRASHED (erreur uniforme)", async () => {
+    const app = appFor({ restart: async () => { throw new Error("reconnexion impossible"); } });
+    const res = await app.request("/api/mcp/restart", {
+      method: "POST",
+      headers: { Authorization: "Bearer test-token" },
+    });
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe("MCP_CRASHED");
+    expect(body.error.message).toBe("reconnexion impossible");
+  });
+
+  it("preflight OPTIONS depuis une origine Tauri → 204 + headers CORS", async () => {
+    const res = await appFor().request("/api/health", {
+      method: "OPTIONS",
+      headers: {
+        Origin: "tauri://localhost",
+        "Access-Control-Request-Method": "GET",
+      },
+    });
+    expect(res.status).toBe(204);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("tauri://localhost");
+    expect(res.headers.get("Access-Control-Allow-Methods")).toBe("GET, POST, PATCH, DELETE, OPTIONS");
+    expect(res.headers.get("Access-Control-Allow-Headers")).toBe("Authorization, Content-Type");
+    expect(res.headers.get("Access-Control-Max-Age")).toBe("86400");
+  });
+
+  it("GET avec Origin Tauri → header ACAO présent (sans origine : aucun header CORS)", async () => {
+    const res = await appFor().request("/api/health", {
+      headers: { Origin: "tauri://localhost", Authorization: "Bearer test-token" },
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("tauri://localhost");
+
+    const noOrigin = await get(appFor(), "/api/health");
+    expect(noOrigin.status).toBe(200);
+    expect(noOrigin.headers.get("Access-Control-Allow-Origin")).toBeNull();
+  });
 });

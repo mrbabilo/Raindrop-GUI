@@ -12,10 +12,14 @@ export function jobSse(job: JobHandle, c: Context): Response {
   let heartbeat: ReturnType<typeof setInterval> | null = null;
   return streamSSE(c, async (stream) => {
     unsub = job.subscribe((evt) => {
-      void stream.writeSSE({ event: evt.kind, data: JSON.stringify("result" in evt ? evt.result : evt) });
+      // writeSSE rejette si le client s'est déconnecté : ne jamais laisser
+      // devenir un rejet non géré (crash Node).
+      void stream
+        .writeSSE({ event: evt.kind, data: JSON.stringify("result" in evt ? evt.result : evt) })
+        .catch(() => undefined);
     });
     heartbeat = setInterval(() => {
-      void stream.writeSSE({ event: "ping", data: String(Date.now()) });
+      void stream.writeSSE({ event: "ping", data: String(Date.now()) }).catch(() => undefined);
     }, 15_000);
     // libérer à la déconnexion du client
     c.req.raw.signal.addEventListener("abort", () => {

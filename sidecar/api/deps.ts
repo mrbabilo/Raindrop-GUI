@@ -24,6 +24,34 @@ export interface SidecarDeps {
   direct: { updateRaindropUrl(id: number, url: string): Promise<CallOutcome<{ id: number }>> };
 }
 
-export function makeMcpCaller(lifecycle: McpLifecycle, throttle: Throttle): SidecarDeps["mcp"] {
-  return (tool, args, timeoutMs) => throttle.run(() => lifecycle.call(tool, args, timeoutMs));
+/** Tools en LECTURE seule — seuls autorisés à être rejoués (jamais les
+ *  écritures : un retry de create/edit/double risquerait un doublon). */
+const READ_TOOLS = new Set([
+  "search_raindrops", "get_raindrop", "get_collections", "get_child_collections",
+  "get_collection", "get_tags", "get_highlights", "get_user", "parse_url", "check_urls_exist",
+]);
+
+/**
+ * Appel tool MCP avec :
+ * - timeout par appel (opts.timeoutMs, défaut 30 s — MCP_TIMEOUT_MS), overridable
+ *   par appel (le paramètre timeoutMs du caller reste prioritaire) ;
+ * - retry UNIQUE après opts.retryDelayMs (défaut 2 000 ms) sur échec
+ *   RAINDROP_API d'un tool de lecture — le 429 est indétectable via MCP, cette
+ *   relance est la face réactive du rate limiting (jamais sur les écritures).
+ * Le résultat du retry est retourné tel quel (ok ou ko).
+ */
+export function makeMcpCaller(
+  lifecycle: McpLifecycle,
+  throttle: Throttle,
+  opts?: { timeoutMs?: number; retryDelayMs?: number },
+): SidecarDeps["mcp"] {
+  const defaultTimeoutMs = opts?.timeoutMs ?? 30_000;
+  const retryDelayMs = opts?.retryDelayMs ?? 2_000;
+  return (tool, args, timeoutMs) =>
+    throttle.run(() => lifecycle.call(tool, args, timeoutMs ?? defaultTimeoutMs)).then((first) => {
+      if (!(!first.ok && first.code === "RAINDROP_API" && READ_TOOLS.has(tool))) return first;
+      return new Promise((r) => setTimeout(r, retryDelayMs)).then(() =>
+        throttle.run(() => lifecycle.call(tool, args, timeoutMs ?? defaultTimeoutMs)),
+      );
+    });
 }

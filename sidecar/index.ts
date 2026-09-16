@@ -29,7 +29,7 @@ const logger = createLogger(join(dataDir, "logs"), { level: cfg.LOG_LEVEL });
 logger.info("démarrage sidecar", { node: process.versions.node, pid: process.pid });
 
 // Lockfile : réutilisation si un sidecar vivant existe déjà (reload webview/HMR)
-const preLock = await acquireLock(dataDir, { port: 0, token: cfg.LOCAL_API_TOKEN });
+const preLock = await acquireLock(dataDir, { port: 0 });
 if (preLock === "reused") {
   logger.warn("sidecar déjà actif (lockfile + pid vivant) — sortie");
   await logger.close();
@@ -60,11 +60,12 @@ const scanner = new Scanner({
   jobs,
   cache,
   concurrency: cfg.LINK_CONCURRENCY,
+  timeoutMs: cfg.LINK_TIMEOUT_MS,
   ttlDays: cfg.ANALYSIS_TTL_DAYS,
 });
 
 const deps: SidecarDeps = {
-  mcp: makeMcpCaller(lifecycle, throttle),
+  mcp: makeMcpCaller(lifecycle, throttle, { timeoutMs: cfg.MCP_TIMEOUT_MS }),
   state: () => lifecycle.state,
   restart: () => lifecycle.restart(),
   jobs,
@@ -84,7 +85,7 @@ const server = serve(
     logger.info("api prête", { port: info.port });
     // réécrit le lockfile avec le port réel — acquireLock lirait son propre pid
     // vivant et renverrait "reused" sans rien écrire
-    await writeLockfile(dataDir, { port: info.port, token: cfg.LOCAL_API_TOKEN });
+    await writeLockfile(dataDir, { port: info.port });
     logger.info("sidecar prêt", { port: info.port, mcp: lifecycle.state });
   },
 );

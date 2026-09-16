@@ -18,6 +18,8 @@ export interface ScannerDeps {
   /** Seam de test — défaut : checkUrl prod (timeout 10 s, 1 retry réseau). */
   check?: (url: string) => Promise<CheckOutcome>;
   concurrency?: number;
+  /** Timeout par requête HTTP du link checker (LINK_TIMEOUT_MS) — défaut 10 s. */
+  timeoutMs?: number;
   ttlDays?: number;
 }
 
@@ -35,7 +37,8 @@ export class Scanner {
     this.running.add(type);
     const ttlDays = this.deps.ttlDays ?? 30;
     const concurrency = this.deps.concurrency ?? 6;
-    const check = this.deps.check ?? ((url: string) => checkUrl(url, { timeoutMs: TIMEOUT_MS, retry: 1 }));
+    const timeoutMs = this.deps.timeoutMs ?? TIMEOUT_MS;
+    const check = this.deps.check ?? ((url: string) => checkUrl(url, { timeoutMs, retry: 1 }));
 
     const job = runJob(this.deps.jobs, `scan-${type}`, 0, async (j) => {
       const snap = await fetchLibrarySnapshot(this.deps.mcp, {
@@ -75,7 +78,7 @@ export class Scanner {
       let done = 0;
       let sinceSave = 0;
       const out = await checkAll(targets, {
-        timeoutMs: TIMEOUT_MS,
+        timeoutMs,
         concurrency,
         retry: 1,
         checkImpl: (url) => check(url), // seam de test — défaut : checkUrl prod

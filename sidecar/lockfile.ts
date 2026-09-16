@@ -1,9 +1,11 @@
 import { readFile, writeFile, unlink, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
+// Ruling R15 : le lockfile NE porte PAS le token local. Le token ne doit
+// jamais figer en clair sur disque (spec §3.7, qui prime sur §3.6) ; Tauri
+// connaît le token qu'il a généré — le lockfile n'a pas à le porter.
 export interface LockfileData {
   port: number;
-  token: string;
   pid: number;
   startedAt: string;
 }
@@ -36,7 +38,7 @@ export function isPidAlive(pid: number): boolean {
 
 export async function writeLockfile(
   dataDir: string,
-  data: { port: number; token: string; pid?: number },
+  data: { port: number; pid?: number },
 ): Promise<void> {
   await mkdir(dataDir, { recursive: true });
   // pid injectable (seam de test — simuler un pid mort) ; prod : process.pid
@@ -54,7 +56,7 @@ export async function writeLockfile(
  */
 export async function acquireLock(
   dataDir: string,
-  data: { port: number; token: string },
+  data: { port: number },
 ): Promise<"created" | "reused"> {
   const existing = await readLockfile(dataDir);
   if (existing && isPidAlive(existing.pid)) return "reused";

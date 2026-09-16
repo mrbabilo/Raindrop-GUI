@@ -25,13 +25,25 @@ export function createApp(deps: SidecarDeps, opts: { localToken: string }): Hono
   // doit être celui du webview Tauri ou d'un serveur de dev local.
   // Adaptation brief : enregistré AVANT l'auth Bearer — une origine forgée est
   // rejetée 403 même sans token (sinon elle serait écrasée par le 401).
+  // CORS minimal (spec §3.7) : même liste locale — les origines autorisées
+  // reçoivent les headers CORS (le webview Tauri en a besoin pour lire les
+  // réponses) ; pas d'Origin ou origine non locale → aucun header CORS.
+  // Le preflight OPTIONS est répondu ici (204, sans corps) : les navigateurs
+  // n'envoient jamais Authorization sur un preflight, il ne doit donc pas
+  // traverser le middleware d'auth.
   const LOCAL_ORIGIN =
     /^(tauri:\/\/localhost|https:\/\/tauri\.localhost|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)$/;
   app.use("/api/*", async (c, next) => {
     const origin = c.req.header("Origin");
-    if (origin && !LOCAL_ORIGIN.test(origin)) {
+    if (!origin) return next();
+    if (!LOCAL_ORIGIN.test(origin)) {
       return c.json({ error: { code: "INVALID_INPUT", message: "origine non autorisée" } }, 403);
     }
+    c.header("Access-Control-Allow-Origin", origin);
+    c.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
+    c.header("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    c.header("Access-Control-Max-Age", "86400");
+    if (c.req.method === "OPTIONS") return c.body(null, 204);
     return next();
   });
 
@@ -47,7 +59,13 @@ export function createApp(deps: SidecarDeps, opts: { localToken: string }): Hono
   );
 
   app.post("/api/mcp/restart", async (c) => {
-    await deps.restart();
+    // lifecycle.restart() rejette quand la reconnexion échoue — erreur uniforme
+    // (MCP_CRASHED → 503) au lieu d'une 500 nue.
+    try {
+      await deps.restart();
+    } catch (e) {
+      return apiError(c, "MCP_CRASHED", e instanceof Error ? e.message : String(e));
+    }
     return c.json({ status: "restarted", mcp: deps.state() });
   });
 
