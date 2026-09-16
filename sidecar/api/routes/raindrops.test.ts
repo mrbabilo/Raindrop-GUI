@@ -143,4 +143,31 @@ describe("routes raindrops", () => {
     expect(res.status).toBe(200);
     expect(spy[0]).toEqual(["bulk_raindrops", { operation: "move", collection_id: 0, ids: [1000, 1001], to_collection_id: 101 }]);
   });
+
+  it("POST /unrestore restaure depuis la corbeille", async () => {
+    const calls: number[][] = [];
+    const deps = {
+      mcp: (tool: string, args: Record<string, unknown>) => conn.call(tool, args),
+      state: () => "connected" as const,
+      restart: async () => undefined,
+      jobs: { get: () => undefined, list: () => [] } as unknown as SidecarDeps["jobs"],
+      cache: {} as SidecarDeps["cache"],
+      scanner: { startScan: () => "", isRunning: () => false },
+      direct: {
+        updateRaindropUrl: async () => ({ ok: true as const, data: { id: 1 } }),
+        unrestore: async (ids: number[]) => {
+          calls.push(ids);
+          return { ok: true as const, data: { restored: ids.length } };
+        },
+      },
+    };
+    const app2 = createApp(deps as SidecarDeps, { localToken: "t" });
+    const res = await req(app2, "/api/raindrops/unrestore", {
+      method: "POST",
+      body: JSON.stringify({ ids: [1000] }),
+    }, "t");
+    expect(res.status).toBe(200);
+    expect((await res.json()) as { restored: number }).toEqual({ restored: 1 });
+    expect(calls).toEqual([[1000]]);
+  });
 });

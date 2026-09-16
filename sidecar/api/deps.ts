@@ -20,8 +20,12 @@ export interface SidecarDeps {
   /** Scanner local (Task 14). */
   scanner: Scanner;
   /** Appels REST directs Raindrop — Task 8 (contournement : update_raindrop
-   *  MCP v1.3.1 n'expose pas `url`). */
-  direct: { updateRaindropUrl(id: number, url: string): Promise<CallOutcome<{ id: number }>> };
+   *  MCP v1.3.1 n'expose pas `url` ; unrestore — MCP n'expose pas la
+   *  restauration, Task 0 front phase 1). */
+  direct: {
+    updateRaindropUrl(id: number, url: string): Promise<CallOutcome<{ id: number }>>;
+    unrestore(ids: number[]): Promise<CallOutcome<{ restored: number }>>;
+  };
 }
 
 /** Tools en LECTURE seule — seuls autorisés à être rejoués (jamais les

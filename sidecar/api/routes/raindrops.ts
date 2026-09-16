@@ -121,6 +121,15 @@ export function raindropsRoutes(deps: SidecarDeps): Hono {
     return c.json({ deleted: true });
   });
 
+  // Restauration corbeille — le MCP v1.3.1 n'expose pas unrestore → REST direct (§3.3)
+  app.post("/unrestore", async (c) => {
+    const body = z.object({ ids: z.array(z.number().int()).min(1) }).safeParse(await c.req.json().catch(() => null));
+    if (!body.success) return apiError(c, "INVALID_INPUT", z.prettifyError(body.error));
+    const out = await deps.direct.unrestore(body.data.ids);
+    if (!out.ok) return apiError(c, out.code, out.message);
+    return c.json(out.data);
+  });
+
   app.post("/bulk", async (c) => {
     const body = bulkBody.safeParse(await c.req.json().catch(() => null));
     if (!body.success) return apiError(c, "INVALID_INPUT", z.prettifyError(body.error));
