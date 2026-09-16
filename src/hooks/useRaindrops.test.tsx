@@ -75,6 +75,16 @@ describe("useRaindrops", () => {
     expect(url).not.toContain("collection_id=-2");
   });
 
+  it("convertit le marqueur -3 (Favoris) en important=true sur Tous — il ne sort pas du front", async () => {
+    const fetchMock = stubFetch(60);
+    const { result } = renderHook(() => useRaindrops({ collectionId: -3 }), { wrapper });
+    await waitFor(() => expect(result.current.data?.pages).toHaveLength(1));
+    const url = fetchMock.mock.calls[0]![0] as string;
+    expect(url).toContain("collection_id=0");
+    expect(url).toContain("important=true");
+    expect(url).not.toContain("collection_id=-3");
+  });
+
   it("-2 : un search explicite reste prioritaire sur la conversion", async () => {
     const fetchMock = stubFetch(60);
     const { result } = renderHook(() => useRaindrops({ collectionId: -2, search: "custom" }), { wrapper });

@@ -2,6 +2,7 @@ import { t } from "./i18n/fr";
 import { useTheme } from "./lib/theme";
 import { useHealth } from "./hooks/useStaticData";
 import { Sidebar } from "./components/Sidebar";
+import { TopBar } from "./components/TopBar";
 
 // Icônes SVG (DESIGN.md §9 : jamais d'emoji), grille 16px, trait 1,7.
 function SunIcon() {
@@ -40,7 +41,7 @@ export default function App() {
 
   return (
     <div className="grid h-screen grid-cols-[240px_1fr_320px] grid-rows-[auto_1fr] bg-app text-app-ink">
-      <header className="col-span-3 flex items-center gap-3 border-b border-app-border bg-app px-4 py-2">
+      <header className="flex items-center gap-3 border-b border-app-border bg-app px-4 py-2">
         <span className="font-medium">{t("app.title")}</span>
         {mcpDown && (
           <span className="text-app-broken" role="status">
@@ -56,6 +57,10 @@ export default function App() {
           {isDark ? <SunIcon /> : <MoonIcon />}
         </button>
       </header>
+      {/* Row 1 col 2 : la barre recherche/filtres/tri de la vue courante
+          (rend une cellule vide hors vue list). */}
+      <TopBar />
+      <div className="border-b border-app-border bg-app" aria-hidden="true" />
       <Sidebar />
       <main className="overflow-y-auto bg-app-panel p-2">liste</main>
       <aside className="overflow-y-auto bg-app p-2">détail</aside>
