@@ -1,0 +1,252 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #1F6F8B; } a:hover { color: #175567; }
+    .t-clair {
+      --surface: #FBFAF9; --work: #FFFFFF; --ink: #17171A; --quiet: #6E6E75;
+      --line: #E7E5E2; --hover: #F5F4F1;
+      --broken: #A8301C; --moved: #8A6410; --unsure: #9A9A96;
+      --tag-l: 0.94; --tag-c: 0.045; --tag-tl: 0.42; --tag-tc: 0.11;
+      --icon-l: 0.62; --icon-c: 0.11; --wash-l: 0.95; --wash-c: 0.035;
+    }
+    .t-sombre {
+      --surface: #161618; --work: #1E1E21; --ink: #ECECE9; --quiet: #9B9BA2;
+      --line: #2C2C30; --hover: #252528;
+      --broken: #E06A52; --moved: #D4A03C; --unsure: #6B6B68;
+      --tag-l: 0.30; --tag-c: 0.05; --tag-tl: 0.80; --tag-tc: 0.09;
+      --icon-l: 0.68; --icon-c: 0.11; --wash-l: 0.32; --wash-c: 0.05;
+    }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .tag {
+      display: inline-flex; align-items: center; height: 24px; padding: 0 11px;
+      border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap;
+      background: oklch(var(--tag-l) calc(var(--tag-c) * var(--sat, 1)) var(--h));
+      color: oklch(var(--tag-tl) calc(var(--tag-tc) * var(--sat, 1)) var(--h));
+    }
+    .tag-s { height: 18px; padding: 0 7px; border-radius: 9px; font-size: 11px; }
+    .tag-pale { background: transparent; border: 1px solid var(--line); color: var(--quiet); }
+    .bouton { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+    .voisin:hover { background: var(--hover); }
+  </style>
+</helmet>
+
+<div class="{{themeClass}}" style="display: flex; flex-direction: column; width: 1440px; height: 900px; background: var(--surface); color: var(--ink); font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif; font-size: 13px; overflow: hidden;">
+
+  <!-- En-tête -->
+  <div style="display: flex; align-items: center; gap: 14px; height: 54px; padding: 0 20px; border-bottom: 1px solid var(--line); flex-shrink: 0;">
+    <div style="display: flex; align-items: center; gap: 8px; color: var(--quiet);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M15 18l-6-6 6-6"></path></svg>
+      <div style="display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 6px; background: {{collFond}};">
+        <div style="width: 11px; height: 11px; border-radius: 3px; background: {{collInk}};"></div>
+      </div>
+      <span style="color: var(--ink);">Développement</span>
+      <span style="color: var(--quiet);">/ Langages</span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+      <div class="bouton" style="background: var(--ink); color: var(--work);">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path><path d="M15 3h6v6"></path><path d="M10 14L21 3"></path></svg>
+        Ouvrir le lien
+      </div>
+      <div class="bouton" style="border: 1px solid var(--line);">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l2.6 5.6 6 .8-4.4 4.2 1.1 6.1L12 16.9 6.7 19.7l1.1-6.1L3.4 9.4l6-.8z"></path></svg>
+        Favori
+      </div>
+      <div class="bouton" style="border: 1px solid var(--line); color: var(--quiet); width: 32px; padding: 0; justify-content: center;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16"></path><path d="M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2"></path><path d="M6 7l1 13h10l1-13"></path></svg>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-grow: 1; min-height: 0;">
+
+    <!-- Aperçu -->
+    <div style="display: flex; flex-direction: column; gap: 16px; width: 872px; flex-shrink: 0; padding: 22px; overflow: hidden;">
+      <div style="display: flex; flex-direction: column; gap: 9px;">
+        <div style="font-size: 26px; font-weight: 590; line-height: 1.22; letter-spacing: -0.015em; text-wrap: pretty;">{{titre}}</div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="mono" style="font-size: 12px; color: var(--quiet); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{url}}</span>
+          <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+            <div style="width: 3px; height: 13px; border-radius: 1px; background-image: {{gutter}}; background-color: {{gutterBg}};"></div>
+            <span style="font-size: 12px; color: {{etatInk}};">{{etatTitre}}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- La copie archivée, plein cadre -->
+      <div style="flex-grow: 1; min-height: 0; border: 1px solid var(--line); border-radius: 11px; background: var(--work); overflow: hidden; display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; gap: 9px; height: 34px; padding: 0 13px; border-bottom: 1px solid var(--line); background: var(--surface); flex-shrink: 0;">
+          <div style="display: flex; gap: 5px;">
+            <div style="width: 8px; height: 8px; border-radius: 4px; background: var(--line);"></div>
+            <div style="width: 8px; height: 8px; border-radius: 4px; background: var(--line);"></div>
+            <div style="width: 8px; height: 8px; border-radius: 4px; background: var(--line);"></div>
+          </div>
+          <span style="font-size: 11px; color: var(--quiet);">Copie archivée du 8 janvier 2026 · 11 Ko</span>
+        </div>
+        <div style="flex-grow: 1; padding: 30px 40px; display: flex; flex-direction: column; gap: 13px; background: {{apercuFond}}; overflow: hidden;">
+          <div style="height: 15px; width: 54%; border-radius: 4px; background: {{apercuTrait}};"></div>
+          <div style="height: 7px; width: 30%; border-radius: 3px; background: {{apercuTrait}}; opacity: 0.45;"></div>
+          <div style="height: 128px; margin: 8px 0; border-radius: 8px; background: {{apercuTrait}}; opacity: 0.2;"></div>
+          <sc-for list="{{lignes}}" as="l" hint-placeholder-count="7">
+            <div style="height: 7px; border-radius: 3px; background: {{apercuTrait}}; opacity: 0.4; width: {{l.w}};"></div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <!-- Colonne latérale -->
+    <div style="display: flex; flex-direction: column; gap: 22px; flex-grow: 1; min-width: 0; padding: 22px 22px 0; border-left: 1px solid var(--line); background: var(--work); overflow: hidden;">
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-size: 12px; font-weight: 590; color: var(--quiet);">Étiquettes</div>
+        <div style="display: flex; gap: 7px; flex-wrap: wrap;">
+          <sc-for list="{{tags}}" as="t" hint-placeholder-count="3">
+            <span class="tag" style="--h: {{t.h}}; --sat: {{t.sat}};">{{t.nom}}</span>
+          </sc-for>
+          <span class="tag tag-pale">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>
+          </span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 9px;">
+        <div style="font-size: 12px; font-weight: 590; color: var(--quiet);">Note</div>
+        <div style="line-height: 1.6; text-wrap: pretty;">{{note}}</div>
+      </div>
+
+      <!-- Voisinage -->
+      <div style="display: flex; flex-direction: column; gap: 13px; min-height: 0;">
+        <div style="display: flex; align-items: baseline; gap: 9px;">
+          <div style="font-size: 12px; font-weight: 590; color: var(--quiet);">Voisinage</div>
+          <div style="font-size: 12px; color: var(--quiet);">{{voisinageResume}}</div>
+        </div>
+
+        <div style="display: flex; justify-content: center; padding: 4px 0;">
+          <svg width="250" height="186" viewBox="0 0 250 186">
+            <sc-for list="{{arcs}}" as="a" hint-placeholder-count="6">
+              <line x1="125" y1="93" x2="{{a.x}}" y2="{{a.y}}" stroke="{{a.couleur}}" stroke-width="{{a.epaisseur}}" stroke-linecap="round" opacity="0.5"></line>
+            </sc-for>
+            <sc-for list="{{arcs}}" as="a" hint-placeholder-count="6">
+              <circle cx="{{a.x}}" cy="{{a.y}}" r="{{a.r}}" fill="{{a.couleur}}"></circle>
+            </sc-for>
+            <circle cx="125" cy="93" r="13" fill="currentColor"></circle>
+          </svg>
+        </div>
+
+        <div style="display: flex; flex-direction: column;">
+          <sc-for list="{{voisins}}" as="v" hint-placeholder-count="4">
+            <div class="voisin" style="display: flex; flex-direction: column; gap: 6px; padding: 10px 9px; margin: 0 -9px; border-radius: 8px; border-top: 1px solid var(--line); cursor: default;">
+              <div style="display: flex; align-items: baseline; gap: 10px;">
+                <span style="flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{v.titre}}</span>
+                <span style="font-size: 11px; color: var(--quiet); flex-shrink: 0;">{{v.raison}}</span>
+              </div>
+              <div style="display: flex; gap: 5px;">
+                <sc-for list="{{v.tags}}" as="g" hint-placeholder-count="2">
+                  <span class="tag tag-s {{g.cls}}" style="--h: {{g.h}}; --sat: {{g.sat}};">{{g.nom}}</span>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["clair","sombre"],"default":"clair","section":"Affichage"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  // La teinte vient du SENS, pas de l'orthographe : bleu pour la technique,
+  // vert pour l'argent, ambre pour la maison… Un mot non reconnu reste gris,
+  // ce qui se voit — et se corrige en ajoutant le mot au lexique.
+  themes() {
+    return [
+      { nom: "technique", h: 250, mots: ["code", "dev", "développement", "programmation", "informatique", "typescript", "javascript", "python", "rust", "linux", "mac", "logiciel", "api", "serveur", "git", "données", "langage", "build", "test"] },
+      { nom: "création", h: 300, mots: ["design", "webdesign", "typographie", "police", "graphisme", "illustration", "couleur", "art", "photo", "ui", "ux", "système de design"] },
+      { nom: "argent", h: 150, mots: ["achat", "finance", "banque", "budget", "prix", "vente", "boutique", "économie", "facture", "comparer"] },
+      { nom: "maison", h: 62, mots: ["maison", "cuisine", "recette", "pâtisserie", "bricolage", "jardin", "déco", "meuble", "matériel", "périphérique"] },
+      { nom: "santé", h: 25, mots: ["santé", "médecine", "sport", "urgent", "important", "sécurité", "à-revoir", "à-traiter"] },
+      { nom: "lieux", h: 195, mots: ["voyage", "carte", "ville", "pays", "transport", "train", "hôtel", "restaurant", "lieu"] },
+      { nom: "culture", h: 345, mots: ["lecture", "livre", "article", "veille", "musique", "film", "podcast", "histoire", "infolettre", "presse"] },
+      { nom: "méthode", h: 120, mots: ["outil", "service", "application", "extension", "productivité", "méthode", "référence", "guide", "tutoriel", "archive"] }
+    ];
+  }
+
+  theme(nom) {
+    const n = (nom || "").toLowerCase();
+    const liste = this.themes();
+    for (let i = 0; i < liste.length; i++) {
+      for (let j = 0; j < liste[i].mots.length; j++) {
+        if (n.indexOf(liste[i].mots[j]) !== -1) return liste[i];
+      }
+    }
+    return { nom: "hors lexique", h: 250, neutre: true };
+  }
+
+  teinte(nom) { return this.theme(nom).h; }
+  sature(nom) { return this.theme(nom).neutre ? 0 : 1; }
+
+  renderVals() {
+    const theme = this.props.theme ?? "clair";
+    const mesTags = ["code", "typescript", "référence"];
+    const h = this.teinte("typescriptlang.org");
+
+    // Voisinage calculable sans IA : étiquettes communes, domaine, date d'ajout.
+    const voisins = [
+      { titre: "Les types utilitaires de TypeScript", raison: "2 étiquettes communes", tags: [["code", true], ["typescript", true]] },
+      { titre: "Inférence et génériques, un guide", raison: "2 étiquettes communes", tags: [["code", true], ["typescript", true]] },
+      { titre: "Structure d'un projet Rust", raison: "1 étiquette · même jour", tags: [["code", true], ["rust", false]] },
+      { titre: "Écrire des tests qui tiennent", raison: "1 étiquette commune", tags: [["code", true], ["méthode", false]] },
+      { titre: "Le manuel officiel", raison: "même domaine", tags: [["référence", true]] }
+    ].map((v) => ({
+      titre: v.titre,
+      raison: v.raison,
+      tags: v.tags.map((t) => ({ nom: t[0], h: this.teinte(t[0]), sat: this.sature(t[0]), cls: t[1] ? "" : "tag-pale" }))
+    }));
+
+    // Le graphe : un nœud par voisin, l'épaisseur du trait dit la force du lien.
+    const forces = [2, 2, 1, 1, 1, 2];
+    const arcs = forces.map((f, i) => {
+      const a = (Math.PI * 2 * i) / forces.length - Math.PI / 2;
+      return {
+        x: Math.round(125 + 82 * Math.cos(a)),
+        y: Math.round(93 + 68 * Math.sin(a)),
+        r: 5 + f * 2,
+        epaisseur: f * 1.4,
+        couleur: "oklch(0.62 0.1 " + this.teinte("code") + ")"
+      };
+    });
+
+    return {
+      themeClass: theme === "sombre" ? "t-sombre" : "t-clair",
+      collInk: "oklch(var(--icon-l) var(--icon-c) " + this.teinte("Développement") + ")",
+      collFond: "oklch(var(--wash-l) var(--wash-c) " + this.teinte("Développement") + ")",
+      titre: "Une introduction aux types conditionnels",
+      url: "https://www.typescriptlang.org/docs/handbook/2/conditional-types.html",
+      etatTitre: "Lien mort — 404 depuis le 8 janvier",
+      etatInk: "var(--broken)",
+      gutter: "none",
+      gutterBg: "var(--broken)",
+      apercuFond: "oklch(0.97 0.02 " + h + ")",
+      apercuTrait: "oklch(0.5 0.08 " + h + ")",
+      lignes: [{ w: "100%" }, { w: "96%" }, { w: "99%" }, { w: "72%" }, { w: "94%" }, { w: "88%" }, { w: "46%" }],
+      tags: mesTags.map((t) => ({ nom: t, h: this.teinte(t), sat: this.sature(t) })),
+      note: "La référence que je rouvre chaque fois que je bloque sur un type générique. À remplacer par la copie archivée, la page a disparu.",
+      voisinageResume: "14 éléments partagent au moins une étiquette",
+      arcs: arcs,
+      voisins: voisins
+    };
+  }
+}
+</script>
+</body>
+</html>

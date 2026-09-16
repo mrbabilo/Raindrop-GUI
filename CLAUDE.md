@@ -16,7 +16,7 @@ spec et les plans (`docs/superpowers/`) ; ce fichier n'en est que la carte.
 - Interface **en français**, textes externalisés (pas d'i18n, un seul fichier).
 
 **Avant de toucher au nettoyage, aux vues ou à l'API locale : lire
-`docs/DOMAINE.md`** (vocabulaire métier) et la **spec**
+`docs/DOMAINE.md`** (vocabulaire métier), **`docs/DESIGN.md`** (apparence) et la **spec**
 (`docs/superpowers/specs/2026-09-15-raindrop-gui-design.md`), qui fait foi sur
 les décisions structurantes.
 
@@ -27,6 +27,9 @@ les décisions structurantes.
 - `docs/superpowers/plans/` — plans d'implémentation (3 plans séquentiels :
   sidecar → front React → shell Tauri). Chaque plan est autosuffisant.
 - `docs/DOMAINE.md` — vocabulaire métier Raindrop + catégories d'analyse.
+- `docs/DESIGN.md` — **la direction visuelle : fait foi sur l'apparence.** À
+  lire avant de dessiner le moindre composant du front (symbolique des
+  couleurs, signalétique de collection, états, densités, règles).
 - `docs/SOURCES.md` — la carte de tout ce qui vit **hors** du dépôt (MCP kud
   épinglé — **archivé upstream**, son candidat de reprise évalué spec §10.1,
   API Raindrop, SDK/hono/zod). Registre des sources :

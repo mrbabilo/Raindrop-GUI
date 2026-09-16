@@ -1,0 +1,373 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #1F6F8B; } a:hover { color: #175567; }
+    .t-clair {
+      --surface: #FBFAF9; --work: #FFFFFF; --ink: #17171A; --quiet: #6E6E75;
+      --line: #E7E5E2; --sel: #F0EFEC; --hover: #F5F4F1;
+      --broken: #A8301C; --moved: #8A6410; --unsure: #9A9A96;
+      --tag-l: 0.94; --tag-c: 0.045; --tag-tl: 0.42; --tag-tc: 0.11;
+      --icon-l: 0.62; --icon-c: 0.11; --wash-l: 0.95; --wash-c: 0.035;
+    }
+    .t-sombre {
+      --surface: #161618; --work: #1E1E21; --ink: #ECECE9; --quiet: #9B9BA2;
+      --line: #2C2C30; --sel: #2A2A2E; --hover: #252528;
+      --broken: #E06A52; --moved: #D4A03C; --unsure: #6B6B68;
+      --tag-l: 0.30; --tag-c: 0.05; --tag-tl: 0.80; --tag-tc: 0.09;
+      --icon-l: 0.68; --icon-c: 0.11; --wash-l: 0.32; --wash-c: 0.05;
+    }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .sel { background: var(--sel); }
+    .row:hover { background: var(--hover); }
+    .nav:hover { background: var(--hover); }
+    .tag {
+      display: inline-flex; align-items: center; height: 18px; padding: 0 7px;
+      border-radius: 9px; font-size: 11px; font-weight: 500; white-space: nowrap;
+      background: oklch(var(--tag-l) calc(var(--tag-c) * var(--sat, 1)) var(--h));
+      color: oklch(var(--tag-tl) calc(var(--tag-tc) * var(--sat, 1)) var(--h));
+    }
+  </style>
+</helmet>
+
+<div class="{{themeClass}}" style="display: flex; flex-direction: column; width: 1440px; height: 900px; background: var(--surface); color: var(--ink); font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif; font-size: 13px; overflow: hidden;">
+
+  <div style="display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 16px; border-bottom: 1px solid var(--line); flex-shrink: 0;">
+    <div style="display: flex; align-items: center; gap: 8px; width: 300px; height: 28px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--work);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color: var(--quiet); flex-shrink: 0;"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+      <span style="color: var(--quiet);">Rechercher</span>
+      <span class="mono" style="margin-left: auto; font-size: 11px; color: var(--quiet);">⌘K</span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 4px;">
+      <div style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 7px; background: var(--sel);">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 7px; color: var(--quiet);">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>
+      </div>
+      <div style="width: 1px; height: 18px; background: var(--line); margin: 0 8px;"></div>
+      <span style="color: var(--quiet); font-size: 12px;">12 210 éléments</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-grow: 1; min-height: 0;">
+
+    <!-- Collections -->
+    <div style="display: flex; flex-direction: column; width: 258px; flex-shrink: 0; padding: 12px 8px; gap: 1px; border-right: 1px solid var(--line); overflow: hidden;">
+      <sc-for list="{{nav}}" as="n" hint-placeholder-count="9">
+        <div class="nav {{n.cls}}" style="display: flex; align-items: center; height: 26px; border-radius: 7px; cursor: default; padding-right: 8px;">
+          <div style="width: {{n.retrait}}; flex-shrink: 0; height: 26px; display: flex; justify-content: flex-end;">
+            <div style="width: 2px; height: 26px; background: {{n.filet}};"></div>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: center; width: 14px; flex-shrink: 0; color: var(--quiet);">
+            <sc-if value="{{n.pliable}}" hint-placeholder-val="{{true}}">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="transform: rotate({{n.rotation}});"><path d="M9 6l6 6-6 6"></path></svg>
+            </sc-if>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0; margin-right: 8px; background: {{n.fondIcone}}; color: {{n.couleur}};">
+            <sc-if value="{{n.aIcone}}" hint-placeholder-val="{{true}}">
+              <div style="width: 10px; height: 10px; border-radius: 3px; background: {{n.couleur}};"></div>
+            </sc-if>
+            <sc-if value="{{n.sansIcone}}" hint-placeholder-val="{{true}}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+            </sc-if>
+          </div>
+          <span style="flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: {{n.graisse}};">{{n.nom}}</span>
+          <span class="mono" style="font-size: 11px; color: var(--quiet); flex-shrink: 0;">{{n.compte}}</span>
+        </div>
+      </sc-for>
+
+      <div style="height: 16px;"></div>
+      <div style="padding: 0 9px 7px; font-size: 12px; font-weight: 590; color: var(--quiet);">Étiquettes</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 5px; padding: 0 9px 4px;">
+        <sc-for list="{{tagsNav}}" as="t" hint-placeholder-count="8">
+          <span class="tag" style="--h: {{t.h}}; --sat: {{t.sat}};">{{t.nom}}</span>
+        </sc-for>
+      </div>
+
+      <div style="height: 16px;"></div>
+      <div style="padding: 0 9px 7px; font-size: 12px; font-weight: 590; color: var(--quiet);">Entretien</div>
+      <sc-for list="{{entretien}}" as="e" hint-placeholder-count="4">
+        <div class="nav" style="display: flex; align-items: center; gap: 9px; height: 28px; padding: 0 9px; border-radius: 7px; cursor: default;">
+          <div style="width: 3px; height: 14px; border-radius: 1px; flex-shrink: 0; background: {{e.marque}};"></div>
+          <span>{{e.nom}}</span>
+          <span class="mono" style="margin-left: auto; font-size: 11px; color: var(--quiet);">{{e.compte}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- Liste -->
+    <div style="display: flex; flex-direction: column; flex-grow: 1; min-width: 0; background: var(--work); border-right: 1px solid var(--line);">
+      <sc-for list="{{items}}" as="it" hint-placeholder-count="12">
+        <div class="row {{it.cls}}" onClick="{{it.pick}}" style="display: flex; align-items: center; gap: 11px; height: 36px; padding-right: 16px; border-bottom: 1px solid var(--line); cursor: default;">
+          <div style="width: 3px; height: 36px; flex-shrink: 0; background-image: {{it.gutter}}; background-color: {{it.gutterBg}};"></div>
+          <div title="{{it.coll}}" style="display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0; background: {{it.collFond}}; color: {{it.collInk}};">
+            <sc-if value="{{it.collIcone}}" hint-placeholder-val="{{true}}">
+              <div style="width: 10px; height: 10px; border-radius: 3px; background: {{it.collInk}};"></div>
+            </sc-if>
+            <sc-if value="{{it.collDossier}}" hint-placeholder-val="{{true}}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+            </sc-if>
+          </div>
+          <span style="flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{it.titre}}</span>
+          <div style="display: flex; gap: 5px; flex-shrink: 0;">
+            <sc-for list="{{it.tags}}" as="t" hint-placeholder-count="2">
+              <span class="tag" style="--h: {{t.h}}; --sat: {{t.sat}};">{{t.nom}}</span>
+            </sc-for>
+          </div>
+          <span class="mono" style="font-size: 11px; color: var(--quiet); flex-shrink: 0; width: 156px; text-align: right; overflow: hidden; text-overflow: ellipsis;">{{it.domaine}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- Détail -->
+    <div style="display: flex; flex-direction: column; width: 340px; flex-shrink: 0; padding: 16px; gap: 14px; overflow: hidden;">
+      <div style="display: flex; flex-direction: column; gap: 3px; height: 152px; border-radius: 9px; border: 1px solid var(--line); background: {{detail.vignetteFond}}; padding: 13px; overflow: hidden;">
+        <div style="height: 7px; width: 62%; border-radius: 3px; background: {{detail.vignetteTrait}};"></div>
+        <div style="height: 5px; width: 88%; border-radius: 3px; background: {{detail.vignetteTrait}}; opacity: 0.55; margin-top: 7px;"></div>
+        <div style="height: 5px; width: 74%; border-radius: 3px; background: {{detail.vignetteTrait}}; opacity: 0.55;"></div>
+        <div style="flex-grow: 1; margin-top: 9px; border-radius: 5px; background: {{detail.vignetteTrait}}; opacity: 0.3;"></div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <div style="font-size: 15px; font-weight: 590; line-height: 1.3; text-wrap: pretty;">{{detail.titre}}</div>
+        <div class="mono" style="font-size: 11px; color: var(--quiet); line-height: 1.45; word-break: break-all;">{{detail.url}}</div>
+      </div>
+
+      <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+        <sc-for list="{{detail.tags}}" as="t" hint-placeholder-count="3">
+          <span class="tag" style="--h: {{t.h}}; --sat: {{t.sat}}; height: 21px; padding: 0 9px; border-radius: 11px; font-size: 12px;">{{t.nom}}</span>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{detail.aProbleme}}" hint-placeholder-val="{{true}}">
+        <div style="display: flex; gap: 10px; padding: 11px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line);">
+          <div style="width: 3px; border-radius: 1px; flex-shrink: 0; background-image: {{detail.gutter}}; background-color: {{detail.gutterBg}};"></div>
+          <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0;">
+            <div style="font-weight: 590; color: {{detail.etatInk}};">{{detail.etatTitre}}</div>
+            <div style="color: var(--quiet); line-height: 1.5; text-wrap: pretty;">{{detail.etatTexte}}</div>
+            <div style="display: flex; align-items: center; height: 26px; padding: 0 11px; margin-top: 2px; border-radius: 6px; background: var(--ink); color: var(--work); font-size: 12px; font-weight: 500; align-self: flex-start;">{{detail.action}}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 13px; border-top: 1px solid var(--line); color: var(--quiet);">
+        <div style="display: flex; gap: 10px;"><span style="width: 84px; flex-shrink: 0;">Collection</span><span style="color: var(--ink);">{{detail.collection}}</span></div>
+        <div style="display: flex; gap: 10px;"><span style="width: 84px; flex-shrink: 0;">Ajouté</span><span style="color: var(--ink);">{{detail.ajoute}}</span></div>
+        <div style="display: flex; gap: 10px;"><span style="width: 84px; flex-shrink: 0;">Voisins</span><span style="color: var(--ink);">{{detail.voisins}}</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["clair","sombre"],"default":"clair","section":"Affichage"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { picked: 2 };
+  }
+
+  // Huit teintes à chroma et clarté constantes : un tag garde sa couleur partout,
+  // et deux tags voisins alphabétiquement ne tombent pas dans la même.
+  // La teinte vient du SENS, pas de l'orthographe : bleu pour la technique,
+  // vert pour l'argent, ambre pour la maison… Un mot non reconnu reste gris,
+  // ce qui se voit — et se corrige en ajoutant le mot au lexique.
+  themes() {
+    return [
+      { nom: "technique", h: 250, mots: ["code", "dev", "développement", "programmation", "informatique", "typescript", "javascript", "python", "rust", "linux", "mac", "logiciel", "api", "serveur", "git", "données", "langage", "build", "test"] },
+      { nom: "création", h: 300, mots: ["design", "webdesign", "typographie", "police", "graphisme", "illustration", "couleur", "art", "photo", "ui", "ux", "système de design"] },
+      { nom: "argent", h: 150, mots: ["achat", "finance", "banque", "budget", "prix", "vente", "boutique", "économie", "facture", "comparer"] },
+      { nom: "maison", h: 62, mots: ["maison", "cuisine", "recette", "pâtisserie", "bricolage", "jardin", "déco", "meuble", "matériel", "périphérique"] },
+      { nom: "santé", h: 25, mots: ["santé", "médecine", "sport", "urgent", "important", "sécurité", "à-revoir", "à-traiter"] },
+      { nom: "lieux", h: 195, mots: ["voyage", "carte", "ville", "pays", "transport", "train", "hôtel", "restaurant", "lieu"] },
+      { nom: "culture", h: 345, mots: ["lecture", "livre", "article", "veille", "musique", "film", "podcast", "histoire", "infolettre", "presse"] },
+      { nom: "méthode", h: 120, mots: ["outil", "service", "application", "extension", "productivité", "méthode", "référence", "guide", "tutoriel", "archive"] }
+    ];
+  }
+
+  theme(nom) {
+    const n = (nom || "").toLowerCase();
+    const liste = this.themes();
+    for (let i = 0; i < liste.length; i++) {
+      for (let j = 0; j < liste[i].mots.length; j++) {
+        if (n.indexOf(liste[i].mots[j]) !== -1) return liste[i];
+      }
+    }
+    return { nom: "hors lexique", h: 250, neutre: true };
+  }
+
+  teinte(nom) { return this.theme(nom).h; }
+  sature(nom) { return this.theme(nom).neutre ? 0 : 1; }
+
+  chips(noms) {
+    return (noms || []).map((n) => ({ nom: n, h: this.teinte(n), sat: this.sature(n) }));
+  }
+
+  donnees() {
+    return [
+      { id: 1, titre: "Guide des Container Queries", domaine: "web.dev", etat: "", tags: ["webdesign", "code"], coll: "Design", ico: true },
+      { id: 2, titre: "Une introduction aux types conditionnels", domaine: "typescriptlang.org", etat: "mort",
+        url: "https://www.typescriptlang.org/docs/handbook/2/conditional-types.html",
+        tags: ["code", "typescript"], collection: "Développement", coll: "Développement", ico: true, voisins: "14 partagent « code »" },
+      { id: 3, titre: "Comprendre les oklch en CSS", domaine: "evilmartians.com", etat: "", tags: ["webdesign"] },
+      { id: 4, titre: "Tauri 2 — modèle de permissions", domaine: "v2.tauri.app", etat: "redirige", tags: ["code", "mac"] },
+      { id: 5, titre: "Structure d'un projet Rust", domaine: "doc.rust-lang.org", etat: "", tags: ["code"] },
+      { id: 6, titre: "Les pièges du fuseau horaire en JavaScript", domaine: "date-fns.org", etat: "doublon", tags: ["code"] },
+      { id: 7, titre: "Virtualiser de longues listes", domaine: "tanstack.com", etat: "", tags: ["code", "webdesign"] },
+      { id: 8, titre: "Le protocole MCP, vue d'ensemble", domaine: "modelcontextprotocol.io", etat: "", tags: ["informatique"] },
+      { id: 9, titre: "Archiver le web avec ArchiveBox", domaine: "archivebox.io", etat: "indetermine", tags: ["outil-en-ligne", "linux"] },
+      { id: 10, titre: "Sur la conception des sauvegardes", domaine: "tarsnap.com", etat: "", tags: ["informatique"] },
+      { id: 11, titre: "SQLite convient à votre application", domaine: "sqlite.org", etat: "", tags: ["code"] },
+      { id: 12, titre: "Les limites de l'API Raindrop", domaine: "developer.raindrop.io", etat: "redirige", tags: ["outil-en-ligne"] },
+      { id: 13, titre: "Écrire des tests qui tiennent", domaine: "kentcdodds.com", etat: "", tags: ["code"] },
+      { id: 14, titre: "Une histoire des gestionnaires de favoris", domaine: "arstechnica.com", etat: "mort", tags: ["informatique"] },
+      { id: 15, titre: "Les Server Components expliqués", domaine: "react.dev", etat: "", tags: ["code", "webdesign"] },
+      { id: 16, titre: "Mesurer la performance perçue", domaine: "web.dev", etat: "", tags: ["webdesign"] },
+      { id: 17, titre: "Raccourcis clavier pour experts", domaine: "nngroup.com", etat: "", tags: ["webdesign"] },
+      { id: 18, titre: "Un modèle mental pour les jobs", domaine: "brandur.org", etat: "", tags: ["code"] },
+      { id: 19, titre: "Le lien pourrit, et vite", domaine: "pudding.cool", etat: "mort", tags: ["informatique"] },
+      { id: 20, titre: "Concevoir pour la densité", domaine: "edwardtufte.com", etat: "", tags: ["webdesign"] },
+      { id: 21, titre: "Gérer les redirections HTTP", domaine: "httpwg.org", etat: "indetermine", tags: ["code"] },
+      { id: 22, titre: "Ce que coûte une dépendance", domaine: "research.swtch.com", etat: "", tags: ["code"] }
+    ];
+  }
+
+  marques(etat) {
+    switch (etat) {
+      case "mort":        return { image: "none", bg: "var(--broken)" };
+      case "redirige":    return { image: "repeating-linear-gradient(180deg, var(--moved) 0 4px, transparent 4px 8px)", bg: "transparent" };
+      case "indetermine": return { image: "repeating-linear-gradient(180deg, var(--unsure) 0 1px, transparent 1px 3px)", bg: "transparent" };
+      case "doublon":     return { image: "linear-gradient(90deg, var(--ink) 0 1px, transparent 1px 2px, var(--ink) 2px 3px)", bg: "transparent" };
+      default:            return { image: "none", bg: "transparent" };
+    }
+  }
+
+  libelle(etat) {
+    switch (etat) {
+      case "mort":        return { titre: "Lien mort", texte: "404 depuis trois vérifications. Une copie archivée existe.", action: "Voir la copie", ink: "var(--broken)" };
+      case "redirige":    return { titre: "Redirection permanente", texte: "L'adresse a changé définitivement.", action: "Remplacer l'URL", ink: "var(--moved)" };
+      case "indetermine": return { titre: "Vérification impossible", texte: "Le site refuse les requêtes automatiques.", action: "Ouvrir le lien", ink: "var(--quiet)" };
+      case "doublon":     return { titre: "Doublon d'URL", texte: "Un autre élément pointe la même adresse.", action: "Fusionner", ink: "var(--ink)" };
+      default:            return null;
+    }
+  }
+
+  // Une couleur par thématique : la racine la porte, ses descendantes en héritent.
+  arbreNav() {
+    const brut = [
+      { id: 100, t: "Développement", n: 0, c: "3 480", ico: true, pliable: true, ouvert: true },
+      { id: 110, t: "Langages", n: 1, c: "1 204", ico: true, pliable: true, ouvert: true },
+      { id: 111, t: "TypeScript", n: 2, c: "412", ico: false },
+      { id: 112, t: "Rust", n: 2, c: "289", ico: true },
+      { id: 120, t: "Outils de build", n: 1, c: "876", ico: false, pliable: true },
+      { id: 130, t: "Bases de données", n: 1, c: "618", ico: true },
+      { id: 200, t: "Design", n: 0, c: "1 926", ico: true, pliable: true, ouvert: true },
+      { id: 210, t: "Typographie", n: 1, c: "534", ico: true },
+      { id: 220, t: "Systèmes de design", n: 1, c: "392", ico: false },
+      { id: 300, t: "Veille et lecture", n: 0, c: "2 145", ico: false, pliable: true },
+      { id: 400, t: "Maison et matériel", n: 0, c: "1 087", ico: true, pliable: true },
+      { id: 500, t: "Recettes", n: 0, c: "612", ico: true, pliable: true }
+    ];
+    let racine = null;
+    return brut.map((x) => {
+      if (x.n === 0) racine = x;
+      const h = this.teinte((racine || x).t);
+      return {
+        nom: x.t,
+        compte: x.c,
+        retrait: (x.n === 0 ? 2 : 8 + x.n * 14) + "px",
+        filet: x.n === 0 ? "transparent" : "oklch(var(--wash-l) var(--wash-c) " + h + ")",
+        pliable: !!x.pliable,
+        rotation: x.pliable && x.ouvert ? "90deg" : "0deg",
+        aIcone: !!x.ico,
+        sansIcone: !x.ico,
+        couleur: "oklch(var(--icon-l) var(--icon-c) " + h + ")",
+        fondIcone: "oklch(var(--wash-l) var(--wash-c) " + h + ")",
+        graisse: x.n === 0 ? "590" : "400",
+        cls: ""
+      };
+    });
+  }
+
+  collectionDe(tags) {
+    const t = (tags || [])[0] || "";
+    const th = this.theme(t);
+    const par = { technique: "Développement", "création": "Design", argent: "Achats", maison: "Maison", "santé": "Santé", lieux: "Voyages", culture: "Veille et lecture", "méthode": "Outils" };
+    return par[th.nom] || "Non classés";
+  }
+
+  renderVals() {
+    const theme = this.props.theme ?? "clair";
+    const picked = this.state.picked;
+    const donnees = this.donnees();
+
+    const items = donnees.map((d) => {
+      const m = this.marques(d.etat);
+      const coll = d.coll || this.collectionDe(d.tags);
+      const ch = this.teinte(coll);
+      const cs = this.sature(coll);
+      return {
+        titre: d.titre,
+        domaine: d.domaine,
+        coll: coll,
+        collIcone: !!d.ico,
+        collDossier: !d.ico,
+        collInk: "oklch(var(--icon-l) calc(var(--icon-c) * " + cs + ") " + ch + ")",
+        collFond: "oklch(var(--wash-l) calc(var(--wash-c) * " + cs + ") " + ch + ")",
+        tags: this.chips((d.tags || []).slice(0, 2)),
+        gutter: m.image,
+        gutterBg: m.bg,
+        cls: d.id === picked ? "sel" : "",
+        pick: () => this.setState({ picked: d.id })
+      };
+    });
+
+    const d = donnees.find((x) => x.id === picked) || donnees[0];
+    const m = this.marques(d.etat);
+    const l = this.libelle(d.etat);
+    const h = this.teinte(d.domaine);
+
+    return {
+      themeClass: theme === "sombre" ? "t-sombre" : "t-clair",
+      nav: this.arbreNav(),
+      tagsNav: this.chips(["code", "webdesign", "outil-en-ligne", "mac", "linux", "informatique", "achats", "typescript"]),
+      entretien: [
+        { nom: "Liens morts", compte: "127", marque: "var(--broken)" },
+        { nom: "Redirections", compte: "48", marque: "var(--moved)" },
+        { nom: "Doublons", compte: "31", marque: "var(--ink)" },
+        { nom: "Sans étiquette", compte: "412", marque: "var(--unsure)" }
+      ],
+      items: items,
+      detail: {
+        titre: d.titre,
+        url: d.url || ("https://" + d.domaine + "/"),
+        tags: this.chips(d.tags || []),
+        aProbleme: !!l,
+        etatTitre: l ? l.titre : "",
+        etatTexte: l ? l.texte : "",
+        action: l ? l.action : "",
+        etatInk: l ? l.ink : "var(--ink)",
+        gutter: m.image,
+        gutterBg: m.bg,
+        vignetteFond: "oklch(0.95 0.035 " + h + ")",
+        vignetteTrait: "oklch(0.55 0.09 " + h + ")",
+        collection: d.collection || "Développement",
+        ajoute: "12 mars 2024",
+        voisins: d.voisins || "9 partagent une étiquette"
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

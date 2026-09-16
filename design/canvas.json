@@ -1,0 +1,87 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Liste",
+      "is_interactive": true
+    },
+    {
+      "file": "Mosaique.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Mosaïque"
+    },
+    {
+      "file": "Fiche.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Fiche d'un lien"
+    },
+    {
+      "file": "Collections.dc.html",
+      "x": 0,
+      "y": 1020,
+      "w": 560,
+      "h": 980,
+      "title": "Arborescence",
+      "is_interactive": true
+    },
+    {
+      "file": "Systeme.dc.html",
+      "x": 680,
+      "y": 1020,
+      "w": 1000,
+      "h": 1250,
+      "title": "Le vocabulaire"
+    },
+    {
+      "file": "Revue.dc.html",
+      "x": 1800,
+      "y": 1020,
+      "w": 1440,
+      "h": 900,
+      "title": "Revue de l'action"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "note-tags",
+      "x": 0,
+      "y": -172,
+      "w": 430,
+      "text": "La couleur dit le sens.\n\nUn lexique range chaque étiquette dans une thématique : bleu pour la technique, vert pour l'argent, ambre pour la maison. Ce qu'il ne reconnaît pas reste gris — la lacune se voit au lieu de se cacher.\n\nChaque lien porte aussi l'icône de sa collection d'origine. Cliquez une ligne."
+    },
+    {
+      "id": "note-densite",
+      "x": 1560,
+      "y": -172,
+      "w": 430,
+      "text": "La vignette prend la teinte de sa collection.\n\nUn coup d'œil suffit pour voir d'où vient chaque élément, même mélangés. 93 % de la bibliothèque a une vignette ; les 7 % restants reçoivent l'initiale du domaine."
+    },
+    {
+      "id": "note-voisins",
+      "x": 3120,
+      "y": -172,
+      "w": 430,
+      "text": "Voisinage, pas proximité sémantique.\n\nCalculé sans IA : étiquettes communes, domaine, date d'ajout. Chaque voisin dit pourquoi il est là, et les étiquettes partagées sont pleines quand les autres restent pâles."
+    },
+    {
+      "id": "note-arbre",
+      "x": 0,
+      "y": 2060,
+      "w": 560,
+      "text": "216 collections, trois niveaux.\n\nLa couleur appartient à la racine ; ses descendantes en héritent, si bien qu'on repère une famille sans lire les titres. Raindrop donne l'icône et sa couleur pour 68 d'entre elles — les autres reçoivent un dossier teinté. Cliquez un chevron pour plier."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

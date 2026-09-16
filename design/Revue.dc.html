@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #1F6F8B; } a:hover { color: #175567; }
+    .t-clair {
+      --surface: #FBFAF9; --work: #FFFFFF; --ink: #17171A; --quiet: #6E6E75;
+      --line: #E7E5E2; --broken: #A8301C; --moved: #8A6410;
+    }
+    .t-sombre {
+      --surface: #161618; --work: #1E1E21; --ink: #ECECE9; --quiet: #9B9BA2;
+      --line: #2C2C30; --broken: #E06A52; --moved: #D4A03C;
+    }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+  </style>
+</helmet>
+
+<div class="{{themeClass}}" style="display: flex; flex-direction: column; align-items: center; width: 1440px; height: 900px; padding-top: 104px; background: var(--surface); color: var(--ink); font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif; font-size: 14px; overflow: hidden;">
+
+  <div style="display: flex; flex-direction: column; gap: 40px; width: 552px;">
+
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div style="font-size: 28px; font-weight: 590; line-height: 1.2; letter-spacing: -0.015em;">{{titre}}</div>
+      <div style="color: var(--quiet); line-height: 1.6; text-wrap: pretty;">{{explication}}</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; border-top: 1px solid var(--line);">
+      <sc-for list="{{apercu}}" as="a" hint-placeholder-count="5">
+        <div style="display: flex; align-items: baseline; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--line);">
+          <div style="width: 3px; height: 13px; flex-shrink: 0; align-self: center; background-image: {{a.gutter}}; background-color: {{a.gutterBg}};"></div>
+          <span style="flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{a.titre}}</span>
+          <span class="mono" style="font-size: 12px; color: var(--quiet); flex-shrink: 0;">{{a.domaine}}</span>
+        </div>
+      </sc-for>
+      <div style="padding: 13px 0 0; color: var(--quiet);">{{reste}}</div>
+    </div>
+
+    <sc-if value="{{definitif}}" hint-placeholder-val="{{true}}">
+      <div style="display: flex; flex-direction: column; gap: 11px;">
+        <div style="line-height: 1.6;">Pour confirmer, tapez <span class="mono" style="font-weight: 500;">SUPPRIMER</span>.</div>
+        <div style="display: flex; align-items: center; height: 40px; padding: 0 13px; border: 1px solid var(--broken); border-radius: 6px; background: var(--work);">
+          <span class="mono" style="color: var(--quiet);">|</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="display: flex; align-items: center; height: 38px; padding: 0 18px; border-radius: 6px; font-weight: 500; background: {{boutonFond}}; color: {{boutonInk}};">{{bouton}}</div>
+      <div style="display: flex; align-items: center; height: 38px; padding: 0 18px; border-radius: 6px; border: 1px solid var(--line); color: var(--ink);">Annuler</div>
+      <div style="margin-left: auto; color: var(--quiet); font-size: 13px;">{{rappel}}</div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["clair","sombre"],"default":"clair","section":"Affichage"},"niveau":{"editor":"enum","options":["corbeille","definitif"],"default":"corbeille","section":"Affichage"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme ?? "clair";
+    const niveau = this.props.niveau ?? "corbeille";
+    const definitif = niveau === "definitif";
+
+    const apercu = [
+      { titre: "Une histoire des gestionnaires de favoris", domaine: "arstechnica.com", etat: "mort" },
+      { titre: "Le lien pourrit, et vite", domaine: "pudding.cool", etat: "mort" },
+      { titre: "Les frameworks CSS de 2016", domaine: "sitepoint.com", etat: "mort" },
+      { titre: "Migrer vers Webpack 2", domaine: "medium.com", etat: "mort" },
+      { titre: "Tutoriel Grunt pour débutants", domaine: "gruntjs.com", etat: "mort" }
+    ].map((a) => ({
+      titre: a.titre,
+      domaine: a.domaine,
+      gutter: "none",
+      gutterBg: "var(--broken)"
+    }));
+
+    return {
+      themeClass: theme === "sombre" ? "t-sombre" : "t-clair",
+      definitif: definitif,
+      titre: definitif ? "Supprimer définitivement 47 éléments" : "Mettre 47 éléments à la corbeille",
+      explication: definitif
+        ? "Ces éléments quittent Raindrop pour de bon. Aucune restauration n'est possible, ni depuis cette application, ni depuis le site."
+        : "Ces éléments partent à la corbeille Raindrop. Vous pourrez les restaurer tant que vous ne videz pas la corbeille.",
+      apercu: apercu,
+      reste: "et 42 autres, tous classés « lien mort » lors de la vérification du 16 septembre.",
+      bouton: definitif ? "Supprimer définitivement" : "Mettre à la corbeille",
+      boutonFond: definitif ? "var(--broken)" : "var(--ink)",
+      boutonInk: definitif ? "#FFFFFF" : "var(--work)",
+      rappel: definitif ? "Cette action ne peut pas être annulée." : "Restaurable depuis la corbeille."
+    };
+  }
+}
+</script>
+</body>
+</html>

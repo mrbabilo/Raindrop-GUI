@@ -1,0 +1,272 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #1F6F8B; } a:hover { color: #175567; }
+    .t-clair {
+      --surface: #FBFAF9; --work: #FFFFFF; --ink: #17171A; --quiet: #6E6E75;
+      --line: #E7E5E2; --broken: #A8301C; --moved: #8A6410; --unsure: #9A9A96;
+      --tag-l: 0.94; --tag-c: 0.045; --tag-tl: 0.42; --tag-tc: 0.11;
+      --icon-l: 0.62; --icon-c: 0.11; --wash-l: 0.95; --wash-c: 0.035;
+    }
+    .t-sombre {
+      --surface: #161618; --work: #1E1E21; --ink: #ECECE9; --quiet: #9B9BA2;
+      --line: #2C2C30; --broken: #E06A52; --moved: #D4A03C; --unsure: #6B6B68;
+      --tag-l: 0.30; --tag-c: 0.05; --tag-tl: 0.80; --tag-tc: 0.09;
+      --icon-l: 0.68; --icon-c: 0.11; --wash-l: 0.32; --wash-c: 0.05;
+    }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .tag {
+      display: inline-flex; align-items: center; height: 22px; padding: 0 10px;
+      border-radius: 11px; font-size: 12px; font-weight: 500; white-space: nowrap;
+      background: oklch(var(--tag-l) calc(var(--tag-c) * var(--sat, 1)) var(--h));
+      color: oklch(var(--tag-tl) calc(var(--tag-tc) * var(--sat, 1)) var(--h));
+    }
+  </style>
+</helmet>
+
+<div class="{{themeClass}}" style="display: flex; flex-direction: column; gap: 34px; width: 1000px; min-height: 1250px; padding: 40px; background: var(--surface); color: var(--ink); font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif; font-size: 13px;">
+
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <div style="font-size: 21px; font-weight: 590; letter-spacing: -0.01em;">Le vocabulaire</div>
+    <div style="color: var(--quiet); line-height: 1.6; max-width: 66ch; text-wrap: pretty;">La couleur ne décore pas : elle nomme. Une étiquette garde sa teinte partout dans l'application, et l'état d'un lien se lit à sa marque. Tout le reste est neutre pour que ces deux signaux ressortent.</div>
+  </div>
+
+  <!-- Symbolique -->
+  <div style="display: flex; flex-direction: column; gap: 14px;">
+    <div style="font-weight: 590;">La symbolique des couleurs</div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
+      <sc-for list="{{symbolique}}" as="t" hint-placeholder-count="9">
+        <div style="display: flex; flex-direction: column; gap: 9px; padding: 13px 15px; background: var(--work); border: 1px solid var(--line); border-radius: 9px;">
+          <div style="display: flex; align-items: center; gap: 9px;">
+            <div style="width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0; background: {{t.plein}};"></div>
+            <span style="font-weight: 500;">{{t.nom}}</span>
+          </div>
+          <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+            <sc-for list="{{t.exemples}}" as="e" hint-placeholder-count="3">
+              <span class="tag" style="--h: {{e.h}}; --sat: {{e.sat}}; height: 19px; padding: 0 8px; font-size: 11px;">{{e.nom}}</span>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="color: var(--quiet); line-height: 1.6; max-width: 76ch; text-wrap: pretty;">La teinte d'une étiquette vient de ce qu'elle <strong style="font-weight: 590; color: var(--ink);">signifie</strong>, pas de son orthographe : bleu pour la technique, vert pour l'argent, ambre pour la maison, rouge pour ce qui presse. Un petit lexique range chaque mot dans une thématique, si bien que « code », « python » et « serveur » partagent le même bleu sans qu'on ait rien réglé.</div>
+    <div style="color: var(--quiet); line-height: 1.6; max-width: 76ch; text-wrap: pretty;">Un mot absent du lexique reste <strong style="font-weight: 590; color: var(--ink);">gris</strong> — c'est délibéré. Le gris se remarque, il signale une étiquette que le lexique ne sait pas classer, et il se corrige en ajoutant le mot. Une couleur inventée au hasard aurait caché la lacune. Clarté et chroma restent identiques d'une thématique à l'autre : aucune ne crie plus fort qu'une autre.</div>
+  </div>
+
+  <!-- États -->
+  <div style="display: flex; flex-direction: column; gap: 14px;">
+    <div style="font-weight: 590;">États d'un lien</div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+      <sc-for list="{{etats}}" as="e" hint-placeholder-count="5">
+        <div style="display: flex; gap: 13px; padding: 13px 15px; background: var(--work); border: 1px solid var(--line); border-radius: 9px;">
+          <div style="width: 3px; flex-shrink: 0; border-radius: 1px; background-image: {{e.gutter}}; background-color: {{e.gutterBg}};"></div>
+          <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+            <div style="font-weight: 500;">{{e.nom}}</div>
+            <div style="color: var(--quiet); line-height: 1.5; text-wrap: pretty;">{{e.desc}}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="color: var(--quiet); line-height: 1.6; max-width: 76ch; text-wrap: pretty;">La forme distingue les états autant que la couleur — plein, pointillé large, pointillé fin, double trait — donc un lien mort et une redirection restent différenciables sans percevoir le rouge et l'ambre. En liste, la marque borde la ligne ; en mosaïque, elle coiffe la vignette. L'état sain n'a aucune marque : sur 12 210 éléments, seul ce qui appelle une action se voit.</div>
+  </div>
+
+  <!-- Surfaces -->
+  <div style="display: flex; flex-direction: column; gap: 14px;">
+    <div style="font-weight: 590;">Surfaces et encres</div>
+    <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px;">
+      <sc-for list="{{jetons}}" as="j" hint-placeholder-count="6">
+        <div style="display: flex; flex-direction: column; gap: 7px;">
+          <div style="height: 50px; border-radius: 8px; border: 1px solid var(--line); background: {{j.valeur}};"></div>
+          <div class="mono" style="font-size: 11px;">{{j.nom}}</div>
+          <div class="mono" style="font-size: 11px; color: var(--quiet); margin-top: -5px;">{{j.hex}}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- Collections -->
+  <div style="display: flex; flex-direction: column; gap: 14px;">
+    <div style="font-weight: 590;">Collections : une couleur par thématique</div>
+    <div style="display: flex; flex-direction: column; gap: 3px; padding: 14px 16px; background: var(--work); border: 1px solid var(--line); border-radius: 9px;">
+      <sc-for list="{{coll}}" as="c" hint-placeholder-count="6">
+        <div style="display: flex; align-items: center; height: 26px;">
+          <div style="width: {{c.retrait}}; flex-shrink: 0; height: 26px; display: flex; justify-content: flex-end;">
+            <div style="width: 2px; height: 26px; background: {{c.filet}};"></div>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0; margin: 0 9px 0 6px; background: {{c.fondIcone}}; color: {{c.couleur}};">
+            <sc-if value="{{c.aIcone}}" hint-placeholder-val="{{true}}">
+              <div style="width: 10px; height: 10px; border-radius: 3px; background: {{c.couleur}};"></div>
+            </sc-if>
+            <sc-if value="{{c.sansIcone}}" hint-placeholder-val="{{true}}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+            </sc-if>
+          </div>
+          <span style="font-weight: {{c.graisse}};">{{c.nom}}</span>
+          <span class="mono" style="margin-left: auto; font-size: 11px; color: var(--quiet);">{{c.compte}}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="color: var(--quiet); line-height: 1.6; max-width: 76ch; text-wrap: pretty;">216 collections sur trois niveaux : la couleur appartient à la <strong style="font-weight: 590; color: var(--ink);">racine</strong>, et ses descendantes en héritent — on repère une famille sans lire les titres. Raindrop fournit l'icône et sa couleur dominante pour 68 collections sur 216 ; les autres reçoivent un dossier teinté de leur thématique, jamais une case vide. Le filet vertical à gauche remplace l'indentation nue et porte la même teinte.</div>
+  </div>
+
+  <!-- Typographie -->
+  <div style="display: flex; flex-direction: column; gap: 14px;">
+    <div style="font-weight: 590;">Typographie</div>
+    <div style="display: flex; flex-direction: column; gap: 12px; padding: 20px 22px; background: var(--work); border: 1px solid var(--line); border-radius: 9px;">
+      <div style="font-size: 26px; font-weight: 590; letter-spacing: -0.015em; line-height: 1.22;">Une introduction aux types conditionnels</div>
+      <div style="font-size: 21px; font-weight: 590; letter-spacing: -0.01em;">Titre de section</div>
+      <div style="font-size: 15px; font-weight: 590;">Titre dans le panneau de détail</div>
+      <div style="font-size: 13px;">Texte courant de l'interface, la taille par défaut</div>
+      <div style="font-size: 12px; color: var(--quiet);">Texte secondaire, compteurs, raisons de voisinage</div>
+      <div class="mono" style="font-size: 11px;">https://exemple.fr/page?utm_source=infolettre</div>
+    </div>
+    <div style="color: var(--quiet); line-height: 1.6; max-width: 76ch; text-wrap: pretty;">Police système pour l'interface : elle s'aligne sur macOS et ne coûte aucun chargement sur des listes de 12 000 lignes. Chasse fixe réservée aux adresses, parce que les comparer caractère par caractère est le travail même — repérer un doublon, valider une redirection.</div>
+  </div>
+
+  <!-- Densité -->
+  <div style="display: flex; flex-direction: column; gap: 14px;">
+    <div style="font-weight: 590;">Deux densités, un seul modèle</div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+      <sc-for list="{{densites}}" as="d" hint-placeholder-count="2">
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; background: var(--work); border: 1px solid var(--line); border-radius: 9px;">
+          <div style="display: flex; align-items: baseline; gap: 9px;">
+            <div style="font-weight: 500;">{{d.nom}}</div>
+            <div class="mono" style="font-size: 11px; color: var(--quiet);">{{d.taille}}</div>
+          </div>
+          <div style="color: var(--quiet); line-height: 1.55; text-wrap: pretty;">{{d.desc}}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="color: var(--quiet); line-height: 1.6; max-width: 76ch; text-wrap: pretty;">L'interface est compacte par défaut et ne respire qu'à deux endroits : la fiche d'un lien et la Revue de l'action. Là où un geste devient difficile à annuler, le vide fait le travail qu'un bandeau d'alerte ferait moins bien.</div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["clair","sombre"],"default":"clair","section":"Affichage"},"$preview":{"width":1000,"height":1250}}'>
+class Component extends DCLogic {
+  // La teinte vient du SENS, pas de l'orthographe : bleu pour la technique,
+  // vert pour l'argent, ambre pour la maison… Un mot non reconnu reste gris,
+  // ce qui se voit — et se corrige en ajoutant le mot au lexique.
+  themes() {
+    return [
+      { nom: "technique", h: 250, mots: ["code", "dev", "développement", "programmation", "informatique", "typescript", "javascript", "python", "rust", "linux", "mac", "logiciel", "api", "serveur", "git", "données", "langage", "build", "test"] },
+      { nom: "création", h: 300, mots: ["design", "webdesign", "typographie", "police", "graphisme", "illustration", "couleur", "art", "photo", "ui", "ux", "système de design"] },
+      { nom: "argent", h: 150, mots: ["achat", "finance", "banque", "budget", "prix", "vente", "boutique", "économie", "facture", "comparer"] },
+      { nom: "maison", h: 62, mots: ["maison", "cuisine", "recette", "pâtisserie", "bricolage", "jardin", "déco", "meuble", "matériel", "périphérique"] },
+      { nom: "santé", h: 25, mots: ["santé", "médecine", "sport", "urgent", "important", "sécurité", "à-revoir", "à-traiter"] },
+      { nom: "lieux", h: 195, mots: ["voyage", "carte", "ville", "pays", "transport", "train", "hôtel", "restaurant", "lieu"] },
+      { nom: "culture", h: 345, mots: ["lecture", "livre", "article", "veille", "musique", "film", "podcast", "histoire", "infolettre", "presse"] },
+      { nom: "méthode", h: 120, mots: ["outil", "service", "application", "extension", "productivité", "méthode", "référence", "guide", "tutoriel", "archive"] }
+    ];
+  }
+
+  theme(nom) {
+    const n = (nom || "").toLowerCase();
+    const liste = this.themes();
+    for (let i = 0; i < liste.length; i++) {
+      for (let j = 0; j < liste[i].mots.length; j++) {
+        if (n.indexOf(liste[i].mots[j]) !== -1) return liste[i];
+      }
+    }
+    return { nom: "hors lexique", h: 250, neutre: true };
+  }
+
+  teinte(nom) { return this.theme(nom).h; }
+  sature(nom) { return this.theme(nom).neutre ? 0 : 1; }
+
+  renderVals() {
+    const theme = this.props.theme ?? "clair";
+    const clair = theme !== "sombre";
+    const noms = ["code", "webdesign", "outil-en-ligne", "mac", "linux", "informatique", "achats", "typescript", "référence", "méthode"];
+
+    return {
+      themeClass: clair ? "t-clair" : "t-sombre",
+      symbolique: [
+        { t: "technique", ex: ["code", "python", "serveur"] },
+        { t: "création", ex: ["webdesign", "typographie", "couleur"] },
+        { t: "argent", ex: ["achats", "budget", "comparer"] },
+        { t: "maison", ex: ["cuisine", "recette", "matériel"] },
+        { t: "santé", ex: ["santé", "urgent", "sécurité"] },
+        { t: "lieux", ex: ["voyage", "ville", "transport"] },
+        { t: "culture", ex: ["lecture", "veille", "podcast"] },
+        { t: "méthode", ex: ["outil-en-ligne", "référence", "guide"] },
+        { t: "hors lexique", ex: ["babiole", "divers", "à-ranger"] }
+      ].map((x) => {
+        const th = this.theme(x.ex[0]);
+        const sat = th.neutre ? 0 : 1;
+        return {
+          nom: x.t,
+          plein: "oklch(var(--icon-l) calc(var(--icon-c) * " + sat + ") " + th.h + ")",
+          exemples: x.ex.map((e) => ({ nom: e, h: this.teinte(e), sat: this.sature(e) }))
+        };
+      }),
+      coll: (() => {
+        const brut = [
+          { t: "Développement", n: 0, c: "3 480", ico: true },
+          { t: "Langages", n: 1, c: "1 204", ico: true },
+          { t: "TypeScript", n: 2, c: "412", ico: false },
+          { t: "Design", n: 0, c: "1 926", ico: true },
+          { t: "Typographie", n: 1, c: "534", ico: true },
+          { t: "Veille et lecture", n: 0, c: "2 145", ico: false }
+        ];
+        let racine = null;
+        return brut.map((x) => {
+          if (x.n === 0) racine = x;
+          const h = this.teinte((racine || x).t);
+          return {
+            nom: x.t,
+            compte: x.c,
+            retrait: (x.n === 0 ? 2 : 8 + x.n * 14) + "px",
+            filet: x.n === 0 ? "transparent" : "oklch(var(--wash-l) var(--wash-c) " + h + ")",
+            aIcone: !!x.ico,
+            sansIcone: !x.ico,
+            couleur: "oklch(var(--icon-l) var(--icon-c) " + h + ")",
+            fondIcone: "oklch(var(--wash-l) var(--wash-c) " + h + ")",
+            graisse: x.n === 0 ? "590" : "400"
+          };
+        });
+      })(),
+      etats: [
+        { nom: "Sain", desc: "Aucune marque. L'état normal ne consomme pas d'attention.", gutter: "none", gutterBg: "transparent" },
+        { nom: "Lien mort", desc: "Trait plein. Le serveur ne répond plus, ou répond 404.", gutter: "none", gutterBg: "var(--broken)" },
+        { nom: "Redirection", desc: "Pointillé large. L'adresse a changé définitivement.", gutter: "repeating-linear-gradient(180deg, var(--moved) 0 4px, transparent 4px 8px)", gutterBg: "transparent" },
+        { nom: "Vérification impossible", desc: "Pointillé fin. Le site refuse les requêtes automatiques.", gutter: "repeating-linear-gradient(180deg, var(--unsure) 0 1px, transparent 1px 3px)", gutterBg: "transparent" },
+        { nom: "Doublon", desc: "Double trait. Un autre élément pointe la même adresse.", gutter: "linear-gradient(90deg, var(--ink) 0 1px, transparent 1px 2px, var(--ink) 2px 3px)", gutterBg: "transparent" }
+      ],
+      jetons: clair
+        ? [
+            { nom: "surface", hex: "#FBFAF9", valeur: "#FBFAF9" },
+            { nom: "work", hex: "#FFFFFF", valeur: "#FFFFFF" },
+            { nom: "line", hex: "#E7E5E2", valeur: "#E7E5E2" },
+            { nom: "quiet", hex: "#6E6E75", valeur: "#6E6E75" },
+            { nom: "ink", hex: "#17171A", valeur: "#17171A" },
+            { nom: "broken", hex: "#A8301C", valeur: "#A8301C" }
+          ]
+        : [
+            { nom: "surface", hex: "#161618", valeur: "#161618" },
+            { nom: "work", hex: "#1E1E21", valeur: "#1E1E21" },
+            { nom: "line", hex: "#2C2C30", valeur: "#2C2C30" },
+            { nom: "quiet", hex: "#9B9BA2", valeur: "#9B9BA2" },
+            { nom: "ink", hex: "#ECECE9", valeur: "#ECECE9" },
+            { nom: "broken", hex: "#E06A52", valeur: "#E06A52" }
+          ],
+      densites: [
+        { nom: "Liste", taille: "ligne de 36 px", desc: "Le mode de travail : environ 22 éléments visibles, étiquettes et domaine compris. C'est là qu'on trie, qu'on répare, qu'on sélectionne en masse." },
+        { nom: "Mosaïque", taille: "tuile de 221 px", desc: "Le mode de parcours : la vignette porte la reconnaissance. 93 % des éléments en ont une ; les autres reçoivent l'initiale du domaine sur fond teinté, jamais un cadre vide." }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

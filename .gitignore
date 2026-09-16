@@ -28,3 +28,6 @@ __pycache__/
 # macOS
 .DS_Store
 
+
+# Canvas de design assemblé (~2 Mo, régénérable depuis design/*.dc.html)
+design/raindrop-gui-interface.html

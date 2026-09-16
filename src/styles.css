@@ -1,24 +1,96 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Jetons de la direction visuelle — voir docs/DESIGN.md, qui fait foi.
+   La couleur ne décore pas : elle nomme une thématique ou un diagnostic.
+   Pas d'accent de marque — une teinte qui ne signifie rien n'existe pas ici. */
 @theme {
-  --color-app: oklch(0.98 0 0);
-  --color-app-panel: oklch(1 0 0);
-  --color-app-ink: oklch(0.2 0 0);
-  --color-app-muted: oklch(0.5 0 0);
-  --color-app-accent: oklch(0.55 0.15 250);
-  --color-app-danger: oklch(0.55 0.2 25);
-  --color-app-border: oklch(0.9 0 0);
+  --color-app: #FBFAF9;
+  --color-app-panel: #FFFFFF;
+  --color-app-ink: #17171A;
+  --color-app-muted: #6E6E75;
+  --color-app-border: #E7E5E2;
+  --color-app-sel: #F0EFEC;
+  --color-app-hover: #F5F4F1;
+
+  /* États d'un lien. La forme les distingue autant que la couleur
+     (plein / pointillé large / pointillé fin / double trait). */
+  --color-app-broken: #A8301C;
+  --color-app-moved: #8A6410;
+  --color-app-unsure: #9A9A96;
+
+  /* Clarté et chroma des couleurs dérivées : identiques pour toutes les
+     thématiques, seule la teinte varie — aucune ne crie plus fort qu'une autre.
+     Un mot hors lexique passe --sat à 0 et retombe en gris, délibérément. */
+  --app-tag-l: 0.94;
+  --app-tag-c: 0.045;
+  --app-tag-ink-l: 0.42;
+  --app-tag-ink-c: 0.11;
+  --app-icon-l: 0.62;
+  --app-icon-c: 0.11;
+  --app-wash-l: 0.95;
+  --app-wash-c: 0.035;
 }
 
 .dark {
-  --color-app: oklch(0.18 0 0);
-  --color-app-panel: oklch(0.23 0 0);
-  --color-app-ink: oklch(0.92 0 0);
-  --color-app-muted: oklch(0.65 0 0);
-  --color-app-accent: oklch(0.7 0.13 250);
-  --color-app-danger: oklch(0.65 0.18 25);
-  --color-app-border: oklch(0.32 0 0);
+  --color-app: #161618;
+  --color-app-panel: #1E1E21;
+  --color-app-ink: #ECECE9;
+  --color-app-muted: #9B9BA2;
+  --color-app-border: #2C2C30;
+  --color-app-sel: #2A2A2E;
+  --color-app-hover: #252528;
+
+  --color-app-broken: #E06A52;
+  --color-app-moved: #D4A03C;
+  --color-app-unsure: #6B6B68;
+
+  --app-tag-l: 0.30;
+  --app-tag-c: 0.05;
+  --app-tag-ink-l: 0.80;
+  --app-tag-ink-c: 0.09;
+  --app-icon-l: 0.68;
+  --app-icon-c: 0.11;
+  --app-wash-l: 0.32;
+  --app-wash-c: 0.05;
 }
 
-body { background: var(--color-app); color: var(--color-app-ink); }
+body {
+  background: var(--color-app);
+  color: var(--color-app-ink);
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size: 13px;
+}
+
+/* Chasse fixe réservée aux URLs et aux domaines : les comparer caractère par
+   caractère est le travail même (doublons, redirections). Nulle part ailleurs. */
+.url {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Étiquette et icône de collection : --h porte la teinte de la thématique,
+   --sat vaut 0 pour un mot hors lexique. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  background: oklch(var(--app-tag-l) calc(var(--app-tag-c) * var(--sat, 1)) var(--h));
+  color: oklch(var(--app-tag-ink-l) calc(var(--app-tag-ink-c) * var(--sat, 1)) var(--h));
+}
+
+.coll-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  background: oklch(var(--app-wash-l) calc(var(--app-wash-c) * var(--sat, 1)) var(--h));
+  color: oklch(var(--app-icon-l) calc(var(--app-icon-c) * var(--sat, 1)) var(--h));
+}

@@ -1,0 +1,216 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #1F6F8B; } a:hover { color: #175567; }
+    .t-clair {
+      --surface: #FBFAF9; --work: #FFFFFF; --ink: #17171A; --quiet: #6E6E75;
+      --line: #E7E5E2; --sel: #F0EFEC; --hover: #F5F4F1;
+      --icon-l: 0.62; --icon-c: 0.11; --wash-l: 0.95; --wash-c: 0.035;
+    }
+    .t-sombre {
+      --surface: #161618; --work: #1E1E21; --ink: #ECECE9; --quiet: #9B9BA2;
+      --line: #2C2C30; --sel: #2A2A2E; --hover: #252528;
+      --icon-l: 0.68; --icon-c: 0.11; --wash-l: 0.32; --wash-c: 0.05;
+    }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .n:hover { background: var(--hover); }
+    .sel { background: var(--sel); }
+  </style>
+</helmet>
+
+<div class="{{themeClass}}" style="display: flex; flex-direction: column; width: 560px; height: 980px; background: var(--surface); color: var(--ink); font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, system-ui, sans-serif; font-size: 13px; overflow: hidden;">
+
+  <div style="display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 16px; border-bottom: 1px solid var(--line); flex-shrink: 0;">
+    <span style="font-weight: 590;">Collections</span>
+    <span class="mono" style="font-size: 11px; color: var(--quiet);">216</span>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 6px; color: var(--quiet);">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"></path></svg>
+    </div>
+  </div>
+
+  <div style="flex-grow: 1; min-height: 0; padding: 9px 8px; overflow: hidden;">
+    <sc-for list="{{noeuds}}" as="n" hint-placeholder-count="20">
+      <div class="n {{n.cls}}" onClick="{{n.bascule}}" style="display: flex; align-items: center; height: 28px; border-radius: 7px; cursor: default; padding-right: 9px;">
+
+        <!-- Gouttière d'héritage : le filet porte la couleur de la thématique -->
+        <div style="width: {{n.retrait}}; flex-shrink: 0; height: 28px; display: flex; justify-content: flex-end;">
+          <div style="width: 2px; height: 28px; background: {{n.filet}};"></div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: center; width: 16px; flex-shrink: 0; color: var(--quiet);">
+          <sc-if value="{{n.pliable}}" hint-placeholder-val="{{true}}">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="transform: rotate({{n.rotation}}); transition: transform 130ms ease;"><path d="M9 6l6 6-6 6"></path></svg>
+          </sc-if>
+        </div>
+
+        <!-- L'icône : la vignette Raindrop quand elle existe, sinon un dossier teinté -->
+        <div style="display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0; margin-right: 9px; background: {{n.fondIcone}}; color: {{n.couleur}};">
+          <sc-if value="{{n.aIcone}}" hint-placeholder-val="{{true}}">
+            <div style="width: 11px; height: 11px; border-radius: 3px; background: {{n.couleur}};"></div>
+          </sc-if>
+          <sc-if value="{{n.sansIcone}}" hint-placeholder-val="{{true}}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+          </sc-if>
+        </div>
+
+        <span style="flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: {{n.graisse}};">{{n.titre}}</span>
+        <span class="mono" style="font-size: 11px; color: var(--quiet); flex-shrink: 0;">{{n.compte}}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 9px; padding: 14px 16px; border-top: 1px solid var(--line); flex-shrink: 0; color: var(--quiet); line-height: 1.55;">
+    <div style="display: flex; align-items: center; gap: 9px;">
+      <div style="display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 6px; background: oklch(var(--wash-l) var(--wash-c) 245);">
+        <div style="width: 11px; height: 11px; border-radius: 3px; background: oklch(var(--icon-l) var(--icon-c) 245);"></div>
+      </div>
+      <span>Icône définie dans Raindrop — 68 collections sur 216</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 9px;">
+      <div style="display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 6px; background: oklch(var(--wash-l) var(--wash-c) 155); color: oklch(var(--icon-l) var(--icon-c) 155);">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+      </div>
+      <span>Sans icône : dossier teinté de la thématique</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["clair","sombre"],"default":"clair","section":"Affichage"},"$preview":{"width":560,"height":980}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    // Raindrop mémorise déjà l'état d'ouverture par collection (champ `expanded`).
+    this.state = { fermes: { 300: true, 600: true }, choisi: 210 };
+  }
+
+  // La teinte vient du SENS, pas de l'orthographe : bleu pour la technique,
+  // vert pour l'argent, ambre pour la maison… Un mot non reconnu reste gris,
+  // ce qui se voit — et se corrige en ajoutant le mot au lexique.
+  themes() {
+    return [
+      { nom: "technique", h: 250, mots: ["code", "dev", "développement", "programmation", "informatique", "typescript", "javascript", "python", "rust", "linux", "mac", "logiciel", "api", "serveur", "git", "données", "langage", "build", "test"] },
+      { nom: "création", h: 300, mots: ["design", "webdesign", "typographie", "police", "graphisme", "illustration", "couleur", "art", "photo", "ui", "ux", "système de design"] },
+      { nom: "argent", h: 150, mots: ["achat", "finance", "banque", "budget", "prix", "vente", "boutique", "économie", "facture", "comparer"] },
+      { nom: "maison", h: 62, mots: ["maison", "cuisine", "recette", "pâtisserie", "bricolage", "jardin", "déco", "meuble", "matériel", "périphérique"] },
+      { nom: "santé", h: 25, mots: ["santé", "médecine", "sport", "urgent", "important", "sécurité", "à-revoir", "à-traiter"] },
+      { nom: "lieux", h: 195, mots: ["voyage", "carte", "ville", "pays", "transport", "train", "hôtel", "restaurant", "lieu"] },
+      { nom: "culture", h: 345, mots: ["lecture", "livre", "article", "veille", "musique", "film", "podcast", "histoire", "infolettre", "presse"] },
+      { nom: "méthode", h: 120, mots: ["outil", "service", "application", "extension", "productivité", "méthode", "référence", "guide", "tutoriel", "archive"] }
+    ];
+  }
+
+  theme(nom) {
+    const n = (nom || "").toLowerCase();
+    const liste = this.themes();
+    for (let i = 0; i < liste.length; i++) {
+      for (let j = 0; j < liste[i].mots.length; j++) {
+        if (n.indexOf(liste[i].mots[j]) !== -1) return liste[i];
+      }
+    }
+    return { nom: "hors lexique", h: 250, neutre: true };
+  }
+
+  teinte(nom) { return this.theme(nom).h; }
+  sature(nom) { return this.theme(nom).neutre ? 0 : 1; }
+
+  arbre() {
+    // id, titre, niveau, compte, icône définie dans Raindrop, couleur Raindrop si elle existe
+    return [
+      { id: 100, t: "Développement", n: 0, c: "3 480", ico: true, col: "#435b63" },
+      { id: 110, t: "Langages", n: 1, c: "1 204", ico: true },
+      { id: 111, t: "TypeScript", n: 2, c: "412", ico: false },
+      { id: 112, t: "Rust", n: 2, c: "289", ico: true },
+      { id: 113, t: "Python", n: 2, c: "503", ico: false },
+      { id: 120, t: "Outils et chaînes de build", n: 1, c: "876", ico: false },
+      { id: 121, t: "Vite et bundlers", n: 2, c: "204", ico: false },
+      { id: 130, t: "Bases de données", n: 1, c: "618", ico: true },
+
+      { id: 200, t: "Design", n: 0, c: "1 926", ico: true, col: "#8a5a44" },
+      { id: 210, t: "Typographie", n: 1, c: "534", ico: true },
+      { id: 211, t: "Polices libres", n: 2, c: "218", ico: false },
+      { id: 220, t: "Systèmes de design", n: 1, c: "392", ico: false },
+      { id: 230, t: "Couleur et accessibilité", n: 1, c: "287", ico: true },
+
+      { id: 300, t: "Veille et lecture", n: 0, c: "2 145", ico: false },
+      { id: 310, t: "Articles longs", n: 1, c: "742", ico: false },
+      { id: 320, t: "Infolettres", n: 1, c: "318", ico: false },
+
+      { id: 400, t: "Maison et matériel", n: 0, c: "1 087", ico: true, col: "#5d6a3f" },
+      { id: 410, t: "Mac et périphériques", n: 1, c: "421", ico: true },
+      { id: 420, t: "Achats à comparer", n: 1, c: "263", ico: false },
+
+      { id: 500, t: "Recettes", n: 0, c: "612", ico: true, col: "#8d4f5a" },
+      { id: 510, t: "Pâtisserie", n: 1, c: "184", ico: false },
+
+      { id: 600, t: "Archives", n: 0, c: "2 960", ico: false }
+    ];
+  }
+
+  renderVals() {
+    const theme = this.props.theme ?? "clair";
+    const brut = this.arbre();
+    const fermes = this.state.fermes;
+
+    // Une couleur par thématique : la racine la porte, ses descendantes en héritent.
+    let racine = null;
+    const avecCouleur = brut.map((x) => {
+      if (x.n === 0) racine = x;
+      const base = racine || x;
+      return { ...x, h: this.teinte(base.t), racineId: base.id };
+    });
+
+    // Aplatissement : un nœud est masqué si l'un de ses ancêtres est replié.
+    const visibles = [];
+    const pileFermee = [];
+    for (let i = 0; i < avecCouleur.length; i++) {
+      const x = avecCouleur[i];
+      while (pileFermee.length && pileFermee[pileFermee.length - 1] >= x.n) pileFermee.pop();
+      const masque = pileFermee.length > 0;
+      if (!masque) visibles.push(x);
+      if (fermes[x.id]) pileFermee.push(x.n);
+    }
+
+    const suivant = (i) => avecCouleur[avecCouleur.indexOf(i) + 1];
+
+    const noeuds = visibles.map((x) => {
+      const apres = suivant(x);
+      const pliable = !!(apres && apres.n > x.n);
+      const ouvert = !fermes[x.id];
+      const couleur = "oklch(var(--icon-l) var(--icon-c) " + x.h + ")";
+      return {
+        titre: x.t,
+        compte: x.c,
+        retrait: (x.n === 0 ? 2 : 10 + x.n * 15) + "px",
+        filet: x.n === 0 ? "transparent" : "oklch(var(--wash-l) var(--wash-c) " + x.h + ")",
+        pliable: pliable,
+        rotation: pliable && ouvert ? "90deg" : "0deg",
+        aIcone: !!x.ico,
+        sansIcone: !x.ico,
+        couleur: couleur,
+        fondIcone: "oklch(var(--wash-l) var(--wash-c) " + x.h + ")",
+        graisse: x.n === 0 ? "590" : "400",
+        cls: x.id === this.state.choisi ? "sel" : "",
+        bascule: () => {
+          const f = { ...this.state.fermes };
+          if (pliable) { if (f[x.id]) delete f[x.id]; else f[x.id] = true; }
+          this.setState({ fermes: f, choisi: x.id });
+        }
+      };
+    });
+
+    return { themeClass: theme === "sombre" ? "t-sombre" : "t-clair", noeuds: noeuds };
+  }
+}
+</script>
+</body>
+</html>
