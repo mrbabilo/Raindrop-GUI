@@ -15,19 +15,50 @@ repère ce qui ne va pas, puis le corrige sans rien casser. L'interface est
 compacte par défaut et ne respire qu'à deux endroits — la fiche d'un lien et la
 Revue de l'action.
 
-## 2. Les trois signaux, distingués par la forme
+## 2. Les signaux, distingués par la forme
 
-Trois informations colorées coexistent. **Elles ne se distinguent jamais par la
-seule couleur** : chacune a sa forme propre.
+Quatre informations coexistent. **Trois sont colorées, et ne se distinguent
+jamais par la seule couleur** : chacune a sa forme propre. La quatrième — la
+nature du contenu — n'en porte aucune.
 
-| Signal | Forme | Sens |
+| Signal | Forme | Couleur | Sens |
+|---|---|---|---|
+| Collection d'origine | carré arrondi 18 px, rayon 5 | thématique | un contenant |
+| Étiquette | pilule, hauteur 18 px (21 en détail) | thématique | une thématique |
+| État du lien | filet de 3 px en bord de ligne | diagnostic | un diagnostic |
+| Nature du contenu | glyphe au trait, 15 px | **aucune** | ce que c'est |
+
+L'état **n'apparaît que sur les éléments à problème** : une ligne saine porte
+donc trois signaux, une ligne à réparer quatre. C'est le plafond — et c'est
+précisément pourquoi le quatrième ne peut pas être coloré.
+
+**Pourquoi la nature ne prend pas de couleur.** Une quatrième teinte rendrait
+les trois autres illisibles — on ne lit pas quatre codes couleur dans une ligne
+de 36 px. La nature se lit à la **forme du glyphe**, et se filtre depuis la
+barre de recherche (§11). Observation à l'appui (relevée le 2026-09-16 dans
+l'app mymind, qui n'a pourtant aucune contrainte de signalétique) : ses puces
+de type sont des glyphes monochromes sur fond neutre, quand ses étiquettes
+d'espace portent un anneau coloré. La séparation forme/couleur s'impose d'elle-même
+dès qu'on veut afficher les deux à la fois.
+
+### 2.1 Les glyphes de nature
+
+Le champ `type` de Raindrop prend six valeurs et une seule à la fois. Chacune a
+son glyphe, tracé selon §9 (SVG, trait 1,6–1,8, grille 15–16 px) et teinté en
+`quiet` — jamais en couleur de thématique.
+
+| `type` | Glyphe | Tracé |
 |---|---|---|
-| Collection d'origine | carré arrondi 18 px, rayon 5 | un contenant |
-| Étiquette | pilule, hauteur 18 px (21 en détail) | une thématique |
-| État du lien | filet de 3 px en bord de ligne | un diagnostic |
+| `link` | maillon | deux arcs ouverts qui s'entrecroisent |
+| `article` | feuillet | page avec trois filets de texte |
+| `image` | vue | cadre, un mont, un disque en haut à gauche |
+| `video` | lecture | cadre, triangle plein centré |
+| `document` | document | page à coin replié |
+| `audio` | onde | trois barres verticales de hauteurs inégales |
 
-L'état **n'apparaît que sur les éléments à problème** : une ligne ordinaire ne
-porte que deux signaux.
+Le glyphe se place **avant le domaine**, dans le même filet de texte secondaire,
+et partage sa couleur. Il ne prend ni fond, ni bordure, ni pilule : c'est une
+lettre de plus dans la ligne du domaine, pas un badge.
 
 ## 3. La symbolique des couleurs
 
@@ -173,3 +204,27 @@ Un bouton nomme ce qui va se produire — « Mettre à la corbeille », pas
 « Valider » — et garde le même mot dans tout le parcours. Les erreurs disent ce
 qui s'est passé et comment le corriger, sans s'excuser. Un écran vide est une
 invitation à agir, pas un constat.
+
+## 11. Filtrer par nature
+
+La spec §4.1 promet des « filtres avancés » que rien n'annonce à l'écran, et la
+TopBar aligne aujourd'hui sept contrôles de même poids — dont un `<select>` de
+nature que personne ne remarque. Au **focus** du champ de recherche, une rangée
+de puces apparaît sous le champ et nomme les natures disponibles ; elle
+disparaît au blur si aucune n'est active.
+
+- Une puce par nature — glyphe §2.1 + libellé français (`Liens`, `Articles`,
+  `Images`, `Vidéos`, `Documents`, `Audio`).
+- **Ordonnées par fréquence décroissante dans les items chargés de la vue
+  courante** — pas dans la bibliothèque entière : aucun compteur par nature
+  n'existe côté API, et un plein scan est exclu (spec §3.4). L'ordre reflète
+  donc ce que l'utilisateur a sous les yeux, et retombe sur l'ordre du tableau
+  §2.1 quand la liste est vide.
+- Cliquer une puce pose le filtre de nature ; la recliquer le retire. Une puce
+  active prend la surface `sel`, **jamais une teinte**.
+- Hauteur 26 px, rayon 7 px, fond `work`, texte `quiet` — ce sont des commandes,
+  pas des étiquettes : elles ne doivent pas se confondre avec les pilules
+  thématiques de §2.
+
+La nature est une propriété que Raindrop calcule et que nous ne corrigeons
+jamais : ces puces **filtrent**, elles n'éditent rien.
