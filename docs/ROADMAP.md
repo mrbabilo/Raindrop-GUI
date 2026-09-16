@@ -58,10 +58,14 @@ traiter une tâche « à faire ».
       débloque d'un coup l'icône de collection, le mode lecture et le quick win
       « copie archivée » (spec §12). Consommateurs à suivre :
       `sidecar/analysis/snapshot.ts`, les deux routes, `src/lib/api.test.ts`.
-- [ ] **Quatre filtres inertes** : `ListPane.tsx:16` ne transmet pas `domain`,
-      `media`, `createdStart`, `createdEnd` à `useRaindrops`, qui les accepte
-      pourtant. Les contrôles de la TopBar (Task 6) ne filtrent rien. Corrigé
-      par la **Task 7b**, step 4.
+- [ ] **Trois filtres inertes** : `ListPane` ne transmet pas `domain`,
+      `createdStart`, `createdEnd` à `useRaindrops`, qui les accepte pourtant —
+      ces trois contrôles de la TopBar (Task 6) ne filtrent rien. Le quatrième,
+      `media`, a été câblé par la **Task 6b** (`fab257c`) : sans lui les puces
+      de nature n'auraient rien filtré, ce que DESIGN.md §11 exige. Les trois
+      restants passent par `listQueryArgs` (`src/hooks/listQuery.ts`, partagé
+      avec `NatureChips` pour que les `queryKey` ne dérivent pas) — **Task 7b**,
+      step 4.
 - [ ] **Lexique thématique à élargir** (`docs/DESIGN.md` §3) à partir des
       étiquettes réelles : ce qu'il ne reconnaît pas s'affiche en gris.
 
