@@ -130,6 +130,55 @@ describe("DetailPane", () => {
     await waitFor(() => expect(sendApi).toHaveBeenCalledWith("DELETE", "/api/raindrops/1000?from=201"));
   });
 
+  // R8P-1 : un PATCH en échec ne détruit pas la saisie — l'édition reste
+  // ouverte, le brouillon est conservé, l'erreur s'affiche inline.
+  it("échec d'enregistrement : édition ouverte, brouillon intact, erreur inline", async () => {
+    sendApi.mockRejectedValue(new Error("réseau perdu"));
+    renderDetail(<Preselect id={1000} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Modifier" }));
+    const champ = screen.getByDisplayValue("Article exemple");
+    await userEvent.clear(champ);
+    await userEvent.type(champ, "Titre perdu");
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    // L'édition n'a pas fermé : l'input porte toujours le brouillon.
+    expect(screen.getByDisplayValue("Titre perdu")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Annuler" })).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("réseau perdu");
+  });
+
+  // R8P-1 : même contrat pour la corbeille — l'item reste affiché, erreur inline.
+  it("échec de mise à la corbeille : erreur inline, item toujours affiché", async () => {
+    renderDetail(<Preselect id={1000} />);
+    await screen.findByText("Article exemple");
+    sendApi.mockRejectedValue(new Error("réseau perdu"));
+    await userEvent.click(screen.getByRole("button", { name: "Mettre à la corbeille" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("réseau perdu");
+    expect(screen.getByText("Article exemple")).toBeInTheDocument();
+  });
+
+  // R8P-1 : le favori au moins absorbe le rejet — un unhandledRejection fait
+  // échouer le fichier vitest, donc ce test échoue sans .catch.
+  it("échec du favori : rejet absorbé, état inchangé", async () => {
+    renderDetail(<Preselect id={1000} />);
+    await screen.findByText("Article exemple");
+    sendApi.mockRejectedValue(new Error("réseau perdu"));
+    await userEvent.click(screen.getByRole("button", { name: "Favori" }));
+    await waitFor(() => expect(sendApi).toHaveBeenCalled());
+    expect(screen.getByRole("button", { name: "Favori" })).toBeInTheDocument();
+  });
+
+  // R8P-2 : §9 — l'étoile est une icône au trait (1,6–1,8, grille 15–16),
+  // JAMAIS pleine, y compris quand le lien est favori.
+  it("l'étoile reste au trait, même active (§9)", async () => {
+    renderDetail(<Preselect id={1000} />);
+    const inactif = await screen.findByRole("button", { name: "Favori" });
+    expect(inactif.querySelector("svg")).toHaveAttribute("fill", "none");
+    await userEvent.click(inactif);
+    const actif = await screen.findByRole("button", { name: "Retirer des favoris" });
+    expect(actif.querySelector("svg")).toHaveAttribute("fill", "none");
+    expect(actif.querySelector("svg")).toHaveAttribute("width", "15");
+  });
+
   it("changer d'item purge le brouillon d'édition", async () => {
     renderDetail(
       <>

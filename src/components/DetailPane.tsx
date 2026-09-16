@@ -38,11 +38,13 @@ function chaine(arbre: Collection[], id: number): Collection[] {
   return out;
 }
 
-// §9 : icône dessinée en SVG, jamais d'emoji — outline tant que le lien
-// n'est pas favori, pleine ensuite (même étoile que la ligne).
-function Etoile({ pleine }: { pleine: boolean }) {
+// §9 : icône dessinée en SVG au TRAIT, jamais pleine — trait 1,7 sur grille
+// 15–16, comme les glyphes de nature ; l'état favori ne change pas le
+// remplissage. (R8P-2 ; l'étoile pleine de RaindropRow est un minor différé
+// de la Task 7b, la revue finale tranchera la passe unifiée.)
+function Etoile() {
   return (
-    <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill={pleine ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.7} strokeLinejoin="round">
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinejoin="round">
       <path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z" />
     </svg>
   );
@@ -90,11 +92,22 @@ export function DetailPane() {
   if (!r) return <aside className={coque + " text-app-muted"}>{t("state.loading")}</aside>;
 
   const setChamp = (key: ChampEdition, value: string) => setDraft((d) => ({ ...d, [key]: value }));
-  // Enregistrer ne PATCH que ce qui a changé : un brouillon vide ne part pas.
+  // Enregistrer ne PATCH que ce qui a changé, et ne referme l'édition qu'en
+  // cas de succès : un PATCH en échec laisse le brouillon intact (R8P-1),
+  // l'erreur s'affiche inline via update.isError — jamais de saisie détruite
+  // en silence.
   const enregistrer = () => {
-    if (Object.keys(draft).length > 0) void update.mutateAsync(draft);
-    setDraft({});
-    setEditing(false);
+    if (Object.keys(draft).length === 0) {
+      setEditing(false);
+      return;
+    }
+    update.mutateAsync(draft).then(
+      () => {
+        setDraft({});
+        setEditing(false);
+      },
+      () => { /* erreur déjà exposée par la mutation (update.isError) */ },
+    );
   };
   const champ = (key: Exclude<ChampEdition, "title">, rows: number) =>
     editing ? (
@@ -167,8 +180,12 @@ export function DetailPane() {
             {t("detail.edit")}
           </button>
         )}
-        <button type="button" className={bouton} onClick={() => void update.mutateAsync({ important: !r.important })}>
-          <Etoile pleine={r.important} />
+        <button
+          type="button"
+          className={bouton}
+          onClick={() => void update.mutateAsync({ important: !r.important }).catch(() => { /* inline via update.isError */ })}
+        >
+          <Etoile />
           {r.important ? t("detail.unfavorite") : t("detail.favorite")}
         </button>
         <a className={bouton + " inline-flex items-center"} href={r.url} target="_blank" rel="noreferrer">
@@ -180,11 +197,19 @@ export function DetailPane() {
         <button
           type="button"
           className="rounded border border-app-broken px-2 py-1 text-xs text-app-broken"
-          onClick={() => void trash.mutateAsync({ id: r.id, from: r.collectionId })}
+          onClick={() => void trash.mutateAsync({ id: r.id, from: r.collectionId }).catch(() => { /* inline via trash.isError */ })}
         >
           {t("detail.trash")}
         </button>
       </div>
+      {/* R8P-1 : l'échec d'une écriture s'affiche ici, inline — l'édition
+          reste ouverte et le brouillon intact (Enregistrer), l'item reste
+          affiché (Corbeille). --color-app-broken : couleur d'un diagnostic (§6). */}
+      {(update.isError || trash.isError) && (
+        <p role="alert" className="text-xs text-app-broken">
+          {t("state.error", { message: String((update.error ?? trash.error)?.message ?? "") })}
+        </p>
+      )}
       <section className="flex flex-col gap-2">
         <h3 className="text-xs font-medium text-app-muted">{t("detail.highlights")}</h3>
         {(surlignages.data ?? []).map((h) => (
