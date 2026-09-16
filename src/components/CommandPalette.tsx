@@ -1,0 +1,106 @@
+import { useState, type KeyboardEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { t } from "../i18n/fr";
+import { api } from "../lib/api";
+import { useCollections, useTags } from "../hooks/useStaticData";
+import { useAppState } from "../state/appState";
+
+// Une entrée de la palette : `hint` affiche la catégorie (i18n), `run`
+// porte l'action — toujours une navigation via `go`, jamais d'effet direct.
+interface Row {
+  key: string;
+  label: string;
+  hint: string;
+  run(): void;
+}
+
+// Palette ⌘K (Task 11) : bookmarks par recherche serveur (dès 2 caractères —
+// contrat porté seul par `enabled`), collections/tags filtrés localement,
+// vues de nettoyage et corbeille en accès direct. Montée par App via
+// `open`/`onClose` ; App la monte conditionnellement, l'état (saisie,
+// curseur) repart donc à zéro à chaque ouverture — `initialQuery` préremplit
+// (tests, futur lien profond).
+export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boolean; onClose(): void; initialQuery?: string }) {
+  const { go } = useAppState();
+  const collections = useCollections();
+  const tags = useTags();
+  const [q, setQ] = useState(initialQuery);
+  const [cursor, setCursor] = useState(0);
+
+  // Recherche serveur : `{search, per_page: 8}` tel que contracté au plan.
+  const bookmarks = useQuery({
+    queryKey: ["cmdk", q],
+    queryFn: () => api.get<{ items: { id: number; title: string }[] }>("/api/raindrops", { search: q, per_page: 8 }),
+    enabled: open && q.length >= 2,
+  });
+
+  if (!open) return null;
+  const lower = q.toLowerCase();
+  // R11P-1 : la navigation tag porte label ET search `#tag` — le filtre
+  // serveur `#tag` est prouvé en réel (search=#webdesign → count exact du
+  // tag). Sans `search`, listQuery lit view.search absent : « Tous » non
+  // filtré. Vues : formes réelles du type View (appState.tsx).
+  const rows: Row[] = [
+    // Plan T11 : l'ouverture d'un bookmark dans le détail n'est pas câblée —
+    // l'action reste neutre pour l'instant.
+    ...(bookmarks.data?.items ?? []).map((b) => ({ key: `b${b.id}`, label: b.title, hint: t("cmdk.hintBookmark"), run: () => undefined })),
+    ...(collections.data ?? [])
+      .filter((c) => c.title.toLowerCase().includes(lower))
+      .map((c) => ({ key: `c${c.id}`, label: c.title, hint: t("cmdk.hintCollection"), run: () => go({ kind: "list", collectionId: c.id, label: c.title }) })),
+    ...(tags.data ?? [])
+      .filter((tg) => tg.name.toLowerCase().includes(lower))
+      .map((tg) => ({ key: `t${tg.name}`, label: `#${tg.name}`, hint: t("cmdk.hintTag"), run: () => go({ kind: "list", collectionId: 0, label: `#${tg.name}`, search: `#${tg.name}` }) })),
+    { key: "cleanup", label: t("nav.cleanup"), hint: t("cmdk.hintView"), run: () => go({ kind: "cleanup" }) },
+    { key: "dead", label: t("cleanup.dead"), hint: t("cmdk.hintView"), run: () => go({ kind: "cleanupView", type: "dead" }) },
+    { key: "dup", label: t("cleanup.duplicates"), hint: t("cmdk.hintView"), run: () => go({ kind: "cleanupView", type: "duplicates" }) },
+    { key: "trash", label: t("nav.trash"), hint: t("cmdk.hintView"), run: () => go({ kind: "list", collectionId: -99, label: t("nav.trash") }) },
+  ];
+
+  const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") return onClose();
+    if (e.key === "ArrowDown") { e.preventDefault(); setCursor((c) => Math.min(c + 1, rows.length - 1)); }
+    if (e.key === "ArrowUp") { e.preventDefault(); setCursor((c) => Math.max(c - 1, 0)); }
+    if (e.key === "Enter") { rows[cursor]?.run(); onClose(); }
+  };
+
+  return (
+    // DESIGN.md §6 : la ligne active prend la surface `sel` — même précédent
+    // que la sidebar et les puces de nature (R6bP-2), « jamais une teinte ».
+    // Le `bg-app-panel` du snippet aurait été invisible sur le panneau,
+    // lui-même en `work`/`app-panel`.
+    <div className="fixed inset-0 z-50 bg-black/40 p-4 pt-24" onClick={onClose}>
+      <div
+        className="mx-auto max-w-lg overflow-hidden rounded border border-app-border bg-app-panel"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <input
+          role="combobox"
+          aria-expanded="true"
+          autoFocus
+          className="w-full border-b border-app-border bg-transparent px-3 py-2 text-sm outline-none"
+          placeholder={t("cmdk.placeholder")}
+          value={q}
+          onChange={(e) => { setQ(e.target.value); setCursor(0); }}
+          onKeyDown={onKey}
+        />
+        <ul role="listbox" className="max-h-80 overflow-y-auto text-sm">
+          {rows.map((r, i) => (
+            <li key={r.key}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={i === cursor}
+                className={"flex w-full justify-between px-3 py-2 text-left " + (i === cursor ? "bg-app-sel font-medium" : "")}
+                onMouseEnter={() => setCursor(i)}
+                onClick={() => { r.run(); onClose(); }}
+              >
+                <span className="truncate">{r.label}</span>
+                <span className="text-xs text-app-muted">{r.hint}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { t } from "./i18n/fr";
 import { useTheme } from "./lib/theme";
 import { useHealth } from "./hooks/useStaticData";
@@ -7,6 +7,7 @@ import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { ListPane } from "./components/ListPane";
 import { DetailPane } from "./components/DetailPane";
+import { CommandPalette } from "./components/CommandPalette";
 
 // Task 9 : la vue review prend la place de la liste — stub en attendant la
 // Revue de l'action (Task 15 : aperçu filtrable, export CSV, exécution,
@@ -54,11 +55,19 @@ export default function App() {
   // Task 10 : ⌘E amène le focus dans le composer, quel que soit le champ
   // occupé — le data-testid="composer-input" est le contrat du focus (plan).
   // En vue review, pas de composer monté : le raccourci ne fait rien.
+  // Task 11 : ⌘K ouvre la palette ; Échap et le clic-dehors la referment
+  // (portés par le composant). Montée conditionnelle : chaque ouverture
+  // repart d'une saisie vide.
+  const [cmdkOpen, setCmdkOpen] = useState(false);
   useEffect(() => {
     function surRaccourci(e: KeyboardEvent) {
       if (e.metaKey && e.key === "e") {
         e.preventDefault();
         document.querySelector<HTMLInputElement>('[data-testid="composer-input"]')?.focus();
+      }
+      if (e.metaKey && e.key === "k") {
+        e.preventDefault();
+        setCmdkOpen(true);
       }
     }
     window.addEventListener("keydown", surRaccourci);
@@ -95,6 +104,8 @@ export default function App() {
       {/* Row 2 col 3 : détail permanent — aperçu, édition inline, actions,
           surlignages (Task 8). */}
       <DetailPane />
+      {/* Palette ⌘K (Task 11) : overlay fixed, hors flux de la grille. */}
+      {cmdkOpen && <CommandPalette open onClose={() => setCmdkOpen(false)} />}
     </div>
   );
 }

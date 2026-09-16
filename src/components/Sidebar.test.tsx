@@ -44,4 +44,17 @@ describe("Sidebar", () => {
     await userEvent.click(screen.getByText("Dev"));
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ kind: "list", collectionId: 101 });
   });
+
+  // R11P-1 : cliquer un tag FILTRE la liste — la vue porte search `#tag`
+  // (filtre serveur prouvé en réel : search=#webdesign → count exact du tag).
+  // Sans `search`, listQuery lit view.search absent : « Tous » non filtré.
+  it("cliquer un tag filtre la liste par la recherche #tag", async () => {
+    renderSidebar();
+    await userEvent.click(screen.getByText("typescript"));
+    expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({
+      kind: "list",
+      collectionId: 0,
+      search: "#typescript",
+    });
+  });
 });

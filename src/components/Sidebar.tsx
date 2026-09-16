@@ -50,9 +50,12 @@ export function Sidebar() {
       <section>
         <h2 className="px-2 text-xs font-medium text-app-muted">{t("nav.tags")}</h2>
         {/* Nom dans son propre span : le # décoratif reste hors du texte du
-            span (les requêtes RTL ne lisent que les nœuds texte directs). */}
+            span (les requêtes RTL ne lisent que les nœuds texte directs).
+            R11P-1 : la vue porte search `#tag` — listQuery lit view.search,
+            pas le label ; sans lui, cliquer un tag montre « Tous » non
+            filtré. */}
         {(tags.data ?? []).map((tg) => (
-          <button key={tg.name} className={item} onClick={() => go({ kind: "list", collectionId: 0, label: `#${tg.name}` })}>
+          <button key={tg.name} className={item} onClick={() => go({ kind: "list", collectionId: 0, label: `#${tg.name}`, search: `#${tg.name}` })}>
             #<span>{tg.name}</span> <span className={count}>{tg.count}</span>
           </button>
         ))}

@@ -76,6 +76,21 @@ describe("App", () => {
     expect(document.activeElement).toBe(input);
   });
 
+  // Task 11 : ⌘K ouvre la palette (montage conditionnel — état frais à
+  // chaque ouverture), Échap la referme. Même discipline que ⌘E :
+  // événements réels sur window, pas de simulation du handler. L'input se
+  // cherche par son placeholder : le <select> de tri de la TopBar porte lui
+  // aussi le rôle ARIA implicite « combobox ».
+  it("⌘K ouvre la palette, Échap la referme", () => {
+    render(<App />, { wrapper });
+    const input = () => screen.queryByPlaceholderText("Rechercher bookmarks, collections, tags, commandes…");
+    expect(input()).not.toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "k", metaKey: true });
+    expect(input()).toBeInTheDocument();
+    fireEvent.keyDown(input()!, { key: "Escape" });
+    expect(input()).not.toBeInTheDocument();
+  });
+
   it("bascule le thème sombre au clic sur le bouton de thème", async () => {
     const user = userEvent.setup();
     render(<App />, { wrapper });
