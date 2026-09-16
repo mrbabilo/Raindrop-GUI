@@ -1,8 +1,13 @@
 import type { RaindropItem } from "../../shared/types.js";
 import type { Collection } from "../../shared/types.js";
 
+// Forme réelle vérifiée par sonde le 2026-09-16 (R7cP-2 : 6 pages de
+// search_raindrops, 300 items, 300 ids distincts lus via `it._id`) :
+// l'identifiant porte **`_id`**, pas `id` — même défaut que RawCollection
+// ci-dessous. Contrôle navigateur : sans ce nom, GET /api/raindrops rendait
+// `data-testid="row-undefined"` sur toutes les lignes.
 export interface RawRaindrop {
-  id: number;
+  _id: number;
   link: string;
   title?: string;
   excerpt?: string;
@@ -39,7 +44,7 @@ export interface RawCollection {
 
 export function toRaindropItem(raw: RawRaindrop): RaindropItem {
   return {
-    id: raw.id,
+    id: raw._id,
     url: raw.link,
     title: raw.title ?? raw.link,
     excerpt: raw.excerpt ?? "",

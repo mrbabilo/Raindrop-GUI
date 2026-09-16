@@ -71,7 +71,7 @@ export function makeFixtures(raindropCount = 60) {
  */
 export function toRaw(r: FakeRaindrop) {
   return {
-    id: r.id,
+    _id: r.id, // identifiant réel sous `_id`, pas `id` (sonde 2026-09-16, R7cP-2)
     link: r.link,
     title: r.title,
     excerpt: r.excerpt,

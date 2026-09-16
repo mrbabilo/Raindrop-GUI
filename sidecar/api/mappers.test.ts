@@ -40,8 +40,12 @@ const RAW_CHILD: RawCollection = {
   parent: { $id: 75028677 },
 };
 
+// Contrat réel (R7cP-2, sonde 2026-09-16 : 6 pages de search_raindrops, 300
+// items, 300 ids distincts lus via `it._id`) : l'identifiant arrive sous
+// `_id`, la clé `id` n'existe pas — même défaut que RawCollection avant
+// ca2ad68. La fixture porte la forme réelle, pas notre supposition.
 const RAW_RAINDROP_FULL: RawRaindrop = {
-  id: 1851471691,
+  _id: 1851471691,
   link: "https://www.1000exercicespourlascene.fr/",
   title: "1000 exercices de théâtre et jeux pour l'animation",
   excerpt: "Recueil de 1000 exercices...",
@@ -62,7 +66,7 @@ const RAW_RAINDROP_FULL: RawRaindrop = {
 
 // ~5 % des 400 raindrops sondés portent `cover: ""` (pas de miniature) —
 // ex. réel : id 1750750726, "https://korben.info/tuistudio-figma-applications-terminal.html".
-const RAW_RAINDROP_EMPTY_COVER: RawRaindrop = { ...RAW_RAINDROP_FULL, id: 1750750726, cover: "" };
+const RAW_RAINDROP_EMPTY_COVER: RawRaindrop = { ...RAW_RAINDROP_FULL, _id: 1750750726, cover: "" };
 
 describe("toCollection — forme réelle sondée (tableau nu, _id, parent.$id)", () => {
   it("mappe _id → id, cover[0] → cover, color → color", () => {
@@ -106,6 +110,23 @@ describe("toRaindropItem — cache et broken gratuits dans la liste", () => {
     const item = toRaindropItem(rest);
     expect(item.cache).toBeNull();
     expect(item.broken).toBe(false);
+  });
+});
+
+describe("toRaindropItem — l'identifiant arrive sous _id (forme réelle, R7cP-2)", () => {
+  it("mappe _id → id sur un item réel qui n'a PAS de clé `id`", () => {
+    // Contrôle navigateur 2026-09-16 : GET /api/raindrops rendait
+    // data-testid="row-undefined" sur toutes les lignes — corps JSON sans
+    // clé `id`. Si ce test redevient rouge avec `expected undefined to be
+    // 1851471691`, quelqu'un a remis `raw.id` dans le mapper.
+    const item = toRaindropItem(RAW_RAINDROP_FULL);
+    expect(item.id).toBe(1851471691);
+  });
+
+  it("toutes les lignes ne partagent pas le même id (deux fixtures, deux ids)", () => {
+    expect(toRaindropItem(RAW_RAINDROP_FULL).id).not.toBe(
+      toRaindropItem(RAW_RAINDROP_EMPTY_COVER).id,
+    );
   });
 });
 
