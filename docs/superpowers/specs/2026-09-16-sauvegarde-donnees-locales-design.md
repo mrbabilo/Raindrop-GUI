@@ -105,6 +105,24 @@ Les objets sont écrits **tels que l'API les renvoie**, sans passer par
 champs non documentés ; les *conserver* est l'inverse d'un risque : un champ
 qu'on n'a pas écrit est définitivement perdu.
 
+### 3.5 Confidentialité du dossier de sauvegarde
+
+Une sauvegarde contient **l'intégralité des URLs, titres, notes et surlignages**
+— soit un profil de lecture complet. Le dossier pouvant être placé sur iCloud,
+Dropbox ou tout autre service, ces données quittent alors la machine vers un
+tiers.
+
+Le projet chiffre le jeton dans le trousseau et interdit de l'écrire en clair ;
+écrire 12 210 URLs sans le mentionner serait incohérent. Décision : **pas de
+chiffrement** (une archive chiffrée dont la clé se perd est une archive perdue,
+et le besoin exprimé est la récupération), mais **un avertissement explicite au
+moment du choix du dossier**, indiquant ce que le fichier contient et ce que
+cela implique si l'emplacement est synchronisé. Le choix reste à l'utilisateur,
+il est simplement éclairé.
+
+Le jeton Raindrop, lui, **n'apparaît dans aucun fichier de sauvegarde** — comme
+partout ailleurs dans le projet.
+
 ## 4. Architecture
 
 ### 4.1 Un seul artefact dans ce lot
@@ -134,7 +152,8 @@ sauvegarde repart complète. Le cas est signalé, pas contourné.
 <dossier choisi>/Raindrop-GUI/
 ├── manifest.json              # inventaire des instantanés, compteurs, empreintes
 ├── 2026-09-16T15-30-00/
-│   ├── raindrops.jsonl        # un objet BRUT par ligne
+│   ├── raindrops.jsonl        # un objet BRUT par ligne (collection 0)
+│   ├── trash.jsonl            # la corbeille, même format
 │   ├── collections.json
 │   ├── highlights.json
 │   ├── user.json
@@ -147,11 +166,15 @@ sauvegarde repart complète. Le cas est signalé, pas contourné.
 reprise d'une sauvegarde interrompue, lecture ligne à ligne.
 
 ⚠️ **La pagination doit être stable pour que la reprise ait un sens.** Le
-balayage complet dure ~2 min 15, largement de quoi qu'un élément soit modifié en
+balayage complet dure ≈ 2 min 20, largement de quoi qu'un élément soit modifié en
 cours de route : trié par `-lastUpdate`, il remonterait en page 0 et décalerait
 tout ce qui suit, si bien qu'une « reprise à la page suivante » sauterait des
-éléments. Le balayage complet se fait donc trié par **`created`**, qui ne change
-jamais. Le tri `-lastUpdate` est réservé au rafraîchissement incrémental, dont
+éléments. Le balayage complet se fait donc trié par **`created` ascendant** —
+le paramètre `sort=created`, **jamais `-created`**. Le sens n'est pas un détail
+de style : en descendant, un bookmark créé pendant le balayage apparaît en
+page 0 et décale tout ce qui suit, ce qui recrée exactement la course qu'on
+élimine. En ascendant, les nouveaux éléments s'ajoutent **après** le point de
+lecture et ne perturbent rien ; ils seront pris au passage suivant. Le tri `-lastUpdate` est réservé au rafraîchissement incrémental, dont
 la fenêtre se compte en secondes. L'horodatage de début de balayage est
 enregistré dans `meta.json` : ce qui a bougé pendant la course est rattrapé par
 le rafraîchissement suivant, et l'instantané ne prétend pas être plus cohérent
@@ -172,13 +195,42 @@ incrémentales, l'archivage des copies.
 livre avec un chemin fourni par configuration ; le sélecteur graphique se
 branche ensuite sans modifier le moteur.
 
+### 4.4 Une seule file vers l'API, avec priorité
+
+**Défaut relevé dans l'existant (2026-09-16)** : le throttle de 550 ms
+(`sidecar/mcp/throttle.ts`) n'encadre **que** les appels MCP. Le client REST
+direct appelle `fetch` sans passer par lui. Sans conséquence jusqu'ici — il ne
+servait qu'à des corrections d'URL isolées — mais ≈ 250 requêtes de sauvegarde
+hors file cumulées au trafic MCP dépasseraient les 120 req/min : la limite est
+**globale par utilisateur**, elle ne distingue pas nos canaux.
+
+Correctif imposé par ce lot : **les deux canaux partagent la même file**. La
+sauvegarde n'a pas le droit d'ignorer un throttle que le reste respecte.
+
+**Priorité.** Un job de plus de deux minutes qui partage la file rendrait l'interface
+poussive pendant tout ce temps. La file distingue donc deux rangs : les requêtes
+**interactives passent devant**, la sauvegarde consomme ce qui reste. Elle
+s'efface pendant que l'utilisateur travaille et rattrape quand il s'arrête.
+
+**Déclenchement** : au démarrage de l'app si la dernière sauvegarde date de plus
+de 24 h — plutôt qu'à heure fixe, qui tomberait forcément au mauvais moment et
+ne servirait à rien si l'app est fermée. Plus le déclenchement manuel.
+
 ## 5. Flux
 
-### 5.1 Sauvegarde initiale
+### 5.1 Sauvegarde initiale — ce qui est collecté
 
-245 requêtes, ≈ 2 min 15 au throttle de 550 ms. Exécutée comme **job SSE
-annulable** via l'infrastructure existante (`sidecar/jobs/`), avec progression.
-Reprise possible grâce au JSONL.
+| Source | Requêtes | Contenu |
+|---|---|---|
+| `/raindrops/0` paginé | 245 | les 12 210 bookmarks, bruts |
+| `/raindrops/-99` paginé | 1 et + | **la corbeille** — incluse : elle contient ce que l'utilisateur vient de supprimer, donc exactement ce qu'une sauvegarde doit pouvoir rendre |
+| `/collections` + `/collections/childrens` | 2 | l'arborescence complète |
+| `/highlights` paginé | 1 et + | **tous les surlignages en une fois** — vérifié : l'endpoint global existe, il ne faut surtout pas interroger les bookmarks un par un (12 210 requêtes, ≈ 2 h) |
+| `/user` | 1 | compte et préférences |
+
+≈ 250 requêtes, ≈ 2 min 20 au throttle. Exécutée comme **job SSE annulable**
+via l'infrastructure existante (`sidecar/jobs/`), avec progression. Reprise
+possible grâce au JSONL.
 
 ### 5.2 Rafraîchissement incrémental
 
@@ -201,6 +253,17 @@ Les compteurs de référence vivant dans `manifest.json`, donc dans le dossier d
 l'utilisateur (§4.1), cette vérification économique suppose ce dossier
 accessible. S'il ne l'est pas, ni la comparaison ni l'incrémental ne sont
 possibles : la prochaine sauvegarde repart complète, et le dit.
+
+⚠️ **L'angle mort des compteurs.** Une suppression *et* un ajout entre deux
+passages laissent le compte inchangé : la divergence est invisible, et
+l'élément supprimé survivrait indéfiniment dans les sauvegardes suivantes comme
+s'il existait encore. La comparaison de compteurs est donc un **déclencheur bon
+marché, pas une garantie**.
+
+D'où la règle : **un balayage complet est exécuté au moins une fois par
+semaine**, que les compteurs aient bougé ou non. Coût hebdomadaire : ≈ 250
+requêtes, ≈ 2 min 20. C'est le prix d'une sauvegarde dont on peut affirmer
+qu'elle reflète la bibliothèque, et non qu'elle n'a pas détecté de différence.
 
 ### 5.4 Archivage des copies permanentes
 
@@ -227,18 +290,24 @@ classés morts — là où l'archive vaut le plus.
 
 ### 5.5 Rotation
 
-Instantanés complets horodatés. Rétention : **les 7 derniers instantanés
-quotidiens**, plus **le plus ancien de chacune des 4 semaines précédentes** — un
-instantané promu « hebdomadaire » échappe à la purge quotidienne. À
+Instantanés complets horodatés. Rétention : **les 7 derniers instantanés**, plus
+**le plus ancien de chacune des 4 semaines calendaires précédentes** — un
+instantané promu « hebdomadaire » échappe à la purge. La promotion se calcule
+**à partir des instantanés présents**, jamais d'un calendrier théorique : si
+l'app reste fermée trois semaines, les semaines sans instantané restent vides,
+rien n'est fabriqué et rien n'est purgé à tort. À
 11 Mo pièce, l'historique coûte peu et protège de ce qu'une sauvegarde unique
 écrasée ne protège pas : une suppression massive accidentelle propagée dans la
 sauvegarde avant qu'elle ne soit remarquée.
 
 ### 5.6 Export lisible
 
-Dérivé à la demande depuis l'instantané, ou récupéré directement via
-`GET /raindrops/0/export.{format}` (`csv`, `html`, `zip` — natif, avec passage
-de `sort` et `search`). Le brut reste la référence ; l'export est une vue.
+**Dérivé de l'instantané**, et uniquement de lui. L'API propose bien
+`GET /raindrops/0/export.{format}` (`csv`, `html`, `zip`), mais s'en servir
+produirait un export reflétant le **serveur à l'instant T**, pas la sauvegarde
+qu'on prétend exporter : deux documents portant la même date pourraient
+diverger. Le brut est la référence, l'export en est une vue — dérivée hors
+ligne, sans requête, et reproductible.
 
 ## 6. États dégradés
 
@@ -250,6 +319,19 @@ jamais d'écrasement avant écriture réussie.
 Une sauvegarde interrompue est marquée incomplète dans `meta.json` et n'est
 **jamais** présentée comme valide — mieux vaut « la dernière sauvegarde date
 d'hier » qu'une archive tronquée qu'on croit bonne.
+
+**Vérification systématique après écriture.** Une archive jamais relue est une
+archive qu'on *croit* bonne, et c'est le mode de défaillance qu'une sauvegarde
+existe pour exclure. Chaque instantané est donc **relu immédiatement après
+écriture** : comptage des lignes du JSONL, validité JSON de chaque ligne,
+recoupement avec le compteur annoncé par l'API. Les empreintes SHA-256 de chaque
+fichier sont consignées dans `manifest.json` et **revérifiées** avant qu'un
+instantané ne serve de base à un rafraîchissement incrémental — sans quoi une
+corruption silencieuse se propagerait de sauvegarde en sauvegarde.
+
+Un instantané qui échoue à sa propre vérification est marqué invalide et
+conservé (il peut rester partiellement exploitable), mais n'est jamais compté
+comme la dernière sauvegarde valide.
 
 Le réseau qui tombe reprend à la page suivante. Le 429, désormais visible,
 déclenche une pause avant reprise au lieu d'être compté comme un échec.
@@ -265,8 +347,12 @@ Raindrop, sur le modèle de `sidecar/testing/targetServer.ts` : bibliothèque
 paginée, 307 vers un faux S3, 429, réponses tronquées.
 
 Couverture visée : pagination complète, reprise après coupure, watermark
-incrémental, détection de suppression par écart de compteurs, rotation et
-rétention, dossier devenu inaccessible, sauvegarde partielle jamais validée.
+incrémental, détection de suppression par écart de compteurs **et** balayage
+hebdomadaire garanti, rotation et rétention (y compris avec des semaines sans
+instantané), dossier devenu inaccessible, sauvegarde partielle jamais validée,
+**vérification post-écriture** (JSONL tronqué, ligne corrompue, empreinte qui ne
+correspond plus), et **priorité de file** : une requête interactive passe devant
+une sauvegarde en cours.
 Aucun appel réseau réel, comme le reste de la suite.
 
 ## 8. Effets sur la spec principale
@@ -277,6 +363,7 @@ Aucun appel réseau réel, comme le reste de la suite.
 | §3.3 | Élargi : le REST direct devient le canal de la couche de données |
 | §5.1 | Inchangé — l'analyse garde son snapshot normalisé ; une éventuelle fusion avec la réplique est une optimisation ultérieure, non retenue par YAGNI |
 | §12 | L'export élargi trouve ici son usage (§5.6) |
+| §3.2 (throttle) | Étendu : la file de 550 ms couvre désormais **aussi** le REST direct, et distingue interactif / arrière-plan (§4.4) |
 
 ## 9. Hors périmètre
 
@@ -300,3 +387,11 @@ la perte d'information est un choix assumé, et non une amputation.
   uniquement.
 - Aucun ETag ni `If-Match` : **le serveur n'arbitre pas les conflits** — à
   charge du lot hors ligne d'en définir la politique.
+- **Pagination profonde sans limite observée** : page 244 répond 200 avec les
+  10 derniers items (12 210 = 244 × 50 + 10). Le balayage complet tient.
+- **`GET /highlights` existe** et renvoie tous les surlignages paginés — ne
+  jamais les collecter bookmark par bookmark.
+- Collections spéciales mesurées : `0` → 12 210, `-1` → 0, `-99` → 0.
+- **Le throttle du projet ne couvre pas le client REST direct** (relevé dans le
+  code, `sidecar/index.ts` : seul `deps.mcp` est encadré). La limite de 120
+  req/min étant globale par utilisateur, ce lot impose une file commune (§4.4).
