@@ -11,15 +11,17 @@ traiter une tâche « à faire ».
       **exécuté le 2026-09-16** (16/16 tasks, 108 tests, revue finale clean ;
       5 fix rounds en cours d'exécution + fix wave final).
 - [ ] **Plan 2/3 — front React** — plan **écrit** (`cd7466b`) et **en cours
-      d'exécution** ; **20 sections de task** depuis l'amendement du 2026-09-16
-      (ajout des Tasks 6b et 7b), dont la Task 0 invalidée — **19 à exécuter** :
+      d'exécution** ; **21 sections de task** depuis l'amendement du 2026-09-16
+      (ajout des Tasks 6b, 7b et 7c), dont la Task 0 invalidée — **20 à
+      exécuter** :
       - Task 0 livrée (`d61c7f0`) puis **INVALIDÉE** — son endpoint n'existe
         pas (voir dettes ci-dessous) ; remplacée par la **Task 0b**.
       - Tasks 1 → 7 livrées : scaffold (`e55a167`), i18n/thème/shell
         (`ac5f17b`…`941e9cf`), client API (`b70b7f6`), hooks Query (`f4b35df`),
         panneau gauche (`6f35ef7`), TopBar (`9e181d9`), liste virtualisée
         (`d03612f`).
-      - **Reprend à la Task 6b**, puis 7b, puis 8. Task 0b avant la Task 8.
+      - Séquence : 6b → 7b → **7c** → 0b → 8 → … → 16. La Task 7c répare
+        les défauts trouvés en pilotant l'app (voir dettes ci-dessous).
       - ⚠️ `docs/DESIGN.md` **fait foi sur l'apparence** depuis le 2026-09-16
         ~16h18 — soit **après** l'écriture du plan (9h49). Les blocs de code du
         plan antérieurs à cette heure portent des jetons inexistants
@@ -55,13 +57,14 @@ traiter une tâche « à faire ».
       l'enveloppe corrigée. À traiter avec la dette des mappers ci-dessous.
       ⚠️ Les 108 tests du sidecar passent contre un **faux MCP dont la forme
       diffère du vrai** : même mécanisme que le 404 d'`unrestore`.
+      → **Task 7c**, qui impose de sonder le vrai serveur avant de corriger.
 - [ ] **Avertissement React de clé manquante dans `ListPane`** (console
       navigateur, invisible en test). En liste virtualisée, une clé absente se
       paie en réutilisation de lignes au défilement.
 - [ ] **Débordement horizontal de la fenêtre** : `App.tsx:44` pose
       `grid-cols-[240px_1fr_320px]`, or `1fr` = `minmax(auto,1fr)` et le
       contenu de la colonne centrale impose son minimum — le panneau de détail
-      sort de 62 px. Correctif : `minmax(0,1fr)`.
+      sort de 62 px. Correctif : `minmax(0,1fr)` → **Task 7c**, step 3.
 
 - [ ] **`POST /raindrops/unrestore` n'existe pas** — 404 vérifié en réel. Le
       code de la Task 0 ne peut pas fonctionner. Correctif = **Task 0b**
@@ -79,6 +82,7 @@ traiter une tâche « à faire ».
       débloque d'un coup l'icône de collection, le mode lecture et le quick win
       « copie archivée » (spec §12). Consommateurs à suivre :
       `sidecar/analysis/snapshot.ts`, les deux routes, `src/lib/api.test.ts`.
+      → **Task 7c**, traité avec le contrat MCP puisque c'est le même fichier.
 - [ ] **Trois filtres inertes** : `ListPane` ne transmet pas `domain`,
       `createdStart`, `createdEnd` à `useRaindrops`, qui les accepte pourtant —
       ces trois contrôles de la TopBar (Task 6) ne filtrent rien. Le quatrième,
@@ -89,6 +93,11 @@ traiter une tâche « à faire ».
       step 4.
 - [ ] **Lexique thématique à élargir** (`docs/DESIGN.md` §3) à partir des
       étiquettes réelles : ce qu'il ne reconnaît pas s'affiche en gris.
+      **Échelle mesurée le 2026-09-16 sur l'app réelle : 96 étiquettes grises
+      sur 113 affichées — 85 %.** Le gris joue son rôle (il désigne la lacune)
+      mais à cette proportion la coloration thématique ne se lit pas encore.
+      Les 317 étiquettes du compte sont listées par le tool `get_tags`, tri par
+      `count` décroissant : les 50 premières couvriraient l'essentiel.
 
 ## Veille
 
