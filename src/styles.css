@@ -123,12 +123,21 @@ body {
    un `border-inline-start` ne saurait de toute façon pas coiffer la vignette
    de la mosaïque (§5 : « en liste la marque borde la ligne ; en mosaïque elle
    coiffe la vignette »). Le filet est donc un dégradé répété, peint sur une
-   bande de 3 px dont .filet et .coiffe fixent l'orientation. */
+   bande de 3 px dont .filet et .coiffe fixent l'orientation.
+
+   `background-origin: border-box` n'est pas décoratif : par défaut un fond se
+   peint dans la boîte de PADDING, donc le filet d'une ligne à `px-3` se
+   poserait à 12 px du bord — derrière la case à cocher, qui commence
+   exactement là (un fond se peint sous le contenu des descendants) — et sa
+   hauteur de 100 % s'arrêterait un pixel avant la bordure basse. §2 (« filet
+   de 3 px en bord de ligne ») et §5 (« la marque borde la ligne ») exigent le
+   bord, pas le padding. */
 .filet {
   --filet-dir: to bottom; /* le motif court le long de la ligne */
   --filet-dir-cross: to right; /* …et le double trait en travers */
   background-image: var(--filet, none);
   background-repeat: no-repeat;
+  background-origin: border-box;
   background-position: 0 0;
   background-size: 3px 100%;
 }
@@ -139,6 +148,7 @@ body {
   height: 3px;
   background-image: var(--filet, none);
   background-repeat: no-repeat;
+  background-origin: border-box;
   background-size: 100% 100%;
 }
 

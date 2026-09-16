@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 // fixtures AVANT RaindropRow (TDZ — même remarque que Sidebar.test.tsx).
 import { raindrop } from "../test/fixtures";
 import { RaindropRow } from "./RaindropRow";
+import { injecterRegles } from "../test/injectStyles";
 
 const noop = () => undefined;
 const ligne = (props: Partial<Parameters<typeof RaindropRow>[0]> = {}) =>
@@ -59,6 +60,28 @@ describe("RaindropRow — signalétique (DESIGN.md §2)", () => {
     expect(row()).toHaveClass("filet", "filet-duplicate");
     rerender(<RaindropRow {...props} etat="ok" />);
     expect(row()).not.toHaveClass("filet");
+  });
+
+  // Les autres assertions de filet ne portent que sur des noms de classe :
+  // jsdom ne peint rien, donc aucune ne peut attraper une bande qui s'affiche
+  // au mauvais endroit. Celle-ci injecte la règle `.filet` RÉELLE (lue dans
+  // src/styles.css, jamais recopiée ici) et vérifie la déclaration qui décide
+  // de son origine. Sans `background-origin: border-box`, la bande se peint
+  // dans la boîte de padding — soit, avec le `px-3` de la ligne, à 12 px du
+  // bord, DERRIÈRE la case à cocher (les fonds se peignent sous le contenu
+  // des descendants) : §2 « filet de 3 px en bord de ligne » et §5 « la
+  // marque borde la ligne » ne seraient satisfaits ni l'un ni l'autre.
+  // jsdom ne fait aucune mise en page : ce test prouve que la déclaration
+  // atteint l'élément, pas la géométrie peinte — celle-ci se juge à l'œil.
+  it("le filet part du bord de la ligne, pas du bord de padding (§2, §5)", () => {
+    const style = injecterRegles(".filet");
+    try {
+      const { container } = ligne({ etat: "dead" });
+      const row = container.querySelector("[data-testid='row-1000']")!;
+      expect(getComputedStyle(row).backgroundOrigin).toBe("border-box");
+    } finally {
+      style.remove();
+    }
   });
 
   it("cliquer une étiquette filtre sans ouvrir la fiche", async () => {

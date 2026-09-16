@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 // fixtures AVANT MosaicTile (TDZ — même remarque que Sidebar.test.tsx).
 import { raindrop } from "../test/fixtures";
 import { MosaicTile } from "./MosaicTile";
+import { injecterRegles } from "../test/injectStyles";
 
 describe("MosaicTile", () => {
   it("img quand cover existe, initiale du titre sinon", () => {
@@ -44,6 +45,18 @@ describe("MosaicTile", () => {
     expect(container.querySelector(".coiffe")!.nextElementSibling).toHaveClass("wash");
     rerender(<MosaicTile r={raindrop()} etat="ok" onOpen={() => undefined} />);
     expect(container.querySelector(".coiffe")).toBeNull();
+  });
+
+  // Symétrique du test de `.filet` : la coiffe n'a pas de padding aujourd'hui,
+  // mais les deux règles doivent rester honnêtes sur la boîte de référence.
+  it("la coiffe se peint depuis le bord de la vignette (§5)", () => {
+    const style = injecterRegles(".coiffe");
+    try {
+      const { container } = render(<MosaicTile r={raindrop()} etat="dead" onOpen={() => undefined} />);
+      expect(getComputedStyle(container.querySelector(".coiffe")!).backgroundOrigin).toBe("border-box");
+    } finally {
+      style.remove();
+    }
   });
 
   // §2.1 : le glyphe de nature précède le domaine ; §7 : le domaine en chasse
