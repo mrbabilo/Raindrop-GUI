@@ -42,6 +42,27 @@ traiter une tâche « à faire ».
 
 ## Dettes et points ouverts
 
+- [ ] 🔴 **`/api/collections` et `/api/tags` répondent 500 en réel** (vérifié le
+      2026-09-16 en pilotant l'app sur le compte réel). Le panneau gauche n'a
+      donc **jamais** affiché ni collections ni étiquettes.
+      `sidecar/api/routes/collections.ts:35` et `sidecar/api/routes/tags.ts:25`
+      lisent `.items` sur la réponse du MCP ; **sonde réelle : les trois tools
+      renvoient un tableau nu** — `get_collections` → 13 racines,
+      `get_child_collections` → 203 enfants (13+203 = 216, le chiffre de
+      DESIGN.md §4), `get_tags` → 317 × `{_id, count}`.
+      **Deuxième couche** : `RawCollection` (`mappers.ts:20`) attend `id`, la
+      forme réelle porte `_id` — `toCollection` rendrait `id: undefined` même
+      l'enveloppe corrigée. À traiter avec la dette des mappers ci-dessous.
+      ⚠️ Les 108 tests du sidecar passent contre un **faux MCP dont la forme
+      diffère du vrai** : même mécanisme que le 404 d'`unrestore`.
+- [ ] **Avertissement React de clé manquante dans `ListPane`** (console
+      navigateur, invisible en test). En liste virtualisée, une clé absente se
+      paie en réutilisation de lignes au défilement.
+- [ ] **Débordement horizontal de la fenêtre** : `App.tsx:44` pose
+      `grid-cols-[240px_1fr_320px]`, or `1fr` = `minmax(auto,1fr)` et le
+      contenu de la colonne centrale impose son minimum — le panneau de détail
+      sort de 62 px. Correctif : `minmax(0,1fr)`.
+
 - [ ] **`POST /raindrops/unrestore` n'existe pas** — 404 vérifié en réel. Le
       code de la Task 0 ne peut pas fonctionner. Correctif = **Task 0b**
       (`PUT /raindrops/-99` + mémoire des origines de corbeille) ; prérequis
