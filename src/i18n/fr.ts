@@ -43,6 +43,8 @@ export const fr = {
   "bulk.trash": "Corbeille",
   "bulk.move": "Déplacer",
   "bulk.tag": "Tagger",
+  "bulk.selection": "sélection",
+  "bulk.destination": "Destination",
   "bulk.review": "Revue de l'action",
   "composer.placeholder": "Coller une URL à sauvegarder (⌘E)",
   "composer.exists": "Déjà sauvegardé",

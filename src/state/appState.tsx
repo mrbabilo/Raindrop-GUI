@@ -21,7 +21,18 @@ export type View =
     }
   | { kind: "cleanup" }
   | { kind: "cleanupView"; type: "dead" | "redirect" | "duplicates" | "untagged" | "empty-collections" | "trash" }
-  | { kind: "tags" };
+  | { kind: "tags" }
+  // Task 9 : la Revue de l'action, construite par BulkBar puis exécutée
+  // (Task 15). Items réduits au nécessaire — `collectionId` porte
+  // l'origine, que la corbeille Raindrop ne garde pas (spec §4.2).
+  // R4P : l'action n'a pas encore de destination (le `dest` du <select>
+  // est jeté en T9) ; la Task 13 étendra cette union.
+  | {
+      kind: "review";
+      items: { id: number; url: string; title: string; collectionId: number }[];
+      action: { op: "trash" } | { op: "move" } | { op: "tag" };
+      sourceLabel: string;
+    };
 
 // Les filtres/tri/mode portés par la vue list — cible du merge de patchList.
 type ListPatch = Partial<Extract<View, { kind: "list" }>>;

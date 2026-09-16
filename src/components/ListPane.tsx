@@ -9,6 +9,7 @@ import { listQueryArgs } from "../hooks/listQuery";
 import { useAppState } from "../state/appState";
 import { RaindropRow } from "./RaindropRow";
 import { MosaicTile } from "./MosaicTile";
+import { BulkBar } from "./BulkBar";
 
 type ListView = Extract<View, { kind: "list" }>;
 
@@ -36,44 +37,50 @@ export function ListPane() {
   if (items.length === 0 && !query.isFetching) return <main className="grid place-items-center p-4 text-app-muted">{t("state.empty")}</main>;
 
   return (
-    <main ref={parentRef} className="overflow-y-auto">
-      {q.viewMode === "mosaic" ? (
-        // §8 : la tuile fait 221 px de large — une largeur exacte, pas un
-        // minmax élastique qui la ferait varier d'un écran à l'autre.
-        <div className="grid grid-cols-[repeat(auto-fill,221px)] gap-3 p-3">
-          {items.map((r) => <MosaicTile key={r.id} r={r} collectionRacine={titreRacine(r.collectionId)} onOpen={() => selectRaindrop(r.id)} />)}
-        </div>
-      ) : (
-        <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
-          {virtual.getVirtualItems().map((v) => {
-            const r = items[v.index]!;
-            return (
-              // measureElement (R7P) : la hauteur reste MESURÉE, pas
-              // décrétée — la ligne vise 36 px (§8) sans hauteur fixe, et
-              // ce qu'ajoutera l'analyse (Task 13) sera mesuré de même ;
-              // data-index est requis par virtual-core pour rattacher la
-              // mesure à l'index.
-              <div key={r.id} data-index={v.index} ref={virtual.measureElement} style={{ position: "absolute", top: 0, left: 0, width: "100%", transform: `translateY(${v.start}px)` }}>
-                <RaindropRow r={r} selected={selectedIds.has(r.id)} isDetail={selectedRaindropId === r.id}
-                  collectionRacine={titreRacine(r.collectionId)}
-                  onOpen={() => selectRaindrop(r.id)} onToggle={() => toggleSelect(r.id)} onTag={(name) => patchList({ search: `#${name}` })} />
-              </div>
-            );
-          })}
-        </div>
-      )}
-      {query.hasNextPage && (
-        // Infinite scroll : le callback ref tourne à chaque rendu — on
-        // débranche l'observeur précédent avant d'en créer un (sinon N
-        // rendus = N observateurs = N× fetchNextPage au même event).
-        <div ref={(el) => {
-          ioRef.current?.disconnect();
-          if (!el) return;
-          const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && query.fetchNextPage()));
-          io.observe(el);
-          ioRef.current = io;
-        }} className="p-4 text-center text-app-muted">{query.isFetchingNextPage ? t("list.loadingMore") : ""}</div>
-      )}
-    </main>
+    // Colonne : la liste défile, le pied (BulkBar, Task 9) reste posé sous
+    // elle — hors du scroll, pour ne pas fausser la mesure du virtualizer.
+    <div className="flex h-full min-h-0 flex-col">
+      <main ref={parentRef} className="min-h-0 flex-1 overflow-y-auto">
+        {q.viewMode === "mosaic" ? (
+          // §8 : la tuile fait 221 px de large — une largeur exacte, pas un
+          // minmax élastique qui la ferait varier d'un écran à l'autre.
+          <div className="grid grid-cols-[repeat(auto-fill,221px)] gap-3 p-3">
+            {items.map((r) => <MosaicTile key={r.id} r={r} collectionRacine={titreRacine(r.collectionId)} onOpen={() => selectRaindrop(r.id)} />)}
+          </div>
+        ) : (
+          <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
+            {virtual.getVirtualItems().map((v) => {
+              const r = items[v.index]!;
+              return (
+                // measureElement (R7P) : la hauteur reste MESURÉE, pas
+                // décrétée — la ligne vise 36 px (§8) sans hauteur fixe, et
+                // ce qu'ajoutera l'analyse (Task 13) sera mesuré de même ;
+                // data-index est requis par virtual-core pour rattacher la
+                // mesure à l'index.
+                <div key={r.id} data-index={v.index} ref={virtual.measureElement} style={{ position: "absolute", top: 0, left: 0, width: "100%", transform: `translateY(${v.start}px)` }}>
+                  <RaindropRow r={r} selected={selectedIds.has(r.id)} isDetail={selectedRaindropId === r.id}
+                    collectionRacine={titreRacine(r.collectionId)}
+                    onOpen={() => selectRaindrop(r.id)} onToggle={() => toggleSelect(r.id)} onTag={(name) => patchList({ search: `#${name}` })} />
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {query.hasNextPage && (
+          // Infinite scroll : le callback ref tourne à chaque rendu — on
+          // débranche l'observeur précédent avant d'en créer un (sinon N
+          // rendus = N observateurs = N× fetchNextPage au même event).
+          <div ref={(el) => {
+            ioRef.current?.disconnect();
+            if (!el) return;
+            const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && query.fetchNextPage()));
+            io.observe(el);
+            ioRef.current = io;
+          }} className="p-4 text-center text-app-muted">{query.isFetchingNextPage ? t("list.loadingMore") : ""}</div>
+        )}
+      </main>
+      {/* Invisible sans sélection (rend null) : aucune layout shift au repos. */}
+      <BulkBar items={items} />
+    </div>
   );
 }

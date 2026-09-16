@@ -1,10 +1,22 @@
 import { t } from "./i18n/fr";
 import { useTheme } from "./lib/theme";
 import { useHealth } from "./hooks/useStaticData";
+import { useAppState } from "./state/appState";
 import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { ListPane } from "./components/ListPane";
 import { DetailPane } from "./components/DetailPane";
+
+// Task 9 : la vue review prend la place de la liste — stub en attendant la
+// Revue de l'action (Task 15 : aperçu filtrable, export CSV, exécution,
+// frappe « SUPPRIMER » pour le vidage — spec §4.2).
+function RevueStub() {
+  return (
+    <section aria-label={t("review.title")} className="flex h-full items-center justify-center bg-app text-app-muted">
+      {t("review.title")}
+    </section>
+  );
+}
 
 // Icônes SVG (DESIGN.md §9 : jamais d'emoji), grille 16px, trait 1,7.
 function SunIcon() {
@@ -35,6 +47,7 @@ function MoonIcon() {
 export default function App() {
   const { resolved, setMode } = useTheme();
   const { data: health } = useHealth();
+  const { view } = useAppState();
   const isDark = resolved === "dark";
   const mcpDown = health !== undefined && health.mcp !== "connected";
   function toggleTheme() {
@@ -64,7 +77,7 @@ export default function App() {
       <TopBar />
       <div className="border-b border-app-border bg-app" aria-hidden="true" />
       <Sidebar />
-      <ListPane />
+      {view.kind === "review" ? <RevueStub /> : <ListPane />}
       {/* Row 2 col 3 : détail permanent — aperçu, édition inline, actions,
           surlignages (Task 8). */}
       <DetailPane />
