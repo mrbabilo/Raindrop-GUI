@@ -140,11 +140,22 @@ sauvegarde repart complète. Le cas est signalé, pas contourné.
 │   ├── user.json
 │   └── meta.json              # compteurs, watermark lastUpdate, complétude
 └── archives/
-    └── <raindropId>.html      # copies permanentes, à la demande
+    └── <raindropId>.html.gz   # copies permanentes (HTML gzippé), à la demande
 ```
 
 **JSONL** pour les raindrops : écriture en flux sans charger 11 Mo en mémoire,
-reprise d'une sauvegarde interrompue à la page suivante, lecture ligne à ligne.
+reprise d'une sauvegarde interrompue, lecture ligne à ligne.
+
+⚠️ **La pagination doit être stable pour que la reprise ait un sens.** Le
+balayage complet dure ~2 min 15, largement de quoi qu'un élément soit modifié en
+cours de route : trié par `-lastUpdate`, il remonterait en page 0 et décalerait
+tout ce qui suit, si bien qu'une « reprise à la page suivante » sauterait des
+éléments. Le balayage complet se fait donc trié par **`created`**, qui ne change
+jamais. Le tri `-lastUpdate` est réservé au rafraîchissement incrémental, dont
+la fenêtre se compte en secondes. L'horodatage de début de balayage est
+enregistré dans `meta.json` : ce qui a bougé pendant la course est rattrapé par
+le rafraîchissement suivant, et l'instantané ne prétend pas être plus cohérent
+qu'il ne l'est.
 
 ### 4.3 Module
 
@@ -186,11 +197,33 @@ Parade : **comparer d'abord les compteurs** (une requête) ; ne lancer le
 balayage complet des 245 pages que si les comptes divergent du local. Coût
 habituel : une requête. Coût réel seulement quand quelque chose a bougé.
 
+Les compteurs de référence vivant dans `manifest.json`, donc dans le dossier de
+l'utilisateur (§4.1), cette vérification économique suppose ce dossier
+accessible. S'il ne l'est pas, ni la comparaison ni l'incrémental ne sont
+possibles : la prochaine sauvegarde repart complète, et le dit.
+
 ### 5.4 Archivage des copies permanentes
 
-`GET /raindrop/{id}/cache` répond **307 vers S3** : suivre la redirection et
-écrire le fichier. Déclenché par l'utilisateur sur une collection, ou
-automatiquement sur les liens classés morts — là où l'archive vaut le plus.
+`GET /raindrop/{id}/cache` répond **303** (et non 307 comme l'annonce la doc)
+vers une URL S3 **signée et temporaire** (Wasabi, `X-Amz-*`). Vérifié le
+2026-09-16 :
+
+- la signature ne couvre que `GET` — un `HEAD` sur la cible renvoie **403**,
+  donc pas de sondage préalable de taille : on télécharge ou rien ;
+- le contenu est **du HTML compressé en gzip** (`1f8b08`) servi en
+  `Content-Type: text/html`, un fichier unique et non un bundle de ressources ;
+- `cache.size` correspond exactement à la taille **compressée** stockée
+  (11 186 o mesurés pour un `cache.size` de 11 186) — l'estimation de 18,7 Go
+  du §1 vaut donc pour du contenu déjà compressé ;
+- l'URL étant signée et périssable, elle ne peut pas être mémorisée : chaque
+  archivage repart de l'endpoint `/cache`.
+
+Les fichiers sont donc écrits **`<raindropId>.html.gz`**, tels quels, sans
+décompression : nommer `.html` un contenu gzippé produirait des archives que
+rien n'ouvre.
+
+Déclenché par l'utilisateur sur une collection, ou automatiquement sur les liens
+classés morts — là où l'archive vaut le plus.
 
 ### 5.5 Rotation
 
@@ -259,7 +292,7 @@ la perte d'information est un choix assumé, et non une amputation.
 - `sort=-lastUpdate` **fonctionne** sur `/raindrops/{collectionId}` (REST).
 - `cache` et `broken` figurent **dans la réponse de liste** — pas de requête
   supplémentaire par item.
-- `GET /raindrop/{id}/cache` → **307** vers S3.
+- `GET /raindrop/{id}/cache` → **303** (la doc annonce 307) vers une URL S3 signée et temporaire ; `HEAD` y est refusé (403) ; le contenu est du **HTML gzippé** et `cache.size` est la taille compressée.
 - `/backups` et `/backup/{id}.{format}` existent (sauvegardes générées par
   Raindrop) ; `/raindrops/{id}/export.{format}` en `csv`, `html`, `zip`.
 - Pagination 50 max en lecture, 100 objets max en création groupée.
