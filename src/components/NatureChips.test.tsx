@@ -11,10 +11,18 @@ import { AppStateProvider, useAppState } from "../state/appState";
 // factories vi.mock : voir ListPane.test.tsx).
 const pagesRef = vi.hoisted(() => ({ items: [] as ReturnType<typeof import("../test/fixtures").raindrop>[] }));
 
+// Le mock simule le filtrage serveur par `media` (sidecar/api/routes/
+// raindrops.ts) : un arg avec `media` défini ne renvoie que les items de
+// cette nature. Ainsi un test peut vérifier, sans lire l'argument passé à
+// useRaindrops, que NatureChips compte bien sur la vue NON filtrée
+// (omitMedia, R6bP-1) — si ce n'était plus le cas, le mock collapserait
+// les fréquences des autres natures à zéro, exactement comme le ferait le
+// vrai sidecar.
 vi.mock("../hooks/useRaindrops", () => ({
-  useRaindrops: () => ({
-    data: { pages: [{ items: pagesRef.items, count: pagesRef.items.length, page: 0, perPage: 50 }] },
-  }),
+  useRaindrops: (args: { media?: string } = {}) => {
+    const items = args.media ? pagesRef.items.filter((it) => it.type === args.media) : pagesRef.items;
+    return { data: { pages: [{ items, count: items.length, page: 0, perPage: 50 }] } };
+  },
 }));
 
 // Harnais minimal : NatureChips ne possède pas le champ de recherche (il vit
@@ -66,6 +74,29 @@ describe("NatureChips", () => {
     renderChips(true);
     const names = screen.getAllByRole("button").map((b) => b.textContent);
     expect(names[0]).toBe("Liens");
+  });
+
+  it("R6bP-1 : le comptage reste sur la vue non filtrée après activation d'une nature", async () => {
+    // video×3, article×1, image×1 : avant activation, l'ordre correct est
+    // Vidéos, Articles, Images (fréquence), puis Liens/Documents/Audio (0,
+    // ordre §2.1). Si NatureChips comptait sur la vue déjà filtrée par
+    // `media` (la régression que `{ omitMedia: true }` empêche), le mock —
+    // qui simule le filtrage serveur — ne renverrait plus que les items
+    // "video" une fois le filtre actif : Articles et Images retomberaient à
+    // zéro et perdraient leur rang face à Liens (également à zéro, mais qui
+    // le précède dans le tableau §2.1). C'est cette perte de rang, visible
+    // par l'utilisateur, que ce test détecte — pas la forme de l'appel.
+    pagesRef.items = [
+      raindrop({ type: "video" }), raindrop({ type: "video" }), raindrop({ type: "video" }),
+      raindrop({ type: "article" }),
+      raindrop({ type: "image" }),
+    ];
+    renderChips(true);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Vidéos" }));
+    const names = screen.getAllByRole("button").map((b) => b.textContent);
+    expect(names[1]).toBe("Articles");
+    expect(names[2]).toBe("Images");
   });
 
   it("clic = bascule le filtre de nature", async () => {
