@@ -134,7 +134,11 @@ Ces points sont **contraignants** pour l'implémentation :
 >
 > **Et l'API ne conserve pas l'origine** — vérifié le 2026-09-16 par une sonde jetable (collection temporaire, bookmark créé puis mis à la corbeille, compte remis dans son état initial) : une fois à la corbeille, `collectionId` vaut `-99`, `collection.$id` vaut `-99`, `removed` passe à `true`, et **aucun champ ne porte la collection d'avant**. Restaurer « à l'origine » est donc impossible à partir des seules données de l'API : l'information doit venir de nous, ou être demandée à l'utilisateur.
 >
-> À trancher avant les Tasks 8/13/15 (§4.2 « restauration individuelle »).
+> **Décision (2026-09-16) — restauration hybride.** Quand c'est **l'app** qui met à la corbeille, elle **note la collection d'avant** : la restauration se fait alors en un clic, comme dans Raindrop officiel. Pour un élément dont l'origine est inconnue — mis à la corbeille depuis le web, le mobile, ou avant l'installation — l'interface **demande la destination**. Conséquences de contrat :
+>
+> - `DELETE /api/raindrops/:id?from=<collectionId>` — le front passe la collection courante, le sidecar la mémorise. Sans `from`, la suppression fonctionne mais l'origine sera inconnue à la restauration.
+> - `POST /api/raindrops/unrestore {ids, toCollectionId?}` — avec `toCollectionId`, tout est restauré là ; sans, le sidecar regroupe par origine mémorisée et renvoie `{restored, unknown: number[]}`, les `unknown` n'étant **pas** restaurés. Le front demande alors une destination pour ceux-là et rappelle avec `toCollectionId`.
+> - Mémoire des origines : petit état local en app-data, à côté du cache d'analyse (artefact recalculable, jamais une source de vérité — §11). Purge des entrées dont l'élément n'est plus en corbeille.
 
 ### 4.3 Page « Revue de l'action » (aperçu destructeur)
 
