@@ -37,6 +37,17 @@ describe("routes tags", () => {
     expect(body.items[0]).toMatchObject({ name: expect.any(String), count: expect.any(Number) });
   });
 
+  // Régression : l'incident d'origine (Task 7c) venait d'une lecture `.items`
+  // sur une réponse MCP qui est en réalité un tableau nu. Si `{items: [...]}`
+  // (l'ancienne enveloppe fausse) réapparaît un jour, ce test doit le voir.
+  it("échoue bruyamment (502) si get_tags renvoie {items:[...]} au lieu d'un tableau nu", async () => {
+    const badDeps: SidecarDeps = { ...deps(conn), mcp: async () => ({ ok: true, data: { items: [] } }) };
+    const badApp = createApp(badDeps, { localToken: "test-token" });
+    const res = await req(badApp, "/api/tags");
+    expect(res.status).toBe(502);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("RAINDROP_API");
+  });
+
   it("POST /manage rename exige new_name (400 sinon)", async () => {
     const res = await req(app, "/api/tags/manage", {
       method: "POST",

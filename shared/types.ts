@@ -15,6 +15,8 @@ export interface RaindropItem {
   type: string; // link | article | image | video | document | audio
   cover: string | null;
   collectionId: number;
+  cache: { status: string } | null; // copie permanente Pro — gratuite dans le snapshot (2026-09-16)
+  broken: boolean; // verdict serveur — gratuit dans le snapshot (2026-09-16)
 }
 
 export interface Collection {
@@ -24,6 +26,8 @@ export interface Collection {
   count: number;
   public: boolean;
   view: string;
+  cover: string | null; // DESIGN.md §4 : icône Raindrop, 68/216 collections
+  color: string | null;
 }
 
 export interface Tag {

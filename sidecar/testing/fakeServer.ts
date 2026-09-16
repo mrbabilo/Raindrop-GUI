@@ -163,16 +163,19 @@ export function buildFakeRaindropServer(opts?: {
     },
   );
 
+  // Tableau nu, pas {items} : forme réelle vérifiée par sonde le 2026-09-16
+  // (Task 7c) — c'est l'enveloppe fausse {items:[...]} qui a laissé passer
+  // le bug d'origine (routes collections/tags lisaient `.items`).
   server.registerTool("get_collections", { inputSchema: {} }, async () => {
     const g = guard("get_collections");
     if (g) return g;
-    return ok({ items: fx.collections.filter((c) => c.parentId === null) });
+    return ok(fx.collections.filter((c) => c.parentId === null));
   });
 
   server.registerTool("get_child_collections", { inputSchema: {} }, async () => {
     const g = guard("get_child_collections");
     if (g) return g;
-    return ok({ items: fx.collections.filter((c) => c.parentId !== null) });
+    return ok(fx.collections.filter((c) => c.parentId !== null));
   });
 
   server.registerTool(
@@ -247,8 +250,9 @@ export function buildFakeRaindropServer(opts?: {
         if (r.removed) continue;
         for (const t of r.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
       }
-      // format brut Raindrop : {_id, count} (normalisé par la route GET /api/tags)
-      return ok({ items: [...counts].map(([name, count]) => ({ _id: name, count })) });
+      // Tableau nu de {_id, count} : forme réelle vérifiée par sonde (2026-09-16).
+      // Le format {_id, count} est normalisé en {name, count} par la route.
+      return ok([...counts].map(([name, count]) => ({ _id: name, count })));
     },
   );
 

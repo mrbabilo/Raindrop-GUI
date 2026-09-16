@@ -41,7 +41,7 @@ export default function App() {
   }
 
   return (
-    <div className="grid h-screen grid-cols-[240px_1fr_320px] grid-rows-[auto_1fr] bg-app text-app-ink">
+    <div className="grid h-screen grid-cols-[240px_minmax(0,1fr)_320px] grid-rows-[auto_1fr] bg-app text-app-ink">
       <header className="flex items-center gap-3 border-b border-app-border bg-app px-4 py-2">
         <span className="font-medium">{t("app.title")}</span>
         {mcpDown && (

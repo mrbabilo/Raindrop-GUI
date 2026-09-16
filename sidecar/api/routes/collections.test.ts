@@ -58,4 +58,21 @@ describe("routes collections", () => {
     });
     expect(res.status).toBe(200);
   });
+
+  // Régression : l'incident d'origine (Task 7c) venait d'une lecture `.items`
+  // sur une réponse MCP qui est en réalité un tableau nu. Si `{items: [...]}`
+  // (l'ancienne enveloppe fausse) réapparaît un jour, ce test doit le voir.
+  it("échoue bruyamment (502) si le MCP renvoie {items:[...]} au lieu d'un tableau nu", async () => {
+    const badDeps: SidecarDeps = {
+      ...deps(conn),
+      mcp: async (tool) =>
+        tool === "get_collections"
+          ? { ok: true, data: { items: [] } }
+          : { ok: true, data: [] },
+    };
+    const badApp = createApp(badDeps, { localToken: "test-token" });
+    const res = await req(badApp, "/api/collections");
+    expect(res.status).toBe(502);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("RAINDROP_API");
+  });
 });

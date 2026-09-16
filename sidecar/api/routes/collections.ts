@@ -13,13 +13,34 @@ const createBody = z.object({
 });
 const updateBody = createBody.partial().extend({ id: z.number().int() }).partial().omit({ id: true });
 
-// Adaptation brief : le fake (Task 3) sérialise les collections en camelCase
-// (`parentId: number|null`) alors que l'API Raindrop réelle renvoie `parent:{$id}`
-// (forme attendue par RawCollection/toCollection). On tolère les deux — no-op
-// pour la vraie forme — sinon le test du brief (child.parentId === 101) échoue.
-type RawCollectionCompat = RawCollection & { parentId?: number | null };
-const toCol = (raw: RawCollectionCompat): ReturnType<typeof toCollection> =>
-  toCollection(raw.parent || raw.parentId == null ? raw : { ...raw, parent: { $id: raw.parentId } });
+// Adaptation test : le fake MCP (sidecar/testing/fixtures.ts) sérialise les
+// collections en camelCase (`id`, `parentId: number|null`) alors que l'API
+// Raindrop réelle porte `_id` et `parent:{$id}|null` (forme vérifiée par
+// sonde le 2026-09-16, voir mappers.test.ts). On comble l'écart pour ces deux
+// champs seulement — no-op sur la vraie forme, jamais atteint en production.
+type RawCollectionCompat = RawCollection & { id?: number; parentId?: number | null };
+const toCol = (raw: RawCollectionCompat): ReturnType<typeof toCollection> => {
+  const withParent = raw.parent || raw.parentId == null ? raw : { ...raw, parent: { $id: raw.parentId } };
+  const withId: RawCollection = { ...withParent, _id: withParent._id ?? withParent.id! };
+  return toCollection(withId);
+};
+
+/** La réponse MCP réelle de get_collections/get_child_collections est un
+ * tableau nu (vérifié par sonde le 2026-09-16), jamais `{items: [...]}`.
+ * Tolérer les deux formes cacherait à nouveau l'écart avec le contrat réel :
+ * on échoue bruyamment sur autre chose qu'un tableau. */
+function asCollectionArray(data: unknown, tool: string): RawCollectionCompat[] {
+  if (!Array.isArray(data)) {
+    throw new ShapeError(tool);
+  }
+  return data as RawCollectionCompat[];
+}
+
+class ShapeError extends Error {
+  constructor(readonly tool: string) {
+    super(`${tool}: réponse MCP inattendue — tableau attendu`);
+  }
+}
 
 export function collectionsRoutes(deps: SidecarDeps): Hono {
   const app = new Hono();
@@ -31,11 +52,16 @@ export function collectionsRoutes(deps: SidecarDeps): Hono {
     ]);
     if (!root.ok) return apiError(c, root.code, root.message, root.tool);
     if (!children.ok) return apiError(c, children.code, children.message, children.tool);
-    const items = [
-      ...(root.data as { items: RawCollectionCompat[] }).items,
-      ...(children.data as { items: RawCollectionCompat[] }).items,
-    ].map(toCol);
-    return c.json({ items });
+    try {
+      const items = [
+        ...asCollectionArray(root.data, "get_collections"),
+        ...asCollectionArray(children.data, "get_child_collections"),
+      ].map(toCol);
+      return c.json({ items });
+    } catch (e) {
+      if (e instanceof ShapeError) return apiError(c, "RAINDROP_API", e.message, e.tool);
+      throw e;
+    }
   });
 
   app.get("/:id", async (c) => {

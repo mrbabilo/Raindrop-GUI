@@ -20,9 +20,15 @@ export function tagsRoutes(deps: SidecarDeps): Hono {
     const args = collectionId ? { collection_id: Number(collectionId) } : {};
     const out = await deps.mcp("get_tags", args);
     if (!out.ok) return apiError(c, out.code, out.message, out.tool);
+    // Réponse MCP réelle de get_tags : tableau nu de {_id, count} (vérifié par
+    // sonde le 2026-09-16), jamais {items: [...]}. Pas de lecture tolérante :
+    // autre chose qu'un tableau échoue bruyamment.
+    if (!Array.isArray(out.data)) {
+      return apiError(c, "RAINDROP_API", "get_tags: réponse MCP inattendue — tableau attendu", "get_tags");
+    }
+    const raw = out.data as { _id: string; count: number }[];
     // format brut Raindrop {_id, count} → DTO Tag {name, count}
-    const raw = out.data as { items: { _id: string; count: number }[] };
-    return c.json({ items: raw.items.map((t) => ({ name: t._id, count: t.count })) });
+    return c.json({ items: raw.map((t) => ({ name: t._id, count: t.count })) });
   });
 
   app.post("/manage", async (c) => {

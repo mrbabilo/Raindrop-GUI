@@ -83,8 +83,8 @@ describe("racine — §4 : la couleur appartient à la racine", () => {
 
   it("une boucle de parents ne fait pas tourner la remontée à l'infini", () => {
     const boucle = [
-      { id: 1, title: "A", parentId: 2, count: 0, public: false, view: "list" },
-      { id: 2, title: "B", parentId: 1, count: 0, public: false, view: "list" },
+      { id: 1, title: "A", parentId: 2, count: 0, public: false, view: "list", cover: null, color: null },
+      { id: 2, title: "B", parentId: 1, count: 0, public: false, view: "list", cover: null, color: null },
     ];
     expect(racine(boucle, 1)).toBeDefined(); // termine, quel que soit le nœud rendu
   });
