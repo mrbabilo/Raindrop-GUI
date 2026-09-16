@@ -12,6 +12,7 @@ import { JobStore } from "./jobs/store.js";
 import { AnalysisCache } from "./analysis/cache.js";
 import { Scanner } from "./analysis/scanner.js";
 import { makeRestClient } from "./direct/raindropRest.js";
+import { makeOriginStore } from "./trash/origins.js";
 import { join } from "node:path";
 
 function fail(msg: string): never {
@@ -64,6 +65,10 @@ const scanner = new Scanner({
   ttlDays: cfg.ANALYSIS_TTL_DAYS,
 });
 
+// Task 0b : mémoire des origines de corbeille (restauration hybride, §4.2).
+// Jamais une source de vérité : fichier absent = origines inconnues.
+const origins = makeOriginStore({ file: join(dataDir, "trash-origins.json") });
+
 const deps: SidecarDeps = {
   mcp: makeMcpCaller(lifecycle, throttle, { timeoutMs: cfg.MCP_TIMEOUT_MS }),
   state: () => lifecycle.state,
@@ -71,7 +76,13 @@ const deps: SidecarDeps = {
   jobs,
   cache,
   scanner,
-  direct: rest,
+  origins,
+  // REST direct sous la MÊME file que le MCP (550 ms partagées) : les appels
+  // unrestore par destination sont espacés par le throttle, pas par un sleep.
+  direct: {
+    updateRaindropUrl: (id, url) => throttle.run(() => rest.updateRaindropUrl(id, url)),
+    unrestore: (ids, toCollectionId) => throttle.run(() => rest.unrestore(ids, toCollectionId)),
+  },
 };
 
 const app = createApp(deps, { localToken: cfg.LOCAL_API_TOKEN });
@@ -96,6 +107,7 @@ const shutdown = async (signal: string) => {
   stopping = true;
   logger.info("arrêt", { signal });
   server.close();
+  await origins.flush(); // ne rien perdre d'une mémorisation en vol (§4.2)
   await lifecycle.stop();
   await clearLockfile(dataDir);
   await logger.close();

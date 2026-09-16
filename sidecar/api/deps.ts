@@ -4,6 +4,7 @@ import type { CallOutcome } from "../../shared/errors.js";
 import type { JobStore } from "../jobs/store.js"; // Task 10
 import type { AnalysisCache } from "../analysis/cache.js"; // Task 13
 import type { Scanner } from "../analysis/scanner.js"; // Task 14
+import type { OriginStore } from "../trash/origins.js"; // Task 0b
 
 export interface SidecarDeps {
   /** Appel tool MCP throttled (espacement 550 ms en prod). */
@@ -19,12 +20,15 @@ export interface SidecarDeps {
   cache: AnalysisCache;
   /** Scanner local (Task 14). */
   scanner: Scanner;
+  /** Mémoire des origines de corbeille (Task 0b, décision spec §4.2). */
+  origins: OriginStore;
   /** Appels REST directs Raindrop — Task 8 (contournement : update_raindrop
    *  MCP v1.3.1 n'expose pas `url` ; unrestore — MCP n'expose pas la
-   *  restauration, Task 0 front phase 1). */
+   *  restauration, Task 0b). Throttled en prod comme les appels MCP. */
   direct: {
     updateRaindropUrl(id: number, url: string): Promise<CallOutcome<{ id: number }>>;
-    unrestore(ids: number[]): Promise<CallOutcome<{ restored: number }>>;
+    /** Destination OBLIGATOIRE : la route /unrestore résout l'origine. */
+    unrestore(ids: number[], toCollectionId: number): Promise<CallOutcome<{ restored: number }>>;
   };
 }
 

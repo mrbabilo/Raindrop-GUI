@@ -4,7 +4,10 @@ const API_BASE = "https://api.raindrop.io/rest/v1";
 
 export interface RaindropRestClient {
   updateRaindropUrl(id: number, url: string): Promise<CallOutcome<{ id: number }>>;
-  unrestore(ids: number[]): Promise<CallOutcome<{ restored: number }>>;
+  /** Destination OBLIGATOIRE à ce niveau : c'est la route (Task 0b) qui
+   *  résout l'origine mémorisée. POST /raindrops/unrestore n'existe pas
+   *  (404 en réel, 2026-09-16) — la seule voie est PUT /raindrops/-99. */
+  unrestore(ids: number[], toCollectionId: number): Promise<CallOutcome<{ restored: number }>>;
 }
 
 export function makeRestClient(
@@ -33,15 +36,15 @@ export function makeRestClient(
       }
     },
 
-    async unrestore(ids) {
+    async unrestore(ids, toCollectionId) {
       try {
-        const res = await f(`${base}/raindrops/unrestore`, {
-          method: "POST",
+        const res = await f(`${base}/raindrops/-99`, {
+          method: "PUT",
           headers: {
             Authorization: `Bearer ${opts.token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ ids }),
+          body: JSON.stringify({ ids, collection: { $id: toCollectionId } }),
           signal: AbortSignal.timeout(opts.timeoutMs ?? 30_000),
         });
         if (!res.ok) {

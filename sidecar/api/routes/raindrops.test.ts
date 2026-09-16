@@ -7,6 +7,7 @@ import type { Paginated, RaindropItem } from "../../../../shared/types.js";
 
 let conn: McpConnection;
 let app: Hono;
+let baseDeps: SidecarDeps;
 
 // Adaptation brief : l'API locale est derrière l'auth Bearer (Task 7, spec §3.7)
 // → chaque requête du test fournit le token local (même motif que app.test.ts).
@@ -14,21 +15,74 @@ const TOKEN = "test-token";
 const req = (hono: Hono, path: string, init?: RequestInit, token: string = TOKEN): Promise<Response> =>
   hono.request(path, { ...init, headers: { Authorization: `Bearer ${token}` } });
 
+/** Store d'origines factice : état en mémoire + journal d'appels (ordre). */
+const makeOriginsFake = (journal: string[], initial?: Map<number, number>) => {
+  const map = new Map(initial);
+  const store = {
+    remember: async (id: number, collectionId: number) => {
+      journal.push(`remember:${id}:${collectionId}`);
+      map.set(id, collectionId);
+    },
+    take: async (ids: number[]) => {
+      const known = new Map<number, number>();
+      const unknown: number[] = [];
+      for (const id of ids) {
+        const dest = map.get(id);
+        if (dest === undefined) unknown.push(id);
+        else known.set(id, dest);
+      }
+      return { known, unknown };
+    },
+    forget: async (ids: number[]) => {
+      journal.push(`forget:${ids.join(",")}`);
+      for (const id of ids) map.delete(id);
+    },
+    flush: async () => undefined,
+  };
+  return { map, store: store as unknown as SidecarDeps["origins"] };
+};
+
+/** App espionnant mcp + origins dans un journal partagé (ordre remember/delete). */
+const journalApp = (journal: string[]): Hono =>
+  createApp(
+    {
+      ...baseDeps,
+      mcp: async (tool: string, args: Record<string, unknown>) => {
+        journal.push(`mcp:${tool}`);
+        return conn.call(tool, args);
+      },
+      origins: makeOriginsFake(journal).store,
+    },
+    { localToken: TOKEN },
+  );
+
+const unrestoreDirect = (calls: [number[], number][], failTo?: number) => ({
+  updateRaindropUrl: async () => ({ ok: true as const, data: { id: 1 } }),
+  unrestore: async (ids: number[], toCollectionId: number) => {
+    calls.push([ids, toCollectionId]);
+    if (toCollectionId === failTo) return { ok: false as const, code: "RAINDROP_API" as const, message: "http 500" };
+    return { ok: true as const, data: { restored: ids.length } };
+  },
+});
+
+/** App pour POST /unrestore : direct espion + origines factices fournies. */
+const unrestoreApp = (calls: [number[], number][], origins: ReturnType<typeof makeOriginsFake>, failTo?: number): Hono =>
+  createApp({ ...baseDeps, direct: unrestoreDirect(calls, failTo), origins: origins.store }, { localToken: TOKEN });
+
 beforeEach(async () => {
   const fake = await connectFake({ raindropCount: 30 });
   conn = McpConnection.fromClient(fake.client);
-  const deps: SidecarDeps = {
+  baseDeps = {
     mcp: (tool, args, timeoutMs) => conn.call(tool, args, timeoutMs),
     state: () => "connected",
     restart: async () => undefined,
     jobs: { get: () => undefined, list: () => [] } as unknown as SidecarDeps["jobs"],
     cache: {} as SidecarDeps["cache"],
     scanner: { startScan: () => "", isRunning: () => false },
-    direct: {
-      updateRaindropUrl: vi.fn(async () => ({ ok: true, data: { id: 1 } })),
-    },
+    direct: unrestoreDirect([]),
+    origins: makeOriginsFake([]).store,
   };
-  app = createApp(deps, { localToken: "test-token" });
+  app = createApp(baseDeps, { localToken: TOKEN });
 });
 afterEach(async () => conn.close());
 
@@ -103,11 +157,49 @@ describe("routes raindrops", () => {
     expect(res.status).toBe(400);
   });
 
-  it("DELETE /:id renvoie deleted:true (→ corbeille)", async () => {
+  it("DELETE /:id?from= mémorise l'origine AVANT la suppression (corbeille aveugle, §4.2)", async () => {
+    const journal: string[] = [];
     const list = (await (await req(app, "/api/raindrops?per_page=1")).json()) as Paginated<RaindropItem>;
-    const res = await req(app, `/api/raindrops/${list.items[0]!.id}`, { method: "DELETE" });
+    const id = list.items[0]!.id;
+    const res = await req(journalApp(journal), `/api/raindrops/${id}?from=42`, { method: "DELETE" });
     expect(res.status).toBe(200);
-    expect((await res.json()) as { deleted: boolean }).toEqual({ deleted: true });
+    expect(journal).toEqual([`remember:${id}:42`, "mcp:delete_raindrop"]);
+  });
+
+  it("DELETE /:id sans from ne mémorise rien", async () => {
+    const journal: string[] = [];
+    const list = (await (await req(app, "/api/raindrops?per_page=1")).json()) as Paginated<RaindropItem>;
+    const res = await req(journalApp(journal), `/api/raindrops/${list.items[0]!.id}`, { method: "DELETE" });
+    expect(res.status).toBe(200);
+    expect(journal).toEqual(["mcp:delete_raindrop"]);
+  });
+
+  it("DELETE /:id?from=abc → 400 INVALID_INPUT (pas de coerce booléen piégeur, R10)", async () => {
+    const res = await req(app, "/api/raindrops/1000?from=abc", { method: "DELETE" });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("INVALID_INPUT");
+  });
+
+  it("POST /bulk delete mémorise l'origine (collection_id de la requête) de chaque id", async () => {
+    const journal: string[] = [];
+    const res = await req(journalApp(journal), "/api/raindrops/bulk", {
+      method: "POST",
+      body: JSON.stringify({ operation: "delete", collection_id: 5, ids: [1000, 1001] }),
+    });
+    expect(res.status).toBe(200);
+    // mémorisé AVANT l'appel bulk : sinon tout ce qui part en masse (BulkBar,
+    // ReviewPage) reviendrait unknown — la décision §4.2 serait vidée (Task 0b)
+    expect(journal).toEqual(["remember:1000:5", "remember:1001:5", "mcp:bulk_raindrops"]);
+  });
+
+  it("POST /bulk move ne mémorise rien (pas une mise à la corbeille)", async () => {
+    const journal: string[] = [];
+    const res = await req(journalApp(journal), "/api/raindrops/bulk", {
+      method: "POST",
+      body: JSON.stringify({ operation: "move", collection_id: 0, ids: [1000, 1001], to_collection_id: 101 }),
+    });
+    expect(res.status).toBe(200);
+    expect(journal).toEqual(["mcp:bulk_raindrops"]);
   });
 
   it("POST /bulk delete exige ids (400)", async () => {
@@ -126,16 +218,7 @@ describe("routes raindrops", () => {
         return conn.call(tool, args);
       },
     };
-    const deps = {
-      mcp: (tool: string, args: Record<string, unknown>) => connSpy.call(tool, args),
-      state: () => "connected" as const,
-      restart: async () => undefined,
-      jobs: { get: () => undefined, list: () => [] } as unknown as SidecarDeps["jobs"],
-      cache: {} as SidecarDeps["cache"],
-      scanner: { startScan: () => "", isRunning: () => false },
-      direct: { updateRaindropUrl: async () => ({ ok: true as const, data: { id: 1 } }) },
-    };
-    const app2 = createApp(deps as SidecarDeps, { localToken: "t" });
+    const app2 = createApp({ ...baseDeps, mcp: (tool, args) => connSpy.call(tool, args) }, { localToken: "t" });
     const res = await req(app2, "/api/raindrops/bulk", {
       method: "POST",
       body: JSON.stringify({ operation: "move", collection_id: 0, ids: [1000, 1001], to_collection_id: 101 }),
@@ -144,30 +227,66 @@ describe("routes raindrops", () => {
     expect(spy[0]).toEqual(["bulk_raindrops", { operation: "move", collection_id: 0, ids: [1000, 1001], to_collection_id: 101 }]);
   });
 
-  it("POST /unrestore restaure depuis la corbeille", async () => {
-    const calls: number[][] = [];
-    const deps = {
-      mcp: (tool: string, args: Record<string, unknown>) => conn.call(tool, args),
-      state: () => "connected" as const,
-      restart: async () => undefined,
-      jobs: { get: () => undefined, list: () => [] } as unknown as SidecarDeps["jobs"],
-      cache: {} as SidecarDeps["cache"],
-      scanner: { startScan: () => "", isRunning: () => false },
-      direct: {
-        updateRaindropUrl: async () => ({ ok: true as const, data: { id: 1 } }),
-        unrestore: async (ids: number[]) => {
-          calls.push(ids);
-          return { ok: true as const, data: { restored: ids.length } };
-        },
-      },
-    };
-    const app2 = createApp(deps as SidecarDeps, { localToken: "t" });
-    const res = await req(app2, "/api/raindrops/unrestore", {
+  // Task 0b — remplace le test de la Task 0 (POST /raindrops/unrestore, 404 réel)
+  it("POST /unrestore avec toCollectionId : un appel, origines oubliées, unknown:[]", async () => {
+    const calls: [number[], number][] = [];
+    const origins = makeOriginsFake([], new Map([[1000, 5]]));
+    const res = await req(unrestoreApp(calls, origins), "/api/raindrops/unrestore", {
       method: "POST",
-      body: JSON.stringify({ ids: [1000] }),
-    }, "t");
+      body: JSON.stringify({ ids: [1000, 1002], toCollectionId: 9 }),
+    });
     expect(res.status).toBe(200);
-    expect((await res.json()) as { restored: number }).toEqual({ restored: 1 });
-    expect(calls).toEqual([[1000]]);
+    expect(await res.json()).toEqual({ restored: 2, unknown: [] });
+    expect(calls).toEqual([[[1000, 1002], 9]]);
+    expect(origins.map.has(1000)).toBe(false); // forget des ids restaurés
+  });
+
+  it("POST /unrestore sans destination : un appel par origine, unknown renvoyé tel quel", async () => {
+    const calls: [number[], number][] = [];
+    const origins = makeOriginsFake([], new Map([[1000, 5], [1001, 5], [1002, 7]]));
+    const res = await req(unrestoreApp(calls, origins), "/api/raindrops/unrestore", {
+      method: "POST",
+      body: JSON.stringify({ ids: [1000, 1001, 1002, 1003] }),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ restored: 3, unknown: [1003] });
+    // les groupes passent par la file (throttle 550 ms en prod), l'un après l'autre
+    expect(calls).toEqual([[[1000, 1001], 5], [[1002], 7]]);
+    expect(origins.map.has(1000)).toBe(false);
+    expect(origins.map.has(1002)).toBe(false);
+    expect(origins.map.get(1003)).toBeUndefined();
+  });
+
+  it("échec d'une destination : origines du groupe en échec conservées (retry possible)", async () => {
+    const calls: [number[], number][] = [];
+    const origins = makeOriginsFake([], new Map([[1000, 5], [1002, 7]]));
+    const res = await req(unrestoreApp(calls, origins, 7), "/api/raindrops/unrestore", {
+      method: "POST",
+      body: JSON.stringify({ ids: [1000, 1002] }),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ restored: 1, unknown: [] });
+    expect(origins.map.get(1002)).toBe(7); // PAS forget — sinon irrécupérable à l'origine
+    expect(origins.map.has(1000)).toBe(false);
+  });
+
+  it("POST /unrestore avec toCollectionId en échec → erreur, origines conservées", async () => {
+    const calls: [number[], number][] = [];
+    const origins = makeOriginsFake([], new Map([[1000, 5]]));
+    const res = await req(unrestoreApp(calls, origins, 9), "/api/raindrops/unrestore", {
+      method: "POST",
+      body: JSON.stringify({ ids: [1000, 1001], toCollectionId: 9 }),
+    });
+    expect(res.status).toBe(502);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("RAINDROP_API");
+    expect(origins.map.get(1000)).toBe(5);
+  });
+
+  it("POST /unrestore exige ids non vides (400)", async () => {
+    const res = await req(app, "/api/raindrops/unrestore", {
+      method: "POST",
+      body: JSON.stringify({ ids: [] }),
+    });
+    expect(res.status).toBe(400);
   });
 });

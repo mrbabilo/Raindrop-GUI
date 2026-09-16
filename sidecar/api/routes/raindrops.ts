@@ -63,6 +63,15 @@ const bulkBody = z
     message: "update exige tags ou important",
   });
 
+const unrestoreBody = z.object({
+  ids: z.array(z.number().int()).min(1),
+  toCollectionId: z.number().int().optional(),
+});
+
+/** `from` arrive en query string → coercion explicite (⚠️ jamais
+ *  z.coerce.boolean(), ruling R10 ; ici un nombre : coerce sûr). */
+const fromQuery = z.coerce.number().int().optional();
+
 export function raindropsRoutes(deps: SidecarDeps): Hono {
   const app = new Hono();
 
@@ -116,23 +125,67 @@ export function raindropsRoutes(deps: SidecarDeps): Hono {
   app.delete("/:id", async (c) => {
     const id = Number(c.req.param("id"));
     if (!Number.isInteger(id)) return apiError(c, "INVALID_INPUT", "id invalide");
+    const from = fromQuery.safeParse(c.req.query("from") ?? undefined);
+    if (!from.success) return apiError(c, "INVALID_INPUT", z.prettifyError(from.error));
+    // §4.2 : la corbeille ne garde pas l'origine → notée AVANT la suppression.
+    // Le store ne remonte jamais d'erreur (contrat origins.ts) : un échec de
+    // mémorisation dégrade en « destination demandée au front », pas en 500.
+    if (from.data !== undefined) await deps.origins.remember(id, from.data);
     const out = await deps.mcp("delete_raindrop", { id });
     if (!out.ok) return apiError(c, out.code, out.message, out.tool);
     return c.json({ deleted: true });
   });
 
-  // Restauration corbeille — le MCP v1.3.1 n'expose pas unrestore → REST direct (§3.3)
+  // Restauration corbeille — le MCP v1.3.1 n'expose pas unrestore → REST direct.
+  // Hybride (§4.2) : destination fournie → tout part là ; sinon regroupement
+  // par origine mémorisée, les ids sans origine reviennent `unknown` SANS
+  // être restaurés (le front demandera la destination, Task 8).
   app.post("/unrestore", async (c) => {
-    const body = z.object({ ids: z.array(z.number().int()).min(1) }).safeParse(await c.req.json().catch(() => null));
+    const body = unrestoreBody.safeParse(await c.req.json().catch(() => null));
     if (!body.success) return apiError(c, "INVALID_INPUT", z.prettifyError(body.error));
-    const out = await deps.direct.unrestore(body.data.ids);
-    if (!out.ok) return apiError(c, out.code, out.message);
-    return c.json(out.data);
+    const { ids, toCollectionId } = body.data;
+
+    if (toCollectionId !== undefined) {
+      const out = await deps.direct.unrestore(ids, toCollectionId);
+      if (!out.ok) return apiError(c, out.code, out.message);
+      await deps.origins.forget(ids);
+      return c.json({ restored: out.data.restored, unknown: [] });
+    }
+
+    // take est une LECTURE PURE — seul forget écrit, et uniquement sur les
+    // ids d'un groupe effectivement restauré : si une destination réussit et
+    // une autre échoue, les origines du groupe en échec survivent (sinon ces
+    // éléments deviennent irrécupérables à l'origine au prochain essai).
+    const { known, unknown } = await deps.origins.take(ids);
+    const byDest = new Map<number, number[]>();
+    for (const [id, dest] of known) {
+      const group = byDest.get(dest);
+      if (group) group.push(id);
+      else byDest.set(dest, [id]);
+    }
+    let restored = 0;
+    for (const [dest, group] of byDest) {
+      // séquentiel : en prod, deps.direct.unrestore passe par le throttle
+      // partagé (550 ms) qui espace les appels entre destinations
+      const out = await deps.direct.unrestore(group, dest);
+      if (out.ok) {
+        restored += out.data.restored;
+        await deps.origins.forget(group);
+      }
+      // échec d'un groupe : origines conservées, ids ni restaurés ni unknown
+      // (restored + unknown < ids.length le signale au front)
+    }
+    return c.json({ restored, unknown });
   });
 
   app.post("/bulk", async (c) => {
     const body = bulkBody.safeParse(await c.req.json().catch(() => null));
     if (!body.success) return apiError(c, "INVALID_INPUT", z.prettifyError(body.error));
+    if (body.data.operation === "delete" && body.data.ids) {
+      // §4.2 : la corbeille en masse (BulkBar, ReviewPage) est le cas COURANT
+      // d'un nettoyage — sans mémorisation ici, tout reviendrait unknown.
+      await Promise.all(body.data.ids.map((id) => deps.origins.remember(id, body.data.collection_id)));
+    }
     const out = await deps.mcp("bulk_raindrops", body.data);
     if (!out.ok) return apiError(c, out.code, out.message, out.tool);
     return c.json(out.data);

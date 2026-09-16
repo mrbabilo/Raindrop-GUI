@@ -17,16 +17,27 @@ describe("raindropRest (abstraction de secours)", () => {
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer rd-token");
   });
 
-  it("unrestore POST {ids} sur /raindrops/unrestore", async () => {
+  // Task 0b : la Task 0 appelait POST /raindrops/unrestore — 404 en réel
+  // (vérifié 2026-09-16). La seule voie vivante est PUT /raindrops/-99 avec
+  // une destination obligatoire (corps {ids, collection:{$id}}).
+  it("unrestore PUT {ids, collection} sur /raindrops/-99 avec Bearer", async () => {
     const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const client = makeRestClient({ token: "rd-token" });
-    const out = await client.unrestore([7, 9]);
+    const out = await client.unrestore([7, 9], 42);
     expect(out).toEqual({ ok: true, data: { restored: 2 } });
     const [calledUrl, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(calledUrl).toBe("https://api.raindrop.io/rest/v1/raindrops/unrestore");
-    expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body as string)).toEqual({ ids: [7, 9] });
+    expect(calledUrl).toBe("https://api.raindrop.io/rest/v1/raindrops/-99");
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body as string)).toEqual({ ids: [7, 9], collection: { $id: 42 } });
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer rd-token");
+  });
+
+  it("unrestore classe un 4xx/5xx en RAINDROP_API avec le code HTTP", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 413 })));
+    const out = await makeRestClient({ token: "t" }).unrestore([1], 42);
+    expect(out).toMatchObject({ ok: false, code: "RAINDROP_API" });
+    expect((out as { message: string }).message).toContain("413");
   });
 
   it("classe un 4xx/5xx en RAINDROP_API avec le code HTTP", async () => {
