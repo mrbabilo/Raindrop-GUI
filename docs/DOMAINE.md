@@ -15,6 +15,19 @@ Ce que le code ne dit pas. À lire avant de toucher au nettoyage, aux vues ou
 - **Tag** : étiquette. Format brut API `{_id, count}` ; le front ne voit que
   `{name, count}`.
 - **Highlight** : extrait surligné d'une page. Lecture seule en Phase 1.
+- **Nature du contenu** : ce qu'un raindrop *est* — `link`, `article`, `image`,
+  `video`, `document`, `audio`. Une seule valeur à la fois, **calculée par
+  Raindrop, jamais corrigée par nous** : on la filtre, on ne l'édite pas.
+  Libellés d'interface : *Liens*, *Articles*, *Images*, *Vidéos*, *Documents*,
+  *Audio*. Rendue par un glyphe monochrome (DESIGN.md §2.1), filtrée par les
+  puces de la barre de recherche (§11).
+
+  > ⚠️ **Le mot d'interface et l'identifiant de code divergent, exprès.** Côté
+  > utilisateur : « nature ». Côté code : le champ reste **`media`** partout —
+  > `view.media` (appState), `RaindropQuery.media`, `?media=` vers le sidecar —
+  > parce que c'est le nom du paramètre de l'API locale et que le renommer
+  > casserait le contrat pour rien. Ne pas « harmoniser ». L'ancien libellé
+  > « Type de média » est abandonné.
 - **Corbeille** : supprimer = déplacer en corbeille (`delete_raindrop`). Seul
   `empty_trash` (niveau 2 de la Revue) est irréversible.
 
