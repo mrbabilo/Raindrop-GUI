@@ -58,7 +58,11 @@ export function makeOriginStore(opts: { file: string }): OriginStore {
       );
     });
     chain = task.catch(() => undefined); // la file continue même si un save échoue
-    return task as Promise<void>;
+    // Contrat §11 sur les ÉCRITURES aussi : disque plein, EACCES, ENOENT…
+    // ne remontent JAMAIS à l'appelant (sinon une suppression ou une
+    // restauration réussie échouerait à cause du store). Perte dégradée
+    // assumée : origines inconnues → destination demandée au front.
+    return task.catch(() => undefined);
   };
 
   return {

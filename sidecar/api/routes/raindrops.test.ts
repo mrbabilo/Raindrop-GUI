@@ -1,8 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { Hono } from "hono";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createApp, type SidecarDeps } from "../app.js";
 import { connectFake } from "../../testing/fakeServer.js";
 import { McpConnection } from "../../mcp/connection.js";
+import { makeOriginStore } from "../../trash/origins.js";
 import type { Paginated, RaindropItem } from "../../../../shared/types.js";
 
 let conn: McpConnection;
@@ -68,6 +72,10 @@ const unrestoreDirect = (calls: [number[], number][], failTo?: number) => ({
 /** App pour POST /unrestore : direct espion + origines factices fournies. */
 const unrestoreApp = (calls: [number[], number][], origins: ReturnType<typeof makeOriginsFake>, failTo?: number): Hono =>
   createApp({ ...baseDeps, direct: unrestoreDirect(calls, failTo), origins: origins.store }, { localToken: TOKEN });
+
+/** Vrai store dont TOUTE écriture échoue (répertoire parent inexistant → ENOENT) :
+ *  verrouille « un échec d'écriture du store ne fait jamais échouer la route ». */
+const brokenOrigins = () => makeOriginStore({ file: join(mkdtempSync(join(tmpdir(), "origines-ko-")), "pas-de-rep", "origins.json") });
 
 beforeEach(async () => {
   const fake = await connectFake({ raindropCount: 30 });
@@ -166,6 +174,13 @@ describe("routes raindrops", () => {
     expect(journal).toEqual([`remember:${id}:42`, "mcp:delete_raindrop"]);
   });
 
+  it("DELETE /:id?from= avec écriture du store impossible → la suppression réussit quand même", async () => {
+    const list = (await (await req(app, "/api/raindrops?per_page=1")).json()) as Paginated<RaindropItem>;
+    const appKo = createApp({ ...baseDeps, origins: brokenOrigins() }, { localToken: TOKEN });
+    const res = await req(appKo, `/api/raindrops/${list.items[0]!.id}?from=42`, { method: "DELETE" });
+    expect(res.status).toBe(200);
+  });
+
   it("DELETE /:id sans from ne mémorise rien", async () => {
     const journal: string[] = [];
     const list = (await (await req(app, "/api/raindrops?per_page=1")).json()) as Paginated<RaindropItem>;
@@ -190,6 +205,14 @@ describe("routes raindrops", () => {
     // mémorisé AVANT l'appel bulk : sinon tout ce qui part en masse (BulkBar,
     // ReviewPage) reviendrait unknown — la décision §4.2 serait vidée (Task 0b)
     expect(journal).toEqual(["remember:1000:5", "remember:1001:5", "mcp:bulk_raindrops"]);
+  });
+
+  it("POST /bulk delete avec écriture du store impossible → le bulk réussit quand même", async () => {
+    const res = await req(createApp({ ...baseDeps, origins: brokenOrigins() }, { localToken: TOKEN }), "/api/raindrops/bulk", {
+      method: "POST",
+      body: JSON.stringify({ operation: "delete", collection_id: 5, ids: [1000, 1001] }),
+    });
+    expect(res.status).toBe(200);
   });
 
   it("POST /bulk move ne mémorise rien (pas une mise à la corbeille)", async () => {
@@ -239,6 +262,22 @@ describe("routes raindrops", () => {
     expect(await res.json()).toEqual({ restored: 2, unknown: [] });
     expect(calls).toEqual([[[1000, 1002], 9]]);
     expect(origins.map.has(1000)).toBe(false); // forget des ids restaurés
+  });
+
+  it("POST /unrestore avec destination et écriture du store impossible → 200, forget avalé", async () => {
+    const calls: [number[], number][] = [];
+    const store = brokenOrigins();
+    // préchauffe la MÉMOIRE (le disque est KO) : sinon forget n'a rien à retirer
+    // et ne déclenche jamais l'écriture qui doit être avalée
+    await store.remember(1000, 9).catch(() => undefined);
+    await store.remember(1002, 9).catch(() => undefined);
+    const res = await req(
+      createApp({ ...baseDeps, direct: unrestoreDirect(calls), origins: store }, { localToken: TOKEN }),
+      "/api/raindrops/unrestore",
+      { method: "POST", body: JSON.stringify({ ids: [1000, 1002], toCollectionId: 9 }) },
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ restored: 2, unknown: [] });
   });
 
   it("POST /unrestore sans destination : un appel par origine, unknown renvoyé tel quel", async () => {

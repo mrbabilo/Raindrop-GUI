@@ -51,6 +51,17 @@ describe("makeOriginStore", () => {
     expect(unknown).toEqual([1000, 9999]);
   });
 
+  it("écriture impossible → remember/forget ne rejettent JAMAIS (contrat §11, fix round 1)", async () => {
+    // le répertoire parent n'existe pas : writeFile/rename échouent (ENOENT)
+    const store = makeOriginStore({ file: join(dir, "pas-de-repertoire", "origins.json") });
+    await expect(store.remember(1000, 42)).resolves.toBeUndefined();
+    // l'état mémoire reste vivant pour la session en cours (perte dégradée : disque)
+    expect((await store.take([1000])).known.get(1000)).toBe(42);
+    await expect(store.forget([1000])).resolves.toBeUndefined();
+    expect((await store.take([1000])).known.size).toBe(0);
+    await expect(store.flush()).resolves.toBeUndefined();
+  });
+
   it("persiste : un second store (relance) relit les origines du premier", async () => {
     const file = join(dir, "origins.json");
     const first = makeOriginStore({ file });
