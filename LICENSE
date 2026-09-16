@@ -1,0 +1,64 @@
+Tous droits réservés
+====================
+
+Copyright (c) 2026 David Baudoin. Tous droits réservés.
+
+Ce logiciel et son code source, sa documentation et les ressources qui
+l'accompagnent (ci-après « le Logiciel ») sont la propriété exclusive de leur
+auteur. Ils ne sont couverts par aucune licence libre ou open source.
+
+Aucune autorisation n'est accordée
+----------------------------------
+
+En l'absence d'un accord écrit préalable de l'auteur, il est notamment interdit
+de :
+
+- copier, reproduire ou héberger le Logiciel, en tout ou partie ;
+- le modifier, l'adapter, le traduire ou en produire des œuvres dérivées ;
+- le distribuer, le publier, le prêter, le louer, le vendre ou le sous-licencier ;
+- l'utiliser à des fins commerciales, ou pour le compte d'un tiers ;
+- en retirer ou en altérer les mentions de propriété.
+
+La consultation du code par une personne y ayant légitimement accès n'emporte
+aucune cession de droits.
+
+Absence de garantie
+-------------------
+
+Le Logiciel est fourni « en l'état », sans garantie d'aucune sorte, expresse ou
+implicite, y compris et sans limitation les garanties de qualité marchande,
+d'adéquation à un usage particulier et d'absence de contrefaçon. L'auteur ne
+saurait être tenu responsable d'un quelconque dommage, direct ou indirect,
+résultant de l'utilisation du Logiciel ou de l'impossibilité de l'utiliser —
+en particulier de toute perte ou altération de données de la bibliothèque
+Raindrop.io de l'utilisateur.
+
+Composants tiers
+----------------
+
+Le Logiciel s'appuie sur des bibliothèques tierces distribuées sous leurs
+propres licences, majoritairement MIT et Apache 2.0. **Ces licences continuent
+de s'appliquer à ces composants**, que la présente licence ne restreint en
+aucune manière. Leurs textes sont fournis avec chaque paquet, dans
+`node_modules/<paquet>/`.
+
+Le Logiciel interroge l'API de Raindrop.io, service tiers indépendant, soumis à
+ses propres conditions d'utilisation. Raindrop.io est une marque de ses
+détenteurs respectifs ; le présent projet n'est ni affilié à, ni approuvé par
+Raindrop.io.
+
+---
+
+All rights reserved
+-------------------
+
+Copyright (c) 2026 David Baudoin. All rights reserved.
+
+This software is proprietary and confidential. No license, express or implied,
+is granted to use, copy, modify, merge, publish, distribute, sublicense or sell
+copies of this software, in whole or in part, without the prior written consent
+of the copyright holder. The software is provided "as is", without warranty of
+any kind.
+
+Third-party components remain subject to their own licenses (mostly MIT and
+Apache 2.0), which this notice does not restrict.
