@@ -42,7 +42,7 @@ export default function App() {
   return (
     <div className="grid h-screen grid-cols-[240px_1fr_320px] grid-rows-[auto_1fr] bg-app text-app-ink">
       <header className="col-span-3 flex items-center gap-3 border-b border-app-border bg-app px-4 py-2">
-        <span className="text-[15px] font-medium">{t("app.title")}</span>
+        <span className="font-medium">{t("app.title")}</span>
         <button
           type="button"
           className="btn ml-auto"
