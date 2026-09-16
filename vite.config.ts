@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -38,7 +39,12 @@ const sharedTest = {
 } as const;
 
 export default defineConfig(({ command, isPreview }) => ({
-  plugins: [react()],
+  // tailwindcss() manquait ici (relevé pendant Task 2) : sans lui,
+  // `@import "tailwindcss"` ne fait qu'inliner le CSS par défaut du paquet
+  // (variables --color-red-*, etc.) sans jamais scanner le code source —
+  // aucune classe utilitaire (grid, border-b, rounded…) n'est générée.
+  // Vérifié : `npm run build:front` puis grep sur dist/assets/*.css.
+  plugins: [tailwindcss(), react()],
   // Le proxy ne concerne que le serveur de dev : sans ce garde, la config
   // serait évaluée aussi par `vite build`/`vite preview` (exigerait un
   // sidecar en marche) et par vitest (`npm test`, process.env.VITEST positionné).
@@ -57,6 +63,16 @@ export default defineConfig(({ command, isPreview }) => ({
   // Deux environnements : node pour sidecar/shared (leur code lit
   // import.meta.url comme file:// — casse sous jsdom), jsdom pour le front.
   test: {
+    // pool/poolOptions n'est pas configurable par projet (partagé par tout
+    // le run) : posé ici, au niveau racine. Node ≥ 22 expose un
+    // `globalThis.localStorage` natif (expérimental, muet sans
+    // --localstorage-file) qui masque celui de jsdom lors du peuplement des
+    // globals — theme.ts le lirait `undefined`. Sans effet sur le projet
+    // node (aucun code sidecar/shared n'y touche).
+    pool: "forks",
+    poolOptions: {
+      forks: { execArgv: ["--no-experimental-webstorage"] },
+    },
     projects: [
       {
         test: {

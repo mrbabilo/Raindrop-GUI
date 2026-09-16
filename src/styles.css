@@ -94,3 +94,49 @@ body {
   background: oklch(var(--app-wash-l) calc(var(--app-wash-c) * var(--sat, 1)) var(--h));
   color: oklch(var(--app-icon-l) calc(var(--app-icon-c) * var(--sat, 1)) var(--h));
 }
+
+/* Classes utilitaires partagées — DESIGN.md §6 (rayons), §8 (densités),
+   §9 (pas d'ombre : la hiérarchie vient de la surface, jamais du relief). */
+
+/* Panneau flottant (popover, menu, ⌘K) : ne repose pas sur un changement de
+   surface avec ce qu'il recouvre, donc un filet — pas d'ombre — le détoure. */
+.panel {
+  background: var(--color-app-panel);
+  border: 1px solid var(--color-app-border);
+  border-radius: 11px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 7px;
+  border: 1px solid var(--color-app-border);
+  background: transparent;
+  color: var(--color-app-ink);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: var(--color-app-hover);
+}
+
+.input {
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 7px;
+  border: 1px solid var(--color-app-border);
+  background: var(--color-app-panel);
+  color: var(--color-app-ink);
+  font-size: 13px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-app-muted);
+}
