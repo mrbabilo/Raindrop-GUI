@@ -98,13 +98,16 @@ les décisions structurantes.
   sinon le build `tsc` est cassé au runtime.
 - **Tags au format brut** : l'API renvoie `{_id, count}` → normaliser en
   `{name, count}` côté sidecar ; le front ne voit jamais le format brut.
-- **`POST /raindrops/unrestore` n'est PAS dans l'API publique** (relu le
-  2026-09-16) — `sidecar/direct/raindropRest.ts` l'appelle pourtant, et son
-  test ne vérifie que l'URL construite sur un `fetch` mocké : **rien ne prouve
-  que le serveur l'accepte**. La voie documentée est
-  `PUT /raindrops/-99 {ids, collection:{$id}}`, qui exige une collection cible
-  et ne sait donc pas restaurer « à l'origine ». Statut : **à vérifier en réel
-  avant les Tasks 8/13/15** du plan 2 (cf. spec §4.2).
+- **`POST /raindrops/unrestore` N'EXISTE PAS** — 404 vérifié en réel le
+  2026-09-16 (contrôle négatif : une route inventée répond pareil, les routes
+  documentées répondent 200). `sidecar/direct/raindropRest.ts` l'appelle
+  pourtant : **ce code ne peut pas marcher en production**, son test ne vérifie
+  que l'URL sur un `fetch` mocké. Seule voie :
+  `PUT /raindrops/-99 {ids, collection:{"$id": N}}` — **une destination est
+  obligatoire**, restaurer « à l'origine » n'existe pas côté API (spec §4.2).
+- **`cache` et `broken` arrivent dans la réponse de liste** (vérifié le
+  2026-09-16) : la copie permanente Pro (`cache.status === "ready"`) et le
+  verdict serveur sont **gratuits** dans le snapshot, sans requête par item.
 - **Ne jamais commiter** : `MCP_RAINDROPIO_TOKEN`, `RAINDROP_TEST_TOKEN`,
   lockfile `sidecar.json`, `analysis.json` — tout vit dans app-data ou le
   trousseau, hors du dépôt.
