@@ -82,7 +82,7 @@ export function toRaw(r: FakeRaindrop) {
     important: r.important,
     type: r.type,
     domain: new URL(r.link).hostname,
-    cover: r.cover ? [{ src: r.cover }] : [],
+    cover: r.cover ?? "", // chaîne réelle, pas {src}[] (vérifié par sonde 2026-09-16)
     collection: { $id: r.collectionId },
   };
 }

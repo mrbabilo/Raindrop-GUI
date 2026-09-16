@@ -19,11 +19,11 @@ const updateBody = createBody.partial().extend({ id: z.number().int() }).partial
 // sonde le 2026-09-16, voir mappers.test.ts). On comble l'écart pour ces deux
 // champs seulement — no-op sur la vraie forme, jamais atteint en production.
 type RawCollectionCompat = RawCollection & { id?: number; parentId?: number | null };
-const toCol = (raw: RawCollectionCompat): ReturnType<typeof toCollection> => {
+const normalize = (raw: RawCollectionCompat): RawCollection => {
   const withParent = raw.parent || raw.parentId == null ? raw : { ...raw, parent: { $id: raw.parentId } };
-  const withId: RawCollection = { ...withParent, _id: withParent._id ?? withParent.id! };
-  return toCollection(withId);
+  return { ...withParent, _id: withParent._id ?? withParent.id! };
 };
+const toCol = (raw: RawCollectionCompat): ReturnType<typeof toCollection> => toCollection(normalize(raw));
 
 /** La réponse MCP réelle de get_collections/get_child_collections est un
  * tableau nu (vérifié par sonde le 2026-09-16), jamais `{items: [...]}`.
@@ -34,6 +34,23 @@ function asCollectionArray(data: unknown, tool: string): RawCollectionCompat[] {
     throw new ShapeError(tool);
   }
   return data as RawCollectionCompat[];
+}
+
+/** get_collections et get_child_collections se chevauchent sur le compte
+ * réel (vérifié par sonde le 2026-09-16 : 2 des 13 racines réapparaissent
+ * dans les 203 enfants — `parent: null` dans les deux réponses ; ni les
+ * deux ensembles ne sont disjoints, ni get_child_collections ne renvoie
+ * tout — mesuré, pas supposé, voir le rapport de task). Dédoublonner par
+ * `_id`, première occurrence conservée (root avant children). */
+function dedupeById(items: RawCollection[]): RawCollection[] {
+  const seen = new Set<number>();
+  const out: RawCollection[] = [];
+  for (const raw of items) {
+    if (seen.has(raw._id)) continue;
+    seen.add(raw._id);
+    out.push(raw);
+  }
+  return out;
 }
 
 class ShapeError extends Error {
@@ -53,10 +70,11 @@ export function collectionsRoutes(deps: SidecarDeps): Hono {
     if (!root.ok) return apiError(c, root.code, root.message, root.tool);
     if (!children.ok) return apiError(c, children.code, children.message, children.tool);
     try {
-      const items = [
+      const raw = [
         ...asCollectionArray(root.data, "get_collections"),
         ...asCollectionArray(children.data, "get_child_collections"),
-      ].map(toCol);
+      ].map(normalize);
+      const items = dedupeById(raw).map(toCollection);
       return c.json({ items });
     } catch (e) {
       if (e instanceof ShapeError) return apiError(c, "RAINDROP_API", e.message, e.tool);

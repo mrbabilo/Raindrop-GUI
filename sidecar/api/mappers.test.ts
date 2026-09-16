@@ -55,7 +55,14 @@ const RAW_RAINDROP_FULL: RawRaindrop = {
   collection: { $id: 45024906 },
   cache: { status: "ready" },
   broken: false,
+  // `cover` est une chaîne unique dans la vraie réponse — jamais un tableau
+  // {src}[] — vérifié par sonde sur 400 raindrops réels (2026-09-16).
+  cover: "https://www.1000exercicespourlascene.fr/img/partenaires/logo1000rond.png",
 };
+
+// ~5 % des 400 raindrops sondés portent `cover: ""` (pas de miniature) —
+// ex. réel : id 1750750726, "https://korben.info/tuistudio-figma-applications-terminal.html".
+const RAW_RAINDROP_EMPTY_COVER: RawRaindrop = { ...RAW_RAINDROP_FULL, id: 1750750726, cover: "" };
 
 describe("toCollection — forme réelle sondée (tableau nu, _id, parent.$id)", () => {
   it("mappe _id → id, cover[0] → cover, color → color", () => {
@@ -99,5 +106,23 @@ describe("toRaindropItem — cache et broken gratuits dans la liste", () => {
     const item = toRaindropItem(rest);
     expect(item.cache).toBeNull();
     expect(item.broken).toBe(false);
+  });
+});
+
+describe("toRaindropItem — cover est une chaîne réelle, pas {src}[]", () => {
+  it("mappe la chaîne cover telle quelle", () => {
+    expect(toRaindropItem(RAW_RAINDROP_FULL).cover).toBe(
+      "https://www.1000exercicespourlascene.fr/img/partenaires/logo1000rond.png",
+    );
+  });
+
+  it("cover vide (\"\", ~5 % des raindrops réels sondés) → null", () => {
+    expect(toRaindropItem(RAW_RAINDROP_EMPTY_COVER).cover).toBeNull();
+  });
+
+  it("absence de cover → null", () => {
+    const { cover, ...rest } = RAW_RAINDROP_FULL;
+    void cover;
+    expect(toRaindropItem(rest).cover).toBeNull();
   });
 });

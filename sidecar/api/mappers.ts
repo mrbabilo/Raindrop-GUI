@@ -13,7 +13,11 @@ export interface RawRaindrop {
   important?: boolean;
   type?: string;
   domain?: string;
-  cover?: { src: string }[];
+  // Chaîne unique dans la vraie réponse (jamais {src}[]) — vérifié par sonde
+  // sur 400 raindrops réels le 2026-09-16 : toujours une string, parfois
+  // vide ("" — ~5 % des items, pas de miniature), jamais absente en pratique
+  // mais traitée en défensif comme les autres champs optionnels du DTO.
+  cover?: string;
   collection?: { $id: number };
   cache?: { status: string } | null; // gratuit dans la réponse de liste (vérifié 2026-09-16)
   broken?: boolean; // idem
@@ -46,7 +50,7 @@ export function toRaindropItem(raw: RawRaindrop): RaindropItem {
     lastUpdate: raw.last_update,
     important: raw.important ?? false,
     type: raw.type ?? "link",
-    cover: raw.cover?.[0]?.src ?? null,
+    cover: raw.cover || null, // "" (pas de miniature) et absence traitées pareil
     collectionId: raw.collection?.$id ?? -1,
     cache: raw.cache ?? null,
     broken: raw.broken ?? false,

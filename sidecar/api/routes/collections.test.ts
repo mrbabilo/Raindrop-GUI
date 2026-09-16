@@ -59,6 +59,29 @@ describe("routes collections", () => {
     expect(res.status).toBe(200);
   });
 
+  // Régression : sur le compte réel, get_collections et get_child_collections
+  // se chevauchent (vérifié par sonde le 2026-09-16 : 2 des 13 racines
+  // réapparaissent aussi dans les 203 enfants, toutes deux avec parent:null
+  // dans les deux réponses — ni get_child_collections qui renverrait tout,
+  // ni un artefact du fake). Sans dédoublonnage, /api/collections rend le
+  // même id deux fois et React lève « duplicate key » sur la Sidebar.
+  it("dédoublonne par _id quand les deux tools renvoient la même collection", async () => {
+    const overlap = { _id: 999, title: "Chevauche", parent: null, count: 0, public: false, view: "list" };
+    const dupeDeps: SidecarDeps = {
+      ...deps(conn),
+      mcp: async (tool) =>
+        tool === "get_collections" || tool === "get_child_collections"
+          ? { ok: true, data: [overlap] }
+          : { ok: false, code: "RAINDROP_API", message: "tool inattendu dans ce test" },
+    };
+    const dupeApp = createApp(dupeDeps, { localToken: "test-token" });
+    const res = await req(dupeApp, "/api/collections");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { items: Collection[] };
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0]!.id).toBe(999);
+  });
+
   // Régression : l'incident d'origine (Task 7c) venait d'une lecture `.items`
   // sur une réponse MCP qui est en réalité un tableau nu. Si `{items: [...]}`
   // (l'ancienne enveloppe fausse) réapparaît un jour, ce test doit le voir.
