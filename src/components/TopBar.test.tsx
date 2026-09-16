@@ -1,8 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TopBar } from "./TopBar";
 import { AppStateProvider, useAppState } from "../state/appState";
+
+// TopBar rend désormais NatureChips (Task 6b), qui appelle useRaindrops —
+// mocké ici comme dans ListPane.test.tsx pour ne dépendre d'aucun
+// QueryClientProvider ni réseau : ce fichier teste TopBar, pas le comptage
+// par fréquence (couvert par NatureChips.test.tsx).
+vi.mock("../hooks/useRaindrops", () => ({
+  useRaindrops: () => ({ data: { pages: [{ items: [], count: 0, page: 0, perPage: 50 }] } }),
+}));
 
 const Spy = () => {
   const { view } = useAppState();
@@ -39,11 +47,14 @@ describe("TopBar", () => {
     expect(v.viewMode).toBe("mosaic");
   });
 
-  it("filtres avancés : domaine, média, dates → query", async () => {
+  it("filtres avancés : domaine, nature (puce au focus), dates → query", async () => {
+    // Task 6b : le <select> de nature est remplacé par les puces de
+    // NatureChips, révélées au focus du champ de recherche (DESIGN.md §11).
     renderTop();
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Domaine"), "example.com");
-    await user.selectOptions(screen.getByLabelText("Type de média"), "article");
+    await user.click(screen.getByPlaceholderText("Rechercher…"));
+    await user.click(screen.getByRole("button", { name: "Articles" }));
     await user.type(screen.getByLabelText("Depuis"), "2025-01-01");
     await user.type(screen.getByLabelText("Jusqu'à"), "2025-12-31");
     const v = JSON.parse(screen.getByTestId("view").textContent!);

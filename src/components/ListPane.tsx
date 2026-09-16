@@ -3,6 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { t } from "../i18n/fr";
 import type { View } from "../state/appState";
 import { useRaindrops } from "../hooks/useRaindrops";
+import { listQueryArgs } from "../hooks/listQuery";
 import { useAppState } from "../state/appState";
 import { RaindropRow } from "./RaindropRow";
 import { MosaicTile } from "./MosaicTile";
@@ -13,7 +14,9 @@ export function ListPane() {
   const { view, patchList, selectedIds, toggleSelect, selectedRaindropId, selectRaindrop } = useAppState();
   // Hors vue list (Nettoyage, Tags…), la zone centrale retombe sur « Tous ».
   const q: ListView = view.kind === "list" ? view : { kind: "list", collectionId: 0, label: "" };
-  const query = useRaindrops({ collectionId: q.collectionId, search: q.search, sort: q.sort, notag: q.notag });
+  // listQueryArgs (partagé avec NatureChips, R6bP-1) : la nature filtre
+  // désormais réellement la liste, plus seulement l'état de la puce active.
+  const query = useRaindrops(listQueryArgs(view));
   const items = query.data?.pages.flatMap((p) => p.items) ?? [];
   const parentRef = useRef<HTMLDivElement>(null);
   const virtual = useVirtualizer({ count: items.length, getScrollElement: () => parentRef.current, estimateSize: () => 76, overscan: 10 });
