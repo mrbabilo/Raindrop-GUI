@@ -3,6 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useRaindrops } from "./useRaindrops";
+import { listQueryArgs } from "./listQuery";
 import { raindrop } from "../test/fixtures";
 
 // Module api RÉEL + fetch global stubbé : les assertions portent sur l'URL
@@ -83,6 +84,28 @@ describe("useRaindrops", () => {
     expect(url).toContain("collection_id=0");
     expect(url).toContain("important=true");
     expect(url).not.toContain("collection_id=-3");
+  });
+
+  // Task 7b : la preuve de bout en bout que les filtres de la TopBar ne sont
+  // plus jetés — la vue traverse listQueryArgs puis useRaindrops et ressort
+  // dans la query string réellement demandée.
+  it("les filtres de la vue atteignent l'URL demandée (domaine, bornes de date)", async () => {
+    const fetchMock = stubFetch(60);
+    const { result } = renderHook(
+      () =>
+        useRaindrops(
+          listQueryArgs({
+            kind: "list", collectionId: 0, label: "Tous",
+            domain: "exemple.fr", createdStart: "2025-01-01", createdEnd: "2025-12-31",
+          }),
+        ),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.data?.pages).toHaveLength(1));
+    const url = fetchMock.mock.calls[0]![0] as string;
+    expect(url).toContain("domain=exemple.fr");
+    expect(url).toContain("created_start=2025-01-01");
+    expect(url).toContain("created_end=2025-12-31");
   });
 
   it("-2 : un search explicite reste prioritaire sur la conversion", async () => {

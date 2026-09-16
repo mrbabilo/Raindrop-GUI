@@ -15,7 +15,8 @@ export interface ListQueryOptions {
 // fréquence par nature, DESIGN.md §11) pour que les deux clés de requête ne
 // divergent jamais. Sans nature active, les deux appels partagent la même
 // queryKey (TanStack Query déduplique) : zéro requête en plus.
-// Task 7b ajoutera domain/createdStart/createdEnd ici, en un seul endroit.
+// Tous les filtres de la vue passent par ici, en un seul endroit : c'est ce
+// qui garantit que les deux appelants ne divergent que par `media`.
 export function listQueryArgs(view: View, opts: ListQueryOptions = {}): RaindropQuery {
   const q: ListView = view.kind === "list" ? view : { kind: "list", collectionId: 0, label: "" };
   return {
@@ -24,5 +25,11 @@ export function listQueryArgs(view: View, opts: ListQueryOptions = {}): Raindrop
     sort: q.sort,
     notag: q.notag,
     media: opts.omitMedia ? undefined : q.media,
+    // Task 7b : les trois contrôles de la TopBar livrés en Task 6 étaient
+    // collectés dans la vue puis jetés — ils ne filtraient rien. useRaindrops
+    // les acceptait pourtant déjà et les passe au sidecar.
+    domain: q.domain,
+    createdStart: q.createdStart,
+    createdEnd: q.createdEnd,
   };
 }

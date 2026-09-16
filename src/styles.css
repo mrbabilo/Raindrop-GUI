@@ -95,6 +95,73 @@ body {
   color: oklch(var(--app-icon-l) calc(var(--app-icon-c) * var(--sat, 1)) var(--h));
 }
 
+/* Lavis thématique sur une surface plus grande qu'une icône — la vignette de
+   la mosaïque, qui « reprend la signalétique de sa collection » (§4). Mêmes
+   jetons dérivés que .coll-icon (§6), sans en imposer la taille de 18 px :
+   la formule oklch ne se recopie pas dans le TSX. */
+.wash {
+  background: oklch(var(--app-wash-l) calc(var(--app-wash-c) * var(--sat, 1)) var(--h));
+  color: oklch(var(--app-icon-l) calc(var(--app-icon-c) * var(--sat, 1)) var(--h));
+}
+
+/* Densité « détail » (DESIGN.md §2) : la pilule passe de 18 à 21 px dans la
+   fiche, qui est l'un des deux seuls endroits où l'interface respire (§1).
+   Variante de .tag — s'ajoute à elle, ne la remplace pas. */
+.tag-detail {
+  height: 21px;
+  padding: 0 9px;
+  border-radius: 11px;
+  font-size: 12px;
+}
+
+/* États d'un lien — DESIGN.md §5. La FORME distingue autant que la couleur :
+   un lien mort et une redirection restent différenciables sans percevoir le
+   rouge et l'ambre. Un état sain ne porte AUCUNE marque.
+
+   Les longueurs de tirets de §5 (4 px/4 px, 1 px/2 px) ne sont pas
+   exprimables par `border-style` — CSS n'expose pas le motif d'un tiret — et
+   un `border-inline-start` ne saurait de toute façon pas coiffer la vignette
+   de la mosaïque (§5 : « en liste la marque borde la ligne ; en mosaïque elle
+   coiffe la vignette »). Le filet est donc un dégradé répété, peint sur une
+   bande de 3 px dont .filet et .coiffe fixent l'orientation. */
+.filet {
+  --filet-dir: to bottom; /* le motif court le long de la ligne */
+  --filet-dir-cross: to right; /* …et le double trait en travers */
+  background-image: var(--filet, none);
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 3px 100%;
+}
+
+.coiffe {
+  --filet-dir: to right;
+  --filet-dir-cross: to bottom;
+  height: 3px;
+  background-image: var(--filet, none);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+/* trait plein */
+.filet-broken {
+  --filet: linear-gradient(var(--filet-dir, to bottom), var(--color-app-broken), var(--color-app-broken));
+}
+
+/* pointillé large : 4 px pleins, 4 px vides */
+.filet-moved {
+  --filet: repeating-linear-gradient(var(--filet-dir, to bottom), var(--color-app-moved) 0 4px, transparent 4px 8px);
+}
+
+/* pointillé fin : 1 px plein, 2 px vides */
+.filet-unsure {
+  --filet: repeating-linear-gradient(var(--filet-dir, to bottom), var(--color-app-unsure) 0 1px, transparent 1px 3px);
+}
+
+/* double trait : deux filets de 1 px séparés de 1 px, en travers de la bande */
+.filet-duplicate {
+  --filet: repeating-linear-gradient(var(--filet-dir-cross, to right), var(--color-app-ink) 0 1px, transparent 1px 2px);
+}
+
 /* Classes utilitaires partagées — DESIGN.md §6 (rayons), §8 (densités),
    §9 (pas d'ombre : la hiérarchie vient de la surface, jamais du relief). */
 

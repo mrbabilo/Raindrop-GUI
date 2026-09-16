@@ -5,15 +5,22 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 // fixtures AVANT ListPane : la factory vi.mock (hisée au-dessus des imports)
 // référence `raindrop` — piège TDZ documenté dans useStaticData.test.tsx.
-import { raindrop } from "../test/fixtures";
+import { raindrop, collections } from "../test/fixtures";
 import { ListPane } from "./ListPane";
 import { AppStateProvider, useAppState } from "../state/appState";
 
 vi.mock("../hooks/useRaindrops", () => ({
   useRaindrops: () => ({
-    data: { pages: [{ items: [raindrop({ id: 1000 }), raindrop({ id: 1001, title: "Second", tags: ["rust", "design"] })], count: 2, page: 0, perPage: 50 }] },
+    data: { pages: [{ items: [raindrop({ id: 1000 }), raindrop({ id: 1001, title: "Second", tags: ["rust", "design"], collectionId: 201 })], count: 2, page: 0, perPage: 50 }] },
     fetchNextPage: vi.fn(), hasNextPage: false, isFetchingNextPage: false,
   }),
+}));
+
+// L'arbre des collections sert la signalétique §4 (la couleur appartient à la
+// racine) : ListPane le résout et passe le titre résolu à chaque ligne.
+// Mocké comme useRaindrops — aucun fetch réseau dans un test de composant.
+vi.mock("../hooks/useStaticData", () => ({
+  useCollections: () => ({ data: collections, isLoading: false }),
 }));
 
 // jsdom ne fait pas de layout : offsetHeight vaut 0 et le virtualizer en
@@ -54,19 +61,31 @@ const renderList = () =>
   );
 
 describe("ListPane", () => {
-  it("affiche les items virtualisés (titre, domaine, extrait, tags, date fr)", () => {
+  it("affiche les items virtualisés (titre, domaine, étiquettes, date fr)", () => {
     renderList();
     expect(screen.getByText("Article exemple")).toBeInTheDocument();
     expect(screen.getByText("Second")).toBeInTheDocument();
     expect(screen.getAllByText("example.com").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText("#rust")).toBeInTheDocument();
+    // Étiquettes en pilules (DESIGN.md §2), plus en texte « #tag ».
+    expect(screen.getByText("rust")).toHaveClass("tag");
+    expect(screen.getAllByText("01/01/2025")).toHaveLength(2);
+  });
+
+  // §4 : « La collection racine porte la couleur de sa thématique ; ses
+  // descendantes en héritent. » L'item 1001 est dans Rust (201), enfant de
+  // Dev (101) : il doit prendre la teinte de Dev, pas la sienne.
+  it("le carré de collection hérite de la teinte de sa racine (§4)", () => {
+    renderList();
+    expect(screen.getByTestId("coll-101").style.getPropertyValue("--h")).toBe("250"); // Dev → technique
+    expect(screen.getByTestId("coll-201").style.getPropertyValue("--h")).toBe("250"); // Rust ⊂ Dev
+    expect(screen.getByTestId("coll-201").style.getPropertyValue("--sat")).toBe("1");
   });
 
   it("clic = détail ; clic tag = filtre ; checkbox = sélection", async () => {
     renderList();
     await userEvent.click(screen.getByText("Article exemple"));
     expect(document.querySelector("[data-testid='detail-id']")?.textContent).toBe("1000");
-    await userEvent.click(screen.getByText("#rust"));
+    await userEvent.click(screen.getByText("rust"));
     // le tag cliqué déclenche patchList({search:"#rust"}) — asserté via la vue
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ search: "#rust" });
     expect(screen.getByRole("checkbox", { name: "Sélectionner Second" })).not.toBeChecked();

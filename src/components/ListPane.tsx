@@ -3,6 +3,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { t } from "../i18n/fr";
 import type { View } from "../state/appState";
 import { useRaindrops } from "../hooks/useRaindrops";
+import { useCollections } from "../hooks/useStaticData";
+import { racine } from "../design/Signaux";
 import { listQueryArgs } from "../hooks/listQuery";
 import { useAppState } from "../state/appState";
 import { RaindropRow } from "./RaindropRow";
@@ -18,8 +20,17 @@ export function ListPane() {
   // désormais réellement la liste, plus seulement l'état de la puce active.
   const query = useRaindrops(listQueryArgs(view));
   const items = query.data?.pages.flatMap((p) => p.items) ?? [];
+  // DESIGN.md §4 : la couleur appartient à la RACINE, les descendantes en
+  // héritent. L'arbre n'est connu que d'ici — la ligne et la tuile reçoivent
+  // le titre déjà résolu plutôt qu'un hook de plus dans chaque ligne
+  // virtualisée. Arbre pas encore chargé : titre absent → carré gris.
+  const arbre = useCollections().data ?? [];
+  const titreRacine = (collectionId: number) => racine(arbre, collectionId)?.title;
   const parentRef = useRef<HTMLDivElement>(null);
-  const virtual = useVirtualizer({ count: items.length, getScrollElement: () => parentRef.current, estimateSize: () => 76, overscan: 10 });
+  // estimateSize suit la densité §8 (36 px) : measureElement (R7P) corrige
+  // ensuite chaque hauteur réelle, mais un estimate faux ferait sauter la
+  // barre de défilement sur 12 000 lignes dès le premier scroll.
+  const virtual = useVirtualizer({ count: items.length, getScrollElement: () => parentRef.current, estimateSize: () => 36, overscan: 10 });
   const ioRef = useRef<IntersectionObserver | null>(null);
 
   if (items.length === 0 && !query.isFetching) return <main className="grid place-items-center p-4 text-app-muted">{t("state.empty")}</main>;
@@ -27,20 +38,24 @@ export function ListPane() {
   return (
     <main ref={parentRef} className="overflow-y-auto">
       {q.viewMode === "mosaic" ? (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2 p-2">
-          {items.map((r) => <MosaicTile key={r.id} r={r} onOpen={() => selectRaindrop(r.id)} />)}
+        // §8 : la tuile fait 221 px de large — une largeur exacte, pas un
+        // minmax élastique qui la ferait varier d'un écran à l'autre.
+        <div className="grid grid-cols-[repeat(auto-fill,221px)] gap-3 p-3">
+          {items.map((r) => <MosaicTile key={r.id} r={r} collectionRacine={titreRacine(r.collectionId)} onOpen={() => selectRaindrop(r.id)} />)}
         </div>
       ) : (
         <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
           {virtual.getVirtualItems().map((v) => {
             const r = items[v.index]!;
             return (
-              // measureElement (R7P) : la hauteur réelle varie (~59 px sans
-              // extrait, ~79 px avec) — l'estimate 76 seul produisait
-              // chevauchements et trous ; data-index est requis par
-              // virtual-core pour rattacher la mesure à l'index.
+              // measureElement (R7P) : la hauteur reste MESURÉE, pas
+              // décrétée — la ligne vise 36 px (§8) sans hauteur fixe, et
+              // ce qu'ajoutera l'analyse (Task 13) sera mesuré de même ;
+              // data-index est requis par virtual-core pour rattacher la
+              // mesure à l'index.
               <div key={r.id} data-index={v.index} ref={virtual.measureElement} style={{ position: "absolute", top: 0, left: 0, width: "100%", transform: `translateY(${v.start}px)` }}>
                 <RaindropRow r={r} selected={selectedIds.has(r.id)} isDetail={selectedRaindropId === r.id}
+                  collectionRacine={titreRacine(r.collectionId)}
                   onOpen={() => selectRaindrop(r.id)} onToggle={() => toggleSelect(r.id)} onTag={(name) => patchList({ search: `#${name}` })} />
               </div>
             );
