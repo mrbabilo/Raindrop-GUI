@@ -32,7 +32,11 @@ export function ListPane() {
           {virtual.getVirtualItems().map((v) => {
             const r = items[v.index]!;
             return (
-              <div key={r.id} style={{ position: "absolute", top: 0, left: 0, width: "100%", transform: `translateY(${v.start}px)` }}>
+              // measureElement (R7P) : la hauteur réelle varie (~59 px sans
+              // extrait, ~79 px avec) — l'estimate 76 seul produisait
+              // chevauchements et trous ; data-index est requis par
+              // virtual-core pour rattacher la mesure à l'index.
+              <div key={r.id} data-index={v.index} ref={virtual.measureElement} style={{ position: "absolute", top: 0, left: 0, width: "100%", transform: `translateY(${v.start}px)` }}>
                 <RaindropRow r={r} selected={selectedIds.has(r.id)} isDetail={selectedRaindropId === r.id}
                   onOpen={() => selectRaindrop(r.id)} onToggle={() => toggleSelect(r.id)} onTag={(name) => patchList({ search: `#${name}` })} />
               </div>

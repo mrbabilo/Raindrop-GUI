@@ -21,6 +21,12 @@ vi.mock("../hooks/useRaindrops", () => ({
 // getVirtualItems []). On simule une fenêtre de défilement de 600 px, le
 // temps du fichier — l'ombre sur HTMLElement.prototype masque le getter
 // d'Element.prototype et `delete` la retire sans toucher à l'original.
+// Reste représentatif avec measureElement (R7P) : les lignes mesurent aussi
+// 600 px sous jsdom — géométrie irréaliste, mais ce que le fichier asserte
+// est QUELS items se rendent (contenu, sélection, filtre, détail), pas la
+// métrique ; le câblage mesure→position (data-index + ref) s'exerce
+// réellement (mesures enregistrées, translateY recalculé sans crash), et la
+// précision numérique de virtual-core est son domaine testé à lui.
 beforeAll(() => {
   Object.defineProperty(HTMLElement.prototype, "offsetHeight", { configurable: true, get: () => 600 });
 });
@@ -28,11 +34,16 @@ afterAll(() => {
   delete (HTMLElement.prototype as unknown as { offsetHeight?: unknown }).offsetHeight;
 });
 
-// Assertion du détail : le brief propose le span dans App ou le Spy —
-// même pattern que Task 5/6 ; le Spy évite de polluer App.
+// Assertions d'état : détail (detail-id) et vue courante (view) — même
+// pattern Spy que Task 5/6 ; le Spy évite de polluer App.
 const Spy = () => {
-  const { selectedRaindropId } = useAppState();
-  return <span data-testid="detail-id" className="hidden">{selectedRaindropId}</span>;
+  const { selectedRaindropId, view } = useAppState();
+  return (
+    <>
+      <span data-testid="detail-id" className="hidden">{selectedRaindropId}</span>
+      <span data-testid="view" className="hidden">{JSON.stringify(view)}</span>
+    </>
+  );
 };
 
 const renderList = () =>
@@ -56,7 +67,8 @@ describe("ListPane", () => {
     await userEvent.click(screen.getByText("Article exemple"));
     expect(document.querySelector("[data-testid='detail-id']")?.textContent).toBe("1000");
     await userEvent.click(screen.getByText("#rust"));
-    // le tag cliqué déclenche patchList({search:"#rust"}) — vérifié via la vue
+    // le tag cliqué déclenche patchList({search:"#rust"}) — asserté via la vue
+    expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ search: "#rust" });
     expect(screen.getByRole("checkbox", { name: "Sélectionner Second" })).not.toBeChecked();
     await userEvent.click(screen.getByRole("checkbox", { name: "Sélectionner Second" }));
     expect(screen.getByRole("checkbox", { name: "Sélectionner Second" })).toBeChecked();
