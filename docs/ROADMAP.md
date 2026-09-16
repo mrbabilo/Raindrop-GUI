@@ -5,12 +5,16 @@ traiter une tâche « à faire ».
 
 ## Phase 1 — Bibliothèque + Nettoyage (spec validée)
 
-- [ ] **Plan 1/3 — sidecar** (pont MCP, API REST locale, moteur d'analyse) :
-      plan écrit (`docs/superpowers/plans/2026-09-15-phase1-1-sidecar.md`,
-      16 tasks), exécution non commencée.
+- [x] **Plan 1/3 — sidecar** (pont MCP, API REST locale, moteur d'analyse) :
+      **exécuté le 2026-09-16** (16/16 tasks, 108 tests, revue finale clean ;
+      5 fix rounds en cours d'exécution + fix wave final).
 - [ ] **Plan 2/3 — front React** (3 panneaux, palette ⌘K, nettoyage, Revue de
-      l'action) : plan à écrire après l'exécution du plan 1 — il consommera
-      l'API réelle du sidecar (`shared/types.ts` + endpoints).
+      l'action) : plan à écrire — il consommera l'API réelle du sidecar
+      (`shared/types.ts` + endpoints). Notes d'exécution à porter :
+      SSE `done` porte le result nu (autres events : enveloppe) ; pas de
+      replay SSE → GET `/api/jobs/:id` avant/parallèle au SSE ; EventSource
+      natif ne peut pas poser d'Authorization → SSE par fetch ; latence
+      pire-cas lecture MCP 2×timeout+2 s (retry).
 - [ ] **Plan 3/3 — shell Tauri** (fenêtre, spawn sidecar, trousseau macOS,
       écran premier lancement) : plan à écrire après le plan 2.
 
