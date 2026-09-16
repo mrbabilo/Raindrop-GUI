@@ -24,17 +24,32 @@ export function createLogger(
     return join(logsDir, `sidecar-${ymd}.jsonl`);
   };
 
+  // Deux courses sous charge (flake ~27 %) : (1) un appendFile tiré avant la
+  // fin du mkdir du boot échouait ENOENT, avalé par le catch — entrée perdue ;
+  // (2) deux appendFile concurrents ne garantissent pas l'ORDRE d'écriture
+  // (open+write entrelacés) — lignes inversées dans le JSONL. Correctif : mkdir
+  // mis en cache + file d'écriture SÉRIALISÉE (chaque write s'enchaîne sur le
+  // précédent), sans changer le contrat public.
+  let dirReady: Promise<void> | null = null;
+  const ensureDir = (): Promise<void> =>
+    (dirReady ??= mkdir(logsDir, { recursive: true }).then(() => undefined, () => undefined));
+
+  let queue: Promise<unknown> = Promise.resolve();
   const write = (lvl: Level, msg: string, fields?: Record<string, unknown>) => {
     if (LEVELS[lvl] < level) return;
     const entry = JSON.stringify({ ts: now().toISOString(), level: lvl, msg, ...fields });
-    pending.push(appendFile(fileFor(now()), `${entry}\n`, "utf8").catch(() => undefined));
+    const file = fileFor(now()); // figé à l'appel (rollover minuit possible)
+    const task = queue.then(() => ensureDir()).then(() => appendFile(file, `${entry}\n`, "utf8"));
+    // la file continue même si un append échoue (logs non critiques)
+    queue = task.catch(() => undefined);
+    pending.push(task);
   };
 
   // rotation : purge des logs > 7 jours (async, sans bloquer)
   const retentionDays = opts.retentionDays ?? 7;
   void (async () => {
     try {
-      await mkdir(logsDir, { recursive: true });
+      await ensureDir();
       const cutoff = Date.now() - retentionDays * 864e5;
       for (const f of await readdir(logsDir)) {
         const m = /^sidecar-(\d{4}-\d{2}-\d{2})\.jsonl$/.exec(f);

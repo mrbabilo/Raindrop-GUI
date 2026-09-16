@@ -6,6 +6,16 @@ import { createLogger } from "./logger.js";
 
 const dir = () => mkdtempSync(join(tmpdir(), "logs-"));
 
+/** Les writes du logger sont asynchrones : borne l'attente au lieu de courser
+ *  sur le scheduling (flake 27 % sous charge). Échoue si jamais apparu. */
+async function waitFor(cond: () => boolean, what: string, timeoutMs = 2_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!cond()) {
+    if (Date.now() > deadline) throw new Error(`condition non remplie : ${what}`);
+    await new Promise((r) => setTimeout(r, 10));
+  }
+}
+
 describe("createLogger", () => {
   it("écrit une entrée JSONL avec ts/level/msg dans le fichier du jour", async () => {
     const d = dir();
@@ -15,7 +25,7 @@ describe("createLogger", () => {
     await logger.close();
 
     const file = join(d, `sidecar-${new Date().toISOString().slice(0, 10)}.jsonl`);
-    expect(existsSync(file)).toBe(true);
+    await waitFor(() => existsSync(file), `fichier créé : ${file}`);
     const lines = readFileSync(file, "utf8").trim().split("\n").map((l) => JSON.parse(l));
     expect(lines).toMatchObject([
       { level: "info", msg: "démarrage sidecar", pid: process.pid },
@@ -31,8 +41,6 @@ describe("createLogger", () => {
     const logger = createLogger(d, { level: "info", retentionDays: 7 });
     logger.info("nouveau");
     await logger.close();
-    // laisse le toggle async de purge s'exécuter
-    await new Promise((r) => setTimeout(r, 50));
-    expect(existsSync(old)).toBe(false);
+    await waitFor(() => !existsSync(old), "ancien log purgé");
   });
 });
