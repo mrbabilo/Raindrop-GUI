@@ -10,17 +10,12 @@ import { CarreCollection, PiluleEtiquette } from "../design/Signaux";
 import type { Collection, RaindropItem } from "../../shared/types";
 
 // Les champs éditables de la fiche (tags et emplacement viendront des Tasks
-// 9-11). get_highlights (sidecar) transmet les items bruts {_id, text, note,
-// color} : la conversion _id→id reste côté front (convention « le front ne
-// voit jamais le format brut », enveloppe posée en Task 0c). Lecture seule
-// en Phase 1 (spec §12).
+// 9-11). Les surlignages sont lus directement dans `r.highlights` — déjà
+// normalisés par le mapper sidecar ({id: ObjectId chaîne, text, note,
+// created}) : la route dédiée /api/highlights/:id appelait un endpoint
+// fantôme (404 réel pour tout raindrop, ruling R8cP-1) et a été supprimée.
+// Lecture seule en Phase 1 (spec §12).
 type ChampEdition = "title" | "excerpt" | "note";
-interface Surlignage {
-  id: number;
-  text: string;
-  note: string;
-  color: string;
-}
 
 // DESIGN.md §4 : « chaque lien reprend la signalétique de sa collection » —
 // fil d'Ariane dans la fiche. Même marche bornée que racine() (Signaux) :
@@ -63,16 +58,6 @@ export function DetailPane() {
   const detail = useQuery({
     queryKey: ["raindrop", selectedRaindropId],
     queryFn: () => api.get<RaindropItem>(`/api/raindrops/${selectedRaindropId}`),
-    enabled: selectedRaindropId != null,
-  });
-  const surlignages = useQuery({
-    queryKey: ["highlights", selectedRaindropId],
-    queryFn: async () => {
-      const brut = await api.get<{ items: { _id: number; text: string; note: string; color: string }[] }>(
-        `/api/highlights/${selectedRaindropId}`,
-      );
-      return brut.items.map(({ _id, text, note, color }): Surlignage => ({ id: _id, text, note, color }));
-    },
     enabled: selectedRaindropId != null,
   });
   const arbre = useCollections().data ?? [];
@@ -212,7 +197,7 @@ export function DetailPane() {
       )}
       <section className="flex flex-col gap-2">
         <h3 className="text-xs font-medium text-app-muted">{t("detail.highlights")}</h3>
-        {(surlignages.data ?? []).map((h) => (
+        {r.highlights.map((h) => (
           <blockquote key={h.id} className="border-l-2 border-app-border pl-2 text-sm">
             {h.text}
             {h.note !== "" && <footer className="text-xs text-app-muted">{h.note}</footer>}

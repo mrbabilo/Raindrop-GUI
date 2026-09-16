@@ -97,11 +97,6 @@ describe("routes maintenance", () => {
     expect(res.status).toBe(200);
   });
 });
-
-describe("routes highlights", () => {
-  it("GET /api/highlights/:id renvoie une liste (vide au fake)", async () => {
-    const res = await req(app, "/api/highlights/1000");
-    const body = (await res.json()) as { items: unknown[] };
-    expect(body.items).toEqual([]);
-  });
-});
+// Pas de describe « routes highlights » : la route a été supprimée (R8cP-1 —
+// elle appelait un endpoint fantôme 404 en réel) ; les highlights traversent
+// GET /api/raindrops/:id (mappers.test.ts sonde la traversée).

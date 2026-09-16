@@ -17,6 +17,10 @@ export interface RaindropItem {
   collectionId: number;
   cache: { status: string } | null; // copie permanente Pro — gratuite dans le snapshot (2026-09-16)
   broken: boolean; // verdict serveur — gratuit dans le snapshot (2026-09-16)
+  // Gratuits dans l'item complet (GET /raindrop/{id}) — vide dans les listes.
+  // La route dédiée /api/highlights/:id est morte en réel (endpoint fantôme
+  // 404, ruling R8cP-1) : supprimée, les highlights traversent le détail.
+  highlights: Highlight[];
 }
 
 export interface Collection {
@@ -35,12 +39,14 @@ export interface Tag {
   count: number;
 }
 
+// Forme réelle sondée (R8cP-1, 2026-09-16) : l'`_id` API est un ObjectId
+// **chaîne** ; `color` n'existe pas en réel (abandonné) ; `raindropId` est
+// redondant dans l'item qui porte la collection. `lastUpdate`/`creatorRef`
+// existent côté API mais ne traversent pas (hors Produces).
 export interface Highlight {
-  id: number;
+  id: string;
   text: string;
   note: string;
-  color: string;
-  raindropId: number;
   created: string;
 }
 

@@ -6,7 +6,7 @@ export function raindrop(partial: Partial<RaindropItem> = {}): RaindropItem {
     excerpt: "Un extrait", note: "", domain: "example.com", tags: ["typescript"],
     created: "2025-01-01T12:00:00Z", lastUpdate: "2025-06-01T12:00:00Z",
     important: false, type: "link", cover: null, collectionId: 101,
-    cache: null, broken: false,
+    cache: null, broken: false, highlights: [],
     ...partial,
   };
 }

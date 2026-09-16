@@ -27,12 +27,21 @@ beforeEach(() => {
   favori = false;
   getApi.mockReset().mockImplementation((path: string) => {
     if (path === "/api/raindrops/1000")
-      return Promise.resolve(raindrop({ id: 1000, collectionId: 201, important: favori }));
+      return Promise.resolve(
+        raindrop({
+          id: 1000,
+          collectionId: 201,
+          important: favori,
+          // R8cP-1 : les highlights vivent dans l'item complet (normalisés par
+          // le mapper sidecar) — la route dédiée /api/highlights est morte.
+          highlights: [
+            { id: "6881239e822c9c57b6088b7d", text: "Un passage", note: "à revoir", created: "2025-07-23T18:02:06.309Z" },
+          ],
+        }),
+      );
     if (path === "/api/raindrops/2000")
       return Promise.resolve(raindrop({ id: 2000, title: "Second", collectionId: 101 }));
-    if (path === "/api/highlights/1000")
-      return Promise.resolve({ items: [{ _id: 9, text: "Un passage", note: "à revoir", color: "yellow" }] });
-    return Promise.resolve({ items: [] }); // surlignages des autres items : aucun
+    return undefined; // tout autre path : aucun (la query morte /api/highlights ne doit plus être appelée)
   });
   sendApi.mockReset().mockImplementation(async (_m: string, _p: string, body?: { important?: boolean }) => {
     if (body && "important" in body) favori = body.important === true;

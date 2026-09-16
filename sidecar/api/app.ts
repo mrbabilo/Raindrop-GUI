@@ -5,7 +5,6 @@ import type { SidecarDeps } from "./deps.js";
 import { raindropsRoutes } from "./routes/raindrops.js";
 import { collectionsRoutes } from "./routes/collections.js";
 import { tagsRoutes } from "./routes/tags.js";
-import { highlightsRoutes } from "./routes/highlights.js";
 import { userRoutes } from "./routes/user.js";
 import { maintenanceRoutes } from "./routes/maintenance.js";
 import { analysisRoutes } from "./routes/analysis.js";
@@ -72,7 +71,9 @@ export function createApp(deps: SidecarDeps, opts: { localToken: string }): Hono
   app.route("/api/raindrops", raindropsRoutes(deps));
   app.route("/api/collections", collectionsRoutes(deps));
   app.route("/api/tags", tagsRoutes(deps));
-  app.route("/api/highlights", highlightsRoutes(deps));
+  // Pas de route /api/highlights : l'endpoint qu'elle appelait
+  // (GET /raindrop/{id}/highlights via get_highlights) répond 404 HTML en
+  // réel (R8cP-1) — les highlights traversent GET /api/raindrops/:id.
   app.route("/", userRoutes(deps)); // chemins complets internes : /api/user, /api/parse-url, /api/check-urls
   app.route("/api/maintenance", maintenanceRoutes(deps));
   app.route("/api/analysis", analysisRoutes(deps));

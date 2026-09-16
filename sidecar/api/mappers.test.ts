@@ -130,6 +130,34 @@ describe("toRaindropItem — l'identifiant arrive sous _id (forme réelle, R7cP-
   });
 });
 
+// Forme réelle d'un highlight embarqué — sonde API 2026-09-16 (R8cP-1,
+// raindrop 1265539367 via GET /raindrop/{id}) : _id est un ObjectId
+// **chaîne**, il n'y a PAS de `color`. La fixture est la sonde, pas une
+// supposition (le brief T8 en avait fait quatre, toutes fausses).
+const SONDE_HIGHLIGHTS = [
+  {
+    _id: "6881239e822c9c57b6088b7d",
+    text: "…",
+    note: "",
+    created: "2025-07-23T18:02:06.309Z",
+    lastUpdate: "…",
+    creatorRef: { _id: 2209989, name: "mrbabilo", avatar: "", email: "" },
+  },
+];
+
+describe("toRaindropItem — highlights traversent l'item complet (R8cP-1)", () => {
+  it("mappe la forme réelle embarquée → {id: chaîne, text, note, created} — ni lastUpdate ni creatorRef ne traversent", () => {
+    const raw: RawRaindrop = { ...RAW_RAINDROP_FULL, highlights: SONDE_HIGHLIGHTS };
+    expect(toRaindropItem(raw).highlights).toEqual([
+      { id: "6881239e822c9c57b6088b7d", text: "…", note: "", created: "2025-07-23T18:02:06.309Z" },
+    ]);
+  });
+
+  it("item sans la clé `highlights` (cas liste) → []", () => {
+    expect(toRaindropItem(RAW_RAINDROP_FULL).highlights).toEqual([]);
+  });
+});
+
 describe("toRaindropItem — cover est une chaîne réelle, pas {src}[]", () => {
   it("mappe la chaîne cover telle quelle", () => {
     expect(toRaindropItem(RAW_RAINDROP_FULL).cover).toBe(
