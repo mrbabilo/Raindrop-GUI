@@ -245,7 +245,7 @@ Logs structurés (JSON) dans `~/Library/Application Support/Raindrop-GUI/logs/`,
 
 Le pont épinglé étant archivé, l'écosystème a été passé en revue. Un seul
 serveur MCP Raindrop est encore vivant : **`adeze/raindrop-mcp` v2.4.5**
-(MIT, TypeScript, 185 étoiles, dernier push 2026-07). Constats établis **en
+(MIT, TypeScript, dernier push 2026-07 — v2.4.5 publiée en 2026-03). Constats établis **en
 lisant le JS publié** (`npm pack`), pas sa documentation :
 
 | Ce qu'il apporterait | Ce qu'il coûterait |

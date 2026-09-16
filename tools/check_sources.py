@@ -48,8 +48,11 @@ BASELINE = os.path.join(ROOT, ".sources-baseline.json")
 TIMEOUT = 30
 UA = "Raindrop-GUI-source-check/1.0 (+https://github.com/mrbabilo/Raindrop-GUI)"
 
-# Le registre — ce qu'on surveille — vit à côté : un fichier de données,
-# lu depuis le dossier du script (usage : `python3 tools/check_sources.py`).
+# Le registre — ce qu'on surveille — vit à côté : un fichier de données. Le
+# chemin est posé explicitement, pas hérité de sys.path[0] : cet import
+# conditionne **tous** les modes, y compris `--offline` qui doit marcher sans
+# rien supposer (appel par `-m`, par symlink dans le PATH, depuis ailleurs).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sources_registry import MCP_PACKAGE, SOURCES, UNPROBED  # noqa: E402
 
 
