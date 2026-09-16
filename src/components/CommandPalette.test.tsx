@@ -37,10 +37,16 @@ function mockApi() {
 }
 
 // Le Spy sérialise la vue ENTIÈRE : les assertions portent sur la navigation
-// (collectionId, search), pas sur un fragment (ruling 2a).
+// (collectionId, search), pas sur un fragment (ruling 2a). R11P-2 : il
+// expose aussi selectedRaindropId pour la sélection de fiche par la palette.
 const Spy = () => {
-  const { view } = useAppState();
-  return <span data-testid="view">{JSON.stringify(view)}</span>;
+  const { view, selectedRaindropId } = useAppState();
+  return (
+    <>
+      <span data-testid="view">{JSON.stringify(view)}</span>
+      <span data-testid="selection">{String(selectedRaindropId)}</span>
+    </>
+  );
 };
 
 const renderPalette = (query = "", onClose: () => void = () => undefined) =>
@@ -96,6 +102,21 @@ describe("CommandPalette", () => {
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({
       kind: "list", collectionId: 0, label: "#rust", search: "#rust",
     });
+  });
+
+  // R11P-2 : choisir un bookmark sélectionne sa fiche dans le détail —
+  // même geste qu'un clic sur une ligne de liste, l'URL y est cliquable ;
+  // pas de changement de vue, pas d'ouverture externe.
+  it("Entrée sur un bookmark sélectionne sa fiche sans changer de vue", async () => {
+    renderPalette("rust");
+    // La fiche attendue en tête de rangées : on attend sa présence avant
+    // d'appuyer sur Entrée (sinon le curseur pointerait encore la première
+    // ligne locale — collections/tags — le temps de la réponse serveur).
+    await waitFor(() => expect(screen.getByText("rust async")).toBeInTheDocument());
+    await userEvent.type(screen.getByRole("combobox"), "{Enter}");
+    expect(screen.getByTestId("selection").textContent).toBe("555");
+    // La vue reste intacte : la palette ne redirige pas.
+    expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ kind: "list", collectionId: 0 });
   });
 
   it("les flèches déplacent la sélection, Échap ferme sans naviguer", async () => {

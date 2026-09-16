@@ -21,7 +21,7 @@ interface Row {
 // curseur) repart donc à zéro à chaque ouverture — `initialQuery` préremplit
 // (tests, futur lien profond).
 export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boolean; onClose(): void; initialQuery?: string }) {
-  const { go } = useAppState();
+  const { go, selectRaindrop } = useAppState();
   const collections = useCollections();
   const tags = useTags();
   const [q, setQ] = useState(initialQuery);
@@ -41,9 +41,11 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
   // tag). Sans `search`, listQuery lit view.search absent : « Tous » non
   // filtré. Vues : formes réelles du type View (appState.tsx).
   const rows: Row[] = [
-    // Plan T11 : l'ouverture d'un bookmark dans le détail n'est pas câblée —
-    // l'action reste neutre pour l'instant.
-    ...(bookmarks.data?.items ?? []).map((b) => ({ key: `b${b.id}`, label: b.title, hint: t("cmdk.hintBookmark"), run: () => undefined })),
+    // R11P-2 : choisir un bookmark sélectionne sa fiche dans le détail —
+    // même geste qu'un clic sur une ligne de liste (l'URL y est cliquable) ;
+    // pas de changement de vue, l'ouverture externe reste un clic depuis
+    // la fiche.
+    ...(bookmarks.data?.items ?? []).map((b) => ({ key: `b${b.id}`, label: b.title, hint: t("cmdk.hintBookmark"), run: () => selectRaindrop(b.id) })),
     ...(collections.data ?? [])
       .filter((c) => c.title.toLowerCase().includes(lower))
       .map((c) => ({ key: `c${c.id}`, label: c.title, hint: t("cmdk.hintCollection"), run: () => go({ kind: "list", collectionId: c.id, label: c.title }) })),
