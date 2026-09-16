@@ -285,7 +285,9 @@ export function buildFakeRaindropServer(opts?: {
     async () => {
       const g = guard("get_highlights");
       if (g) return g;
-      return ok({ items: [] });
+      // Tableau nu, pas {items} : forme réelle du tool (getHighlights finit par
+      // ok(data.items) dans le code compilé épinglé) — la route enveloppe.
+      return ok([]);
     },
   );
 
