@@ -4,6 +4,7 @@ import { useHealth } from "./hooks/useStaticData";
 import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { ListPane } from "./components/ListPane";
+import { DetailPane } from "./components/DetailPane";
 
 // Icônes SVG (DESIGN.md §9 : jamais d'emoji), grille 16px, trait 1,7.
 function SunIcon() {
@@ -64,7 +65,9 @@ export default function App() {
       <div className="border-b border-app-border bg-app" aria-hidden="true" />
       <Sidebar />
       <ListPane />
-      <aside className="overflow-y-auto bg-app p-2">détail</aside>
+      {/* Row 2 col 3 : détail permanent — aperçu, édition inline, actions,
+          surlignages (Task 8). */}
+      <DetailPane />
     </div>
   );
 }

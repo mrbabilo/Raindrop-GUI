@@ -37,6 +37,8 @@ export const fr = {
   "detail.open": "Ouvrir",
   "detail.trash": "Mettre à la corbeille",
   "detail.highlights": "Surlignages",
+  "detail.guest": "Sélectionnez un bookmark pour voir le détail.",
+  "detail.breadcrumb": "Fil d'Ariane",
   "bulk.selected": "{n} sélectionné(s)",
   "bulk.trash": "Corbeille",
   "bulk.move": "Déplacer",

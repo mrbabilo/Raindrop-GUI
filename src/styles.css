@@ -217,3 +217,12 @@ body {
   outline: none;
   border-color: var(--color-app-muted);
 }
+
+/* §7 : titre de fiche — 26 px, graisse 590, resserré. La Revue de l'action
+   (Task 15) reprend la même spécification : la formule ne se recopie pas
+   dans le TSX, même raison que .tag-detail (§2). */
+.titre-fiche {
+  font-size: 26px;
+  font-weight: 590;
+  letter-spacing: -0.015em;
+}
