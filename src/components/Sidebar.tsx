@@ -1,0 +1,62 @@
+import { t } from "../i18n/fr";
+import { useCollections, useTags } from "../hooks/useStaticData";
+import { useAppState } from "../state/appState";
+
+// Entrée de navigation : 28 px de haut (DESIGN.md §8 — leading-5 + py-1),
+// 13 px du corps (§7). Survol et sélection par les jetons dédiés de §6
+// (hover, sel) — la sélection se marque par une surface, jamais une teinte.
+const item = "block w-full text-left rounded px-2 py-1 leading-5 hover:bg-app-hover cursor-pointer truncate";
+const selected = " bg-app-sel font-medium";
+const count = "text-xs text-app-muted";
+
+export function Sidebar() {
+  const { view, go } = useAppState();
+  const collections = useCollections();
+  const tags = useTags();
+  const isList = (id: number) => view.kind === "list" && view.collectionId === id;
+  const roots = (collections.data ?? []).filter((c) => c.parentId === null);
+  const childrenOf = (id: number) => (collections.data ?? []).filter((c) => c.parentId === id);
+
+  // Vues fixes : Tous (0), Non-lus (-2), Favoris (-3), Corbeille (-99).
+  // -2/-3 sont des marqueurs front (ruling R3P) : useRaindrops les convertit
+  // en requêtes ; la Sidebar n'émet que `go`.
+  return (
+    <nav className="flex h-full flex-col gap-3 overflow-y-auto p-2">
+      <section className="flex flex-col gap-0.5">
+        <button className={item + (isList(0) ? selected : "")} onClick={() => go({ kind: "list", collectionId: 0, label: t("nav.all") })}>{t("nav.all")}</button>
+        <button className={item + (isList(-2) ? selected : "")} onClick={() => go({ kind: "list", collectionId: -2, label: t("nav.unread") })}>{t("nav.unread")}</button>
+        <button className={item + (isList(-3) ? selected : "")} onClick={() => go({ kind: "list", collectionId: -3, label: t("nav.favorites") })}>{t("nav.favorites")}</button>
+        <button className={item + (isList(-99) ? selected : "")} onClick={() => go({ kind: "list", collectionId: -99, label: t("nav.trash") })}>{t("nav.trash")}</button>
+      </section>
+
+      <button className={item + (view.kind === "cleanup" ? selected : "")} onClick={() => go({ kind: "cleanup" })}>{t("nav.cleanup")}</button>
+
+      <section>
+        <h2 className="px-2 text-xs font-medium text-app-muted">{t("nav.collections")}</h2>
+        {roots.map((c) => (
+          <div key={c.id}>
+            <button className={item} onClick={() => go({ kind: "list", collectionId: c.id, label: c.title })}>
+              {c.title} <span className={count}>{c.count}</span>
+            </button>
+            {childrenOf(c.id).map((ch) => (
+              <button key={ch.id} className={item + " pl-6"} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
+                {ch.title} <span className={count}>{ch.count}</span>
+              </button>
+            ))}
+          </div>
+        ))}
+      </section>
+
+      <section>
+        <h2 className="px-2 text-xs font-medium text-app-muted">{t("nav.tags")}</h2>
+        {/* Nom dans son propre span : le # décoratif reste hors du texte du
+            span (les requêtes RTL ne lisent que les nœuds texte directs). */}
+        {(tags.data ?? []).map((tg) => (
+          <button key={tg.name} className={item} onClick={() => go({ kind: "list", collectionId: 0, label: `#${tg.name}` })}>
+            #<span>{tg.name}</span> <span className={count}>{tg.count}</span>
+          </button>
+        ))}
+      </section>
+    </nav>
+  );
+}

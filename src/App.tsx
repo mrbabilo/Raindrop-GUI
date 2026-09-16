@@ -1,6 +1,7 @@
 import { t } from "./i18n/fr";
 import { useTheme } from "./lib/theme";
 import { useHealth } from "./hooks/useStaticData";
+import { Sidebar } from "./components/Sidebar";
 
 // Icônes SVG (DESIGN.md §9 : jamais d'emoji), grille 16px, trait 1,7.
 function SunIcon() {
@@ -55,7 +56,7 @@ export default function App() {
           {isDark ? <SunIcon /> : <MoonIcon />}
         </button>
       </header>
-      <nav className="overflow-y-auto bg-app p-2">navigation</nav>
+      <Sidebar />
       <main className="overflow-y-auto bg-app-panel p-2">liste</main>
       <aside className="overflow-y-auto bg-app p-2">détail</aside>
     </div>
