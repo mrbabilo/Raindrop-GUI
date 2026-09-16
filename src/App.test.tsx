@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -63,6 +63,17 @@ describe("App", () => {
     expect(screen.getByRole("navigation")).toBeInTheDocument();
     expect(screen.getByRole("main")).toBeInTheDocument();
     expect(screen.getByRole("complementary")).toBeInTheDocument();
+  });
+
+  // Task 10 : ⌘E amène le focus dans le composer, quel que soit le champ
+  // occupé — le data-testid="composer-input" est le contrat du focus (plan).
+  it("⌘E met le focus dans le composer", () => {
+    render(<App />, { wrapper });
+    const input = document.querySelector<HTMLInputElement>('[data-testid="composer-input"]');
+    expect(input).not.toBeNull();
+    expect(document.activeElement).not.toBe(input);
+    fireEvent.keyDown(window, { key: "e", metaKey: true });
+    expect(document.activeElement).toBe(input);
   });
 
   it("bascule le thème sombre au clic sur le bouton de thème", async () => {

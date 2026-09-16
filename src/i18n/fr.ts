@@ -49,6 +49,7 @@ export const fr = {
   "composer.placeholder": "Coller une URL à sauvegarder (⌘E)",
   "composer.exists": "Déjà sauvegardé",
   "composer.save": "Sauvegarder",
+  "composer.titleAria": "Titre",
   "cmdk.placeholder": "Rechercher bookmarks, collections, tags, commandes…",
   "cleanup.title": "Nettoyage",
   "cleanup.dead": "Liens morts",

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { t } from "./i18n/fr";
 import { useTheme } from "./lib/theme";
 import { useHealth } from "./hooks/useStaticData";
@@ -50,6 +51,19 @@ export default function App() {
   const { view } = useAppState();
   const isDark = resolved === "dark";
   const mcpDown = health !== undefined && health.mcp !== "connected";
+  // Task 10 : ⌘E amène le focus dans le composer, quel que soit le champ
+  // occupé — le data-testid="composer-input" est le contrat du focus (plan).
+  // En vue review, pas de composer monté : le raccourci ne fait rien.
+  useEffect(() => {
+    function surRaccourci(e: KeyboardEvent) {
+      if (e.metaKey && e.key === "e") {
+        e.preventDefault();
+        document.querySelector<HTMLInputElement>('[data-testid="composer-input"]')?.focus();
+      }
+    }
+    window.addEventListener("keydown", surRaccourci);
+    return () => window.removeEventListener("keydown", surRaccourci);
+  }, []);
   function toggleTheme() {
     setMode(isDark ? "light" : "dark");
   }

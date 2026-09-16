@@ -10,6 +10,7 @@ import { useAppState } from "../state/appState";
 import { RaindropRow } from "./RaindropRow";
 import { MosaicTile } from "./MosaicTile";
 import { BulkBar } from "./BulkBar";
+import { Composer } from "./Composer";
 
 type ListView = Extract<View, { kind: "list" }>;
 
@@ -34,12 +35,22 @@ export function ListPane() {
   const virtual = useVirtualizer({ count: items.length, getScrollElement: () => parentRef.current, estimateSize: () => 36, overscan: 10 });
   const ioRef = useRef<IntersectionObserver | null>(null);
 
-  if (items.length === 0 && !query.isFetching) return <main className="grid place-items-center p-4 text-app-muted">{t("state.empty")}</main>;
+  // À vide aussi le composer reste monté : c'est LUI qui crée le premier
+  // bookmark de la collection — l'état vide seul le priverait de raison d'être.
+  if (items.length === 0 && !query.isFetching)
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <Composer />
+        <main className="grid min-h-0 flex-1 place-items-center p-4 text-app-muted">{t("state.empty")}</main>
+      </div>
+    );
 
   return (
-    // Colonne : la liste défile, le pied (BulkBar, Task 9) reste posé sous
-    // elle — hors du scroll, pour ne pas fausser la mesure du virtualizer.
+    // Colonne : le composer (Task 10) en tête, la liste défile, le pied
+    // (BulkBar, Task 9) reste posé sous elle — hors du scroll, pour ne pas
+    // fausser la mesure du virtualizer.
     <div className="flex h-full min-h-0 flex-col">
+      <Composer />
       <main ref={parentRef} className="min-h-0 flex-1 overflow-y-auto">
         {q.viewMode === "mosaic" ? (
           // §8 : la tuile fait 221 px de large — une largeur exacte, pas un
