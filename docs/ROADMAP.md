@@ -73,6 +73,16 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       action, le focus passe à la ligne suivante ; la ligne active suit
       aussi le survol souris (un seul état de pointeur). La palette ⌘K
       (T11) sert déjà de référence.
+- [ ] **Drag & drop d'un signet vers les collections** — design validé le
+      2026-09-17 : seuil ~5 px, source fantôme ; **sélection liée**
+      (drag d'un item coché = toute la sélection, le BulkBar suit) ;
+      sidebar cible active (survol = `bg-app-sel`), **survol prolongé
+      d'un parent ~500 ms = dépliage automatique**, auto-scroll des bords
+      ; dépôt interdit sur la collection source, la corbeille et les vues
+      de traitement ; drop = `useBulk` move (1 ou N ids) + invalidation,
+      flash jeton `moved` sur la ligne, échec = retour à la place +
+      pattern R8P-1. Pas de réordonnancement (ordre alphanumérique
+      acté). Front uniquement, `useBulk` existe.
 - [ ] **Passe design** : « Tout désélectionner » testé ; étiquettes
 
 - [ ] **Passe design** : « Tout désélectionner » testé ; étiquettes
