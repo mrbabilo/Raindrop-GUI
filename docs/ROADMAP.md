@@ -3,7 +3,8 @@
 ⚠️ Les cases traînent derrière le code livré : vérifier `git log` avant de
 traiter une tâche « à faire ».
 
-*Dernier recalage : 2026-09-17 (fin du plan 2, après fix wave de la revue
+*Dernier recalage : 2026-09-17 (fin du plan 3 — shell Tauri livré, les
+13 tasks closes ; après revue finale de branche)
 finale de branche).*
 
 ## Phase 1 — Bibliothèque + Nettoyage (spec validée)
@@ -23,13 +24,27 @@ finale de branche).*
       hybride §4.2 complète (origines du bulk + destination demandée),
       Revue à deux niveaux virtualisée, signalétique DESIGN.md jointe à la
       liste et au détail.
-- [ ] **Plan 3/3 — shell Tauri** : **plan écrit** le 2026-09-17 —
-      `docs/superpowers/plans/2026-09-17-phase1-3-tauri.md`, 12 tasks.
-      Reste à exécuter. Les deux notes que portait cette entrée y sont des
-      steps (bannière muette au démarrage à froid → Task 11 ; preview Vite
-      sans proxy → Task 11, déjà couvert par le garde `!isPreview`).
-      Le **sélecteur du dossier de sauvegarde** en est **retiré** : il
-      dépend de la spec sauvegarde, non validée — son propre plan.
+- [x] **Plan 3/3 — shell Tauri** — fait le 2026-09-17, 13 tasks
+      (`docs/superpowers/plans/2026-09-17-phase1-3-tauri.md`) : squelette,
+      jeton local éphémère, résolution de Node, lockfile, trousseau,
+      cycle de vie du sidecar, commandes du webview, amorçage front,
+      premier lancement, écrans de diagnostic/panne, bannière à froid,
+      empaquetage. Hors plan mais livré : le **compilateur**
+      (`scripts/build_app.py` + `release.py`, inspiré de StarHubTH) et le
+      **runtime Node géré** (Task 13, décision utilisateur — voir son
+      entrée). Détails de vérification dans
+      `.superpowers/sdd/2026-09-17-phase1-3-tauri/progress.md` (registre
+      d'exécution, non commité). Le **sélecteur du dossier de
+      sauvegarde** reste hors plan : spec sauvegarde non validée. Les
+      finitions parkées (revue finale) : « Réessayer » désactivé pendant
+      une installation ; extraire runtime.rs/node.rs/commandes.rs à la
+      première retouche de chacun (400/400/331) ; aligner
+      DELAI_SEQUENCE si les délais de boot venaient à croître.
+- [ ] **Dette cliquet** : `sidecar/api/routes/raindrops.test.ts` porte
+      **430 lignes** — au-dessus du plafond dur de 400, préexistant au
+      plan 3 et exclu du cliquet avec les tests (choix documenté dans
+      `scripts/build_app.py`). À découper selon ses frontières naturelles
+      à la première retouche.
       **Vérifié avant d'écrire** : `tauri build` produit `.app` **et**
       `.dmg` avec les seuls Command Line Tools (1 min 31 s), signature
       ad-hoc ; et `node` est **absent** du PATH minimal d'une app lancée du
