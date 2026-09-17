@@ -210,4 +210,27 @@ describe("DetailPane", () => {
     expect(screen.getByDisplayValue("Second")).toBeInTheDocument();
     expect(screen.queryByDisplayValue("Brouillon")).not.toBeInTheDocument();
   });
+
+  // Revue finale : l'état d'ÉCHEC d'une mutation suit l'observateur (pas la
+  // clé) — sans reset, l'alerte d'un PATCH raté sur A s'affiche encore sur B.
+  it("un échec d'écriture sur A ne s'affiche pas sur B au changement d'item", async () => {
+    renderDetail(
+      <>
+        <Preselect id={1000} />
+        <Bascule />
+      </>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Modifier" }));
+    // Un champ doit changer : Enregistrer sans brouillon ne mute pas.
+    const champ = screen.getByDisplayValue("Article exemple");
+    await userEvent.clear(champ);
+    await userEvent.type(champ, "Titre raté");
+    sendApi.mockRejectedValue(new Error("réseau perdu"));
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("réseau perdu");
+
+    await userEvent.click(screen.getByRole("button", { name: "vers-2000" }));
+    expect(await screen.findByText("Second")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
 });

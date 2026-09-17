@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
@@ -30,6 +30,18 @@ const renderReview = (r: ReviewView = review) => render(<ReviewPage review={r} g
 beforeEach(() => {
   sendMock.mockClear();
   goBack.mockClear();
+});
+
+// jsdom ne fait pas de layout : offsetHeight vaut 0 et le virtualizer en
+// déduit une plage vide (virtual-core : outerSize === 0 → getVirtualItems
+// []) — même shim que ListPane.test : une fenêtre de défilement simulée de
+// 600 px pour tout le fichier. Lignes FIXES 36 px (§8, sans measureElement) :
+// ~16 items par fenêtre, les aperçus courts (3 items) s'y rendent entiers.
+beforeAll(() => {
+  Object.defineProperty(HTMLElement.prototype, "offsetHeight", { configurable: true, get: () => 600 });
+});
+afterAll(() => {
+  delete (HTMLElement.prototype as unknown as { offsetHeight?: unknown }).offsetHeight;
 });
 
 describe("ReviewPage — niveau 1 (corbeille)", () => {
@@ -205,5 +217,47 @@ describe("ReviewPage — rulings", () => {
     expect(sendMock).toHaveBeenCalledTimes(1);
     libere();
     await vi.waitFor(() => expect(goBack).toHaveBeenCalled());
+  });
+
+  // §4.3 : « Liste complète scrollable (virtualisée) » — le mot s'était perdu
+  // (revue finale) : la Revue peut porter des milliers d'items (empty-trash
+  // sur 5 000), le map intégral les monterait tous. Même shim que
+  // ListPane.test : jsdom ne fait pas de layout, le virtualizer lit
+  // offsetHeight (virtual-core) — 600 px simulés.
+  describe("virtualisation (§4.3)", () => {
+    const many: ReviewView = {
+      kind: "review",
+      items: Array.from({ length: 300 }, (_, k) => ({
+        id: k + 1,
+        url: `https://x${k + 1}.example`,
+        title: `Item ${k + 1}`,
+        collectionId: 0,
+      })),
+      action: { op: "trash" },
+      sourceLabel: "sélection",
+    };
+
+    it("la liste est virtualisée : conteneur dimensionné, seuls les items de la fenêtre se rendent", () => {
+      const { container } = renderReview(many);
+      // Le conteneur virtuel dimensionne le contenu TOTAL (300 × 36 px, §8).
+      const liste = screen.getByTestId("review-virtual");
+      expect(liste).toHaveStyle({ height: "10800px" });
+      // La fenêtre (600 px simulés + overscan) ne monte PAS les 300 lignes.
+      const lignes = container.querySelectorAll('[data-testid="review-virtual"] label');
+      expect(lignes.length).toBeGreaterThan(0);
+      expect(lignes.length).toBeLessThan(300);
+      expect(screen.getByText("Item 1")).toBeInTheDocument();
+      expect(screen.queryByText("Item 300")).not.toBeInTheDocument();
+    });
+
+    it("le filtre réduit la fenêtre virtualisée (un item hors fenêtre devient visible)", async () => {
+      renderReview(many);
+      expect(screen.queryByText("Item 299")).not.toBeInTheDocument(); // hors fenêtre
+      await userEvent.type(screen.getByPlaceholderText(/Filtrer dans l'aperçu/), "Item 299");
+      // Le count du virtualizer suit le filtre : l'item 299 est dans la
+      // fenêtre (1 item filtré) et se rend.
+      expect(screen.getByText("Item 299")).toBeInTheDocument();
+      expect(screen.queryByText("Item 1")).not.toBeInTheDocument();
+    });
   });
 });

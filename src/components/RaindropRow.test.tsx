@@ -97,4 +97,13 @@ describe("RaindropRow — signalétique (DESIGN.md §2)", () => {
     ligne();
     expect(screen.getByTestId("coll-101").style.getPropertyValue("--sat")).toBe("0");
   });
+
+  // Revue finale (FIX ledger) : l'étoile de la liste est la MÊME icône au
+  // trait que la fiche (§9, R8P-2) — plus d'étoile pleine locale.
+  it("l'étoile de favori de la liste est au trait, unifiée avec la fiche (§9)", () => {
+    ligne({ r: raindrop({ important: true }) });
+    const svg = screen.getByRole("img", { name: "Favori" }).querySelector("svg")!;
+    expect(svg).toHaveAttribute("fill", "none");
+    expect(svg).toHaveAttribute("width", "15");
+  });
 });

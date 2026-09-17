@@ -1,18 +1,10 @@
 import { t } from "../i18n/fr";
 import type { RaindropItem } from "../../shared/types";
 import { Glyphe } from "../design/glyphes";
+import { Etoile } from "../design/Etoile";
 import { CarreCollection, PiluleEtiquette, filetEtat, type EtatLien } from "../design/Signaux";
 
 const dateFr = (iso: string) => new Date(iso).toLocaleDateString("fr-FR");
-
-// §9 : icônes dessinées en SVG, jamais d'emoji — grille 16, trait 1,7.
-function Etoile() {
-  return (
-    <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="currentColor">
-      <path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z" />
-    </svg>
-  );
-}
 
 // DESIGN.md §8 : la ligne de liste fait 36 px — « titre + étiquettes +
 // domaine », ~22 visibles. Tout tient donc sur UNE ligne : deux lignes de

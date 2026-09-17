@@ -6,6 +6,7 @@ import { useAppState } from "../state/appState";
 import { useCollections } from "../hooks/useStaticData";
 import { useUpdateRaindrop, useTrashRaindrop } from "../hooks/useMutations";
 import { Glyphe } from "../design/glyphes";
+import { Etoile } from "../design/Etoile";
 import { CarreCollection, PiluleEtiquette } from "../design/Signaux";
 import type { Collection, RaindropItem } from "../../shared/types";
 
@@ -33,18 +34,9 @@ function chaine(arbre: Collection[], id: number): Collection[] {
   return out;
 }
 
-// §9 : icône dessinée en SVG au TRAIT, jamais pleine — trait 1,7 sur grille
-// 15–16, comme les glyphes de nature ; l'état favori ne change pas le
-// remplissage. (R8P-2 ; l'étoile pleine de RaindropRow est un minor différé
-// de la Task 7b, la revue finale tranchera la passe unifiée.)
-function Etoile() {
-  return (
-    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinejoin="round">
-      <path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z" />
-    </svg>
-  );
-}
-
+// §9 : l'étoile est UNE icône au trait pour toute l'interface — dessinée
+// dans src/design/Etoile.tsx (R8P-2, FIX ledger revue finale : la liste
+// consomme la même que la fiche, plus d'étoile pleine locale).
 const bouton = "rounded border border-app-border px-2 py-1 text-xs";
 const coque = "bg-app p-3 text-sm";
 
@@ -64,9 +56,14 @@ export function DetailPane() {
 
   // Changer d'item ferme l'édition ET purge le brouillon : sinon un brouillon
   // abandonné sur A repartirait vers B au prochain « Enregistrer ».
+  // Revue finale : les mutations aussi se réarment (reset) — l'état d'échec
+  // suit l'observateur, pas la clé : sans lui, l'alerte d'un PATCH raté sur
+  // A s'afficherait encore sur B (update.error comme trash.error).
   useEffect(() => {
     setEditing(false);
     setDraft({});
+    update.reset();
+    trash.reset();
   }, [selectedRaindropId]);
 
   if (selectedRaindropId == null)

@@ -39,7 +39,11 @@ export function Sidebar() {
               {c.title} <span className={count}>{c.count}</span>
             </button>
             {childrenOf(c.id).map((ch) => (
-              <button key={ch.id} className={item + " pl-6"} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
+              // DESIGN.md §8 : retrait d'arbre de 14 px PAR NIVEAU, sur le
+              // padding de base de `item` (px-2 = 8 px) → 22 px au niveau 1
+              // (l'ancien pl-6, 24 px, ne suivait pas la lettre). Style
+              // inline : la valeur exacte compte, pas une classe approximative.
+              <button key={ch.id} className={item} style={{ paddingLeft: "22px" }} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
                 {ch.title} <span className={count}>{ch.count}</span>
               </button>
             ))}

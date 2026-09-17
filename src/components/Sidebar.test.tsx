@@ -45,6 +45,19 @@ describe("Sidebar", () => {
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ kind: "list", collectionId: 101 });
   });
 
+  // FIX ledger (revue finale) : DESIGN.md §8 — « retrait 14 px par niveau ».
+  // L'enfant (niveau 1) porte donc 8 px (px-2 de la classe item) + 14 px de
+  // retrait = 22 px ; l'ancien pl-6 (24 px) ne suivait pas la lettre.
+  it("retrait d'arbre : 14 px par niveau — 22 px au niveau 1 (§8)", () => {
+    renderSidebar();
+    const enfant = screen.getByText("Rust").closest("button")!;
+    expect(enfant).toHaveStyle({ paddingLeft: "22px" });
+    expect(enfant.className).not.toContain("pl-6");
+    // Le parent, racine, ne porte aucun retrait supplémentaire.
+    const racine = screen.getByText("Dev").closest("button")!;
+    expect(racine).not.toHaveStyle({ paddingLeft: "22px" });
+  });
+
   // R11P-1 : cliquer un tag FILTRE la liste — la vue porte search `#tag`
   // (filtre serveur prouvé en réel : search=#webdesign → count exact du tag).
   // Sans `search`, listQuery lit view.search absent : « Tous » non filtré.

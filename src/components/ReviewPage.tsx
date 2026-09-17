@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { t } from "../i18n/fr";
 import { toCsv, downloadCsv } from "../lib/csv";
 import { useBulk, useEmptyTrash, useCleanupCollections, useInvalidate } from "../hooks/useMutations";
@@ -27,6 +28,17 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
   const level2 = review.action.op === "empty-trash" || review.action.op === "delete-empty-collections";
   const visible = review.items.filter((i) => i.title.toLowerCase().includes(filter.toLowerCase()));
   const remaining = review.items.filter((i) => !excluded.has(i.id));
+  // §4.3 « Liste complète scrollable (virtualisée) » (revue finale : le mot
+  // s'était perdu) — même mécanique que ListPane. La Revue peut porter des
+  // milliers d'items (empty-trash sur 5 000) : le map intégral les monterait
+  // tous. Lignes FIXES 36 px (§8) : estimateSize exact, pas de mesure.
+  const parentRef = useRef<HTMLDivElement>(null);
+  const virtual = useVirtualizer({
+    count: visible.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 36,
+    overscan: 10,
+  });
   // Revue finale : sur les deux actions L2, le compteur porte le TOTAL
   // SERVEUR (posé par la vue d'origine) — l'aperçu chargé ne vaut pas la
   // portée réelle de l'action. Absent (L1) : compteur = items portés.
@@ -99,26 +111,39 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
           {t("review.deselect")}
         </button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {visible.map((i) => (
-          <label key={i.id} className="flex min-h-9 items-center gap-2 border-b border-app-border px-4 text-sm">
-            <input
-              type="checkbox"
-              aria-label={i.title}
-              checked={!excluded.has(i.id)}
-              onChange={() =>
-                setExcluded((s) => {
-                  const n = new Set(s);
-                  if (n.has(i.id)) n.delete(i.id);
-                  else n.add(i.id);
-                  return n;
-                })
-              }
-            />
-            <span className="min-w-0 flex-1 truncate">{i.title}</span>
-            <span className="url shrink-0 text-[11px] text-app-muted">{i.url}</span>
-          </label>
-        ))}
+      <div ref={parentRef} className="min-h-0 flex-1 overflow-y-auto">
+        <div data-testid="review-virtual" style={{ height: virtual.getTotalSize(), position: "relative" }}>
+          {virtual.getVirtualItems().map((v) => {
+            const i = visible[v.index]!;
+            return (
+              // Ligne fixe h-9 (36 px, §8) positionnée par le virtualizer —
+              // data-index rattache la fenêtre à l'index filtré (même contrat
+              // que ListPane ; pas de measureElement, la hauteur est exacte).
+              <label
+                key={i.id}
+                data-index={v.index}
+                className="absolute left-0 flex h-9 w-full items-center gap-2 border-b border-app-border px-4 text-sm"
+                style={{ transform: `translateY(${v.start}px)` }}
+              >
+                <input
+                  type="checkbox"
+                  aria-label={i.title}
+                  checked={!excluded.has(i.id)}
+                  onChange={() =>
+                    setExcluded((s) => {
+                      const n = new Set(s);
+                      if (n.has(i.id)) n.delete(i.id);
+                      else n.add(i.id);
+                      return n;
+                    })
+                  }
+                />
+                <span className="min-w-0 flex-1 truncate">{i.title}</span>
+                <span className="url shrink-0 text-[11px] text-app-muted">{i.url}</span>
+              </label>
+            );
+          })}
+        </div>
       </div>
       <footer className="flex items-center gap-3 border-t border-app-border bg-app-panel px-4 py-3 text-sm">
         {level2 ? (
