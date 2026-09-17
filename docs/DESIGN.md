@@ -182,6 +182,21 @@ Pas d'ombre portée : la hiérarchie vient du **niveau de surface**, pas de l'om
 
 ## 9. Règles
 
+- **L'écran ne surcharge jamais.** Seuls les icônes et éléments strictement
+  nécessaires au geste courant de la zone sont posés. Tout le reste sort de
+  l'écran — révélé au survol ou au focus, ou nulle part. Règles dérivées :
+  - **Révélé, pas posé** — une action contextuelle n'existe visuellement
+    qu'au survol ou au focus (actions de ligne, puces de nature §11).
+  - **Une icône par geste** — pas de redondance icône + texte, sauf les
+    verbes qui détruisent ou exécutent (« Mettre à la corbeille »,
+    « Exécuter »).
+  - **Masqué si nul** — compteurs, sections et contrôles sans contenu
+    courant ne s'affichent pas.
+  - **Un seul point d'entrée par geste** — un même geste n'a qu'un seul
+    contrôle visible à l'écran.
+  - **Le texte est l'exception** — l'identité se dessine (icône, teinte,
+    forme) ; le texte n'apparaît que pour ce qui ne se dessine pas :
+    états, comptes de la Revue, frappe de confirmation.
 - **Pas de cartes pour une liste.** Les cartes gaspillent le vertical et
   transforment un outil de tri en catalogue. La mosaïque est un mode, pas un
   style par défaut.

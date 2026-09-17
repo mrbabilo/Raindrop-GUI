@@ -83,8 +83,16 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       flash jeton `moved` sur la ligne, échec = retour à la place +
       pattern R8P-1. Pas de réordonnancement (ordre alphanumérique
       acté). Front uniquement, `useBulk` existe.
-- [ ] **Passe design** : « Tout désélectionner » testé ; étiquettes
-
+- [ ] **Épure (principe §9 de DESIGN.md, amendé le 2026-09-17 — « l'écran
+      ne surcharge jamais »)**, audit de l'existant à reprendre :
+      les filtres domaine/dates de la TopBar sont posés en permanence pour
+      un usage rare → révélés dans le panneau « paramètres » incorporé au
+      champ de recherche (généraliser le pattern §11 de la nature) ; le
+      select de tri avec son option « — » muette devient le bouton-état
+      acté ; dans le détail, les gestes non destructrices (favori,
+      ouvrir) passent en icônes seules — le texte reste aux verbes §10
+      (Modifier, Enregistrer, Mettre à la corbeille) ; compteurs masqués
+      si 0 ; les futures actions de ligne seront des icônes seules.
 - [ ] **Passe design** : « Tout désélectionner » testé ; étiquettes
       évanouies par `shrink` (plancher min-w) ; `leading-tight` tuile ;
       `.wash` vs `.coll-icon` à fusionner ; `filetEtat` demi-paire ;
