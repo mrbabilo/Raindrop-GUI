@@ -3,6 +3,7 @@ import { z } from "zod";
 import { apiError } from "../../../shared/errors.js";
 import type { SidecarDeps } from "../deps.js";
 import { toRaindropItem } from "../mappers.js";
+import { composerRecherche } from "../recherche.js";
 import type { RawRaindrop } from "../mappers.js";
 
 const searchQuery = z.object({
@@ -83,7 +84,13 @@ export function raindropsRoutes(deps: SidecarDeps): Hono {
   app.get("/", async (c) => {
     const q = searchQuery.safeParse(Object.fromEntries(new URL(c.req.url).searchParams));
     if (!q.success) return apiError(c, "INVALID_INPUT", z.prettifyError(q.error));
-    const out = await deps.mcp("search_raindrops", q.data);
+    // CLAUDE.md §Traps : `domain` transmis au tool ne filtre RIEN — le pont
+    // l'envoie en paramètre d'URL et l'API Raindrop l'ignore. Le filtre par
+    // domaine n'existe que dans la recherche : on l'y compose, et on RETIRE
+    // le paramètre mort des arguments (sinon le pont l'ajoute quand même).
+    const { domain, ...args } = q.data;
+    const search = composerRecherche(q.data.search, domain);
+    const out = await deps.mcp("search_raindrops", { ...args, ...(search === undefined ? {} : { search }) });
     if (!out.ok) return apiError(c, out.code, out.message, out.tool);
     const raw = out.data as { count: number; items: RawRaindrop[] };
     return c.json({

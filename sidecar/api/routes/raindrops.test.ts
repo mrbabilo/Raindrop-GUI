@@ -113,6 +113,47 @@ describe("routes raindrops", () => {
     expect(body.count).toBe(32);
   });
 
+  // CLAUDE.md §Traps : `domain` passé au pont MCP ne filtre RIEN — il part
+  // en paramètre d'URL, que l'API Raindrop ignore (12 210 items avec comme
+  // sans). Le filtre n'existe que dans la recherche. Ce test verrouille les
+  // DEUX moitiés : le terme composé arrive, et `domain` ne part plus.
+  // La composition elle-même est prouvée sur l'API réelle dans
+  // recherche.test.ts — un tool mocké ne saurait rien en dire.
+  it("GET / : le domaine devient un terme de recherche, jamais un paramètre du tool", async () => {
+    const vus: unknown[] = [];
+    const app2 = createApp(
+      { ...baseDeps, mcp: async (tool, args) => { vus.push([tool, args]); return conn.call(tool, args); } },
+      { localToken: "t" },
+    );
+    await req(app2, "/api/raindrops?domain=https://WWW.YouTube.com/watch", undefined, "t");
+    const [tool, args] = vus[0] as [string, Record<string, unknown>];
+    expect(tool).toBe("search_raindrops");
+    expect(args.search).toBe('domain:"youtube.com"');
+    expect("domain" in args).toBe(false);
+  });
+
+  it("GET / : le domaine s'ajoute à la recherche saisie sans l'écraser", async () => {
+    const vus: unknown[] = [];
+    const app2 = createApp(
+      { ...baseDeps, mcp: async (tool, args) => { vus.push(args); return conn.call(tool, args); } },
+      { localToken: "t" },
+    );
+    await req(app2, "/api/raindrops?search=%23webdesign&domain=youtube.com", undefined, "t");
+    expect((vus[0] as Record<string, unknown>).search).toBe('#webdesign domain:"youtube.com"');
+  });
+
+  it("GET / : un domaine vide ne pose aucun terme (il rendrait zéro résultat)", async () => {
+    const vus: unknown[] = [];
+    const app2 = createApp(
+      { ...baseDeps, mcp: async (tool, args) => { vus.push(args); return conn.call(tool, args); } },
+      { localToken: "t" },
+    );
+    await req(app2, "/api/raindrops?search=rust&domain=%20%20", undefined, "t");
+    const args = vus[0] as Record<string, unknown>;
+    expect(args.search).toBe("rust");
+    expect("domain" in args).toBe(false);
+  });
+
   it("GET /:id renvoie un DTO", async () => {
     const list = (await (await req(app, "/api/raindrops?per_page=1")).json()) as Paginated<RaindropItem>;
     const res = await req(app, `/api/raindrops/${list.items[0]!.id}`);

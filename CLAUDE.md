@@ -111,16 +111,20 @@ les décisions structurantes.
   en corbeille `collectionId` → `-99`, `removed` → `true`, rien d'autre) :
   restaurer « à l'origine » suppose que **nous** ayons noté la collection
   d'avant (spec §4.2).
-- **Le filtre `domain` du MCP ne filtre RIEN** (vérifié en réel le
-  2026-09-17) : `searchRaindrops` le passe en paramètre d'URL
-  (`/raindrops/0?domain=…`), or l'API Raindrop n'a pas ce paramètre — elle
-  l'ignore. Sonde : 12 210 items avec et sans, résultats identiques. Le
-  filtrage par domaine passe par la **recherche** : `domain:youtube.com`
-  → 64 (tous du domaine), `link:youtube.com` → 76 (plus large, l'URL
-  entière), `site:` → 0 (n'existe pas), plein texte → 782 (flou).
-  Contre-épreuve : `created_start`, qui passe par `search` (`created:>=`),
-  filtre bien (12 210 → 5). Le champ Domaine de l'interface est donc
-  **inerte** — corrigible côté sidecar sans toucher au MCP.
+- **Le paramètre `domain` du MCP ne filtre RIEN** — ne jamais le lui passer
+  (vérifié en réel le 2026-09-17) : `searchRaindrops` l'envoie en paramètre
+  d'URL (`/raindrops/0?domain=…`), or l'API Raindrop n'a pas ce paramètre,
+  elle l'ignore. Sonde : 12 210 items avec comme sans. Le filtrage par
+  domaine n'existe que dans la **recherche**, et l'opérateur **ne pardonne
+  rien** : `domain:youtube.com` → 64, mais `domain:youtube` → 0,
+  `domain:YouTube.com` → 0 (casse), `domain:"www.youtube.com"` → 0 — zéro
+  **sans erreur**, soit un écran vide inexplicable. Les guillemets sont
+  sans effet (64 avec comme sans) et protègent des espaces. Les termes
+  s'**intersectent** : `#webdesign` 1713 + `domain:youtube.com` 64 → 1.
+  `link:` (76) est plus large — il lit l'URL entière ; `site:` n'existe pas
+  (0). **Corrigé** dans `sidecar/api/recherche.ts` (normalisation de la
+  saisie puis composition dans `search`) ; le paramètre mort est retiré des
+  arguments du tool.
 - **`cache` et `broken` arrivent dans la réponse de liste** (vérifié le
   2026-09-16) : la copie permanente Pro (`cache.status === "ready"`) et le
   verdict serveur sont **gratuits** dans le snapshot, sans requête par item.

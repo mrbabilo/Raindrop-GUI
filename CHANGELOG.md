@@ -93,12 +93,18 @@ Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
   Toute commande réduite à une icône porte son nom accessible : l'épure
   ne déplace pas sa dette vers l'accessibilité.
 
+### Corrigé
+
+- **Le champ Domaine ne filtrait rien** (2026-09-17). Le pont MCP envoie
+  `domain` en paramètre d'URL, que l'API Raindrop ignore : la bibliothèque
+  entière revenait, quel que soit le domaine demandé. Le filtre est
+  désormais composé dans la recherche, où il existe vraiment. La saisie est
+  normalisée au passage — minuscules, sans schéma, sans `www.`, sans
+  chemin — car l'opérateur exige le domaine exact et rend zéro **sans
+  erreur** pour toute autre forme : coller une URL donnait un écran vide
+  que rien n'expliquait. Mesuré de bout en bout : 12 210 → 64.
+
 ### Problèmes connus
 
-- **Le champ Domaine ne filtre rien** (constaté en réel le 2026-09-17) :
-  le pont MCP envoie `domain` en paramètre d'URL, que l'API Raindrop
-  ignore. La voie qui fonctionne est `domain:<valeur>` dans la recherche.
-  Sondes et contre-épreuves : `CLAUDE.md`, section Traps ; correction à
-  faire côté sidecar : `docs/ROADMAP.md`.
 - Écriture des surlignages, agent IA, moteur de règles et packaging
   restent hors périmètre de la Phase 1 (spécification §12).
