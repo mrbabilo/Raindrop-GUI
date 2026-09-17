@@ -200,6 +200,19 @@ Pas d'ombre portée : la hiérarchie vient du **niveau de surface**, pas de l'om
   - **Le texte est l'exception** — l'identité se dessine (icône, teinte,
     forme) ; le texte n'apparaît que pour ce qui ne se dessine pas :
     états, comptes de la Revue, frappe de confirmation.
+  - **Toute icône seule porte son `aria-label`** (issu de `fr.ts`), et
+    `aria-pressed` quand c'est une bascule d'état. Une épure qui prive un
+    contrôle de son nom accessible n'épure pas, elle déplace la dette.
+  - **Bouton-état contre champ** — un contrôle qui *applique* aussitôt et
+    nomme l'état courant s'habille en bouton-état (`.etat` : pas de
+    bordure de champ, libellé courant, chevron). Un contrôle qui *prépare*
+    une action qu'un bouton exécute ensuite reste un champ (`.input`) :
+    les `<select>` de destination du BulkBar et des lignes de nettoyage
+    sont des saisies, pas des états.
+  - **Une bascule dont le contenu est la réponse ne marque pas son état** —
+    l'icône liste/mosaïque nomme le mode vers lequel elle bascule, et c'est
+    la liste elle-même qui dit celui qu'on regarde. Ne pas y remettre une
+    paire de boutons : ce serait deux contrôles pour un geste.
 - **Pas de cartes pour une liste.** Les cartes gaspillent le vertical et
   transforment un outil de tri en catalogue. La mosaïque est un mode, pas un
   style par défaut.
