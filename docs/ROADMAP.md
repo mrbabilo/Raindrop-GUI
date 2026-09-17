@@ -23,13 +23,18 @@ finale de branche).*
       hybride §4.2 complète (origines du bulk + destination demandée),
       Revue à deux niveaux virtualisée, signalétique DESIGN.md jointe à la
       liste et au détail.
-- [ ] **Plan 3/3 — shell Tauri** (fenêtre, spawn sidecar, trousseau macOS,
-      écran premier lancement) : à écrire. Porte aussi le **sélecteur du
-      dossier de sauvegarde** (spec sauvegarde §4.3). Points de branchement
-      déjà propres : `connection.ts` consomme `window.RAINDROP_GUI`, build
-      80 KB gzip. **Notes plan 3** : ne monter `<Banners />` qu'après un
-      premier health `connected` (sinon bannière « interrompue » au
-      démarrage à froid) ; preview Vite sans proxy (T1).
+- [ ] **Plan 3/3 — shell Tauri** : **plan écrit** le 2026-09-17 —
+      `docs/superpowers/plans/2026-09-17-phase1-3-tauri.md`, 12 tasks.
+      Reste à exécuter. Les deux notes que portait cette entrée y sont des
+      steps (bannière muette au démarrage à froid → Task 11 ; preview Vite
+      sans proxy → Task 11, déjà couvert par le garde `!isPreview`).
+      Le **sélecteur du dossier de sauvegarde** en est **retiré** : il
+      dépend de la spec sauvegarde, non validée — son propre plan.
+      **Vérifié avant d'écrire** : `tauri build` produit `.app` **et**
+      `.dmg` avec les seuls Command Line Tools (1 min 31 s), signature
+      ad-hoc ; et `node` est **absent** du PATH minimal d'une app lancée du
+      Finder (`/usr/gnu/bin:/usr/local/bin:/bin:/usr/bin:.` contre
+      `/opt/homebrew/bin/node`) — d'où une task de résolution explicite.
 
 ## Lot sauvegarde et couche de données locale
 
