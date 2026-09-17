@@ -37,7 +37,9 @@ type CompteurType = (typeof COMPTEURS)[number]["type"];
 // Un bloc de scan par type : fraîcheur + Lancer/Relancer, ou progression +
 // Annuler tant que le job lancé ici vit (résolution 2 : le handle
 // {jobId, controller} vit dans CE state, jamais dans un global).
-function BlocScan({ type, label, lastScan }: { type: AnalysisType; label: string; lastScan: string | null }) {
+// `running` (status sidecar, pollé 5 s) ferme le trou du remount : un scan
+// lancé avant de quitter la vue désactive le lancement au retour (R12P-1).
+function BlocScan({ type, label, lastScan, running }: { type: AnalysisType; label: string; lastScan: string | null; running: boolean }) {
   const [job, setJob] = useState<{ jobId: string; controller: AbortController } | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const cancelJob = useCancelJob();
@@ -48,7 +50,7 @@ function BlocScan({ type, label, lastScan }: { type: AnalysisType; label: string
   const lancer = () =>
     start.mutate(undefined, {
       // Fin du suivi dans TOUS les cas (done, erreur, annulation) : retour au
-      // repos ; la fraîcheur vient de l'invalidation faite par le hook.
+      // repos ; l'échec, lui, reste affiché inline ci-dessous (pattern T8).
       onSettled: () => {
         setJob(null);
         setProgress(null);
@@ -78,9 +80,18 @@ function BlocScan({ type, label, lastScan }: { type: AnalysisType; label: string
           </button>
         </>
       ) : (
-        <button type="button" className="btn" disabled={start.isPending} onClick={lancer}>
-          {lastScan ? t("cleanup.rescan") : t("cleanup.scan")}
-        </button>
+        <>
+          <button type="button" className="btn" disabled={start.isPending || running} onClick={lancer}>
+            {running ? t("cleanup.scanRunning") : lastScan ? t("cleanup.rescan") : t("cleanup.scan")}
+          </button>
+          {/* R12P-1 : l'échec de lancement ou du scan ne doit jamais être
+              silencieux — inline, brouillon/état non destructif (pattern T8). */}
+          {start.isError && (
+            <p role="alert" className="text-xs text-app-broken">
+              {t("state.error", { message: String(start.error?.message ?? "") })}
+            </p>
+          )}
+        </>
       )}
     </section>
   );
@@ -113,8 +124,18 @@ export function CleanupDashboard() {
         ))}
       </div>
       <div className="flex flex-col gap-2">
-        <BlocScan type="links" label={t("nature.link")} lastScan={status.data?.links.lastScan ?? null} />
-        <BlocScan type="duplicates" label={t("cleanup.duplicates")} lastScan={status.data?.duplicates.lastScan ?? null} />
+        <BlocScan
+          type="links"
+          label={t("nature.link")}
+          lastScan={status.data?.links.lastScan ?? null}
+          running={status.data?.links.running ?? false}
+        />
+        <BlocScan
+          type="duplicates"
+          label={t("cleanup.duplicates")}
+          lastScan={status.data?.duplicates.lastScan ?? null}
+          running={status.data?.duplicates.running ?? false}
+        />
       </div>
     </section>
   );

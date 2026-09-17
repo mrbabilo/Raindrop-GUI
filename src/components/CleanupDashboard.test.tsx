@@ -23,15 +23,24 @@ vi.mock("../hooks/useStaticData", () => ({
 // Forme RÉELLE du flux (sidecar/api/sse.ts : le data de progress est l'event
 // complet sérialisé, la progression sous `progress`). Flux laissé ouvert :
 // l'assertion porte sur l'état « en cours », jamais atteint par un done.
-function stubSse(jobId: string) {
+// Variante "error" : event terminal {kind:"error", message} (jobs/store.ts
+// fail() → pas de champ `result`), puis fermeture — le job n'est plus running.
+function stubSse(jobId: string, kind: "progress" | "error" = "progress") {
   const encoder = new TextEncoder();
   return vi.fn((url: unknown) => {
     if (String(url).includes(`/api/jobs/${jobId}/events`)) {
       return Promise.resolve(new Response(new ReadableStream({
         start(controller) {
-          controller.enqueue(encoder.encode(
-            `event: progress\ndata: ${JSON.stringify({ kind: "progress", progress: { done: 1, total: 2, label: null } })}\n\n`,
-          ));
+          if (kind === "progress") {
+            controller.enqueue(encoder.encode(
+              `event: progress\ndata: ${JSON.stringify({ kind: "progress", progress: { done: 1, total: 2, label: null } })}\n\n`,
+            ));
+          } else {
+            controller.enqueue(encoder.encode(
+              `event: error\ndata: ${JSON.stringify({ kind: "error", message: "bibliothèque injoignable" })}\n\n`,
+            ));
+            controller.close();
+          }
         },
       }), { status: 200, headers: { "Content-Type": "text/event-stream" } }));
     }
@@ -39,11 +48,11 @@ function stubSse(jobId: string) {
   });
 }
 
-function mockApi() {
+function mockApi(opts: { linksRunning?: boolean } = {}) {
   getMock.mockReset().mockImplementation((path: string, query?: Record<string, unknown>) => {
     if (path === "/api/analysis/status")
       return Promise.resolve({
-        links: { lastScan: null, running: false },
+        links: { lastScan: null, running: opts.linksRunning ?? false },
         duplicates: { lastScan: null, running: false },
       });
     if (path === "/api/analysis/results/links")
@@ -119,5 +128,43 @@ describe("CleanupDashboard", () => {
     await screen.findByText("Analyse en cours… 1/2");
     await userEvent.click(screen.getByRole("button", { name: "Annuler le scan" }));
     expect(sendMock).toHaveBeenCalledWith("POST", "/api/jobs/job-1/cancel");
+  });
+
+  // R12P-1 : un échec de lancement ne doit pas être silencieux (pattern T8 :
+  // erreur inline, brouillon non détruit). Ex. scan déjà en cours côté
+  // sidecar après un quit/retour sur la vue.
+  it("affiche l'erreur inline quand le lancement échoue", async () => {
+    sendMock.mockRejectedValue(new Error("scan links déjà en cours"));
+    renderDashboard();
+    const blocLiens = await screen.findByRole("region", { name: "Liens" });
+    await userEvent.click(within(blocLiens).getByRole("button", { name: "Lancer l'analyse" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Erreur : scan links déjà en cours");
+  });
+
+  // R12P-1 cas (ii) : l'event SSE `error` est un échec, pas une fin normale —
+  // le suivi rejette, la mutation passe en erreur, le message s'affiche.
+  it("l'event SSE error rejette le suivi et s'affiche inline", async () => {
+    vi.stubGlobal("fetch", stubSse("job-1", "error"));
+    sendMock.mockImplementation(async (_m: string, p: string) =>
+      p === "/api/analysis/scan" ? { jobId: "job-1" } : { cancelled: true });
+    renderDashboard();
+    const blocLiens = await screen.findByRole("region", { name: "Liens" });
+    await userEvent.click(within(blocLiens).getByRole("button", { name: "Lancer l'analyse" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Erreur : bibliothèque injoignable");
+  });
+
+  // R12P-1 complément : le champ `running` du status (pollé toutes les 5 s)
+  // ferme le trou du remount — le lancement est désactivé tant que le
+  // sidecar signale un scan en cours pour ce type.
+  it("désactive le lancement quand le sidecar signale un scan en cours", async () => {
+    mockApi({ linksRunning: true });
+    renderDashboard();
+    const blocLiens = await screen.findByRole("region", { name: "Liens" });
+    // La region existe dès le premier rendu : c'est le BOUTON (posé par la
+    // réponse status) qui porte la résolution — d'où findBy.
+    expect(await within(blocLiens).findByRole("button", { name: "Analyse en cours" })).toBeDisabled();
+    // L'autre type, lui, reste lançable.
+    const blocDupes = screen.getByRole("region", { name: "Doublons" });
+    expect(within(blocDupes).getByRole("button", { name: "Lancer l'analyse" })).toBeEnabled();
   });
 });

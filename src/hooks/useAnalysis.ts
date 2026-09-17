@@ -71,8 +71,18 @@ export const useStartScan = (type: AnalysisType, onEvent?: (e: ScanEvent) => voi
       const controller = new AbortController();
       onEvent?.({ kind: "start", jobId, controller });
       await new Promise<void>((resolve, reject) => {
+        // R12P-1 : un seul settle — l'event `error` (échec du scan) rejette
+        // AVANT le onDone que le parseur appelle pour tout kind terminal ;
+        // sans le garde, la promesse se résoudrait comme une fin normale et
+        // l'échec serait silencieux.
+        let settled = false;
         void jobEvents(jobId, {
           onEvent: (e) => {
+            if (e.kind === "error") {
+              settled = true;
+              reject(new Error(typeof e.message === "string" && e.message ? e.message : "event error sans message"));
+              return;
+            }
             if (e.kind !== "progress") return;
             // Forme réelle du flux (sidecar/api/sse.ts) : le data de progress
             // est l'event sérialisé, la progression vit sous `progress`.
@@ -82,8 +92,12 @@ export const useStartScan = (type: AnalysisType, onEvent?: (e: ScanEvent) => voi
             qc.setQueryData(["analysis", "job", type], { done, total }); // relisible par T13
             onEvent?.({ kind: "progress", done, total });
           },
-          onDone: () => resolve(),
-        }, controller.signal).catch(reject);
+          onDone: () => {
+            if (!settled) resolve();
+          },
+        }, controller.signal).catch((err: unknown) => {
+          if (!settled) reject(err);
+        });
       }).then(() => {
         // Fin du suivi (done, error, cancelled ou flux clos) : fraîcheur et
         // compteurs repartent de ce que le sidecar a persisté.
