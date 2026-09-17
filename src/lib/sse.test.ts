@@ -56,4 +56,33 @@ describe("jobEvents", () => {
       jobEvents("job-1", { onEvent: () => undefined, onDone: () => undefined }, new AbortController().signal),
     ).rejects.toThrow(/404/);
   });
+
+  // Le protocole SSE permet les fins de ligne CRLF et les blocs data en
+  // plusieurs lignes. Le sidecar n'émet ni l'un ni l'autre aujourd'hui —
+  // mais un proxy local ou une réécriture de l'émission pourrait le faire,
+  // et le parseur ne disait alors RIEN (blocs jamais coupés) ou tronquait
+  // le data silencieusement.
+  it("tient les fins de ligne CRLF", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => sseResponse([
+      'event: progress\r\ndata: {"done":1}\r\n\r\n',
+      'event: done\r\ndata: {}\r\n\r\n',
+    ])));
+    const events: string[] = [];
+    await jobEvents("job-1", { onEvent: (e) => events.push(e.kind), onDone: () => undefined }, new AbortController().signal);
+    expect(events).toEqual(["progress", "done"]);
+  });
+
+  it("joint les lignes data multi-lignes (protocole SSE : séparées par \\n)", async () => {
+    // JSON.stringify indenté éclate le JSON sur plusieurs lignes : en SSE,
+    // CHAQUE ligne devient son propre `data: ` et le protocole les joint
+    // par \n.
+    vi.stubGlobal("fetch", vi.fn(async () => sseResponse([
+      'event: progress\ndata: {\ndata:  "done": 1,\ndata:  "total": 2\ndata: }\n\n',
+      'event: done\n\n',
+    ])));
+    const events: { kind: string; [k: string]: unknown }[] = [];
+    await jobEvents("job-1", { onEvent: (e) => events.push(e), onDone: () => undefined }, new AbortController().signal);
+    // Le JSON éclaté sur quatre lignes `data:` se reconstitue entier.
+    expect(events[0]).toEqual({ kind: "progress", done: 1, total: 2 });
+  });
 });

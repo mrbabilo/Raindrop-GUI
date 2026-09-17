@@ -98,4 +98,24 @@ describe("routes collections", () => {
     expect(res.status).toBe(502);
     expect(((await res.json()) as { error: { code: string } }).error.code).toBe("RAINDROP_API");
   });
+
+  // Le `?? id!` silencieux promettait au compilateur un nombre qui n'existait
+  // pas : une collection sans `_id` ni `id` produisait un DTO à
+  // `id: undefined`, avalé plus loin au hasard. La forme supposée s'échoue,
+  // elle ne s'invente pas.
+  it("échoue bruyamment si une collection n'a NI _id NI id", async () => {
+    const badDeps: SidecarDeps = {
+      ...deps(conn),
+      mcp: async (tool) =>
+        tool === "get_collections"
+          ? { ok: true, data: [{ title: "fantôme", count: 0 }] } // aucune clé d'identité
+          : { ok: true, data: [] },
+    };
+    const badApp = createApp(badDeps, { localToken: "test-token" });
+    const res = await req(badApp, "/api/collections");
+    expect(res.status).toBe(502);
+    const corps = (await res.json()) as { error: { code: string; message: string } };
+    expect(corps.error.code).toBe("RAINDROP_API");
+    expect(corps.error.message).toContain("identité");
+  });
 });

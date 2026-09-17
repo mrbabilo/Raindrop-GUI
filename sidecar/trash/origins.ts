@@ -19,6 +19,10 @@ interface OriginsFile {
 
 export interface OriginStore {
   remember(id: number, collectionId: number): Promise<void>;
+  /** Vide TOUT le store — après empty-trash, toute origine pointe vers un
+   *  id qui n'existe plus : les garder ne sert qu'à faire grossir le
+   *  fichier à jamais. */
+  purge(): Promise<void>;
   /** Lecture PURE — ne retire rien. Seul forget écrit. */
   take(ids: number[]): Promise<{ known: Map<number, number>; unknown: number[] }>;
   forget(ids: number[]): Promise<void>;
@@ -26,7 +30,14 @@ export interface OriginStore {
   flush(): Promise<void>;
 }
 
-export function makeOriginStore(opts: { file: string }): OriginStore {
+export function makeOriginStore(opts: {
+  file: string;
+  /** Journalisation OPTIONNELLE des échecs d'écriture. Le contrat §11 les
+   *  avale pour l'appelant (une suppression réussie ne doit pas échouer à
+   *  cause du store) — mais un disque plein devait laisser une trace,
+   *  sinon le store « ne marchait plus » sans rien dire. */
+  warn?: (msg: string, fields?: Record<string, unknown>) => void;
+}): OriginStore {
   let data: Record<string, number> = {};
   let loaded: Promise<void> | null = null;
 
@@ -57,6 +68,9 @@ export function makeOriginStore(opts: { file: string }): OriginStore {
         () => rename(tmp, opts.file),
       );
     });
+    task.catch((e: unknown) =>
+      opts.warn?.("écriture des origines impossible", { err: e instanceof Error ? e.message : String(e) }),
+    );
     chain = task.catch(() => undefined); // la file continue même si un save échoue
     // Contrat §11 sur les ÉCRITURES aussi : disque plein, EACCES, ENOENT…
     // ne remontent JAMAIS à l'appelant (sinon une suppression ou une
@@ -70,6 +84,13 @@ export function makeOriginStore(opts: { file: string }): OriginStore {
       await ensureLoaded();
       data[String(id)] = collectionId;
       await persist();
+    },
+
+    async purge() {
+      await ensureLoaded();
+      const avait = Object.keys(data).length;
+      data = {};
+      if (avait > 0) await persist();
     },
 
     async take(ids) {

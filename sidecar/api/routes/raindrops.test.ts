@@ -221,6 +221,18 @@ describe("routes raindrops", () => {
     expect(res.status).toBe(200);
   });
 
+  // `z.coerce.number()("")` rend 0 : une chaîne vide mémorisait l'origine 0
+  // (« Tous ») au lieu de rien du tout — un DELETE `?from=` mentait sa
+  // provenance en silence.
+  it("DELETE /:id?from= (vide) ne mémorise rien — pas 0", async () => {
+    const journal: string[] = [];
+    const list = (await (await req(app, "/api/raindrops?per_page=1")).json()) as Paginated<RaindropItem>;
+    const id = list.items[0]!.id; // un id qui existe vraiment dans le fake
+    const res = await req(journalApp(journal), `/api/raindrops/${id}?from=`, { method: "DELETE" });
+    expect(res.status).toBe(200);
+    expect(journal).toEqual(["mcp:delete_raindrop"]); // delete sans remember
+  });
+
   it("DELETE /:id sans from ne mémorise rien", async () => {
     const journal: string[] = [];
     const list = (await (await req(app, "/api/raindrops?per_page=1")).json()) as Paginated<RaindropItem>;

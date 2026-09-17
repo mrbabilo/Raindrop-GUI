@@ -137,7 +137,10 @@ export function raindropsRoutes(deps: SidecarDeps): Hono {
   app.delete("/:id", async (c) => {
     const id = Number(c.req.param("id"));
     if (!Number.isInteger(id)) return apiError(c, "INVALID_INPUT", "id invalide");
-    const from = fromQuery.safeParse(c.req.query("from") ?? undefined);
+    // La chaîne vide n'est pas une origine : `z.coerce.number()("")` rend 0
+    // (« Tous »), et `?from=` mentait sa provenance en mémorisant 0.
+    const brut = c.req.query("from") ?? undefined;
+    const from = fromQuery.safeParse(brut === "" ? undefined : brut);
     if (!from.success) return apiError(c, "INVALID_INPUT", z.prettifyError(from.error));
     // §4.2 : la corbeille ne garde pas l'origine → notée AVANT la suppression.
     // Le store ne remonte jamais d'erreur (contrat origins.ts) : un échec de

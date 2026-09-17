@@ -1,5 +1,5 @@
 import { repertoireTemporaire } from "../testing/tmp.js";
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {readFileSync, writeFileSync, existsSync} from "node:fs";
 import { join } from "node:path";
 import { makeOriginStore } from "./origins.js";
@@ -111,4 +111,40 @@ describe("makeOriginStore", () => {
     expect(parsed.version).toBe(1);
     expect(parsed.origins["1000"]).toBe(42);
   });
+
+describe("purge (empty-trash : toute origine pointe vers un id disparu)", () => {
+  it("vide tout le store, et ne réécrit pas s'il est déjà vide", async () => {
+    const warn = vi.fn();
+    const store = makeOriginStore({ file: join(repertoireTemporaire("origins-"), "origins.json"), warn });
+    await store.remember(1, 101);
+    await store.remember(2, 102);
+    await store.purge();
+    await store.flush();
+    expect((await store.take([1, 2])).unknown).toEqual([1, 2]);
+    // Deuxième purge : rien de nouveau à écrire.
+    await store.purge();
+    await store.flush();
+    expect((await store.take([1])).unknown).toEqual([1]);
+  });
+});
+
+describe("échec d'écriture : avalé pour l'appelant, LOGGÉ pour l'exploitant", () => {
+  it("un disque plein produit un warn et ne fait jamais échouer remember", async () => {
+    const warn = vi.fn();
+    const file = join(repertoireTemporaire("origins-"), "pas-de-rep", "origins.json");
+    const store = makeOriginStore({ file, warn });
+    // Ne remonte PAS (contrat §11)…
+    await expect(store.remember(1, 101)).resolves.toBeUndefined();
+    // … mais laisse une trace.
+    await new Promise((r) => setTimeout(r, 20));
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]![0]).toContain("origines");
+  });
+
+  it("sans logger injecté, l'échec reste silencieux comme avant", async () => {
+    const file = join(repertoireTemporaire("origins-"), "pas-de-rep", "origins.json");
+    const store = makeOriginStore({ file });
+    await expect(store.remember(1, 101)).resolves.toBeUndefined();
+  });
+});
 });

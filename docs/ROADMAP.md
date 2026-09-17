@@ -175,14 +175,20 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       puis `rm -rf`.
       `broken: true` était en fait DÉJÀ couvert (mappers.test.ts) — le
       triage se trompait sur ce point.
-- [ ] **Sidecar défensif** : `?? id!` silencieux de `collections.ts:24` →
-      `ShapeError` (en tête de file — famille « forme supposée ») ;
-      `purge()` des origines sur empty-trash (croissance bornée mais
-      inutile) ; échec d'écriture du store sans log ; `asMcpArray` si un
-      3e tool en a besoin ; `?from=` vide coerce en 0 ; robustesse SSE
-      (CRLF, data multi-lignes — localhost only) ; split `fakeServer.ts`
-      (353 lignes) ; compteur doublons = payload complet (à surveiller à
-      l'échelle).
+- [x] **Sidecar défensif** — fait le 2026-09-17 :
+      `?? id!` silencieux → `ShapeError` (une collection sans `_id` ni
+      `id` rendait 200 avec `id: undefined`, elle rend 502) ; **purge**
+      des origines après un empty-trash RÉUSSI (toute origine pointe alors
+      vers un id disparu) ; échec d'écriture du store **loggé** (injecté
+      en option, avalé pour l'appelant — contrat §11 inchangé) ; `?from=`
+      vide ne mémorise plus 0 ; SSE tient le CRLF et les lignes `data:`
+      multi-lignes (le parseur se taisait ou tronquait).
+      `asMcpArray` : sans objet — le 3e tool de tableau était
+      `get_highlights`, dont la route est morte (R8cP-1). `fakeServer.ts`
+      (353 lignes) : **signalé, pas coupé** — sous le plafond dur de 400,
+      le split exigerait de filer `fx`+`guard` à des modules de tools dans
+      le harnais de dix fichiers de test, pour un gain cosmétique.
+      Compteur doublons = payload complet : à surveiller, inchangé.
 - [ ] **Divers** : `t(key: string)` à durcir en `FrKey` ; `ListPatch` trop
       large ; `ChargePlus` dupliqué ListPane/CleanupView ; `initTheme`/
       `setTheme` morts en prod ; commentaire périmé CommandPalette.tsx:8-9 ;

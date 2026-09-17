@@ -81,6 +81,15 @@ Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
   nom qu'elle porte déjà ne déclenche plus rien non plus.
 - **Une URL collée en majuscules est analysée** comme les autres : elle ne
   l'était pas, donc ni titre prérempli, ni alerte de doublon.
+- **Le sidecar ne suppose plus les formes.** Une collection sans
+  identifiant dans la réponse MCP rendait 200 avec un `id: undefined` —
+  elle rend désormais 502 avec la raison. Après un vidage de corbeille,
+  la mémoire des origines est purgée : tout ce qu'elle gardait pointait
+  vers des signets qui n'existent plus. Un échec d'écriture de cette
+  mémoire (disque plein…) laisse désormais une trace au journal — il reste
+  silencieux pour l'appelant, comme le veut le contrat. Et la lecture des
+  flux de progression tient les fins de ligne CRLF et les données en
+  plusieurs lignes que le protocole autorise.
 - **Un échec de chargement se dit.** La liste, les étiquettes et les vues
   de nettoyage affichaient « Rien ici » quand une requête échouait —
   « cette collection est vide » là où la vérité était « je n'ai pas pu

@@ -67,7 +67,10 @@ const scanner = new Scanner({
 
 // Task 0b : mémoire des origines de corbeille (restauration hybride, §4.2).
 // Jamais une source de vérité : fichier absent = origines inconnues.
-const origins = makeOriginStore({ file: join(dataDir, "trash-origins.json") });
+const origins = makeOriginStore({
+  file: join(dataDir, "trash-origins.json"),
+  warn: (msg, fields) => logger.warn(msg, fields),
+});
 
 const deps: SidecarDeps = {
   mcp: makeMcpCaller(lifecycle, throttle, { timeoutMs: cfg.MCP_TIMEOUT_MS }),

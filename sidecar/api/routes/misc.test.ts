@@ -6,13 +6,30 @@ import { McpConnection } from "../../mcp/connection.js";
 
 let conn: McpConnection;
 let app: Hono;
-const deps = (c: McpConnection): SidecarDeps => ({
+// Store d'origines factice : le vidage doit appeler purge() — c'est le seul
+// geste de ce fichier qui touche le store, donc un journal suffit.
+const makeOriginsFake = () => {
+  const journal: string[] = [];
+  const vide = async () => undefined;
+  const store = {
+    remember: vide,
+    take: async () => ({ known: new Map(), unknown: [] }),
+    forget: vide,
+    purge: async () => { journal.push("purge"); },
+    flush: vide,
+    journal,
+  };
+  return store as unknown as SidecarDeps["origins"] & { journal: string[] };
+};
+
+const deps = (c: McpConnection, origins = makeOriginsFake()): SidecarDeps => ({
   mcp: (tool, args, t) => c.call(tool, args, t),
   state: () => "connected",
   restart: async () => undefined,
   jobs: { get: () => undefined, list: () => [] } as unknown as SidecarDeps["jobs"],
   cache: {} as SidecarDeps["cache"],
   scanner: { startScan: () => "", isRunning: () => false },
+  origins,
   direct: { updateRaindropUrl: async () => ({ ok: true as const, data: { id: 1 } }) },
 });
 
@@ -89,12 +106,17 @@ describe("routes maintenance", () => {
     expect(res.status).toBe(400);
   });
 
-  it("POST /api/maintenance/empty-trash avec confirm exécute", async () => {
+  it("POST /api/maintenance/empty-trash avec confirm exécute ET purge les origines", async () => {
+    // Toute origine mémorisée pointe vers un id qui n'existe plus après le
+    // vidage : le store doit être purgé, sinon le fichier grossit à jamais.
+    const origins = makeOriginsFake();
+    app = createApp(deps(conn, origins), { localToken: TOKEN });
     const res = await req(app, "/api/maintenance/empty-trash", {
       method: "POST",
       body: JSON.stringify({ confirm: true }),
     });
     expect(res.status).toBe(200);
+    expect(origins.journal).toEqual(["purge"]);
   });
 });
 // Pas de describe « routes highlights » : la route a été supprimée (R8cP-1 —

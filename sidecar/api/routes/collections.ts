@@ -13,13 +13,26 @@ const createBody = z.object({
 });
 const updateBody = createBody.partial().extend({ id: z.number().int() }).partial().omit({ id: true });
 
+class ShapeError extends Error {
+  constructor(readonly tool: string, detail: string) {
+    super(`${tool}: réponse MCP inattendue — ${detail}`);
+  }
+}
+
 // Adaptation test : le fake MCP (sidecar/testing/fixtures.ts) sérialise les
 // collections en camelCase (`id`, `parentId: number|null`) alors que l'API
 // Raindrop réelle porte `_id` et `parent:{$id}|null` (forme vérifiée par
 // sonde le 2026-09-16, voir mappers.test.ts). On comble l'écart pour ces deux
 // champs seulement — no-op sur la vraie forme, jamais atteint en production.
+//
+// Ni `_id` ni `id` : la forme est inattendue, on ÉCHOUE — l'ancien
+// `?? withParent.id!` promettait au compilateur un nombre qui n'existait
+// pas, et le DTO partait avec `id: undefined` (ROADMAP, « forme supposée »).
 type RawCollectionCompat = RawCollection & { id?: number; parentId?: number | null };
 const normalize = (raw: RawCollectionCompat): RawCollection => {
+  if (typeof raw._id !== "number" && typeof raw.id !== "number") {
+    throw new ShapeError("get_collections", `collection sans identité (${raw.title ?? "?"})`);
+  }
   const withParent = raw.parent || raw.parentId == null ? raw : { ...raw, parent: { $id: raw.parentId } };
   return { ...withParent, _id: withParent._id ?? withParent.id! };
 };
@@ -31,7 +44,7 @@ const toCol = (raw: RawCollectionCompat): ReturnType<typeof toCollection> => toC
  * on échoue bruyamment sur autre chose qu'un tableau. */
 function asCollectionArray(data: unknown, tool: string): RawCollectionCompat[] {
   if (!Array.isArray(data)) {
-    throw new ShapeError(tool);
+    throw new ShapeError(tool, "tableau attendu");
   }
   return data as RawCollectionCompat[];
 }
@@ -51,12 +64,6 @@ function dedupeById(items: RawCollection[]): RawCollection[] {
     out.push(raw);
   }
   return out;
-}
-
-class ShapeError extends Error {
-  constructor(readonly tool: string) {
-    super(`${tool}: réponse MCP inattendue — tableau attendu`);
-  }
 }
 
 export function collectionsRoutes(deps: SidecarDeps): Hono {
