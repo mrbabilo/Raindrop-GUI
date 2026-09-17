@@ -33,12 +33,25 @@
   /* §6 : l'état se marque par la SURFACE. Une entrée de collection portant
      déjà le lavis de sa teinte, le survol et la sélection l'assombrissent
      au lieu de le recouvrir d'un gris étranger. */
-  --app-wash-hover-l: 0.91;
-  --app-wash-sel-l: 0.87;
+  /* Clartés PROPRES aux bandes de navigation — voir --app-nav-c. À 0,95, si
+     près du blanc, le chroma demandé sortait du gamut sRGB : le navigateur
+     ramenait les couleurs les unes vers les autres et deux familles voisines
+     retombaient à ΔEok 0,013, sous le seuil. Mesuré dans le navigateur, le
+     couple (0,90 ; 0,075) donne le meilleur écart — 0,031 — et le texte y
+     garde 12,5:1. */
+  --app-nav-l: 0.9;
+  --app-nav-enfant-l: 0.945;
+  --app-nav-sel-l: 0.82;
   /* §4 : la famille se lit à la TEINTE, le rang à l'INTENSITÉ. Une
      descendante tire vers le fond de l'application — elle appartient à la
-     même famille, elle ne la domine pas. */
-  --app-wash-enfant-l: 0.975;
+     même famille, elle ne la domine pas (--app-nav-enfant-l). */
+  /* Chroma PROPRE aux bandes de navigation. Calculé : deux familles voisines
+     sont à 30° l'une de l'autre, et à chroma 0,035 cela donne ΔEok 0,018 —
+     SOUS le seuil de perception (0,02). Les teintes étaient bien distinctes,
+     l'œil ne les distinguait pas. À 0,075, l'écart passe à 0,039. Le jeton
+     est à part : les pilules d'étiquettes et la mosaïque gardent 0,035, où
+     la question ne se pose pas de la même façon. */
+  --app-nav-c: 0.075;
 }
 
 .dark {
@@ -62,9 +75,10 @@
   --app-icon-c: 0.11;
   --app-wash-l: 0.32;
   --app-wash-c: 0.05;
-  --app-wash-hover-l: 0.38;
-  --app-wash-sel-l: 0.44;
-  --app-wash-enfant-l: 0.25;
+  --app-nav-l: 0.34;
+  --app-nav-enfant-l: 0.26;
+  --app-nav-sel-l: 0.44;
+  --app-nav-c: 0.09;
 }
 
 body {
@@ -131,7 +145,7 @@ body {
   gap: 8px;
   width: 100%;
   border-radius: 5px;
-  background: oklch(var(--app-wash-l) calc(var(--app-wash-c) * var(--sat, 1)) var(--h));
+  background: oklch(var(--app-nav-l) calc(var(--app-nav-c) * var(--sat, 1)) var(--h));
 }
 
 /* Le survol ENTOURE, il ne recolore pas : le fond appartient au lavis de la
@@ -142,7 +156,7 @@ body {
 /* Rang 1 : le lavis s'éclaircit (s'assombrit en thème sombre) vers le fond
    de l'application. La teinte reste celle de la famille. */
 .nav-ligne[data-niveau="1"] {
-  background: oklch(var(--app-wash-enfant-l) calc(var(--app-wash-c) * var(--sat, 1)) var(--h));
+  background: oklch(var(--app-nav-enfant-l) calc(var(--app-nav-c) * var(--sat, 1)) var(--h));
 }
 
 .nav-ligne:hover {
@@ -151,7 +165,7 @@ body {
 }
 
 .nav-ligne[data-courante="true"] {
-  background: oklch(var(--app-wash-sel-l) calc(var(--app-wash-c) * var(--sat, 1)) var(--h));
+  background: oklch(var(--app-nav-sel-l) calc(var(--app-nav-c) * var(--sat, 1)) var(--h));
 }
 
 /* Densité « détail » (DESIGN.md §2) : la pilule passe de 18 à 21 px dans la

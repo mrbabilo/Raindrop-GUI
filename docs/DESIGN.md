@@ -107,6 +107,17 @@ l'écart qu'il faut pour se lire (30° avec douze racines). Le prix est assumé 
 une couleur peut s'éloigner franchement de celle réglée dans Raindrop ; ce
 qu'elle garde, c'est son rang.
 
+**Un écart de teinte ne suffit pas : encore faut-il qu'il se voie.** Les
+bandes de navigation ont donc leur propre clarté et leur propre chroma
+(`--app-nav-l`, `--app-nav-c`), plus soutenus que le lavis de §6. Au lavis
+d'origine — clarté 0,95, chroma 0,035 — deux familles voisines mesuraient
+**ΔEok 0,013**, sous le seuil de perception de 0,02 : les teintes étaient
+distinctes, l'œil ne les distinguait pas. Augmenter le seul chroma n'y
+changeait rien, car si près du blanc la couleur demandée sort du gamut sRGB
+et le navigateur la ramène vers ses voisines. Le couple retenu, mesuré dans
+l'application, est **(0,90 ; 0,075)** : ΔEok 0,031 en clair, 0,035 en sombre,
+le texte gardant 12,5:1 et 9,1:1.
+
 Une première version faisait primer la couleur de chaque collection. Les onze
 sous-collections de « PASSIONS » arrivaient alors en onze teintes : la famille
 ne se lisait plus. Repérer une famille d'un coup d'œil vaut mieux que
