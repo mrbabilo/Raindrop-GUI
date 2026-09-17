@@ -45,3 +45,31 @@ export function teinteDeHex(hex: string | null | undefined): number | null {
   if (Math.hypot(a, bb) < CHROMA_MINIMAL) return null;
   return ((Math.atan2(bb, a) * 180) / Math.PI + 360) % 360;
 }
+
+/**
+ * Écarte un jeu de teintes pour qu'aucune paire ne se confonde, **en gardant
+ * leur ordre**.
+ *
+ * Mesuré sur la bibliothèque le 2026-09-17 : douze collections racines se
+ * pressent dans deux zones du cercle — les orangés (16° à 95°) et les bleus
+ * (211° à 250°) — quand il en compte 360. « Vie pratique » et « Web » sont à
+ * **0,1°** l'une de l'autre, « Enseignement » et « Download » à 2°. À l'œil,
+ * ce sont les mêmes couleurs, et la signalétique de famille ne distingue plus
+ * rien.
+ *
+ * Les teintes sont donc redistribuées à intervalle constant, dans l'ordre où
+ * elles se présentaient : la plus chaude le reste, la plus froide aussi, mais
+ * chacune gagne l'écart qu'il faut pour se lire. L'ancrage sur la plus basse
+ * garde le jeu là où il était plutôt que de le faire tourner.
+ */
+export function ecarterTeintes(teintes: readonly number[]): number[] {
+  if (teintes.length === 0) return [];
+  const ordre = [...teintes].map((h, i) => ({ h, i })).sort((a, b) => a.h - b.h);
+  const pas = 360 / teintes.length;
+  const depart = ordre[0]!.h;
+  const out = new Array<number>(teintes.length);
+  ordre.forEach((t, rang) => {
+    out[t.i] = (depart + rang * pas) % 360;
+  });
+  return out;
+}

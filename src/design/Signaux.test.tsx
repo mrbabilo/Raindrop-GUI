@@ -120,21 +120,21 @@ describe("teinteCollection (§4, cascade)", () => {
   const h = (id: number) => Number((teinteCollection(arbre, id) as Record<string, string>)["--h"]);
   const sat = (id: number) => (teinteCollection(arbre, id) as Record<string, string>)["--sat"];
 
-  // UNE couleur par famille : c'est la racine qui décide.
-  it("la racine donne sa couleur", () => {
-    expect(h(1)).toBeCloseTo(250, 0);
+  // UNE couleur par famille : c'est la racine qui décide. Sa teinte n'est
+  // plus celle de son hex mais sa place dans la RÉPARTITION (couleur.ts) —
+  // douze racines se pressaient dans deux zones du cercle.
+  it("chaque racine a une teinte, et deux racines n'ont jamais la même", () => {
+    expect(sat(1)).toBe("1");
+    expect(sat(5)).toBe("1"); // « Photo » : sans couleur, mais au lexique
+    expect(h(1)).not.toBeCloseTo(h(5), 0);
   });
 
-  // Le grief : les cinq sous-collections de « PASSIONS » arrivaient en cinq
+  // Le grief : les onze sous-collections de « PASSIONS » arrivaient en onze
   // teintes différentes, et la famille ne se lisait plus.
   it("une descendante hérite, même si elle a sa propre couleur", () => {
-    expect(h(2)).toBeCloseTo(250, 0); // et non 29,5 — sa couleur est écartée
-    expect(h(3)).toBeCloseTo(250, 0);
+    expect(h(2)).toBeCloseTo(h(1), 1); // et non la sienne
+    expect(h(3)).toBeCloseTo(h(1), 1);
     expect(sat(3)).toBe("1");
-  });
-
-  it("à défaut de couleur, la thématique du titre de la RACINE", () => {
-    expect(sat(5)).toBe("1"); // « Photo » est au lexique
   });
 
   // §3 : hors de tout, gris — et un --h NUMÉRIQUE malgré tout, sinon

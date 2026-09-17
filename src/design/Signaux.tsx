@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from "react";
 import { thematique, teinte } from "./lexique";
-import { teinteDeHex } from "./couleur";
+import { ecarterTeintes, teinteDeHex } from "./couleur";
 import type { Collection, LinkStatus } from "../../shared/types";
 
 // DESIGN.md §2 — les signaux colorés, distingués par la FORME : carré arrondi
@@ -49,10 +49,32 @@ export function racine(collections: Collection[], id: number): Collection | unde
  * La hiérarchie, elle, ne passe pas par la teinte mais par l'intensité du
  * lavis et le retrait (`.nav-ligne[data-niveau]`) : même famille, deux rangs.
  */
+// Teintes des racines, écartées une fois par arbre. Le cache est indexé sur
+// le TABLEAU lui-même : TanStack Query en rend une référence stable tant que
+// les collections ne changent pas, et la répartition ne se recalcule donc pas
+// à chaque ligne rendue.
+const repartitions = new WeakMap<Collection[], Map<number, number>>();
+
+function repartition(collections: Collection[]): Map<number, number> {
+  const memo = repartitions.get(collections);
+  if (memo !== undefined) return memo;
+  const teintees = collections
+    .filter((c) => c.parentId === null)
+    .map((c) => ({ id: c.id, h: teinteDeHex(c.color) ?? teinte(thematique(c.title)) }))
+    .filter((r): r is { id: number; h: number } => r.h !== null);
+  const ecartees = ecarterTeintes(teintees.map((r) => r.h));
+  const m = new Map(teintees.map((r, i) => [r.id, ecartees[i]!]));
+  repartitions.set(collections, m);
+  return m;
+}
+
 export function teinteCollection(collections: Collection[], id: number): CSSProperties {
   const tete = racine(collections, id);
-  const h = teinteDeHex(tete?.color) ?? teinte(thematique(tete?.title)) ?? null;
-  return { "--h": String(h ?? 0), "--sat": h === null ? "0" : "1" } as CSSProperties;
+  // La teinte vient de la RÉPARTITION, pas de la couleur brute : douze
+  // racines se pressaient dans deux zones du cercle, deux d'entre elles à
+  // 0,1° l'une de l'autre (couleur.ts). Chaque famille a désormais la sienne.
+  const h = tete === undefined ? undefined : repartition(collections).get(tete.id);
+  return { "--h": String(h ?? 0), "--sat": h === undefined ? "0" : "1" } as CSSProperties;
 }
 
 // §4 : « un dossier teinté de la thématique, jamais une case vide » — le repli

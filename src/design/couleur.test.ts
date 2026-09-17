@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { teinteDeHex } from "./couleur";
+import { teinteDeHex, ecarterTeintes } from "./couleur";
 
 // Références calculées HORS de ce code (script Python indépendant, formule
 // d'Ottosson) sur les couleurs réelles de la bibliothèque — sinon le test ne
@@ -41,5 +41,39 @@ describe("teinteDeHex", () => {
     expect(teinteDeHex("rouge")).toBeNull();
     expect(teinteDeHex("#abc")).toBeNull();      // forme courte non gérée
     expect(teinteDeHex("#gggggg")).toBeNull();
+  });
+});
+
+describe("ecarterTeintes", () => {
+  // Les teintes réelles des douze racines colorées : deux zones seulement,
+  // et deux paires que rien ne distingue (0,1° et 2°).
+  const REELLES = [16.8, 29.5, 35.2, 79.8, 87.4, 89.4, 95, 211.8, 220.4, 237.5, 249.9, 250];
+
+  it("aucune paire ne reste confondue", () => {
+    const ecartees = [...ecarterTeintes(REELLES)].sort((a, b) => a - b);
+    for (let i = 1; i < ecartees.length; i++) {
+      expect(ecartees[i]! - ecartees[i - 1]!).toBeGreaterThanOrEqual(25);
+    }
+  });
+
+  // Ce qui était le plus chaud le reste : on écarte, on ne rebat pas.
+  it("garde l'ordre d'origine", () => {
+    const e = ecarterTeintes(REELLES);
+    for (let i = 1; i < REELLES.length; i++) {
+      expect(e[i]!).toBeGreaterThan(e[i - 1]!);
+    }
+    expect(e[0]).toBeCloseTo(16.8, 1); // ancré sur la plus basse
+  });
+
+  it("l'ordre est rendu à la place d'origine, pas trié", () => {
+    // Entrée volontairement désordonnée : la sortie doit suivre les index.
+    const e = ecarterTeintes([300, 10, 200]);
+    expect(e[1]).toBeLessThan(e[2]!); // 10 reste le plus bas
+    expect(e[2]).toBeLessThan(e[0]!); // 200 avant 300
+  });
+
+  it("cas dégénérés", () => {
+    expect(ecarterTeintes([])).toEqual([]);
+    expect(ecarterTeintes([42])).toEqual([42]);
   });
 });

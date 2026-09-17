@@ -89,9 +89,23 @@ ne demande aucune configuration utilisateur.
 
 ## 4. Collections : une couleur par famille
 
-216 collections sur trois niveaux. **Une seule teinte par famille : la racine
-la décide, toutes ses descendantes en héritent** — sa couleur Raindrop, sinon
-la thématique de son titre, sinon rien (gris, §3).
+216 collections sur trois niveaux. **Une seule teinte par famille, et une
+teinte par famille : la racine la décide, toutes ses descendantes en
+héritent.**
+
+La teinte est *dérivée* de la couleur Raindrop de la racine (sinon de la
+thématique de son titre, sinon rien — gris, §3), mais elle n'en est pas la
+copie. Mesuré le 2026-09-17 : les douze racines colorées se pressaient dans
+deux zones du cercle — les orangés de 16° à 95°, les bleus de 211° à 250° —
+quand il en compte 360. « Vie pratique » et « Web » étaient à **0,1°** l'une
+de l'autre, « Enseignement » et « Download » à 2° : à l'œil, la même couleur,
+et la signalétique de famille ne distinguait plus rien.
+
+Les teintes sont donc **écartées à intervalle constant en gardant leur
+ordre** : la plus chaude le reste, la plus froide aussi, mais chacune gagne
+l'écart qu'il faut pour se lire (30° avec douze racines). Le prix est assumé —
+une couleur peut s'éloigner franchement de celle réglée dans Raindrop ; ce
+qu'elle garde, c'est son rang.
 
 Une première version faisait primer la couleur de chaque collection. Les onze
 sous-collections de « PASSIONS » arrivaient alors en onze teintes : la famille
