@@ -129,6 +129,28 @@ describe("CommandPalette", () => {
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ kind: "tags" });
   });
 
+  // Motif combobox d'ARIA 1.2 : le focus ne quitte jamais le champ, et c'est
+  // la chaîne `aria-controls` → listbox → `aria-activedescendant` → option
+  // qui dit au lecteur d'écran ce qui est sélectionné. Sans elle, les
+  // flèches déplacent une surbrillance que rien n'annonce.
+  it("la chaîne ARIA relie le champ à l'option courante", async () => {
+    renderPalette("");
+    const champ = screen.getByRole("combobox");
+    const liste = screen.getByRole("listbox");
+    // Le champ commande bien CETTE liste.
+    expect(champ).toHaveAttribute("aria-controls", liste.id);
+    expect(liste.id).not.toBe("");
+    // Et il désigne l'option sélectionnée, par son identifiant.
+    const actif = () => document.getElementById(champ.getAttribute("aria-activedescendant")!);
+    expect(actif()).toHaveAttribute("aria-selected", "true");
+    await userEvent.type(champ, "{ArrowDown}");
+    expect(actif()).toHaveAttribute("aria-selected", "true");
+    expect(actif()).toBe(screen.getAllByRole("option")[1]);
+    // Les options sont filles DIRECTES de la listbox : un élément nu entre
+    // les deux romprait la filiation qu'attend un lecteur d'écran.
+    for (const o of screen.getAllByRole("option")) expect(o.parentElement).toBe(liste);
+  });
+
   it("les flèches déplacent la sélection, Échap ferme sans naviguer", async () => {
     const onClose = vi.fn();
     renderPalette("", onClose);

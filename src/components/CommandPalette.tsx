@@ -78,9 +78,17 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
         className="mx-auto max-w-lg overflow-hidden rounded border border-app-border bg-app-panel"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Motif combobox d'ARIA 1.2 : le focus ne quitte JAMAIS le champ,
+            c'est `aria-activedescendant` qui désigne l'option courante, et
+            `aria-controls` dit quelle liste le champ commande. La palette
+            n'existe pas fermée (montée à l'ouverture), d'où `expanded` qui
+            vaut toujours vrai — écrit comme une valeur, pas comme une
+            chaîne figée dont on ne saurait plus si elle est un oubli. */}
         <input
           role="combobox"
-          aria-expanded="true"
+          aria-expanded={true}
+          aria-controls="cmdk-liste"
+          aria-activedescendant={rows.length > 0 ? `cmdk-option-${cursor}` : undefined}
           autoFocus
           className="w-full border-b border-app-border bg-transparent px-3 py-2 text-sm outline-none"
           placeholder={t("cmdk.placeholder")}
@@ -88,20 +96,24 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
           onChange={(e) => { setQ(e.target.value); setCursor(0); }}
           onKeyDown={onKey}
         />
-        <ul role="listbox" className="max-h-80 overflow-y-auto text-sm">
+        {/* `role="option"` sur le <li> lui-même : un <li> nu entre la listbox
+            et ses options rompt la filiation qu'attend un lecteur d'écran, et
+            poser ce rôle sur un bouton écrase le rôle d'un élément déjà
+            interactif — le champ garde le focus, l'option n'a pas à le
+            prendre. */}
+        <ul role="listbox" id="cmdk-liste" className="max-h-80 overflow-y-auto text-sm">
           {rows.map((r, i) => (
-            <li key={r.key}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={i === cursor}
-                className={"flex w-full justify-between px-3 py-2 text-left " + (i === cursor ? "bg-app-sel font-medium" : "")}
-                onMouseEnter={() => setCursor(i)}
-                onClick={() => { r.run(); onClose(); }}
-              >
-                <span className="truncate">{r.label}</span>
-                <span className="text-xs text-app-muted">{r.hint}</span>
-              </button>
+            <li
+              key={r.key}
+              id={`cmdk-option-${i}`}
+              role="option"
+              aria-selected={i === cursor}
+              className={"flex cursor-pointer justify-between px-3 py-2 text-left " + (i === cursor ? "bg-app-sel font-medium" : "")}
+              onMouseEnter={() => setCursor(i)}
+              onClick={() => { r.run(); onClose(); }}
+            >
+              <span className="truncate">{r.label}</span>
+              <span className="text-xs text-app-muted">{r.hint}</span>
             </li>
           ))}
         </ul>
