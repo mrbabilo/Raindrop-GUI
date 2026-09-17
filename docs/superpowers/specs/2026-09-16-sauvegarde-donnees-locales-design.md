@@ -21,6 +21,40 @@ Deux mesures orientent tout le design :
 L'écart est de 1 700×. Confondre les deux sous le mot « intégral » conduirait à
 concevoir un système de plusieurs heures pour un besoin de deux minutes.
 
+## 1bis. Corrections issues de la relecture critique (2026-09-18)
+
+Ces points sont **contraignants** : ils corrigent des décisions qui, telles
+qu'écrites, ne tenaient pas.
+
+1. **La pagination ascendante ne protège pas des suppressions** (§4.2). Elle
+   règle les créations ; une suppression en amont du point de lecture décale la
+   suite vers l'arrière et fait **sauter** un élément, que l'incrémental par
+   `-lastUpdate` ne rattrapera jamais. Parade : **réconciliation par
+   identifiants** en fin de balayage, rejeu unique, puis instantané marqué
+   incomplet si l'écart persiste. Sans cela, §5.3 promettait une fidélité qu'il
+   ne pouvait pas tenir.
+2. **`archives/` n'avait ni rétention ni règle d'orphelins** (§5.4) : hors des
+   instantanés horodatés, la rotation ne le touchait pas. Ajouté : purge des
+   orphelins à chaque balayage complet, et budget `ARCHIVES_MAX_GO` (5 Go) avec
+   éviction du plus ancien.
+3. **La file prioritaire pouvait affamer la sauvegarde** (§4.4) : « ce qui
+   reste » peut ne jamais venir. Ajouté : un plancher d'**une requête sur
+   quatre**, qui porte le pire cas du balayage à ≈ 9 min mais garantit qu'il
+   finit.
+4. **Le watermark n'était pas défini en cas d'égalité de dates** (§5.2).
+   Ajouté : comparaison `>=`, une page de recouvrement, dédoublonnage par `_id`.
+5. **Le saut vers S3 se suit à la main** (§5.4) : suivi automatiquement,
+   l'en-tête `Authorization` serait réémis vers une URL déjà signée.
+6. **L'avertissement de confidentialité ignorait `archives/`** (§3.5), qui
+   porte le corps complet des pages — l'artefact le plus sensible de
+   l'arborescence.
+7. **`manifest.json` s'écrit atomiquement**, et **changer de dossier ouvre un
+   arbre neuf** sans adopter ni déplacer l'ancien (§6).
+8. **`sort=created` ascendant est désormais mesuré** (§10) — l'argument du §4.2
+   reposait dessus sans qu'il figure parmi les constantes vérifiées, contre la
+   règle que cette spec se donne elle-même. Le §7 disait « 307 » là où §5.4 et
+   §10 ont mesuré **303** : corrigé.
+
 ## 2. Périmètre
 
 **Ce lot** : sauvegarde des métadonnées (brut fidèle + export lisible dérivé),
@@ -120,6 +154,13 @@ moment du choix du dossier**, indiquant ce que le fichier contient et ce que
 cela implique si l'emplacement est synchronisé. Le choix reste à l'utilisateur,
 il est simplement éclairé.
 
+L'avertissement nomme explicitement `archives/` : les copies permanentes ne sont
+pas des métadonnées mais **le corps complet des pages lues** — articles
+payants, contenus privés, tout ce qu'une page affichait au moment de sa
+capture. C'est l'artefact le plus sensible de l'arborescence, et le passer sous
+silence dans un avertissement qui parle d'« URLs et de titres » serait
+trompeur.
+
 Le jeton Raindrop, lui, **n'apparaît dans aucun fichier de sauvegarde** — comme
 partout ailleurs dans le projet.
 
@@ -174,11 +215,31 @@ le paramètre `sort=created`, **jamais `-created`**. Le sens n'est pas un détai
 de style : en descendant, un bookmark créé pendant le balayage apparaît en
 page 0 et décale tout ce qui suit, ce qui recrée exactement la course qu'on
 élimine. En ascendant, les nouveaux éléments s'ajoutent **après** le point de
-lecture et ne perturbent rien ; ils seront pris au passage suivant. Le tri `-lastUpdate` est réservé au rafraîchissement incrémental, dont
-la fenêtre se compte en secondes. L'horodatage de début de balayage est
-enregistré dans `meta.json` : ce qui a bougé pendant la course est rattrapé par
-le rafraîchissement suivant, et l'instantané ne prétend pas être plus cohérent
-qu'il ne l'est.
+lecture et ne perturbent rien ; ils seront pris au passage suivant. Le tri
+`-lastUpdate` est réservé au rafraîchissement incrémental, dont la fenêtre se
+compte en secondes. L'horodatage de début de balayage est enregistré dans
+`meta.json`.
+
+⚠️ **Ce que l'ordre ascendant ne règle PAS : les suppressions.** L'argument
+ci-dessus vaut pour les créations. Une **suppression en amont du point de
+lecture** décale la suite **vers l'arrière**, et la pagination par offset saute
+alors un élément — silencieusement. Lire la page 5 (indices 250-299), voir
+disparaître l'élément d'indice 10, et la page 6 rend désormais les anciens
+indices 301-350 : l'ancien 300 n'est jamais lu. Le cas n'est pas théorique —
+**l'application elle-même supprime** (vues de nettoyage, mise à la corbeille)
+et le balayage dure 2 min 20.
+
+Le rafraîchissement incrémental ne rattrape pas ce cas : il trie par
+`-lastUpdate`, or un élément sauté qui n'a pas été modifié n'a aucune date
+nouvelle — il ne remonterait jamais.
+
+**Parade : réconciliation par identifiants.** Le balayage collecte les `_id`
+au passage (ils sont déjà en main, 12 210 entiers ≈ rien). À la fin, il relit
+le `count` de l'API et le compare au nombre d'identifiants **distincts**
+collectés. Égalité : l'instantané est complet, et on peut l'affirmer. Écart :
+le balayage est **rejoué une fois** ; si l'écart persiste, l'instantané est
+marqué **incomplet** (§6) et n'est jamais compté comme la dernière sauvegarde
+valide. Le coût n'apparaît que lorsque quelque chose a réellement bougé.
 
 ### 4.3 Module
 
@@ -212,6 +273,12 @@ poussive pendant tout ce temps. La file distingue donc deux rangs : les requête
 **interactives passent devant**, la sauvegarde consomme ce qui reste. Elle
 s'efface pendant que l'utilisateur travaille et rattrape quand il s'arrête.
 
+**Avec un plancher**, sans quoi « ce qui reste » peut ne jamais venir : sur une
+application utilisée sans interruption, la sauvegarde serait affamée et le
+balayage hebdomadaire n'aboutirait jamais. La règle : **au moins une requête de
+sauvegarde sur quatre**, même sous charge interactive. Au pire, le balayage
+complet passe de 2 min 20 à ≈ 9 min — il finit toujours.
+
 **Déclenchement** : au démarrage de l'app si la dernière sauvegarde date de plus
 de 24 h — plutôt qu'à heure fixe, qui tomberait forcément au mauvais moment et
 ne servirait à rien si l'app est fermée. Plus le déclenchement manuel.
@@ -237,6 +304,12 @@ possible grâce au JSONL.
 `sort=-lastUpdate`, page par page, **jusqu'à croiser le watermark** de
 l'instantané précédent. Quelques éléments modifiés : une requête. C'est ce qui
 rend la sauvegarde quotidienne quasi gratuite.
+
+**Égalité de dates.** Plusieurs éléments peuvent partager la même seconde de
+`lastUpdate` : un `>` strict en sauterait, un `>=` seul bouclerait. La règle est
+donc : comparaison `>=`, **une page de recouvrement** au-delà du point de
+croisement, et **dédoublonnage par `_id`**. Réappliquer un élément déjà à jour
+est sans effet — l'opération est idempotente.
 
 Déclenchement : **automatique une fois par jour**, plus un déclenchement manuel.
 
@@ -279,7 +352,12 @@ vers une URL S3 **signée et temporaire** (Wasabi, `X-Amz-*`). Vérifié le
   (11 186 o mesurés pour un `cache.size` de 11 186) — l'estimation de 18,7 Go
   du §1 vaut donc pour du contenu déjà compressé ;
 - l'URL étant signée et périssable, elle ne peut pas être mémorisée : chaque
-  archivage repart de l'endpoint `/cache`.
+  archivage repart de l'endpoint `/cache` ;
+- **la redirection se suit à la main** (`redirect: "manual"`, puis une seconde
+  requête vers l'URL rendue) : suivie automatiquement, l'en-tête
+  `Authorization: Bearer` du premier appel serait réémis vers une URL **déjà
+  signée**, que S3 peut rejeter. Le second appel ne porte aucun en-tête
+  d'authentification.
 
 Les fichiers sont donc écrits **`<raindropId>.html.gz`**, tels quels, sans
 décompression : nommer `.html` un contenu gzippé produirait des archives que
@@ -287,6 +365,21 @@ rien n'ouvre.
 
 Déclenché par l'utilisateur sur une collection, ou automatiquement sur les liens
 classés morts — là où l'archive vaut le plus.
+
+**Rétention des archives.** `archives/` vit hors des instantanés horodatés : la
+rotation du §5.5 ne le touche pas, et sans règle il croîtrait sans borne — à
+2,1 Mo pièce. Deux règles, toutes deux nécessaires :
+
+1. **Purge des orphelins**, à chaque balayage complet : l'ensemble des
+   identifiants vivants est alors connu ; une archive dont l'identifiant
+   n'apparaît ni dans `raindrops.jsonl` ni dans `trash.jsonl` est supprimée.
+   Sans elle, l'archive d'un signet effacé resterait indéfiniment sous un
+   identifiant qui ne résout plus.
+2. **Un budget**, `ARCHIVES_MAX_GO` (défaut **5 Go**) : au-delà, les archives
+   les plus anciennes sont évincées jusqu'à repasser sous le seuil. Une
+   archive évincée se recrée à la demande — l'endpoint `/cache` reste la
+   source. Pas d'exception pour les liens morts : une règle unique vaut mieux
+   qu'une exception qui rouvrirait la croissance sans borne.
 
 ### 5.5 Rotation
 
@@ -333,6 +426,16 @@ Un instantané qui échoue à sa propre vérification est marqué invalide et
 conservé (il peut rester partiellement exploitable), mais n'est jamais compté
 comme la dernière sauvegarde valide.
 
+**`manifest.json` s'écrit atomiquement** — fichier temporaire voisin puis
+renommage. C'est le seul fichier réécrit à chaque passage (les instantanés,
+eux, naissent dans un dossier neuf) : une coupure en cours d'écriture le
+laisserait tronqué, et avec lui l'inventaire de toutes les sauvegardes.
+
+**Changer de dossier de sauvegarde** ouvre un arbre neuf : la prochaine
+sauvegarde est complète, et l'ancien dossier est laissé **intact**, jamais
+déplacé ni adopté. Adopter un arbre trouvé sur place supposerait qu'il vient de
+cette application et de ce compte — deux choses invérifiables.
+
 Le réseau qui tombe reprend à la page suivante. Le 429, désormais visible,
 déclenche une pause avant reprise au lieu d'être compté comme un échec.
 
@@ -344,15 +447,22 @@ traversé l'implémentation *et* la revue.
 
 Ce module se teste donc contre un **vrai serveur HTTP local** imitant l'API
 Raindrop, sur le modèle de `sidecar/testing/targetServer.ts` : bibliothèque
-paginée, 307 vers un faux S3, 429, réponses tronquées.
+paginée, **303** vers un faux S3 (le code mesuré, pas celui de la doc), 429,
+réponses tronquées.
 
 Couverture visée : pagination complète, reprise après coupure, watermark
 incrémental, détection de suppression par écart de compteurs **et** balayage
 hebdomadaire garanti, rotation et rétention (y compris avec des semaines sans
 instantané), dossier devenu inaccessible, sauvegarde partielle jamais validée,
 **vérification post-écriture** (JSONL tronqué, ligne corrompue, empreinte qui ne
-correspond plus), et **priorité de file** : une requête interactive passe devant
-une sauvegarde en cours.
+correspond plus), **priorité de file** (une requête interactive passe devant une
+sauvegarde en cours) **et son plancher** (la sauvegarde progresse même sous
+charge interactive continue), **réconciliation par identifiants** (une
+suppression simulée en cours de balayage doit produire un écart détecté, un
+rejeu, puis un instantané marqué incomplet si l'écart persiste), **égalité de
+watermark** (plusieurs éléments à la même seconde, aucun sauté, aucun doublon),
+et **rétention des archives** (orphelin purgé au balayage complet, éviction du
+plus ancien au-delà du budget).
 Aucun appel réseau réel, comme le reste de la suite.
 
 ## 8. Effets sur la spec principale
@@ -377,6 +487,12 @@ la perte d'information est un choix assumé, et non une amputation.
 - 12 210 bookmarks ; ~937 o de métadonnées par item ; 74 % avec copie permanente
   (`cache.status: ready`), 2,1 Mo en moyenne, maximum observé 23 Mo.
 - `sort=-lastUpdate` **fonctionne** sur `/raindrops/{collectionId}` (REST).
+- **`sort=created` ascendant fonctionne, pagination profonde comprise** (mesuré
+  le 2026-09-18, l'argument du §4.2 reposait dessus sans qu'il soit vérifié) :
+  page 0 rend le plus ancien signet (2011-12-06), `-created` le plus récent
+  (2026-09-12), et la page 244 répond **200** avec les 10 derniers items en
+  ordre chronologique. Pages 0 et 1 : identifiants distincts, aucun
+  recouvrement.
 - `cache` et `broken` figurent **dans la réponse de liste** — pas de requête
   supplémentaire par item.
 - `GET /raindrop/{id}/cache` → **303** (la doc annonce 307) vers une URL S3 signée et temporaire ; `HEAD` y est refusé (403) ; le contenu est du **HTML gzippé** et `cache.size` est la taille compressée.
