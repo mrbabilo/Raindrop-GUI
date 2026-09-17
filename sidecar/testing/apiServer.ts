@@ -28,7 +28,11 @@ export async function startFauxApi(items: FauxApi["items"] = []): Promise<FauxAp
   const etat = { items };
   const server: Server = createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://x");
-    appels.push(url.pathname);
+    // Chemin ET query : un jeton égaré en paramètre d'URL (au lieu de
+    // l'en-tête Authorization) doit apparaître ici, sinon le test qui
+    // vérifie son absence ne peut jamais échouer — c'est exactement la
+    // forme de l'incident `unrestore` reproduite un cran plus haut.
+    appels.push(url.pathname + url.search);
     const json = (code: number, corps: unknown) => {
       res.writeHead(code, { "Content-Type": "application/json" });
       res.end(JSON.stringify(corps));
