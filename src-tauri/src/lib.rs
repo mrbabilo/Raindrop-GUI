@@ -1,5 +1,6 @@
 mod jeton;
 mod node;
+mod sidecar;
 mod verrou;
 mod trousseau;
 
