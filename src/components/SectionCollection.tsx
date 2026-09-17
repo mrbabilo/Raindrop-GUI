@@ -50,8 +50,12 @@ export function SectionCollection({
 
   return (
     <section aria-label={collection.title}>
-      {/* §8 : 28 px. §4 : le carré porte la teinte de la racine. */}
-      <h2 className="flex items-center gap-2 bg-app px-3 py-1 text-xs font-medium leading-5 text-app-muted">
+      {/* §8 : 28 px. §4 : le carré porte la teinte de la racine. §6 : la
+          surface `work` le distingue des lignes, sans bordure — sur le même
+          fond qu'elles, l'intertitre se lisait comme un signet de plus.
+          Collant : en défilant une section de cinquante lignes, on perd
+          sinon le nom de la collection qu'on est en train de lire. */}
+      <h2 className="sticky top-0 z-10 flex items-center gap-2 bg-app-panel px-3 py-1 text-xs font-medium leading-5 text-app-muted">
         <CarreCollection collectionId={collection.id} titre={collection.title} />
         <span>{collection.title}</span>
         {total > 0 && <span className="font-normal">{total}</span>}

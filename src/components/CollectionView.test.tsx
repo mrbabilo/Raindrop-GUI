@@ -109,6 +109,17 @@ describe("CollectionView", () => {
     expect(section.querySelector('input[type="search"], input[placeholder]')).toBeNull();
   });
 
+  // §6 : la surface distingue l'intertitre des lignes ; collant, il garde le
+  // nom de la collection sous les yeux pendant qu'on défile ses 50 lignes.
+  it("l'intertitre se distingue des lignes et reste visible au défilement", () => {
+    parPage[101] = { n: 0, total: 0 };
+    parPage[201] = { n: 3, total: 3 };
+    rendu();
+    const titre = screen.getByRole("region", { name: "Rust" }).querySelector("h2")!;
+    expect(titre.className).toContain("sticky");
+    expect(titre.className).toContain("bg-app-panel");
+  });
+
   // Cocher dans une section doit compter : sans remontée des items chargés,
   // la barre d'actions en masse resterait vide et le geste sans effet.
   it("cocher un signet d'une section alimente la barre d'actions", async () => {

@@ -54,6 +54,14 @@ Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
   annulables) et six vues de traitement — liens morts, redirections,
   doublons, non-taggés, collections vides, corbeille.
 - **Vue des étiquettes** : renommer, fusionner, supprimer.
+- **Vue d'une collection parente** : cliquer une collection qui a des
+  sous-collections montre ses signets directs, puis une section par
+  sous-collection — chacune avec son intertitre, son compte exact et un
+  « Voir les N » vers la collection entière. Les contrôles restent en
+  tête, uniques.
+- **Arbre pliable et rangé** : les collections se lisent en ordre
+  alphanumérique naturel (« 10 - SERVEURS » après « 9 », pas entre « 1 »
+  et « 2 »), et la barre latérale ne déplie un parent qu'au survol.
 - **Déplacement par glissement** : tirer un signet — ou toute une
   sélection — sur une collection de la barre latérale l'y range. Un
   fantôme dit ce qu'on transporte, la collection visée s'allume, et la

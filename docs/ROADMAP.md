@@ -51,17 +51,29 @@ Six familles, ~45 items condensés — aucun ne bloque le merge. S'y
 ajoutent deux designs validés par l'utilisateur après comparaison avec
 app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
 
-- [ ] **Vue collection parente** — design validé le 2026-09-17 :
-      collections triées **alphanumérique naturel** (`localeCompare` fr
-      `numeric: true` — aujourd'hui l'ordre affiché est celui de l'API) ;
-      **chevron de parent ouvert au survol** de sa ligne dans la sidebar
-      (repli au leave, délai ~250 ms — l'arbre s'explore au pointeur) ;
-      **clic sur une collection principale → ses signets directs puis
-      chaque sous-collection en intertitre** (carré teinté + nom + compte,
-      28 px §8) suivi de ses signets en lignes 36 px, tout déplié,
-      contrôles globaux en tête uniques (rien de dupliqué par section,
-      contrairement à Raindrop). Chargement progressif par la file 550 ms.
-      Front uniquement.
+- [x] **Vue collection parente** — fait le 2026-09-17 en trois lots :
+      (1) tri **alphanumérique naturel** à la source (`lib/ordre.ts`,
+      consommé par `useCollections` — un seul endroit range l'arbre pour
+      la sidebar, la palette ⌘K et les destinations de déplacement) ;
+      (2) **pliage de la sidebar** (`GroupeCollection.tsx`) : dépliage au
+      survol, repli différé de 250 ms, chevron `aria-expanded` comme
+      équivalent clavier du survol, parent de la vue courante maintenu
+      ouvert, et **500 ms pendant un déplacement** — ce que le design du
+      drag & drop demandait et qui était sans objet faute de pliage ;
+      (3) **vue composite** (`kind: "collection"`, `CollectionView.tsx` +
+      `SectionCollection.tsx`) : signets directs puis une section par
+      sous-collection, intertitre 28 px collant sur surface `work`,
+      contrôles globaux uniques.
+      **Écart assumé, arbitré avec l'utilisateur** : chaque section ne
+      charge que sa première page et propose « Voir les N » — « tout
+      déplié » au sens plein tenait des milliers de lignes hors
+      virtualiseur. Mesuré en réel sur MIGRATION (10 enfants) : 401
+      lignes, peinture complète en **~10 s** — onze requêtes que la file
+      550 ms sérialise. C'est le plancher de cette vue tant que la file
+      reste séquentielle ; si l'attente gêne à l'usage, la piste est de
+      ne charger une section qu'à son entrée dans le champ de vision.
+      Reste non fait : les sous-collections de niveau 2+ (la sidebar
+      comme la vue ne connaissent qu'un niveau d'enfants).
 - [ ] **Navigation clavier fluide** — directive transversale du
       2026-09-17 : roving tabindex (Tab entre dans la liste, ↑↓ prennent
       le relais — jamais 300 stops de Tab) ; **→/←** déplient/replient un
