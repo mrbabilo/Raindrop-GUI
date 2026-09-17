@@ -18,6 +18,12 @@ export interface FauxApi {
   items: { _id: number; created: string; lastUpdate: string; title: string }[];
   /** Combien de requêtes ont été reçues, par chemin. */
   appels: string[];
+  /**
+   * L'en-tête `Authorization` reçu à chaque requête, dans le même ordre que
+   * `appels` (une entrée par requête, `""` si absent). Prouve la PRÉSENCE
+   * du jeton attendu — `appels` ne prouve que son absence de l'URL.
+   */
+  authorizations: string[];
   /** Fait répondre 429 aux N prochaines requêtes de liste. */
   repondre429(n: number): void;
 }
@@ -25,6 +31,7 @@ export interface FauxApi {
 export async function startFauxApi(items: FauxApi["items"] = []): Promise<FauxApi> {
   let reste429 = 0;
   const appels: string[] = [];
+  const authorizations: string[] = [];
   const etat = { items };
   const server: Server = createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://x");
@@ -33,6 +40,7 @@ export async function startFauxApi(items: FauxApi["items"] = []): Promise<FauxAp
     // vérifie son absence ne peut jamais échouer — c'est exactement la
     // forme de l'incident `unrestore` reproduite un cran plus haut.
     appels.push(url.pathname + url.search);
+    authorizations.push(req.headers.authorization ?? "");
     const json = (code: number, corps: unknown) => {
       res.writeHead(code, { "Content-Type": "application/json" });
       res.end(JSON.stringify(corps));
@@ -56,7 +64,15 @@ export async function startFauxApi(items: FauxApi["items"] = []): Promise<FauxAp
       });
     }
     if (url.pathname === "/rest/v1/collections") return json(200, { items: [{ _id: 1, title: "A" }] });
-    if (url.pathname === "/rest/v1/highlights") return json(200, { count: 0, items: [] });
+    if (url.pathname === "/rest/v1/highlights") {
+      return json(200, {
+        count: 2,
+        items: [
+          { _id: 501, text: "surlignage" },
+          { _id: 502, text: "autre" },
+        ],
+      });
+    }
     if (url.pathname === "/rest/v1/user") return json(200, { user: { _id: 7 } });
     json(404, { error: "inconnu" });
   });
@@ -66,6 +82,7 @@ export async function startFauxApi(items: FauxApi["items"] = []): Promise<FauxAp
     port,
     items: etat.items,
     appels,
+    authorizations,
     repondre429: (n) => {
       reste429 = n;
     },

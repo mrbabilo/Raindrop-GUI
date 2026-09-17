@@ -8,6 +8,24 @@
 
 const API_BASE = "https://api.raindrop.io/rest/v1";
 
+/**
+ * Le code HTTP structuré, pas seulement en sous-chaîne du message.
+ *
+ * La spec justifie le REST direct par « distinguer un 429 d'une panne
+ * réseau » et promet qu'un 429, désormais visible, déclenche une pause
+ * avant reprise (§3.2). Laisser ce statut à une expression régulière sur
+ * `error.message` rendrait cette promesse dépendante d'une chaîne de
+ * caractères, et chaque consommateur (Tasks 4, 5, 8) devrait réinventer son
+ * propre parsing. `status` est la source de vérité ; le message reste pour
+ * la lisibilité des logs.
+ */
+export class ErreurHttpRaindrop extends Error {
+  constructor(public readonly status: number) {
+    super(`raindrop api http ${status}`);
+    this.name = "ErreurHttpRaindrop";
+  }
+}
+
 export interface PageBrute {
   count: number;
   items: unknown[];
@@ -48,7 +66,7 @@ export function makeLecture(opts: {
         if (!res.ok) {
           // Le code HTTP est conservé : c'est précisément ce que le MCP perd,
           // et ce qui permet de distinguer une pause 429 d'un échec.
-          throw new Error(`raindrop api http ${res.status}`);
+          throw new ErreurHttpRaindrop(res.status);
         }
         return res.json();
       },
