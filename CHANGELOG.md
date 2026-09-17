@@ -5,9 +5,11 @@ versionnement [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
-Rien n'est encore publié : l'application se lance en développement
-(`./scripts/dev-sidecar.sh` puis `npm run dev`). Le **plan 3/3 — le shell
-Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
+L'application se construit depuis le dépôt (`npm run build:app`, archives
+avec `npm run release`) et se lance en développement
+(`./scripts/dev-sidecar.sh` puis `npm run dev`, ou `npm run tauri:dev`).
+Rien n'est encore publié au sens releases : la signature est ad-hoc, sans
+Developer ID.
 
 ### Ajouté
 
@@ -124,6 +126,32 @@ Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
   corbeille n'accueille rien : y glisser un signet l'effacerait d'un
   geste, alors que la mise à la corbeille est un verbe que l'on nomme.
 - **Bannières dégradées** : pont MCP tombé, hors-ligne.
+
+#### Application macOS — shell Tauri — plan 3/3 (2026-09-17)
+
+- **Raindrop GUI est une application.** Une fenêtre s'ouvre, lance son
+  service local et l'arrête en partant — par ⌘Q comme par SIGTERM.
+- **Premier lancement** : le jeton d'API se saisit une fois, est vérifié
+  auprès de Raindrop — le compte détecté s'affiche — puis rejoint le
+  **trousseau macOS**, dans le même enregistrement que le développement.
+- **Si Node manque**, l'écran d'accueil le dit et explique quoi installer,
+  au lieu de s'ouvrir sur une bibliothèque vide.
+- **Un service local éphémère** : le token Bearer de l'API locale est
+  régénéré à chaque lancement et jamais écrit sur disque ; un sidecar
+  survivant d'un crash précédent est terminé, pas réutilisé — un ancien
+  token rend 401, proprement.
+- **Les écrans d'attente ont des issues** : « Réessayer » rejoue la
+  séquence (il ne se contente pas de relire l'état qui a échoué), et
+  « Saisir un autre jeton » reste la porte quand un jeton refusé est déjà
+  au trousseau.
+- **La bibliothèque n'apparaît que prête** : la validation du jeton
+  attend que le pont MCP soit connecté — la course du premier lancement
+  (« MCP indisponible » à chaque validation) est morte.
+- **Le compilateur** (`npm run build:app`, `npm run release`, inspiré du
+  cliquet de StarHubTH) : vérifications qui échouent en deux secondes,
+  cliquet de tailles, tests, puis contrôle du bundle — le sidecar est-il
+  vraiment embarqué, le MCP à la version épinglée dedans. Livraison en
+  `.app` et `.dmg`.
 
 #### Conception et outillage
 

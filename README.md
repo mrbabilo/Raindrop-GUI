@@ -1,9 +1,42 @@
 # Raindrop-GUI
 
-GUI desktop macOS pour Raindrop.io. **Phase 1 : sidecar complet** (pont MCP,
-API REST locale, moteur d'analyse) ; front React et shell Tauri : plans
-suivants. Conventions et décisions structurantes : `CLAUDE.md` et la spec
-(`docs/superpowers/specs/2026-09-15-raindrop-gui-design.md`).
+GUI desktop macOS pour Raindrop.io — **Phase 1 livrée** : shell Tauri
+(fenêtre, cycle de vie du sidecar, trousseau macOS), front React
+(bibliothèque, nettoyage, palette, Revue) et sidecar Node (pont MCP épinglé,
+API REST locale, moteur d'analyse). L'application se construit et
+s'empaquete depuis ce dépôt. Conventions et décisions structurantes :
+`CLAUDE.md` et la spec (`docs/superpowers/specs/2026-09-15-raindrop-gui-design.md`).
+
+## Construire l'application
+
+```bash
+npm run build:app     # vérifications, tests, cliquet de tailles, .app + .dmg
+npm run release       # build complet, puis archives dans bundles/ (envoi GitHub en y/N)
+```
+
+`build_app.py` échoue tôt et clairement (épinglage MCP 1.3.1 contrôlé dans
+`package.json` ET `package-lock.json`, Node ≥ 20 résolu, cargo présent,
+plafond de 400 lignes par fichier), puis contrôle le résultat : le sidecar
+est-il VRAIMENT embarqué dans le `.app`, le MCP à la bonne version dedans.
+
+La signature est **ad-hoc** (pas de Developer ID) : au premier lancement,
+Gatekeeper met l'app en quarantaine —
+`xattr -dr com.apple.quarantine "Raindrop GUI.app"` la lève.
+
+Au premier lancement, l'app demande le jeton d'API Raindrop, le vérifie
+auprès de l'API (le compte détecté s'affiche) et le range au **trousseau
+macOS** — le même enregistrement que le développement ci-dessous.
+
+## Développement — l'application complète
+
+```bash
+./scripts/dev-sidecar.sh                 # le sidecar, token lu du trousseau
+VITE_LOCAL_API_TOKEN=dev-local-token npm run dev   # le front au navigateur (proxy Vite)
+npm run tauri:dev                        # la fenêtre native (le shell lance son propre sidecar)
+```
+
+Sous `tauri dev`, le front parle directement au sidecar lancé par le shell
+Rust (`window.RAINDROP_GUI`) — le proxy Vite est coupé automatiquement.
 
 ## Développement — sidecar seul
 
@@ -53,8 +86,9 @@ curl -s -H "Authorization: Bearer dev-local-token" "http://127.0.0.1:$PORT/api/h
 ```bash
 npm test                                   # tout (fakes in-process, réseau local only)
 RAINDROP_TEST_TOKEN=<token> npm test       # + intégration réelle (sidecar/integration.test.ts)
-npm run typecheck                          # tsc --noEmit
-npm run build:sidecar                      # build dist-sidecar/ (plan 3 : spawn par Tauri)
+npm run typecheck && npm run typecheck:front
+npm run build:sidecar                      # build dist-sidecar/
+cd src-tauri && cargo test                 # le shell Rust (modules purs + contrats)
 ```
 
 Veille des sources externes (MCP kud épinglé, API Raindrop, SDK/hono/zod) :
