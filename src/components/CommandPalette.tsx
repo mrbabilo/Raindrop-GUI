@@ -6,7 +6,8 @@ import { useCollections, useTags } from "../hooks/useStaticData";
 import { useAppState } from "../state/appState";
 
 // Une entrée de la palette : `hint` affiche la catégorie (i18n), `run`
-// porte l'action — toujours une navigation via `go`, jamais d'effet direct.
+// porte l'action — une navigation via `go`, ou une sélection de fiche via
+// selectRaindrop (R11P-2 : choisir un bookmark ouvre son détail).
 interface Row {
   key: string;
   label: string;

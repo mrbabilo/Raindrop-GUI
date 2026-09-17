@@ -128,8 +128,13 @@ export const fr = {
 
 export type FrKey = keyof typeof fr;
 
-export function t(key: string, vars?: Record<string, string | number>): string {
-  let s = (fr as Record<string, string>)[key] ?? key;
+/** Une clé du dictionnaire, rien d'autre : le repli « rend la clé »
+ *  masquait les fautes — une chaîne absente s'affichait brute à l'écran
+ *  au lieu d'être refusée au typecheck. Les usages DYNAMIQUES (les seuls
+ *  à ne pas pouvoir être vérifiés ici) construisent leur objet de clés en
+ *  `as const` au lieu de caster (voir NatureChips). */
+export function t(key: FrKey, vars?: Record<string, string | number>): string {
+  let s: string = fr[key];
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
   return s;
 }

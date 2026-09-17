@@ -189,11 +189,19 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       le split exigerait de filer `fx`+`guard` à des modules de tools dans
       le harnais de dix fichiers de test, pour un gain cosmétique.
       Compteur doublons = payload complet : à surveiller, inchangé.
-- [ ] **Divers** : `t(key: string)` à durcir en `FrKey` ; `ListPatch` trop
-      large ; `ChargePlus` dupliqué ListPane/CleanupView ; `initTheme`/
-      `setTheme` morts en prod ; commentaire périmé CommandPalette.tsx:8-9 ;
-      bloc Global Constraints du plan documente encore la route highlights
-      supprimée (doc seule).
+- [x] **Divers** — fait le 2026-09-17 : `t()` durci en `FrKey` (le repli
+      « rend la clé » masquait les fautes — une chaîne absente s'affichait
+      brute au lieu d'être refusée au typecheck) ; le seul usage dynamique
+      (`nature.*`) est typé par un littéral `satisfies Record<NatureType,
+      FrKey>`, qui prouve au typecheck que les six clés existent ;
+      `ListPatch` rétréci (`kind`/`collectionId`/`label` exclus — patcher
+      n'est pas naviguer) ; `ChargePlus` extrait
+      (`components/ChargePlus.tsx`), consommé par ListPane et CleanupView
+      ; `initTheme` retirée (morte en prod, le hook fait le boot), le test
+      du thème réécrit via `useTheme` ; commentaire périmé de
+      CommandPalette réécrit (R11P-2 a introduit `selectRaindrop`).
+      Le bloc Global Constraints du plan documente encore la route
+      highlights supprimée — doc seule, laissé tel quel.
 
 ## Points ouverts (non liés au plan 2)
 

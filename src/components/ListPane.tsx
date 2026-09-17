@@ -11,6 +11,7 @@ import { useDragBookmark } from "../hooks/useDragBookmark";
 import { useIndexClavier } from "../hooks/useIndexClavier";
 import { useRovingFocus } from "../hooks/useRovingFocus";
 import { EtatListe } from "./EtatListe";
+import { ChargePlus } from "./ChargePlus";
 import { RaindropRow } from "./RaindropRow";
 import { MosaicTile } from "./MosaicTile";
 import { BulkBar } from "./BulkBar";
@@ -41,7 +42,6 @@ export function ListPane() {
   // ensuite chaque hauteur réelle, mais un estimate faux ferait sauter la
   // barre de défilement sur 12 000 lignes dès le premier scroll.
   const virtual = useVirtualizer({ count: items.length, getScrollElement: () => parentRef.current, estimateSize: () => 36, overscan: 10 });
-  const ioRef = useRef<IntersectionObserver | null>(null);
 
   // Navigation clavier : la liste ne prend qu'UN arrêt de tabulation, et les
   // flèches y circulent — 12 000 lignes en feraient 12 000. La mécanique est
@@ -154,18 +154,7 @@ export function ListPane() {
             })}
           </div>
         )}
-        {query.hasNextPage && (
-          // Infinite scroll : le callback ref tourne à chaque rendu — on
-          // débranche l'observeur précédent avant d'en créer un (sinon N
-          // rendus = N observateurs = N× fetchNextPage au même event).
-          <div ref={(el) => {
-            ioRef.current?.disconnect();
-            if (!el) return;
-            const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && query.fetchNextPage()));
-            io.observe(el);
-            ioRef.current = io;
-          }} className="p-4 text-center text-app-muted">{query.isFetchingNextPage ? t("list.loadingMore") : ""}</div>
-        )}
+        <ChargePlus q={query} />
       </main>
       {/* R8P-1 : un déplacement raté se dit, il ne disparaît pas en silence. */}
       {drag.erreur !== null && (

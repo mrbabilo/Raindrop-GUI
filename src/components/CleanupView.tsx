@@ -1,6 +1,7 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { t } from "../i18n/fr";
 import { EtatListe } from "./EtatListe";
+import { ChargePlus } from "./ChargePlus";
 import type { View } from "../state/appState";
 import { useAppState } from "../state/appState";
 import { useAnalysisResults, useDuplicateGroups } from "../hooks/useAnalysis";
@@ -65,25 +66,6 @@ function Paginateur({ page, total, perPage, onPage }: { page: number; total: num
 // Suite infinie des listes raindrops (même mécanique que ListPane : le
 // callback ref tourne à chaque rendu — on débranche l'observeur précédent
 // avant d'en créer un, sinon N rendus = N observateurs).
-function ChargePlus({ q }: { q: { hasNextPage?: boolean; isFetchingNextPage: boolean; fetchNextPage: () => void } }) {
-  const ioRef = useRef<IntersectionObserver | null>(null);
-  if (!q.hasNextPage) return null;
-  return (
-    <div
-      ref={(el) => {
-        ioRef.current?.disconnect();
-        if (!el) return;
-        const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && q.fetchNextPage()));
-        io.observe(el);
-        ioRef.current = io;
-      }}
-      className="p-4 text-center text-app-muted"
-    >
-      {q.isFetchingNextPage ? t("list.loadingMore") : ""}
-    </div>
-  );
-}
-
 // dead / redirect : la même page de résultats filtrée — useAnalysisResults
 // (résolution contrôleur 2 : enum filter réel du sidecar, page qui va bien).
 function ResultatsLiens({ type }: { type: "dead" | "redirect" }) {

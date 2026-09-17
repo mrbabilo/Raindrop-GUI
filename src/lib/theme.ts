@@ -3,21 +3,15 @@ import { useEffect, useState } from "react";
 export type ThemeMode = "system" | "light" | "dark";
 const KEY = "raindrop-gui-theme";
 
-export function initTheme(): ThemeMode {
-  const mode = readStoredMode();
-  apply(mode);
-  return mode;
-}
-
 export function setTheme(mode: ThemeMode): void {
   localStorage.setItem(KEY, mode);
   apply(mode);
 }
 
-// Le hook, contrairement à initTheme()/setTheme(), expose l'état *résolu*
-// (clair/sombre effectif) — pas seulement le mode brut stocké. Un appelant
-// qui ne lit que `mode` ne peut pas distinguer "system + OS sombre" de
-// "system + OS clair" sans reconsulter matchMedia lui-même.
+// Le hook expose l'état *résolu* (clair/sombre effectif) — pas seulement le
+// mode brut stocké. Un appelant qui ne lit que `mode` ne peut pas distinguer
+// "system + OS sombre" de "system + OS clair" sans reconsulter matchMedia
+// lui-même.
 export function useTheme(): {
   mode: ThemeMode;
   resolved: "light" | "dark";
@@ -27,7 +21,7 @@ export function useTheme(): {
 
   // Le premier rendu calcule déjà `resolved` correctement (lecture pure,
   // sans mutation du DOM) ; l'effet ne fait qu'appliquer la classe .dark
-  // sur <html>, comme initTheme()/setTheme() le feraient.
+  // sur <html>.
   useEffect(() => {
     apply(mode);
   }, [mode]);

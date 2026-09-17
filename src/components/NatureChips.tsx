@@ -3,6 +3,20 @@ import { useAppState } from "../state/appState";
 import { useRaindrops } from "../hooks/useRaindrops";
 import { listQueryArgs } from "../hooks/listQuery";
 import { Glyphe, NATURE_TYPES, type NatureType } from "../design/glyphes";
+import type { FrKey } from "../i18n/fr";
+
+// Les clés de nature, TYPÉES contre le dictionnaire : le littéral garantit
+// au typecheck que chaque nature a bien sa ligne `nature.*` dans fr.ts —
+// l'alternative (caster la clé composée) déplacerait la confiance dans un
+// silence de compilateur.
+const CLE_NATURE = {
+  link: "nature.link",
+  article: "nature.article",
+  image: "nature.image",
+  video: "nature.video",
+  document: "nature.document",
+  audio: "nature.audio",
+} as const satisfies Record<NatureType, FrKey>;
 
 // DESIGN.md §11 : hauteur 26 px, rayon 7 px, fond `work` (bg-app-panel),
 // texte `quiet` (text-app-muted) — ce sont des commandes, pas les pilules
@@ -48,7 +62,7 @@ export function NatureChips({ focused }: { focused: boolean }) {
             onClick={() => toggle(type)}
           >
             <Glyphe type={type} />
-            {t(`nature.${type}`)}
+            {t(CLE_NATURE[type])}
           </button>
         );
       })}

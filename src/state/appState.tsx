@@ -67,7 +67,11 @@ export type View =
     };
 
 // Les filtres/tri/mode portés par la vue list — cible du merge de patchList.
-type ListPatch = Partial<Extract<View, { kind: "list" }>>;
+// Un patch ajuste les FILTRES de la liste courante — jamais `kind`,
+// `collectionId` ni `label` : changer de collection est une NAVIGATION
+// (go), qui a des effets que le patch n'a pas (reset de page, historique).
+// « Trop large » corrigé : le type disait l'inverse du contrat.
+type ListPatch = Partial<Omit<Extract<View, { kind: "list" }>, "kind" | "collectionId" | "label">>;
 
 // Task 7 : le même store porte la sélection — SPA à un écran, pas de router.
 // `selectedIds` : cases à cocher des lignes (actions groupées, Task 9) ;
