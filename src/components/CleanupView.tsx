@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { t } from "../i18n/fr";
 import { EtatListe } from "./EtatListe";
+import { useRovingFocus } from "../hooks/useRovingFocus";
 import { ChargePlus } from "./ChargePlus";
 import type { View } from "../state/appState";
 import { useAppState } from "../state/appState";
@@ -269,8 +270,23 @@ function CollectionsVides() {
 }
 
 export function CleanupView({ type }: { type: CleanupType }) {
+  // Lot a11y : la vue n'est qu'UN arrêt de tabulation. Les lignes portent
+  // `data-nav` (CleanupRows.Ligne) ; Enter/F2 y entrent — leurs contrôles ne
+  // sont tabulables qu'ensuite (pattern « ligne activée »). Le maillage ARIA
+  // grid est réduit à grid/row : le contrat est le clavier, pas une grille
+  // exhaustive — les en-têtes de vue vivent dans la section, hors rows.
+  const zone = useRef<HTMLElement>(null);
+  const roving = useRovingFocus(zone, {
+    surEchap: () => (document.activeElement as HTMLElement | null)?.blur(),
+  });
   return (
-    <section aria-label={LABELS[type]} className="flex h-full min-h-0 flex-col">
+    <section
+      ref={zone}
+      role="grid"
+      aria-label={LABELS[type]}
+      onKeyDown={roving.surTouche}
+      className="flex h-full min-h-0 flex-col"
+    >
       {type === "dead" && <ResultatsLiens type="dead" />}
       {type === "redirect" && <ResultatsLiens type="redirect" />}
       {type === "duplicates" && <Doublons />}

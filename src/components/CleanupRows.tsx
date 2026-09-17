@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { createContext, useContext, useRef, useState, type ReactNode } from "react";
 import { t } from "../i18n/fr";
 import { CarreCollection, filetEtat, type EtatLien } from "../design/Signaux";
 import { useUpdateRaindrop, useUnrestore, useDeleteCollection } from "../hooks/useMutations";
@@ -17,13 +17,63 @@ export type LinkEnrichi = LinksResultsPage["items"][number];
 // DESIGN.md §8 : ligne de liste 36 px, gap, filet d'état en bord de ligne
 // (§5 — la forme distingue autant que la couleur). Mêmes classes que
 // RaindropRow pour que les six vues respirent comme la liste principale.
+//
+// Clavier (lot a11y) : la LIGNE est l'arrêt de tabulation de la vue
+// (useRovingFocus de CleanupView), jamais ses contrôles. Enter ou F2
+// « entre » dans la ligne — les contrôles deviennent tabulables et le
+// premier reçoit le focus ; quitter la ligne (Échap, clic ailleurs,
+// flèches) les referme. Le maillage ARIA grid est réduit volontairement à
+// row : le contrat visé est le comportement clavier, pas une grille
+// complète.
+const ContexteLigne = createContext(false);
+
 export function Ligne({ etat, children }: { etat: EtatLien | null; children: ReactNode }) {
+  const [active, setActive] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
   const filet = filetEtat(etat);
   return (
-    <div className={"flex min-h-9 items-center gap-2 overflow-hidden border-b border-app-border px-3 " + (filet ? "filet " + filet : "")}>
-      {children}
+    <div
+      ref={ref}
+      role="row"
+      data-nav
+      tabIndex={-1} // le roving de la vue décide (0 pour la première, -1 pour les autres)
+      onBlur={(e) => {
+        // Le focus quitte la ligne → désarmer. Le passage ligne → contrôle
+        // interne est un focus DANS la ligne : rien ne bouge.
+        if (!ref.current?.contains(e.relatedTarget as Node | null)) setActive(false);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === "F2") {
+          e.preventDefault();
+          setActive(true);
+          // Le focus programmatique ignore le tabIndex=-1 momentané : React
+          // propage l'état après coup, et le contrôle reste focusé.
+          ref.current?.querySelector<HTMLElement>("button, a, select, input")?.focus();
+          return;
+        }
+        // Échap quand la ligne est activée : la REFERMER et rendre le focus
+        // À LA LIGNE. Sans ce stop, le roving de la vue blurrait vers body —
+        // le focus se perdait au lieu de remonter d'un niveau.
+        if (e.key === "Escape" && active) {
+          e.preventDefault();
+          e.stopPropagation();
+          setActive(false);
+          ref.current?.focus();
+        }
+      }}
+      className={"flex min-h-9 items-center gap-2 overflow-hidden border-b border-app-border px-3 " + (filet ? "filet " + filet : "")}
+    >
+      <ContexteLigne.Provider value={active}>{children}</ContexteLigne.Provider>
     </div>
   );
+}
+
+/** Un contrôle interne d'une ligne : hors de Tab tant que la ligne n'est pas
+ *  activée (Enter/F2), tabulable ensuite. Le clic reste toujours possible. */
+export function ActionLigne({ el = "button", ...props }: { el?: "button" | "a" | "select" } & Record<string, unknown>) {
+  const active = useContext(ContexteLigne);
+  const Tag = el as "button";
+  return <Tag tabIndex={active ? 0 : -1} {...(props as object)} />;
 }
 
 // Erreur d'action inline (pattern T8/R12P-1) : ce qui s'est passé, jamais
@@ -45,9 +95,9 @@ export function DeadRow({ r, collectionRacine }: { r: LinkEnrichi; collectionRac
       <span className="min-w-[8rem] flex-1 truncate font-medium">{r.title}</span>
       <span className="url shrink-0 text-[11px] text-app-muted">{r.url}</span>
       {r.reason && <span className="shrink-0 text-xs text-app-broken">{r.reason}</span>}
-      <a className="btn shrink-0" href={`https://web.archive.org/web/*/${r.url}`} target="_blank" rel="noreferrer">
+      <ActionLigne el="a" className="btn shrink-0" href={`https://web.archive.org/web/*/${r.url}`} target="_blank" rel="noreferrer">
         {t("cleanup.wayback")}
-      </a>
+      </ActionLigne>
     </Ligne>
   );
 }
@@ -71,16 +121,14 @@ export function RedirectRow({ r, collectionRacine }: { r: LinkEnrichi; collectio
       <span className="shrink-0 text-xs text-app-muted">
         {t(r.redirectKind === "temporary" ? "cleanup.redirect-temporary" : "cleanup.redirect-permanent")}
       </span>
-      <button
-        type="button"
-        className="btn shrink-0"
+      <ActionLigne
         disabled={update.isPending}
         onClick={() => {
           if (r.finalUrl) update.mutate({ url: r.finalUrl }, { onSuccess: () => setRemplace(true) });
         }}
       >
         {t("cleanup.replace-url")}
-      </button>
+      </ActionLigne>
       {update.isError && <ErreurLigne message={String(update.error?.message ?? "")} />}
     </Ligne>
   );
@@ -129,25 +177,20 @@ export function TrashRow({ r }: { r: RaindropItem }) {
       <CarreCollection collectionId={r.collectionId} />
       <span className="min-w-[8rem] flex-1 truncate font-medium">{r.title}</span>
       <span className="url shrink-0 text-[11px] text-app-muted">{r.url}</span>
-      <button type="button" className="btn shrink-0" disabled={unrestore.isPending} onClick={restaurer}>
+      <ActionLigne disabled={unrestore.isPending} onClick={restaurer}>
         {t("cleanup.restore")}
-      </button>
+      </ActionLigne>
       {origineInconnue && (
         <>
           <span className="shrink-0 text-xs text-app-broken">{t("cleanup.unknown-origin")}</span>
-          <select
-            aria-label={t("bulk.destination")}
-            className="input w-32 shrink-0"
-            value={dest}
-            onChange={(e) => setDest(e.target.value)}
-          >
+          <ActionLigne el="select" aria-label={t("bulk.destination")} className="input w-32 shrink-0" value={dest} onChange={(e: { target: { value: string } }) => setDest(e.target.value)}>
             <option value="">{t("bulk.chooseCollection")}</option>
             {collections.map((c) => (
               <option key={c.id} value={String(c.id)}>
                 {c.title}
               </option>
             ))}
-          </select>
+          </ActionLigne>
         </>
       )}
       {unrestore.isError && <ErreurLigne message={String(unrestore.error?.message ?? "")} />}
@@ -163,9 +206,9 @@ export function EmptyCollectionRow({ c }: { c: Collection }) {
     <Ligne etat={null}>
       <CarreCollection collectionId={c.id} titre={c.title} />
       <span className="min-w-[8rem] flex-1 truncate font-medium">{c.title}</span>
-      <button type="button" className="btn shrink-0" disabled={suppr.isPending} onClick={() => suppr.mutate(c.id)}>
+      <ActionLigne disabled={suppr.isPending} onClick={() => suppr.mutate(c.id)}>
         {t("cleanup.delete-collection")}
-      </button>
+      </ActionLigne>
       {suppr.isError && <ErreurLigne message={String(suppr.error?.message ?? "")} />}
     </Ligne>
   );

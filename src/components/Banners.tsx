@@ -8,7 +8,7 @@ import { useHealth } from "../hooks/useStaticData";
 // surface panel suffit à détacher la bande ; le diagnostic reprend le filet
 // de 3 px des états (§5), la FORME des bannières est donc celle des lignes.
 export function Banners() {
-  const { data, refetch } = useHealth();
+  const { data, isError, refetch } = useHealth();
   // Hors-ligne : l'état initial vient de navigator.onLine, puis les événements
   // online/offline du navigateur font foi (spec §7 : lecture cache maintenue).
   const [online, setOnline] = useState(() => navigator.onLine);
@@ -29,6 +29,13 @@ export function Banners() {
   // état de lifecycle.ts (starting/restarting/crashed/stopped) est dégradé —
   // le « crashed » du plan est couvert, sans bande morte pour les transitoires.
   const mcpEnRade = data !== undefined && data.mcp !== "connected";
+  // Le sidecar ENTIER est injoignable : `useHealth` a échoué, `data` est
+  // resté undefined — et l'ancien test `mcpEnRade` restait faux, la bannière
+  // se taisait précisément quand tout était tombé (constaté en coupant le
+  // sidecar, 2026-09-17). Distinction des deux diagnosticss : MCP rade =
+  // sidecar vivant, pont cassé (redémarrage possible) ; injoignable = rien
+  // ne répond (réessayer, le poll de 15 s reprend seul).
+  const injoignable = isError;
 
   async function redemarre() {
     setErreur(null);
@@ -45,9 +52,20 @@ export function Banners() {
     }
   }
 
-  if (!mcpEnRade && online) return null;
+  if (!mcpEnRade && !injoignable && online) return null;
   return (
     <div className="flex flex-col gap-1">
+      {injoignable && (
+        <div
+          role="alert"
+          className="filet filet-broken flex items-center gap-3 bg-app-panel px-4 py-2"
+        >
+          <span className="text-app-broken">{t("banner.unreachable")}</span>
+          <button type="button" className="btn" onClick={() => void refetch()}>
+            {t("state.retry")}
+          </button>
+        </div>
+      )}
       {mcpEnRade && (
         <div
           role="alert"

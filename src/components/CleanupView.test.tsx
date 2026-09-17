@@ -213,4 +213,44 @@ describe("CleanupView", () => {
       totalServer: 2, // les DEUX vides — pas 0 (items de Revue vides pour cette action)
     });
   });
+
+  // Le grief du lot a11y : chaque ligne de traitement portait un arrêt de
+  // tabulation PAR CONTRÔLE (Restaurer, select, liens). La LIGNE est
+  // l'arrêt ; ses contrôles n'existent pour Tab qu'une fois la ligne
+  // activée (Enter), et Échap rend la ligne.
+  it("la ligne est l'arrêt, ses contrôles s'ouvrent à Enter et se referment à Échap", async () => {
+    const user = userEvent.setup();
+    resultsMock.mockReturnValue({ data: redirectPage });
+    render(<CleanupView type="redirect" />, { wrapper });
+    const ligne = screen.getByRole("row");
+    const remplacer = screen.getByRole("button", { name: "Remplacer par l'URL finale" });
+    // Au repos : la ligne est l'unique arrêt, le contrôle est hors Tab.
+    expect(ligne.getAttribute("tabindex")).toBe("0");
+    expect(remplacer.getAttribute("tabindex")).toBe("-1");
+
+    ligne.focus();
+    await user.keyboard("{Enter}");
+    expect(remplacer).toHaveFocus();
+    expect(remplacer.getAttribute("tabindex")).toBe("0");
+
+    // Échap rend la ligne, les contrôles se referment.
+    await user.keyboard("{Escape}");
+    expect(ligne).toHaveFocus();
+    expect(remplacer.getAttribute("tabindex")).toBe("-1");
+  });
+
+  // Sortir du focus (flèches vers une autre ligne, clic ailleurs) désarme
+  // aussi : l'état activé ne survit pas à la ligne.
+  it("quitter la ligne désarme ses contrôles", async () => {
+    const user = userEvent.setup();
+    resultsMock.mockReturnValue({ data: redirectPage });
+    render(<CleanupView type="redirect" />, { wrapper });
+    const ligne = screen.getByRole("row");
+    const remplacer = screen.getByRole("button", { name: "Remplacer par l'URL finale" });
+    ligne.focus();
+    await user.keyboard("{Enter}");
+    expect(remplacer.getAttribute("tabindex")).toBe("0");
+    await user.click(screen.getByRole("heading", { name: /Redirections/i }));
+    expect(remplacer.getAttribute("tabindex")).toBe("-1");
+  });
 });

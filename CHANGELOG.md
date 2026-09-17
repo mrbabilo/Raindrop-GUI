@@ -90,6 +90,15 @@ Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
   silencieux pour l'appelant, comme le veut le contrat. Et la lecture des
   flux de progression tient les fins de ligne CRLF et les données en
   plusieurs lignes que le protocole autorise.
+- **La chute du sidecar ne se tait plus.** La bannière d'état ne savait
+  dire que « pont MCP cassé » — quand le sidecar ENTIER était injoignable,
+  son propre sondage échouait et elle se taisait, précisément quand tout
+  était perdu. Un diagnostic propre lui est dédié, avec un bouton pour
+  relancer le sondage.
+- **Les vues de traitement sont navigables au clavier** sans un arrêt de
+  tabulation par contrôle : la ligne est l'arrêt, Enter y entre et tabule
+  ses actions (Restaurer, remplacer une URL, supprimer), Échap rend la
+  ligne.
 - **Un échec de chargement se dit.** La liste, les étiquettes et les vues
   de nettoyage affichaient « Rien ici » quand une requête échouait —
   « cette collection est vide » là où la vérité était « je n'ai pas pu

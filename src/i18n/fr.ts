@@ -115,6 +115,9 @@ export const fr = {
   "review.confirmL1": "Je confirme l'action sur {n} item(s)",
   "review.execute": "Exécuter",
   "review.typeDelete": "Tapez SUPPRIMER pour confirmer",
+  // Le sidecar ENTIER est injoignable : distinct du crash MCP (le sidecar
+  // vit, le pont est tombé) — ici rien ne répond, données et écritures.
+  "banner.unreachable": "Sidecar local injoignable — aucune donnée ne peut être lue",
   "banner.crashed": "Connexion Raindrop interrompue",
   "banner.restart": "Redémarrer la connexion",
   "banner.offline": "Hors-ligne — lecture du cache seule, écritures désactivées",

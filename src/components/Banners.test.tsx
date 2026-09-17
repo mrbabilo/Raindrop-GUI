@@ -82,4 +82,19 @@ describe("Banners", () => {
     expect(screen.queryByText(/Connexion Raindrop interrompue/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Hors-ligne/)).not.toBeInTheDocument();
   });
+
+  // Le grief : le sidecar ENTIER tombé laissait `useHealth` en échec, `data`
+  // undefined, et la bannière se taisait — précisément quand tout était
+  // perdu. Le cas est distinct du crash MCP (sidecar vivant, pont cassé) :
+  // pas de bouton « Redémarrer » (rien à redémarrer localement), un
+  // « Réessayer » qui relance le sondage.
+  it("sidecar entier injoignable → bannière dédiée avec Réessayer", async () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    healthMock.mockReset().mockReturnValue({ data: undefined, isError: true, refetch });
+    render(<Banners />, { wrapper });
+    expect(screen.getByRole("alert")).toHaveTextContent(/Sidecar local injoignable/);
+    expect(screen.queryByRole("button", { name: /Redémarrer/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Réessayer" }));
+    expect(refetch).toHaveBeenCalled();
+  });
 });

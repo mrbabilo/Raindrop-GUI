@@ -89,11 +89,12 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       survol (sans voler le focus ni défiler). `:focus-visible` seul, et
       l'anneau est passé en `quiet` après mesure — `sel` tenait 1,10:1
       contre un seuil de 3:1 (DESIGN.md §9).
-      **Reste, à dessein** : les vues de traitement gardent un arrêt par
-      ligne — leurs lignes portent plusieurs actions (Restaurer, choisir
-      une destination), et les sortir du parcours sans autre accès serait
-      une régression, pas un progrès. Le motif « grille ARIA » (→ entre
-      dans les contrôles d'une ligne) est la voie, le jour où ça gêne.
+      **Les vues de traitement, d'abord à dessein, sont faites depuis**
+      (2026-09-17) : motif « ligne activée » — la LIGNE est l'arrêt
+      (`role="row"`, roving de la vue), Enter/F2 y entrent et tabulent ses
+      contrôles (`ActionLigne`), Échap rend la ligne, quitter la ligne les
+      referme. Vérifié au navigateur sur « Collections vides » : 13 lignes,
+      1 arrêt, 13 contrôles hors Tab au repos.
 - [x] **Drag & drop d'un signet vers les collections** — fait le
       2026-09-17 (`state/drag.tsx`, `hooks/useDragBookmark.ts`,
       `components/FantomeDrag.tsx`). Pointer events et non le drag & drop
@@ -144,12 +145,10 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       qui l'explique, et un bouton « Réessayer » relance la requête — sans
       quoi il ne restait qu'à recharger la page. Vérifié en coupant le
       sidecar en marche : « Erreur : http 500 » au lieu de « Rien ici ».
-- [ ] **La bannière de crash ne couvre pas le sidecar mort** (constaté en
-      coupant le sidecar, 2026-09-17) : `Banners` lit `useHealth`, qui
-      échoue elle aussi — `data` est alors `undefined` et la bannière se
-      tait. Elle ne sait dire que « sidecar vivant, MCP en rade ». Les vues
-      affichent bien leur erreur, mais rien n'explique en tête que c'est
-      toute la connexion locale qui est tombée.
+- [x] **La bannière de crash ne couvrait pas le sidecar mort** — fait le
+      2026-09-17 : `isError` de `useHealth` est désormais un diagnostic
+      propre (« Sidecar local injoignable », bouton Réessayer), distinct du
+      crash MCP (sidecar vivant, pont cassé, bouton Redémarrer).
 - [x] **Lot Composer/Tags** — fait le 2026-09-17, les cinq points : garde
       `^https?://` rendue insensible à la casse (une URL collée en
       « HTTPS:// » n'était simplement jamais analysée) ; `soumettre` et le
