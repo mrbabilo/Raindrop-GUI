@@ -36,6 +36,21 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
     setEdition(false);
     setNom("");
   };
+  const renommer = () => {
+    const vise = nom.trim();
+    if (vise === "") return;
+    // Renommer vers le nom qu'elle porte déjà n'est pas un renommage : ça
+    // ferait une écriture, une invalidation et un rechargement de toute la
+    // liste pour rien. On ferme, simplement.
+    if (vise === tag.name) {
+      fermerEdition();
+      return;
+    }
+    // Un envoi suffit : deux Entrée rapides lançaient deux renommages, le
+    // second portant sur un nom qui n'existe plus.
+    if (manage.isPending) return;
+    manage.mutate({ operation: "rename", tags: [tag.name], new_name: vise }, { onSuccess: fermerEdition });
+  };
   // Le `blur` ne suffit pas à désarmer : cliquer une zone non focalisable —
   // un fond, un titre, une autre ligne — ne déplace aucun focus, et le
   // bouton restait armé. Une suppression n'a pas à attendre là, prête à
@@ -61,9 +76,7 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
           onChange={(e) => setNom(e.target.value)}
           onBlur={fermerEdition}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && nom.trim()) {
-              manage.mutate({ operation: "rename", tags: [tag.name], new_name: nom.trim() }, { onSuccess: fermerEdition });
-            }
+            if (e.key === "Enter") renommer();
             if (e.key === "Escape") fermerEdition();
           }}
         />

@@ -133,4 +133,40 @@ describe("TagsView", () => {
     expect(screen.getByText("Rien ici")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
+
+  // Renommer vers le nom déjà porté n'est pas un renommage : ça ferait une
+  // écriture, une invalidation et un rechargement de toute la liste pour rien.
+  it("renommer vers le nom identique n'écrit pas, et ferme l'édition", async () => {
+    render(<TagsView />, { wrapper });
+    await userEvent.click(screen.getAllByRole("button", { name: "Renommer" })[0]!);
+    const champ = screen.getByRole("textbox");
+    await userEvent.type(champ, "typescript");
+    sendMock.mockClear();
+    await userEvent.keyboard("{Enter}");
+    expect(sendMock).not.toHaveBeenCalled();
+    // L'édition se ferme quand même : l'utilisateur a validé, il a fini.
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  // Deux Entrée rapides lançaient deux renommages, le second portant sur un
+  // nom qui n'existe plus.
+  it("deux Entrée rapides ne renomment qu'une fois", async () => {
+    // La réponse ne vient jamais : la mutation reste « en vol ».
+    sendMock.mockImplementation(() => new Promise(() => {}));
+    render(<TagsView />, { wrapper });
+    await userEvent.click(screen.getAllByRole("button", { name: "Renommer" })[0]!);
+    await userEvent.type(screen.getByRole("textbox"), "ts");
+    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(sendMock).toHaveBeenCalledTimes(1));
+  });
+
+  it("un nom vide ou blanc n'envoie rien", async () => {
+    render(<TagsView />, { wrapper });
+    await userEvent.click(screen.getAllByRole("button", { name: "Renommer" })[0]!);
+    await userEvent.type(screen.getByRole("textbox"), "   ");
+    sendMock.mockClear();
+    await userEvent.keyboard("{Enter}");
+    expect(sendMock).not.toHaveBeenCalled();
+  });
 });

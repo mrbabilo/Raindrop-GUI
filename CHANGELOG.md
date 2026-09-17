@@ -75,6 +75,12 @@ Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
   - **Le survol explore, le clic fixe** : survoler une collection déplie
     ses sous-collections le temps qu'on y passe ; cliquer la collection ou
     son chevron les garde ouvertes, et le clic suivant les referme.
+- **Deux envois valent un.** Une double validation rapide créait deux fois
+  le même signet, ou lançait deux renommages d'étiquette dont le second
+  portait sur un nom qui n'existait plus. Renommer une étiquette vers le
+  nom qu'elle porte déjà ne déclenche plus rien non plus.
+- **Une URL collée en majuscules est analysée** comme les autres : elle ne
+  l'était pas, donc ni titre prérempli, ni alerte de doublon.
 - **Un échec de chargement se dit.** La liste, les étiquettes et les vues
   de nettoyage affichaient « Rien ici » quand une requête échouait —
   « cette collection est vide » là où la vérité était « je n'ai pas pu

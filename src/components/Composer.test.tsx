@@ -25,8 +25,11 @@ const IMPL_DEFAUT = async (_method: string, path: string) => {
 };
 
 vi.mock("../lib/api", () => ({ api: { get: vi.fn(), send: sendMock } }));
+// `enVol` simule une création en cours : c'est le seul moyen d'éprouver le
+// garde anti double envoi, qui n'existe que pendant ce laps de temps.
+const enVol = vi.hoisted(() => ({ valeur: false }));
 vi.mock("../hooks/useMutations", () => ({
-  useCreateRaindrop: () => ({ mutateAsync: (b: unknown) => sendMock("POST", "/api/raindrops", b), isPending: false }),
+  useCreateRaindrop: () => ({ mutateAsync: (b: unknown) => sendMock("POST", "/api/raindrops", b), isPending: enVol.valeur }),
   useInvalidate: () => vi.fn(),
 }));
 vi.mock("../state/appState", () => ({
@@ -45,6 +48,7 @@ async function saisir(url: string) {
 
 describe("Composer", () => {
   beforeEach(() => {
+  enVol.valeur = false;
     sendMock.mockReset();
     sendMock.mockImplementation(IMPL_DEFAUT);
     etat.view = { kind: "list", collectionId: 101, label: "Dev" };
@@ -125,5 +129,61 @@ describe("Composer", () => {
     expect(container.querySelector("[class*='app-danger'], [class*='app-accent']")).toBeNull();
     expect(screen.getByText("Déjà sauvegardé")).toHaveClass("text-app-broken");
     expect(screen.getByRole("button", { name: "Sauvegarder" })).toHaveClass("bg-app-sel");
+  });
+
+  // Une URL collée depuis une barre d'adresse ou un document peut arriver en
+  // majuscules : sans le drapeau d'insensibilité, elle n'était jamais
+  // analysée — ni titre prérempli, ni alerte de doublon.
+  it("une URL en MAJUSCULES est analysée comme les autres", async () => {
+    render(<Composer />);
+    await userEvent.type(screen.getByPlaceholderText(COLLER), "HTTPS://NOUVEAU.EXAMPLE/A");
+    await waitFor(() => expect(sendMock).toHaveBeenCalledWith("POST", "/api/parse-url", { url: "HTTPS://NOUVEAU.EXAMPLE/A" }));
+  });
+
+  // C'est une ÉCRITURE : deux Entrée rapides créaient deux bookmarks pour la
+  // même URL, et rien ne rattrape ça d'un Échap.
+  it("une création en cours bloque le second envoi", async () => {
+    // Posé AVANT le rendu : le composant lit `isPending` à ce moment-là.
+    enVol.valeur = true;
+    render(<Composer />);
+    await userEvent.type(screen.getByPlaceholderText(COLLER), URL_NEUVE);
+    sendMock.mockClear();
+    await userEvent.keyboard("{Enter}");
+    expect(sendMock).not.toHaveBeenCalledWith("POST", "/api/raindrops", expect.anything());
+  });
+
+  // Contrôle positif : hors envoi en cours, l'Entrée crée bien.
+  it("hors création en cours, l'Entrée envoie", async () => {
+    render(<Composer />);
+    await userEvent.type(screen.getByPlaceholderText(COLLER), URL_NEUVE);
+    sendMock.mockClear();
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(sendMock).toHaveBeenCalledWith("POST", "/api/raindrops", expect.objectContaining({ link: URL_NEUVE })));
+  });
+
+  // Le garde anti-course `seq` n'avait aucun test : une réponse lente sur une
+  // URL abandonnée préremplissait le titre de l'ANCIENNE URL.
+  it("la réponse d'une URL dépassée par la saisie est écartée", async () => {
+    const lentes: Array<(v: unknown) => void> = [];
+    sendMock.mockImplementation(async (_m: string, path: string, body?: { url?: string }) => {
+      if (path === "/api/parse-url" && body?.url?.includes("lente"))
+        return new Promise((resolve) => lentes.push(() => resolve({ title: "TITRE PÉRIMÉ" })));
+      if (path === "/api/parse-url") return { title: "Titre frais" };
+      if (path === "/api/check-urls") return { result: true, ids: [], duplicates: [] };
+      return {};
+    });
+    render(<Composer />);
+    const champ = screen.getByPlaceholderText(COLLER);
+    await userEvent.type(champ, "https://lente.example/a");
+    await waitFor(() => expect(lentes.length).toBeGreaterThan(0));
+    // On change d'URL AVANT que la première réponde.
+    await userEvent.clear(champ);
+    await userEvent.type(champ, "https://fraiche.example/b");
+    await waitFor(() => expect(screen.getByDisplayValue("Titre frais")).toBeInTheDocument());
+    // La réponse périmée arrive enfin : elle ne doit rien écraser.
+    lentes.forEach((r) => r(undefined));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByDisplayValue("TITRE PÉRIMÉ")).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue("Titre frais")).toBeInTheDocument();
   });
 });

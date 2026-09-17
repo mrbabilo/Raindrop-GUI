@@ -150,10 +150,14 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       tait. Elle ne sait dire que « sidecar vivant, MCP en rade ». Les vues
       affichent bien leur erreur, mais rien n'explique en tête que c'est
       toute la connexion locale qui est tombée.
-- [ ] **Lot Composer/Tags** : garde `^https?://` insensible à la casse ;
-      `soumettre` sans garde `isPending` ; test du garde anti-course `seq` ;
-      double-Entrée sur le renommage de tag ; rename no-op vers nom
-      identique.
+- [x] **Lot Composer/Tags** — fait le 2026-09-17, les cinq points : garde
+      `^https?://` rendue insensible à la casse (une URL collée en
+      « HTTPS:// » n'était simplement jamais analysée) ; `soumettre` et le
+      renommage gardés par `isPending` — deux Entrée rapides créaient deux
+      bookmarks, ou lançaient deux renommages dont le second portait sur un
+      nom disparu ; renommage vers le nom identique traité en no-op ; et le
+      garde anti-course `seq`, qui n'avait aucun test, en a un qui retient
+      une réponse lente jusqu'après le changement d'URL.
 - [ ] **Hygiène tests** : useMutations sans tests unitaires (7 hooks/9) ;
       invalidation T8-5 non assertée ; untagged sans test ; « Tout
       désélectionner » non testé ; stubs URL ReviewPage.test sans

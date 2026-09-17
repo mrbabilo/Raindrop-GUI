@@ -48,7 +48,10 @@ export function Composer() {
   // le onBlur du plan n'aurait rien déclenché tant que le champ garde le
   // focus (et aurait fait une requête par frappe s'il valait onChange).
   useEffect(() => {
-    if (!/^https?:\/\//.test(url)) {
+    // Insensible à la casse : une URL collée depuis une barre d'adresse ou
+    // un document peut arriver en « HTTPS:// ». Sans le drapeau, elle n'était
+    // simplement jamais analysée — ni titre, ni alerte de doublon.
+    if (!/^https?:\/\//i.test(url)) {
       seq.current++; // plus une URL : toute réponse en vol est périmée
       setTitre(null);
       setDoublon(null);
@@ -60,6 +63,10 @@ export function Composer() {
 
   const soumettre = () => {
     if (!url) return;
+    // Un envoi suffit : sans ce garde, deux Entrée rapides ou un double clic
+    // créent DEUX bookmarks pour la même URL — et c'est une écriture, elle ne
+    // se rattrape pas d'un Échap.
+    if (create.isPending) return;
     setErreur(null);
     void create
       .mutateAsync({ link: url, ...(titre ? { title: titre } : {}), collection_id: collectionId })
