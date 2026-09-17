@@ -1,5 +1,6 @@
 mod jeton;
 mod node;
+mod verrou;
 
 pub fn run() {
     tauri::Builder::default()
