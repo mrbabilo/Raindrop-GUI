@@ -236,8 +236,13 @@ disparaît au blur si aucune n'est active.
 - **Ordonnées par fréquence décroissante dans les items chargés de la vue
   courante** — pas dans la bibliothèque entière : aucun compteur par nature
   n'existe côté API, et un plein scan est exclu (spec §3.4). L'ordre reflète
-  donc ce que l'utilisateur a sous les yeux, et retombe sur l'ordre du tableau
-  §2.1 quand la liste est vide.
+  donc ce que l'utilisateur a sous les yeux ; à fréquence égale, il retombe
+  sur celui du tableau §2.1.
+- **Une nature absente de la vue n'a pas de puce** (§9, « masqué si nul ») :
+  elle ne filtrerait rien, et la cliquer viderait la liste. Une vue vide ne
+  montre donc aucune puce. Seule exception, la puce **active** : elle reste
+  posée même retombée à zéro, sinon tomber à zéro résultat ferait disparaître
+  la seule commande capable de retirer le filtre.
 - Cliquer une puce pose le filtre de nature ; la recliquer le retire. Une puce
   active prend la surface `sel`, **jamais une teinte**.
 - Hauteur 26 px, rayon 7 px, fond `work`, texte `quiet` — ce sont des commandes,

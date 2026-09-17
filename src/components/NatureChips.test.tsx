@@ -30,13 +30,21 @@ vi.mock("../hooks/useRaindrops", () => ({
 // la prop `focused`, sans dupliquer TopBar.tsx.
 function Harness({ initialFocused = false }: { initialFocused?: boolean }) {
   const [focused, setFocused] = useState(initialFocused);
+  // « Recharger » force un rendu après une mutation de pagesRef : c'est ainsi
+  // qu'un test simule une vue dont le contenu change sous une puce active.
+  const [, forcer] = useState(0);
   return (
     <>
       <input aria-label="Rechercher…" onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+      <button type="button" onClick={() => forcer((n) => n + 1)}>Recharger</button>
       <NatureChips focused={focused} />
     </>
   );
 }
+
+// Les puces, sans le bouton « Recharger » du harnais.
+const puces = () => screen.getAllByRole("button").filter((b) => b.textContent !== "Recharger");
+const nomsPuces = () => puces().map((b) => b.textContent);
 
 const Spy = () => {
   const { view } = useAppState();
@@ -53,27 +61,47 @@ const renderChips = (initialFocused = false) =>
 
 describe("NatureChips", () => {
   it("masquées au repos, visibles au focus du champ de recherche", () => {
-    pagesRef.items = [];
+    pagesRef.items = [raindrop({ type: "link" })];
     renderChips();
-    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(puces()).toHaveLength(0);
     fireEvent.focus(screen.getByLabelText("Rechercher…"));
-    expect(screen.getAllByRole("button")).toHaveLength(6);
     expect(screen.getByRole("button", { name: "Liens" })).toBeInTheDocument();
+  });
+
+  // DESIGN.md §9 « masqué si nul » l'emporte sur l'ancien repli de §11 : une
+  // puce qui ne filtre rien est du bruit — cliquer dessus viderait la liste.
+  it("seules les natures présentes dans la vue sont posées (§9)", () => {
+    pagesRef.items = [raindrop({ type: "video" }), raindrop({ type: "article" })];
+    renderChips(true);
+    expect(nomsPuces().sort()).toEqual(["Articles", "Vidéos"]);
+    expect(screen.queryByRole("button", { name: "Documents" })).not.toBeInTheDocument();
+  });
+
+  // Sans cette exception, poser un filtre puis tomber à zéro résultat
+  // ferait disparaître la seule commande capable de le retirer.
+  it("une puce active reste posée même retombée à zéro", async () => {
+    pagesRef.items = [raindrop({ type: "video" }), raindrop({ type: "article" })];
+    renderChips(true);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Vidéos" }));
+    pagesRef.items = [];
+    await user.click(screen.getByRole("button", { name: "Recharger" }));
+    expect(screen.getByRole("button", { name: "Vidéos" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("button", { name: "Articles" })).not.toBeInTheDocument();
   });
 
   it("ordonnées par fréquence décroissante des items chargés dans la vue", () => {
     pagesRef.items = [raindrop({ type: "video" }), raindrop({ type: "video" }), raindrop({ type: "video" }), raindrop({ type: "article" })];
     renderChips(true);
-    const names = screen.getAllByRole("button").map((b) => b.textContent);
+    const names = nomsPuces();
     expect(names.indexOf("Vidéos")).toBeLessThan(names.indexOf("Articles"));
     expect(names[0]).toBe("Vidéos");
   });
 
-  it("liste vide : retombe sur l'ordre du tableau §2.1 (Liens en premier)", () => {
+  it("liste vide : aucune puce, pas même au focus (§9)", () => {
     pagesRef.items = [];
     renderChips(true);
-    const names = screen.getAllByRole("button").map((b) => b.textContent);
-    expect(names[0]).toBe("Liens");
+    expect(puces()).toHaveLength(0);
   });
 
   it("R6bP-1 : le comptage reste sur la vue non filtrée après activation d'une nature", async () => {
@@ -94,7 +122,7 @@ describe("NatureChips", () => {
     renderChips(true);
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Vidéos" }));
-    const names = screen.getAllByRole("button").map((b) => b.textContent);
+    const names = nomsPuces();
     expect(names[1]).toBe("Articles");
     expect(names[2]).toBe("Images");
   });

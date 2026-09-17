@@ -1,15 +1,18 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { raindrop } from "../test/fixtures";
 import { TopBar } from "./TopBar";
 import { AppStateProvider, useAppState } from "../state/appState";
 
 // TopBar rend désormais NatureChips (Task 6b), qui appelle useRaindrops —
 // mocké ici comme dans ListPane.test.tsx pour ne dépendre d'aucun
 // QueryClientProvider ni réseau : ce fichier teste TopBar, pas le comptage
-// par fréquence (couvert par NatureChips.test.tsx).
+// par fréquence (couvert par NatureChips.test.tsx). La page porte un article :
+// depuis §9 « masqué si nul », une nature absente de la vue n'a pas de puce —
+// une page vide ne rendrait plus aucune puce à cliquer.
 vi.mock("../hooks/useRaindrops", () => ({
-  useRaindrops: () => ({ data: { pages: [{ items: [], count: 0, page: 0, perPage: 50 }] } }),
+  useRaindrops: () => ({ data: { pages: [{ items: [raindrop({ type: "article" })], count: 1, page: 0, perPage: 50 }] } }),
 }));
 
 const Spy = () => {

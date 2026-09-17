@@ -23,9 +23,15 @@ export function NatureChips({ focused }: { focused: boolean }) {
   const items = query.data?.pages.flatMap((p) => p.items) ?? [];
   const counts = new Map<string, number>();
   for (const item of items) counts.set(item.type, (counts.get(item.type) ?? 0) + 1);
-  // Tri stable : à fréquence égale (notamment 0 partout, liste vide),
-  // l'ordre retombe sur le tableau DESIGN.md §2.1 — Liens en premier.
-  const ordered = [...NATURE_TYPES].sort((a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0));
+  // DESIGN.md §9 « masqué si nul » : une nature absente de la vue n'a pas de
+  // puce — elle ne filtrerait rien, cliquer dessus viderait la liste. Seule
+  // exception, la puce ACTIVE : sans elle, tomber à zéro résultat ferait
+  // disparaître la seule commande capable de retirer le filtre.
+  // Tri stable : à fréquence égale, l'ordre retombe sur le tableau §2.1.
+  const ordered = [...NATURE_TYPES]
+    .filter((type) => (counts.get(type) ?? 0) > 0 || media === type)
+    .sort((a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0));
+  if (ordered.length === 0) return null;
 
   const toggle = (type: NatureType) => patchList({ media: media === type ? undefined : type });
 
