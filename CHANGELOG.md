@@ -54,6 +54,10 @@ Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
   annulables) et six vues de traitement — liens morts, redirections,
   doublons, non-taggés, collections vides, corbeille.
 - **Vue des étiquettes** : renommer, fusionner, supprimer.
+- **Navigation au clavier** dans la barre latérale et la liste : chaque
+  zone ne prend qu'un arrêt de tabulation, les flèches y circulent, →/←
+  déplient une collection, Entrée ouvre la fiche, Échap rend la main. Le
+  focus clavier se voit — un anneau —, le clic ne montre rien.
 - **Vue d'une collection parente** : cliquer une collection qui a des
   sous-collections montre ses signets directs, puis une section par
   sous-collection — chacune avec son intertitre, son compte exact et un

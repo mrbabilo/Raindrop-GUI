@@ -74,17 +74,19 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       ne charger une section qu'à son entrée dans le champ de vision.
       Reste non fait : les sous-collections de niveau 2+ (la sidebar
       comme la vue ne connaissent qu'un niveau d'enfants).
-- [ ] **Navigation clavier fluide** — directive transversale du
-      2026-09-17 : roving tabindex (Tab entre dans la liste, ↑↓ prennent
-      le relais — jamais 300 stops de Tab) ; **→/←** déplient/replient un
-      parent dans la sidebar ; Entrée navigue/ouvre le détail ; **Échap
-      remonte d'un niveau et rend le focus** ; ligne active avec suivi du
-      scroll dans le virtualizer (`scrollToIndex`) ; `:focus-visible`
-      uniquement — **ajouter à DESIGN.md §9** : « le focus clavier est un
-      anneau `--color-app-sel`, le clic ne montre rien » ; après une
-      action, le focus passe à la ligne suivante ; la ligne active suit
-      aussi le survol souris (un seul état de pointeur). La palette ⌘K
-      (T11) sert déjà de référence.
+- [~] **Navigation clavier fluide** — barre latérale et liste faites le
+      2026-09-17 (`hooks/useRovingFocus.ts`) : une zone = UN arrêt de
+      tabulation, ↑↓ et Début/Fin circulent, →/← déplient un parent depuis
+      sa ligne, Entrée ouvre la fiche, Échap rend le focus. L'index actif
+      de la liste vit dans l'état et jamais le focus — le virtualiseur
+      démonte la ligne dès qu'elle sort du champ — et il suit le focus
+      réel, sinon la première flèche rejoue l'entrée au lieu d'avancer.
+      `:focus-visible` et la règle de DESIGN.md §9 sont posés.
+      **Reste à faire** : la mosaïque (grille, donc ↑↓←→ en deux
+      dimensions) ; les vues de traitement, la vue collection et la Revue,
+      qui gardent un arrêt par ligne ; « après une action, le focus passe
+      à la ligne suivante » ; « la ligne active suit aussi le survol
+      souris ».
 - [x] **Drag & drop d'un signet vers les collections** — fait le
       2026-09-17 (`state/drag.tsx`, `hooks/useDragBookmark.ts`,
       `components/FantomeDrag.tsx`). Pointer events et non le drag & drop

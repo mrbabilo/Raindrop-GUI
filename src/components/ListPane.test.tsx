@@ -92,4 +92,31 @@ describe("ListPane", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: "Sélectionner Second" }));
     expect(screen.getByRole("checkbox", { name: "Sélectionner Second" })).toBeChecked();
   });
+
+  // Le grief : une ligne par arrêt de tabulation, soit 12 000 sur la
+  // bibliothèque réelle. La liste n'en prend qu'un.
+  it("la liste ne prend qu'un seul arrêt de tabulation", () => {
+    renderList();
+    const enveloppes = [...document.querySelectorAll<HTMLElement>("[data-index]")];
+    expect(enveloppes.length).toBeGreaterThan(1);
+    expect(enveloppes.filter((e) => e.tabIndex === 0)).toHaveLength(1);
+  });
+
+  // L'index actif vit dans l'état, JAMAIS le focus : le virtualiseur démonte
+  // la ligne dès qu'elle sort du champ, et le focus tomberait sur `body`.
+  it("les flèches déplacent l'arrêt de ligne en ligne", async () => {
+    renderList();
+    const premiere = document.querySelector<HTMLElement>('[data-index="0"]')!;
+    premiere.focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(document.querySelector<HTMLElement>('[data-index="1"]')!.tabIndex).toBe(0);
+    expect(premiere.tabIndex).toBe(-1);
+  });
+
+  it("Entrée ouvre la fiche de la ligne active", async () => {
+    renderList();
+    document.querySelector<HTMLElement>('[data-index="0"]')!.focus();
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+    expect(screen.getByTestId("detail-id").textContent).not.toBe("");
+  });
 });
