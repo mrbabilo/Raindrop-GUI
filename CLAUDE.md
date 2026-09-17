@@ -132,6 +132,68 @@ les décisions structurantes.
   lockfile `sidecar.json`, `analysis.json` — tout vit dans app-data ou le
   trousseau, hors du dépôt.
 
+## Traps Tauri — plan 3 (2026-09-17)
+
+- **Une commande Tauri `pub fn` (non `async`) tourne sur le thread
+  principal** — prouvé dans les sources : `tauri-macros` (`body_blocking`)
+  l'appelle en ligne, et le délégué wry est invoqué par WebKit sur le main
+  thread, sans relais. Un appel bloquant gèle la fenêtre. Toujours
+  `async fn` + `tauri::async_runtime::spawn_blocking`, et `State<'_, T>`
+  n'étant pas `Send`, récupérer l'état via `AppHandle` **dans** la closure.
+- **`resource_dir()` rend `UnknownPath` hors LaunchServices** (lancement
+  direct du binaire depuis un Terminal) : repli sur la dérivation depuis
+  `std::env::current_exe()` (`Contents/MacOS/<bin>` →
+  `Contents/Resources/<r>`), jamais de `.expect()`.
+- **SIGTERM ne passe pas par `RunEvent::Exit`** — tao ne pose pas de
+  handler : le processus meurt sans exécuter l'arrêt (sidecar orphelin).
+  Handler `libc::signal` réduit à un store atomique (NI verrou NI
+  allocation NI panique dedans), fil observateur qui rejoue le même arrêt
+  que ⌘Q. ⌘Q, lui, passe bien par `RunEvent::Exit`.
+- **`std::process::Child` n'a pas de `Drop`** : remplacer un enfant sans
+  `arreter()` + `wait()` fabrique un zombie que `kill -0` voit vivant.
+- **Le webview `tauri://localhost` PEUT joindre `http://127.0.0.1:<port>`**
+  (mesuré, 200) — mais un `tauri dev` ordinaire n'exerce JAMAIS ce chemin :
+  il sert le front depuis Vite (`http://localhost:5173`). Pour l'origine
+  réelle en dev : retirer `devUrl` du conf **ET** `--no-dev-server` — les
+  deux, l'un sans l'autre ne suffit pas.
+- **Une app lancée du Finder/launchd n'a pas `node` dans son PATH** (mesuré :
+  `/usr/gnu/bin:/usr/local/bin:/bin:/usr/bin:.` contre
+  `/opt/homebrew/bin/node`) — sonder le PATH hérité puis les candidats
+  connus. Et `USER` peut être absent → repli sur le nom du dossier HOME.
+- **`window.__TAURI__` n'existe pas par défaut** (Tauri 2 :
+  `withGlobalTauri: false`) — soit l'activer temporairement pour une sonde,
+  soit importer de `@tauri-apps/api`.
+- **`beforeDevCommand` voit `TAURI_ENV_PLATFORM`** : couper le proxy Vite
+  sous cette variable (`vite.config.ts`), sinon `tauri dev` se bloque 10 s
+  sur un lockfile que le shell Rust n'a pas encore écrit.
+- **Tarballs nodejs.org : le préfixe des membres INCLUT la plateforme**
+  (`node-v22.23.0-darwin-arm64/bin/node`, pas `node-v22.23.0/…`) et bsdtar
+  exige **`-C <dir>` AVANT le membre** — après, il lit `-C` comme un nom de
+  membre. Vérifier SHASUMS256 **avant** extraction (`sha2`, pas `shasum`
+  qui dépend du CLT).
+- **Cycle de vie sidecar sous Tauri** : un sidecar survivant est TERMINÉ,
+  pas réutilisé (le token local régénéré le ferait répondre 401 partout) ;
+  effacer le lockfile avant `attendre_port` (sinon le port du mort est lu
+  comme neuf) ; attendre `mcp: "connected"` (sonde `/api/health`, curl
+  système, token en header — jamais en URL/argv de log) avant de rendre
+  « prêt » au webview.
+- **Le binaire du bundle porte le nom du crate** (`raindrop-gui`), pas le
+  `productName` ; les ressources atterrissent sous
+  `Contents/Resources/ressources/` (conf : `bundle.resources:
+  ["ressources/**/*"]`, assemblées par `scripts/preparer-ressources.sh`).
+- **Signature ad-hoc** : Gatekeeper met en quarantaine au premier lancement
+  (`xattr -dr com.apple.quarantine`), et macOS redemande l'accès trousseau
+  à CHAQUE rebuild (nouvelle signature) — le dialogue peut surgir derrière
+  la fenêtre. Un test réel du trousseau doit sauver le token en mémoire
+  avec restauration par `trap`, et l'absence de token rend `Ok(None)`
+  (état normal du premier lancement), jamais une erreur.
+- **Cliquets et écrans** : le cliquet de `scripts/build_app.py` exclut les
+  tests front du compte (dette : `raindrops.test.ts` 430 lignes, à
+  découper — entrée ROADMAP) ; tout écran d'amorçage doit avoir une ISSUE
+  (« Réessayer » passe par une commande qui REJOUE la séquence — relire
+  l'état mémorisé rendrait la même panne à jamais ; « Saisir un autre
+  jeton » sinon un jeton refusé enferme, il est déjà au trousseau).
+
 ## Git
 
 Travailler sur `main`. **Pousser uniquement quand l'utilisateur le demande.**
