@@ -39,6 +39,10 @@
      retombaient à ΔEok 0,013, sous le seuil. Mesuré dans le navigateur, le
      couple (0,90 ; 0,075) donne le meilleur écart — 0,031 — et le texte y
      garde 12,5:1. */
+  /* Où commence la pastille d'une racine, mesuré dans l'application : le
+     chevron (19 px) + le gap (8) + le padding du bouton (8). La bande d'une
+     sous-collection part de là. */
+  --nav-retrait: 35px;
   --app-nav-l: 0.9;
   --app-nav-enfant-l: 0.945;
   --app-nav-sel-l: 0.82;
@@ -125,6 +129,19 @@ body {
   color: oklch(var(--app-icon-l) calc(var(--app-icon-c) * var(--sat, 1)) var(--h));
 }
 
+/* Variante de navigation : la barre a de la place là où la ligne de liste
+   n'en a pas (§8 la tient à 36 px pour ~22 lignes visibles). La pastille y
+   gagne 4 px, et l'icône qu'elle porte 3.
+   Son fond reste la surface `work`, NON teintée : posée sur une bande qui
+   porte déjà la couleur de la famille, une pastille de la même teinte ne se
+   détachait pas. Le dessin du dossier, lui, garde la teinte — c'est par lui
+   que le lien avec la famille se lit. */
+.coll-icon-nav {
+  width: 22px;
+  height: 22px;
+  background: var(--color-app-panel);
+}
+
 /* Lavis thématique sur une surface plus grande qu'une icône — la vignette de
    la mosaïque, qui « reprend la signalétique de sa collection » (§4). Mêmes
    jetons dérivés que .coll-icon (§6), sans en imposer la taille de 18 px :
@@ -159,13 +176,21 @@ body {
   background: oklch(var(--app-nav-l) calc(var(--app-nav-c) * var(--sat, 1)) var(--h));
 }
 
+/* La bande d'une sous-collection démarre SOUS la pastille de sa mère : le
+   décrochement dit le rang avant même qu'on lise le titre. Sa valeur suit la
+   gouttière du chevron plus le padding — voir --nav-retrait. */
+.nav-ligne[data-niveau="1"] {
+  margin-left: var(--nav-retrait);
+}
+
 /* Le survol ENTOURE, il ne recolore pas : le fond appartient au lavis de la
    collection, l'état passe par le trait. La bordure est posée en `outline`
    pour ne rien pousser — une bordure réelle décalerait la ligne d'un pixel
    à chaque passage du pointeur. Elle prend la teinte de la collection, plus
    soutenue que son lavis. */
 /* Rang 1 : le lavis s'éclaircit (s'assombrit en thème sombre) vers le fond
-   de l'application. La teinte reste celle de la famille. */
+   de l'application. La teinte reste celle de la famille, seule l'intensité
+   dit le rang — avec le décrochement posé plus haut. */
 .nav-ligne[data-niveau="1"] {
   background: oklch(var(--app-nav-enfant-l) calc(var(--app-nav-c) * var(--sat, 1)) var(--h));
 }

@@ -91,7 +91,7 @@ function Dossier() {
 // famille se lit sans avoir lu les titres. Absent (arbre pas encore chargé,
 // collection inconnue) : gris, jamais un repli coloré.
 export function CarreCollection({
-  collectionId, titre, teinte: style, cover,
+  collectionId, titre, teinte: style, cover, taille = "liste",
 }: {
   collectionId: number;
   titre?: string;
@@ -99,6 +99,9 @@ export function CarreCollection({
   teinte?: CSSProperties;
   /** Icône Raindrop, quand la collection en a une. */
   cover?: string | null;
+  /** « nav » : 22 px au lieu de 18 — la barre a la place que la ligne de
+   *  liste n'a pas (§8 la tient à 36 px pour ~22 lignes visibles). */
+  taille?: "liste" | "nav";
 }) {
   // « Jamais une case vide » vaut aussi pour une icône qui ne se charge PAS :
   // `cover` est une vignette distante, et une image morte laisserait un trou
@@ -106,7 +109,7 @@ export function CarreCollection({
   const [image, setImage] = useState(true);
   return (
     <span
-      className="coll-icon"
+      className={"coll-icon" + (taille === "nav" ? " coll-icon-nav" : "")}
       style={style ?? variablesTeinte(titre)}
       title={titre}
       data-testid={`coll-${collectionId}`}
@@ -116,7 +119,12 @@ export function CarreCollection({
         // ne la remplace pas. À pleine taille elle masquait le fond, et les
         // collections qui ont une icône perdaient toute couleur (§4 :
         // « l'icône vient de Raindrop, AVEC sa couleur dominante »).
-        <img src={cover} alt="" className="h-[13px] w-[13px] object-contain" onError={() => setImage(false)} />
+        <img
+          src={cover}
+          alt=""
+          className={(taille === "nav" ? "h-4 w-4" : "h-[13px] w-[13px]") + " object-contain"}
+          onError={() => setImage(false)}
+        />
       ) : (
         <Dossier />
       )}

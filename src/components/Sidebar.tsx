@@ -34,7 +34,7 @@ const cibleActive = " outline outline-[2.5px] outline-app-ink";
 // celle de sa racine, la thématique du titre) : `teinteCollection` la résout,
 // l'arbre entier étant ici sous la main.
 const Signe = ({ arbre, c }: { arbre: Collection[]; c: Collection }) => (
-  <CarreCollection collectionId={c.id} titre={c.title} teinte={teinteCollection(arbre, c.id)} cover={c.cover} />
+  <CarreCollection collectionId={c.id} titre={c.title} teinte={teinteCollection(arbre, c.id)} cover={c.cover} taille="nav" />
 );
 
 const Compteur = ({ n }: { n: number }) =>
@@ -161,13 +161,12 @@ export function Sidebar() {
                         data-courante={vueCourante === ch.id}
                         style={teinteCollection(arbre, ch.id)}
                       >
-                      {/* DESIGN.md §8 : retrait de 14 px PAR NIVEAU — mais
-                          mesuré depuis le contenu du PARENT, pas depuis le
-                          bord. Le chevron pousse celui-ci à 35 px (19 de
-                          gouttière + 8 de gap + 8 de padding) ; l'ancien
-                          22 px plaçait donc l'enfant 13 px À GAUCHE de son
-                          parent, et la hiérarchie se lisait à l'envers. */}
-                      <button data-nav className={itemColl} {...accueil(ch.id)} style={{ paddingLeft: "49px" }} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
+                      {/* La BANDE démarre déjà sous la pastille de la mère
+                          (`--nav-retrait`) : le contenu n'a plus qu'à
+                          reprendre le padding ordinaire. DESIGN.md §8 — le
+                          retrait de 14 px par niveau est désormais porté par
+                          le décrochement de la bande, non par un padding. */}
+                      <button data-nav className={itemColl} {...accueil(ch.id)} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
                         <Signe arbre={arbre} c={ch} />
                         <span className="truncate">{ch.title}</span>
                         <Compteur n={ch.count} />

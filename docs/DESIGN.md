@@ -124,12 +124,17 @@ ne se lisait plus. Repérer une famille d'un coup d'œil vaut mieux que
 restituer 56 couleurs individuelles.
 
 **La hiérarchie ne passe donc pas par la teinte, mais par l'intensité et le
-retrait.** Une descendante tire son lavis vers le fond de l'application (0,975
-en clair, 0,25 en sombre, contre 0,95 et 0,32 pour sa racine), et se pose
-**14 px à droite du contenu de sa racine** — mesuré depuis ce contenu et non
-depuis le bord : le chevron pousse la racine à 35 px, et un retrait de 22 px
-plaçait l'enfant à gauche d'elle, hiérarchie inversée. Le titre d'une racine
-porte enfin la graisse : c'est elle qui nomme la famille.
+décrochement.** Une descendante tire son lavis vers le fond de l'application,
+et **sa bande démarre sous la pastille de sa mère** (`--nav-retrait`) : le
+décrochement dit le rang avant même qu'on lise le titre. Le titre d'une racine
+porte enfin la graisse — c'est elle qui nomme la famille.
+
+Dans la barre, la pastille mesure 22 px et son fond reste la surface `work`,
+**non teintée** : posée sur une bande qui porte déjà la couleur de la famille,
+une pastille de la même teinte ne se détachait pas. C'est le dessin qu'elle
+contient qui garde la teinte. Les bandes sont franchement arrondies (rayon 9)
+et séparées de 2 px : sans cet air, elles se touchent et l'arrondi ne se voit
+qu'aux extrémités d'un groupe.
 
 Le **pastel n'est pas un traitement** : `.coll-icon` peint
 `oklch(var(--app-wash-l) var(--app-wash-c) var(--h))`, dont la clarté et le

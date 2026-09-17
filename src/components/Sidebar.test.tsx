@@ -87,19 +87,19 @@ describe("Sidebar", () => {
     });
   });
 
-  // DESIGN.md §8 : « retrait 14 px par niveau » — mesuré depuis le contenu du
-  // PARENT, pas depuis le bord de la barre. Le chevron pousse le parent à
-  // 35 px (19 de gouttière + 8 de gap + 8 de padding) : l'enfant se pose donc
-  // à 49. Mesuré au navigateur, l'ancien 22 px le plaçait 13 px À GAUCHE de
-  // son parent, et la hiérarchie se lisait à l'envers.
-  it("retrait d'arbre : l'enfant est 14 px à DROITE du contenu de son parent (§8)", async () => {
+  // Le retrait d'arbre est porté par la BANDE, qui démarre sous la pastille
+  // de la mère — le décrochement dit le rang avant qu'on lise le titre. Le
+  // contenu, lui, reprend le padding ordinaire : un padding de retrait EN
+  // PLUS du décrochement doublerait l'indentation.
+  it("la bande d'une sous-collection décroche, son contenu non", async () => {
     renderSidebar();
     await userEvent.hover(screen.getByText("Dev"));
     const enfant = (await screen.findByText("Rust")).closest("button")!;
-    expect(enfant).toHaveStyle({ paddingLeft: "49px" });
-    // Le parent, racine, ne porte aucun retrait supplémentaire.
-    const racine = screen.getByText("Dev").closest("button")!;
-    expect(racine).not.toHaveStyle({ paddingLeft: "49px" });
+    expect(enfant.getAttribute("style") ?? "").not.toContain("padding-left");
+    const bande = screen.getByText("Rust").closest(".nav-ligne")!;
+    expect(bande.getAttribute("data-niveau")).toBe("1");
+    // La racine, elle, ne décroche pas.
+    expect(screen.getByText("Dev").closest(".nav-ligne")!.getAttribute("data-niveau")).toBe("0");
   });
 
   // DESIGN.md §9 « masqué si nul » : un compteur à 0 ne s'affiche pas — le
