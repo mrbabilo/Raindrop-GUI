@@ -97,6 +97,7 @@ Ces points sont **contraignants** pour l'implémentation :
 
 1. **MCP épinglé** : `@kud/mcp-raindrop-io` est une dépendance versionnée (`1.3.1`), spawn direct du JS. Pas de réseau requis au lancement, pas de dérive de version.
 2. **Prérequis Node** : le sidecar et le serveur MCP nécessitent **Node ≥ 20** présent dans le PATH. L'app vérifie sa présence au démarrage et affiche une erreur claire le cas échéant. (La compilation du sidecar en binaire autonome — Node SEA ou Bun — est repoussée en Phase 2.)
+   - **Amendement du 2026-09-17 (décision utilisateur)** : au premier lancement, si Node est absent ou trop vieux, l'app **propose d'installer un runtime Node géré** — tarball officiel nodejs.org, version épinglée, somme SHASUMS256 vérifiée, installé dans le dossier de données de l'app (aucun droit administrateur). Le runtime géré, une fois présent, est préféré au PATH. Les instructions manuelles restent le repli (hors-ligne, refus de l'installation).
 3. **Abstraction de secours** : le front ne dépend que de l'API REST locale ; chaque tool est isolé derrière une fonction typée avec **timeout par appel**. Si le package MCP devient un blocage, chaque endpoint peut être rebranché sur des appels REST directs à Raindrop **sans toucher au front**.
 4. **Gros volumes** : UX recherche-d'abord. Pas de full scan côté front. Vue par défaut = page courante + infinite scroll (50 items/requête, maximum de l'API Raindrop). L'analyse de nettoyage (doublons, liens morts, redirections) est **calculée localement par l'app** (voir §5.1), pas par Raindrop ; seul le filtre trivial `untagged` passe par `search_raindrops`.
 5. **Bulk** : privilégier `bulk_raindrops` (1 appel = N bookmarks) plutôt que N appels unitaires ; les boucles nécessaires passent par des jobs SSE avec progression, jamais bloquants pour l'UI.
@@ -216,7 +217,7 @@ Note : `PATCH /api/raindrops/:id {url}` → REST direct (`update_raindrop` v1.3.
 | Crash subprocess MCP | Bannière + « Redémarrer la connexion » ; retry auto ×3 back-off exponentiel ; erreurs `MCP_CRASHED` |
 | Rate limit (429) | File d'attente + throttle sidecar, back-off, progression visible |
 | Hors-ligne | Bannière ; lecture du cache TanStack Query maintenue ; écritures refusées proprement |
-| Node absent du PATH | Écran de diagnostic au lancement avec instructions |
+| Node absent du PATH | Écran d'installation : bouton principal « Installer Node » (runtime géré, progression visible), instructions manuelles en repli — amendé le 2026-09-17 |
 | Port/lockfile corrompu | Suppression du lockfile, nouveau bind, log d'incident |
 
 Logs structurés (JSON) dans `~/Library/Application Support/Raindrop-GUI/logs/`, rotation simple (7 jours).
