@@ -75,7 +75,10 @@ export function SectionCollection({
       ))}
       {/* §9 « masqué si nul » : rien de plus à voir, pas de commande. */}
       {total > items.length && (
-        <button type="button" className="w-full px-3 py-1 text-left text-xs text-app-muted hover:bg-app-hover" onClick={onVoirTout}>
+        // `data-nav` : « Voir les N » est dans le flux des flèches, à sa
+        // place — au bas de sa section. Laissé dehors, il gardait son propre
+        // arrêt de tabulation, et huit sections en faisaient huit.
+        <button type="button" data-nav className="w-full px-3 py-1 text-left text-xs text-app-muted hover:bg-app-hover" onClick={onVoirTout}>
           {t("collection.seeAll", { n: total })}
         </button>
       )}

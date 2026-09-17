@@ -82,7 +82,7 @@ export function CollectionView() {
           />
         ))}
         {totalDirects > itemsDirects.length && (
-          <button type="button" className="w-full px-3 py-1 text-left text-xs text-app-muted hover:bg-app-hover" onClick={() => ouvrirListe(parent.id, parent.title)}>
+          <button type="button" data-nav className="w-full px-3 py-1 text-left text-xs text-app-muted hover:bg-app-hover" onClick={() => ouvrirListe(parent.id, parent.title)}>
             {t("collection.seeAll", { n: totalDirects })}
           </button>
         )}

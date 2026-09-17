@@ -142,5 +142,9 @@ describe("CollectionView", () => {
     const focalisables = [...document.querySelectorAll<HTMLElement>("main [data-nav]")];
     expect(focalisables.length).toBeGreaterThan(3);
     expect(focalisables.filter((e) => e.tabIndex === 0)).toHaveLength(1);
+    // Mesuré au navigateur : les boutons « Voir les N », laissés hors du
+    // parcours, gardaient chacun leur arrêt — huit sections, huit arrêts.
+    const tous = [...document.querySelectorAll<HTMLElement>("main *")].filter((e) => e.tabIndex === 0);
+    expect(tous).toHaveLength(1);
   });
 });
