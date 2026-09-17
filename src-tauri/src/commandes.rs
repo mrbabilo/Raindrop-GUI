@@ -11,11 +11,15 @@ use std::time::Duration;
 use tauri::{AppHandle, Manager};
 
 use crate::etat_connexion::{verdict_en_etat, Etat, EtatConnexion};
-use crate::{node, sidecar, trousseau, verrou};
+use crate::{node, sidecar, sonde_mcp, trousseau, verrou};
 
 /// Le sidecar a jusque-là pour publier son port. Large : au premier
 /// lancement, Node compile et le serveur MCP se connecte.
 const DELAI_PORT: Duration = Duration::from_secs(25);
+/// Après le port, le temps laissé au serveur MCP du sidecar pour se
+/// connecter — ~160 ms en réel (constat du 2026-09-17), 20 s = marge large
+/// avant de rendre `Pret` sans MCP (voir l'appel à `sonde_mcp`).
+const DELAI_MCP: Duration = Duration::from_secs(20);
 /// Laissé à un sidecar pour s'arrêter proprement avant SIGKILL. `pub(crate)`
 /// : `lib.rs` le réutilise pour `Etat::arreter_sidecar` à la fermeture, afin
 /// de ne pas dupliquer la constante dans `etat_connexion`.
@@ -117,10 +121,22 @@ fn lancer_sidecar(etat: &Etat, chemin_node: PathBuf, token_raindrop: &str) -> Et
     *etat.sidecar.lock().unwrap() = Some(enfant);
 
     match sidecar::attendre_port(&etat.dossier, DELAI_PORT) {
-        Some(port) => EtatConnexion::Pret {
-            port,
-            token: etat.token_local.clone(),
-        },
+        Some(port) => {
+            // Le port publié ne garantit pas le MCP : en réel, il se connecte
+            // ~160 ms plus tard (constat du 2026-09-17), et un `Pret` rendu
+            // trop tôt faisait interroger `/api/user` par le front dans la
+            // fenêtre « starting » — erreur affichée à CHAQUE validation du
+            // jeton, chaque clic rejouant le cycle. On sonde `/api/health`
+            // jusqu'à `mcp: "connected"` ; à l'échéance, on rend `Pret`
+            // quand même : l'écran d'erreur d'appel (comportement d'avant)
+            // vaut mieux qu'un démarrage bloqué, et la course systématique
+            // a disparu.
+            sonde_mcp::attendre_connexion(port, &etat.token_local, DELAI_MCP);
+            EtatConnexion::Pret {
+                port,
+                token: etat.token_local.clone(),
+            }
+        }
         None => {
             sidecar::terminer(pid, GRACE);
             EtatConnexion::Panne {

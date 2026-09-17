@@ -4,6 +4,7 @@ mod jeton;
 mod node;
 mod sidecar;
 mod signaux;
+mod sonde_mcp;
 mod trousseau;
 mod verrou;
 
