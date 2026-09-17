@@ -36,6 +36,13 @@ describe("Throttle", () => {
     expect(t.pendingCount).toBe(0);
   });
 
+  it("un fn qui lève de façon synchrone ne bloque pas la file", async () => {
+    const t = new Throttle(0);
+    await expect(t.run(() => { throw new Error("sync"); })).rejects.toThrow("sync");
+    await expect(t.run(async () => 7)).resolves.toBe(7);
+    expect(t.pendingCount).toBe(0);
+  });
+
   it("les timers d'espacement sont libérés après usage (pas de fuite vitest)", async () => {
     vi.useFakeTimers();
     const t = new Throttle(100);
@@ -43,5 +50,41 @@ describe("Throttle", () => {
     await vi.advanceTimersByTimeAsync(150);
     await expect(p).resolves.toBe(1);
     vi.useRealTimers();
+  });
+
+  it("l'interactif passe devant le fond déjà en attente", async () => {
+    const t = new Throttle(0);
+    const ordre: string[] = [];
+    // Une tâche occupe la file, les deux suivantes s'empilent derrière.
+    const bloque = t.run(async () => { await new Promise((r) => setTimeout(r, 20)); ordre.push("bloque"); });
+    const fond = t.run(async () => { ordre.push("fond"); }, { rang: "fond" });
+    const interactif = t.run(async () => { ordre.push("interactif"); });
+    await Promise.all([bloque, fond, interactif]);
+    expect(ordre).toEqual(["bloque", "interactif", "fond"]);
+  });
+
+  // Le plancher (spec §4.4, correction §1bis n°3) : sans lui, une application
+  // utilisée sans interruption affamerait la sauvegarde et le balayage
+  // hebdomadaire n'aboutirait jamais.
+  it("le fond progresse même sous charge interactive continue", async () => {
+    const t = new Throttle(0);
+    const ordre: string[] = [];
+    const fini: Promise<unknown>[] = [];
+    // 12 interactives empilées d'un coup, puis 3 de fond derrière elles.
+    for (let i = 0; i < 12; i++) fini.push(t.run(async () => { ordre.push("i"); }));
+    for (let i = 0; i < 3; i++) fini.push(t.run(async () => { ordre.push("f"); }, { rang: "fond" }));
+    await Promise.all(fini);
+    // Une sur quatre au moins : les trois tâches de fond sont servies avant
+    // la fin des douze interactives, pas reléguées à la queue.
+    const derniereF = ordre.lastIndexOf("f");
+    expect(derniereF).toBeLessThan(ordre.length - 1);
+    expect(ordre.filter((x) => x === "f")).toHaveLength(3);
+  });
+
+  it("sans rang précisé, le comportement d'avant est inchangé", async () => {
+    const t = new Throttle(0);
+    const ordre: number[] = [];
+    await Promise.all([1, 2, 3].map((n) => t.run(async () => { ordre.push(n); })));
+    expect(ordre).toEqual([1, 2, 3]);
   });
 });
