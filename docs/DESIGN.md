@@ -209,6 +209,11 @@ Pas d'ombre portée : la hiérarchie vient du **niveau de surface**, pas de l'om
     une action qu'un bouton exécute ensuite reste un champ (`.input`) :
     les `<select>` de destination du BulkBar et des lignes de nettoyage
     sont des saisies, pas des états.
+  - **Le focus clavier est un anneau `sel`, le clic ne montre rien.**
+    `:focus-visible` uniquement : un anneau posé au clic ferait clignoter
+    l'interface sous la souris, et son absence au clavier rendrait la
+    navigation aveugle. Le même jeton que la sélection — c'est la même
+    idée, « l'endroit où je suis ».
   - **Une bascule dont le contenu est la réponse ne marque pas son état** —
     l'icône liste/mosaïque nomme le mode vers lequel elle bascule, et c'est
     la liste elle-même qui dit celui qu'on regarde. Ne pas y remettre une

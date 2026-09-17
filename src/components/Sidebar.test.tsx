@@ -186,6 +186,53 @@ describe("Sidebar", () => {
     expect(screen.getByText("Rust")).toBeInTheDocument();
   });
 
+  // Le grief : plus de 250 arrêts de tabulation avant d'atteindre la liste,
+  // un par étiquette. La barre n'en prend qu'un.
+  it("toute la barre ne prend qu'un seul arrêt de tabulation", () => {
+    renderSidebar();
+    const navigables = [...document.querySelectorAll<HTMLElement>("nav [data-nav]")];
+    expect(navigables.length).toBeGreaterThan(5);
+    expect(navigables.filter((e) => e.tabIndex === 0)).toHaveLength(1);
+  });
+
+  // Le chevron reste cliquable, mais il n'est plus un arrêt : →/← plient
+  // depuis la ligne du parent, là où le focus se trouve déjà.
+  it("le chevron n'est pas un arrêt de tabulation", () => {
+    renderSidebar();
+    expect(screen.getByRole("button", { name: "Déplier Dev" }).tabIndex).toBe(-1);
+  });
+
+  it("les flèches verticales circulent dans la barre", async () => {
+    renderSidebar();
+    const premier = screen.getByRole("button", { name: "Tous" });
+    premier.focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(screen.getByRole("button", { name: "Non-lus" })).toHaveFocus();
+  });
+
+  // « →/← déplient/replient un parent » : le pliage au clavier passe par la
+  // ligne du parent, pas par le chevron.
+  it("→ déplie le parent focalisé, ← le replie", async () => {
+    renderSidebar();
+    const dev = screen.getByText("Dev").closest("button")!;
+    dev.focus();
+    expect(screen.queryByText("Rust")).not.toBeInTheDocument();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(screen.getByText("Rust")).toBeInTheDocument();
+    await userEvent.keyboard("{ArrowLeft}");
+    expect(screen.queryByText("Rust")).not.toBeInTheDocument();
+  });
+
+  // « Échap remonte d'un niveau et rend le focus » : la barre rend la main
+  // à la page plutôt que de retenir le clavier.
+  it("Échap rend le focus", async () => {
+    renderSidebar();
+    const dev = screen.getByText("Dev").closest("button")!;
+    dev.focus();
+    await userEvent.keyboard("{Escape}");
+    expect(dev).not.toHaveFocus();
+  });
+
   // Une collection n'est une cible que PENDANT un déplacement : au repos,
   // survoler la sidebar ne doit rien allumer.
   it("les collections ne s'allument qu'en cours de déplacement", async () => {

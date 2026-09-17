@@ -8,6 +8,14 @@ import type { Collection } from "../../shared/types";
 // le quitter le replie. Le repli est DIFFÉRÉ : sans délai, traverser la
 // sidebar pour atteindre le bas ferait clignoter chaque groupe au passage.
 const REPLI_MS = 250;
+
+/** Ce que la ligne du parent expose aux flèches horizontales (→ déplie,
+ *  ← replie) : le chevron n'est alors plus qu'un doublon pour la souris. */
+export interface PliageClavier {
+  deplie: boolean;
+  pliable: boolean;
+  basculer(ouvrir: boolean): void;
+}
 // Pendant un déplacement, le dépliage attend : on traverse des parents pour
 // atteindre sa cible, on ne veut pas les ouvrir tous en chemin.
 const DEPLI_DRAG_MS = 500;
@@ -21,7 +29,7 @@ export function GroupeCollection({
   contientLaVue: boolean;
   enDeplacement: boolean;
   /** Rendu des lignes : le parent, puis chaque enfant. */
-  children(deplie: boolean, chevron: ReactNode): ReactNode;
+  children(deplie: boolean, chevron: ReactNode, pliage: PliageClavier): ReactNode;
 }) {
   // Deux sources, et l'une prime : le survol ouvre, le chevron TRANCHE.
   // Sans cette priorité, replier au chevron rouvrirait aussitôt — le
@@ -68,6 +76,11 @@ export function GroupeCollection({
     // pas son doublon. Révélé au survol du groupe, ou posé s'il est déplié.
     <button
       type="button"
+      // Hors du parcours de tabulation : →/← plient depuis la ligne du
+      // parent, et quinze chevrons invisibles feraient quinze arrêts de
+      // plus avant d'atteindre la liste. Il reste cliquable, et son
+      // `aria-expanded` continue d'annoncer l'état du groupe.
+      tabIndex={-1}
       aria-expanded={deplie}
       aria-label={t(deplie ? "nav.collapse" : "nav.expand", { title: parent.title })}
       className={
@@ -85,7 +98,7 @@ export function GroupeCollection({
 
   return (
     <div className="group" onPointerEnter={entrer} onPointerLeave={sortir}>
-      {children(deplie, chevron)}
+      {children(deplie, chevron, { deplie, pliable, basculer: (ouvrir) => setForce(ouvrir) })}
     </div>
   );
 }

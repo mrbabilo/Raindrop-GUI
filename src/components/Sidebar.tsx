@@ -1,9 +1,11 @@
+import { useRef } from "react";
 import { t } from "../i18n/fr";
 import { useCollections, useTags } from "../hooks/useStaticData";
 import { useAppState } from "../state/appState";
 import { useDrag } from "../state/drag";
 import { depotPermis } from "../hooks/useDragBookmark";
-import { GroupeCollection } from "./GroupeCollection";
+import { GroupeCollection, type PliageClavier } from "./GroupeCollection";
+import { useRovingFocus } from "../hooks/useRovingFocus";
 
 // Entrée de navigation : 28 px de haut (DESIGN.md §8 — leading-5 + py-1),
 // 13 px du corps (§7). Survol et sélection par les jetons dédiés de §6
@@ -39,6 +41,28 @@ export function Sidebar() {
         };
   const survolee = (collectionId: number) =>
     enDeplacement !== null && cible === collectionId ? cibleActive : "";
+
+  // Une seule entrée au clavier pour toute la barre : sans roving tabindex,
+  // atteindre la liste demande de traverser les collections ET les quelque
+  // deux cent cinquante étiquettes, une par une.
+  const zone = useRef<HTMLElement>(null);
+  // Le pliage de chaque groupe, déposé par GroupeCollection : les flèches
+  // horizontales agissent depuis la ligne du parent, là où se trouve le
+  // focus — le chevron, lui, est sorti du parcours de tabulation.
+  const pliages = useRef(new Map<HTMLElement, PliageClavier>());
+  const roving = useRovingFocus(zone, {
+    surHorizontale: (element, direction) => {
+      const pliage = pliages.current.get(element);
+      if (pliage === undefined || !pliage.pliable) return;
+      pliage.basculer(direction === "droite");
+    },
+    // « Échap remonte d'un niveau et rend le focus » : la barre rend la
+    // main à la page, qui reprend son parcours de tabulation ordinaire.
+    surEchap: () => (document.activeElement as HTMLElement | null)?.blur(),
+  });
+  const noterPliage = (el: HTMLElement | null, pliage: PliageClavier) => {
+    if (el !== null) pliages.current.set(el, pliage);
+  };
   const collections = useCollections();
   const tags = useTags();
   const isList = (id: number) => view.kind === "list" && view.collectionId === id;
@@ -49,15 +73,15 @@ export function Sidebar() {
   // -2/-3 sont des marqueurs front (ruling R3P) : useRaindrops les convertit
   // en requêtes ; la Sidebar n'émet que `go`.
   return (
-    <nav className="flex h-full flex-col gap-3 overflow-y-auto p-2">
+    <nav ref={zone} onKeyDown={roving.surTouche} className="flex h-full flex-col gap-3 overflow-y-auto p-2">
       <section className="flex flex-col gap-0.5">
-        <button className={item + (isList(0) ? selected : "")} onClick={() => go({ kind: "list", collectionId: 0, label: t("nav.all") })}>{t("nav.all")}</button>
-        <button className={item + (isList(-2) ? selected : "")} onClick={() => go({ kind: "list", collectionId: -2, label: t("nav.unread") })}>{t("nav.unread")}</button>
-        <button className={item + (isList(-3) ? selected : "")} onClick={() => go({ kind: "list", collectionId: -3, label: t("nav.favorites") })}>{t("nav.favorites")}</button>
-        <button className={item + (isList(-99) ? selected : "")} onClick={() => go({ kind: "list", collectionId: -99, label: t("nav.trash") })}>{t("nav.trash")}</button>
+        <button data-nav className={item + (isList(0) ? selected : "")} onClick={() => go({ kind: "list", collectionId: 0, label: t("nav.all") })}>{t("nav.all")}</button>
+        <button data-nav className={item + (isList(-2) ? selected : "")} onClick={() => go({ kind: "list", collectionId: -2, label: t("nav.unread") })}>{t("nav.unread")}</button>
+        <button data-nav className={item + (isList(-3) ? selected : "")} onClick={() => go({ kind: "list", collectionId: -3, label: t("nav.favorites") })}>{t("nav.favorites")}</button>
+        <button data-nav className={item + (isList(-99) ? selected : "")} onClick={() => go({ kind: "list", collectionId: -99, label: t("nav.trash") })}>{t("nav.trash")}</button>
       </section>
 
-      <button className={item + (view.kind === "cleanup" ? selected : "")} onClick={() => go({ kind: "cleanup" })}>{t("nav.cleanup")}</button>
+      <button data-nav className={item + (view.kind === "cleanup" ? selected : "")} onClick={() => go({ kind: "cleanup" })}>{t("nav.cleanup")}</button>
 
       <section>
         <h2 className="px-2 text-xs font-medium text-app-muted">{t("nav.collections")}</h2>
@@ -70,7 +94,7 @@ export function Sidebar() {
             (vueCourante === c.id || enfants.some((ch) => ch.id === vueCourante));
           return (
             <GroupeCollection key={c.id} parent={c} enfants={enfants} contientLaVue={porteLaVue} enDeplacement={enDeplacement !== null}>
-              {(deplie, chevron) => (
+              {(deplie, chevron, pliage) => (
                 <>
                   {/* Le chevron vit DANS la ligne, devant le titre : c'est la
                       poignée du groupe, pas une commande de la barre. */}
@@ -79,6 +103,8 @@ export function Sidebar() {
                     {/* Une collection QUI A des enfants ouvre la vue
                         composite ; une feuille ouvre la liste ordinaire. */}
                     <button
+                      data-nav
+                      ref={(el) => noterPliage(el, pliage)}
                       className={item + survolee(c.id)}
                       {...accueil(c.id)}
                       onClick={() =>
@@ -98,7 +124,7 @@ export function Sidebar() {
                       // padding de base de `item` (px-2 = 8 px) → 22 px au niveau 1
                       // (l'ancien pl-6, 24 px, ne suivait pas la lettre). Style
                       // inline : la valeur exacte compte, pas une classe approximative.
-                      <button key={ch.id} className={item + survolee(ch.id)} {...accueil(ch.id)} style={{ paddingLeft: "22px" }} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
+                      <button key={ch.id} data-nav className={item + survolee(ch.id)} {...accueil(ch.id)} style={{ paddingLeft: "22px" }} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
                         {ch.title}<Compteur n={ch.count} />
                       </button>
                     ))}
@@ -117,7 +143,7 @@ export function Sidebar() {
             pas le label ; sans lui, cliquer un tag montre « Tous » non
             filtré. */}
         {(tags.data ?? []).map((tg) => (
-          <button key={tg.name} className={item} onClick={() => go({ kind: "list", collectionId: 0, label: `#${tg.name}`, search: `#${tg.name}` })}>
+          <button key={tg.name} data-nav className={item} onClick={() => go({ kind: "list", collectionId: 0, label: `#${tg.name}`, search: `#${tg.name}` })}>
             #<span>{tg.name}</span><Compteur n={tg.count} />
           </button>
         ))}
