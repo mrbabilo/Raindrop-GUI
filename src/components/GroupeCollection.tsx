@@ -9,12 +9,20 @@ import type { Collection } from "../../shared/types";
 // sidebar pour atteindre le bas ferait clignoter chaque groupe au passage.
 const REPLI_MS = 250;
 
-/** Ce que la ligne du parent expose aux flèches horizontales (→ déplie,
- *  ← replie) : le chevron n'est alors plus qu'un doublon pour la souris. */
+/** Ce que la ligne du parent expose : les flèches horizontales (→ déplie,
+ *  ← replie) et le clic, qui ÉPINGLE. */
 export interface PliageClavier {
   deplie: boolean;
   pliable: boolean;
+  /** Pose un état explicite — les flèches du clavier. */
   basculer(ouvrir: boolean): void;
+  /**
+   * Le geste du clic : **épingle** le groupe ouvert, et le referme au clic
+   * suivant. Il ne part PAS de l'état affiché : survolé, un groupe est déjà
+   * ouvert, et basculer depuis cet état ferait refermer au premier clic
+   * alors qu'on vient de demander à le garder ouvert.
+   */
+  basculerEpingle(): void;
 }
 // Pendant un déplacement, le dépliage attend : on traverse des parents pour
 // atteindre sa cible, on ne veut pas les ouvrir tous en chemin.
@@ -66,7 +74,12 @@ export function GroupeCollection({
       setOuvert(false);
       // Quitter le groupe rend la main au survol : un repli forcé ne vaut
       // que tant qu'on est dessus, un dépliage épinglé survit à la sortie.
-      setForce((f) => (f === false ? null : f));
+      //
+      // Sauf pour le groupe qui PORTE la vue : là, `contientLaVue` le
+      // rouvrirait aussitôt, et la fermeture qu'on vient de demander serait
+      // défaite en quittant la ligne. Son repli tient donc jusqu'au clic
+      // suivant.
+      setForce((f) => (f === false && !contientLaVue ? null : f));
     }, REPLI_MS);
   };
 
@@ -89,7 +102,10 @@ export function GroupeCollection({
       }
       onClick={(e) => {
         e.stopPropagation(); // plier n'est pas naviguer
-        setForce(!deplie);
+        // Même règle que le clic sur la collection : on épingle, puis on
+        // referme. Partir de `deplie` refermerait un groupe que le survol
+        // vient d'ouvrir, au clic même qui demandait de le retenir.
+        setForce(force !== true);
       }}
     >
       <Icone nom={deplie ? "chevronBas" : "chevronDroit"} />
@@ -98,7 +114,12 @@ export function GroupeCollection({
 
   return (
     <div className="group" onPointerEnter={entrer} onPointerLeave={sortir}>
-      {children(deplie, chevron, { deplie, pliable, basculer: (ouvrir) => setForce(ouvrir) })}
+      {children(deplie, chevron, {
+        deplie,
+        pliable,
+        basculer: (ouvrir) => setForce(ouvrir),
+        basculerEpingle: () => setForce(force !== true),
+      })}
     </div>
   );
 }

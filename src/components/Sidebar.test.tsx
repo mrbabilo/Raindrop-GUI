@@ -147,23 +147,48 @@ describe("Sidebar", () => {
   // Le survol n'existe pas au clavier : le chevron est le SEUL accès au
   // pliage pour qui n'a pas de souris. Il n'est pas un doublon du survol,
   // il en est l'équivalent accessible.
-  // `fireEvent.click` et non `userEvent.click` : ce dernier survole avant de
-  // cliquer, et le survol déplie déjà — on testerait alors le chemin souris,
-  // où le chevron affiche « Replier » et replie bel et bien. Ici c'est le
-  // chemin CLAVIER qui est en cause : activer le chevron sans jamais survoler.
-  it("le chevron plie et déplie sans survol (clavier), et dit son état", async () => {
+  it("le chevron épingle le groupe ouvert, et le referme au clic suivant", async () => {
     renderSidebar();
     const chevron = screen.getByRole("button", { name: "Déplier Dev" });
     expect(chevron).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(chevron);
     expect(screen.getByText("Rust")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Replier Dev" })).toHaveAttribute("aria-expanded", "true");
-    // Déplié à la main, le groupe ne se replie pas tout seul au leave.
+    // Épinglé : le groupe ne se replie pas en quittant le survol.
     fireEvent.pointerLeave(screen.getByText("Dev").closest("div.group")!);
     await new Promise((r) => setTimeout(r, 600));
     expect(screen.getByText("Rust")).toBeInTheDocument();
-    // Et le chevron le referme.
+    // Et le clic suivant le referme.
     fireEvent.click(screen.getByRole("button", { name: "Replier Dev" }));
+    expect(screen.queryByText("Rust")).not.toBeInTheDocument();
+  });
+
+  // Le grief : survolé, un groupe est déjà ouvert — cliquer son chevron le
+  // refermait alors qu'on venait de demander à le retenir.
+  it("cliquer le chevron d'un groupe DÉJÀ ouvert par le survol l'épingle", async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    await user.hover(screen.getByText("Dev"));
+    expect(screen.getByText("Rust")).toBeInTheDocument(); // ouvert par le survol
+    await user.click(screen.getByRole("button", { name: "Replier Dev" }));
+    expect(screen.getByText("Rust")).toBeInTheDocument(); // et non refermé
+    fireEvent.pointerLeave(screen.getByText("Dev").closest("div.group")!);
+    await new Promise((r) => setTimeout(r, 600));
+    expect(screen.getByText("Rust")).toBeInTheDocument(); // épinglé pour de bon
+  });
+
+  // Cliquer la collection elle-même la fixe ouverte, comme son chevron.
+  it("cliquer la collection mère l'épingle, un nouveau clic la referme", async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    await user.click(screen.getByText("Dev"));
+    fireEvent.pointerLeave(screen.getByText("Dev").closest("div.group")!);
+    await new Promise((r) => setTimeout(r, 600));
+    expect(screen.getByText("Rust")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Dev"));
+    fireEvent.pointerLeave(screen.getByText("Dev").closest("div.group")!);
+    await new Promise((r) => setTimeout(r, 600));
     expect(screen.queryByText("Rust")).not.toBeInTheDocument();
   });
 

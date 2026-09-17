@@ -136,13 +136,17 @@ export function Sidebar() {
                       data-nav
                       ref={(el) => noterPliage(el, pliage)}
                       className={itemColl}
-                      onClick={() =>
+                      onClick={() => {
+                        // Cliquer une collection la FIXE ouverte — elle ne se
+                        // referme plus en quittant le survol ; le clic suivant
+                        // la referme. Une feuille n'a rien à épingler.
+                        if (enfants.length > 0) pliage.basculerEpingle();
                         go(
                           enfants.length > 0
                             ? { kind: "collection", collectionId: c.id, label: c.title }
                             : { kind: "list", collectionId: c.id, label: c.title },
-                        )
-                      }
+                        );
+                      }}
                     >
                       <Signe arbre={arbre} c={c} />
                       {/* §4 : la racine NOMME la famille — sa graisse la

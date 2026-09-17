@@ -72,6 +72,9 @@ Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
   - **Au survol**, la bande s'entoure d'un trait de sa teinte et son ombre
     s'ouvre, en 140 ms — rien ne se déplace, et la transition disparaît si
     le système demande moins d'animation.
+  - **Le survol explore, le clic fixe** : survoler une collection déplie
+    ses sous-collections le temps qu'on y passe ; cliquer la collection ou
+    son chevron les garde ouvertes, et le clic suivant les referme.
 - **Navigation au clavier** : chaque zone ne prend qu'un arrêt de
   tabulation au lieu d'un par ligne, et les flèches y circulent — y
   compris en deux dimensions dans la mosaïque. →/← déplient une

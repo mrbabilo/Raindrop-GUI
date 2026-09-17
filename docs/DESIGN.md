@@ -129,6 +129,14 @@ et **sa bande démarre sous la pastille de sa mère** (`--nav-retrait`) : le
 décrochement dit le rang avant même qu'on lise le titre. Le titre d'une racine
 porte enfin la graisse — c'est elle qui nomme la famille.
 
+**Le survol explore, le clic fixe.** Survoler une collection déplie ses
+enfants le temps qu'on y passe ; **cliquer** — sur la collection ou sur son
+chevron — les **épingle**, et le clic suivant les referme. Le geste ne part
+jamais de l'état affiché mais de l'épinglage : survolé, un groupe est déjà
+ouvert, et basculer depuis là le refermerait au clic même qui demandait de le
+retenir. Un repli explicite tient aussi pour le groupe qui porte la vue
+courante, que sa qualité de « courant » rouvrirait sinon aussitôt.
+
 Dans la barre, la pastille mesure 22 px et son fond reste la surface `work`,
 **non teintée** : posée sur une bande qui porte déjà la couleur de la famille,
 une pastille de la même teinte ne se détachait pas. C'est le dessin qu'elle
