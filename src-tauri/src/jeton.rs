@@ -24,8 +24,8 @@ pub fn en_hex(octets: &[u8]) -> String {
 }
 
 /// Engendre le token du lancement. `/dev/urandom` plutôt qu'un crate d'aléa :
-/// une dépendance de moins pour trente octets, et la source est celle que le
-/// système offre de toute façon.
+/// une dépendance de moins pour trente-deux octets, et la source est celle
+/// que le système offre de toute façon.
 pub fn engendrer() -> std::io::Result<String> {
     let mut buf = [0u8; OCTETS];
     File::open("/dev/urandom")?.read_exact(&mut buf)?;

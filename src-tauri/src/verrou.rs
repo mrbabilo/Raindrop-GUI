@@ -51,9 +51,46 @@ where
 /// Le MÊME dossier que `sidecar/config.ts::appDataDir` — c'est là que le
 /// lockfile s'écrit et se lit. Les deux doivent s'accorder ou rien ne se
 /// trouve.
+///
+/// `sidecar/config.ts:35` et `vite.config.ts:13` font tous deux
+/// `cfg.APPDATA_DIR ?? join(homedir(), …)` : APPDATA_DIR d'abord, HOME en
+/// repli. Sans le même ordre ici, un développeur qui exporte APPDATA_DIR
+/// pour rediriger son sidecar verrait Tauri chercher le lockfile ailleurs.
 pub fn dossier_donnees() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_default();
-    PathBuf::from(home).join("Library/Application Support/Raindrop-GUI")
+    dossier_depuis(
+        std::env::var("APPDATA_DIR").ok().as_deref(),
+        std::env::var("HOME").ok().as_deref(),
+    )
+}
+
+/// Pur, pour être testable sans toucher à l'environnement du test (même
+/// forme que `trousseau::compte_depuis`).
+///
+/// Ni APPDATA_DIR ni HOME rend un `PathBuf` vide plutôt qu'un chemin relatif
+/// du genre `Library/Application Support/Raindrop-GUI` qui ne mènerait
+/// nulle part en silence — `verifier_dossier` transforme ce vide en panne
+/// lisible, comme `trousseau::verifier_compte` le fait pour un compte vide.
+pub fn dossier_depuis(appdata: Option<&str>, home: Option<&str>) -> PathBuf {
+    if let Some(a) = appdata {
+        if !a.is_empty() {
+            return PathBuf::from(a);
+        }
+    }
+    match home.filter(|h| !h.is_empty()) {
+        Some(h) => PathBuf::from(h).join("Library/Application Support/Raindrop-GUI"),
+        None => PathBuf::new(),
+    }
+}
+
+/// Un dossier vide (ni APPDATA_DIR ni HOME lisibles) chercherait/écrirait à
+/// la racine du système de fichiers courant — indiscernable d'un dossier
+/// valide relatif tant que rien n'échoue bruyamment. On veut une panne qui
+/// se lit, comme `trousseau::verifier_compte`.
+pub fn verifier_dossier(d: &Path) -> Result<(), String> {
+    if d.as_os_str().is_empty() {
+        return Err("dossier de données indéterminable (ni APPDATA_DIR ni HOME)".into());
+    }
+    Ok(())
 }
 
 pub fn chemin(dossier: &Path) -> PathBuf {
@@ -107,5 +144,36 @@ mod tests {
     fn un_sidecar_survivant_est_termine_pas_reutilise() {
         let v = Verrou { port: 51234, pid: 4242 };
         assert_eq!(decider(Some(&v), |pid| pid == 4242), Decision::Terminer(4242));
+    }
+
+    // sidecar/config.ts:35 et vite.config.ts:13 : `cfg.APPDATA_DIR ?? join(homedir(), …)`.
+    // Sans le même ordre ici, un développeur qui exporte APPDATA_DIR a son
+    // sidecar qui écrit ailleurs que là où Tauri cherche le lockfile.
+    #[test]
+    fn appdata_dir_l_emporte_sur_home() {
+        assert_eq!(
+            dossier_depuis(Some("/tmp/dev-appdata"), Some("/Users/alice")),
+            PathBuf::from("/tmp/dev-appdata")
+        );
+        assert_eq!(
+            dossier_depuis(None, Some("/Users/alice")),
+            PathBuf::from("/Users/alice/Library/Application Support/Raindrop-GUI")
+        );
+        // Une variable exportée vide n'est pas une valeur : repli sur HOME,
+        // même traitement que compte_depuis(Some(""), …) côté trousseau.
+        assert_eq!(
+            dossier_depuis(Some(""), Some("/Users/alice")),
+            PathBuf::from("/Users/alice/Library/Application Support/Raindrop-GUI")
+        );
+        assert_eq!(dossier_depuis(None, None), PathBuf::new());
+    }
+
+    // Cohérence avec trousseau::verifier_compte : un HOME absent ne doit pas
+    // donner un chemin relatif qui ne mènera nulle part en silence — on veut
+    // une panne qui se lit.
+    #[test]
+    fn un_dossier_vide_est_refuse_au_lieu_d_etre_utilise() {
+        assert!(verifier_dossier(&PathBuf::new()).is_err());
+        assert!(verifier_dossier(&PathBuf::from("/tmp/x")).is_ok());
     }
 }

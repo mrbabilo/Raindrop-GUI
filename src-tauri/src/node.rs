@@ -6,8 +6,19 @@
 //! en `tauri dev` (qui hérite du PATH du terminal) et échoue dans
 //! l'application livrée. On sonde, on ne suppose pas.
 
+use std::io::Read as _;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
+
+/// Borne au-delà de laquelle un candidat qui ne répond pas est écarté plutôt
+/// qu'attendu indéfiniment. Un `--version` légitime répond en quelques
+/// millisecondes ; deux secondes laissent large tout en respectant le
+/// « timeout par appel » du CLAUDE.md — `candidats_systeme()` peut balayer
+/// tout le PATH hérité, qui peut contenir un montage réseau ou un shim
+/// capricieux, et un seul candidat suspendu ne doit pas geler le démarrage.
+const DELAI_SONDE: Duration = Duration::from_secs(2);
+const PAS_SONDE: Duration = Duration::from_millis(20);
 
 /// Version minimale exigée par le sidecar et le serveur MCP (spec §3.2).
 pub const MAJEURE_MINIMALE: u32 = 20;
@@ -65,12 +76,14 @@ where
     }
 }
 
-/// Les candidats réels : d'abord le PATH hérité (le cas du développeur, où
-/// `node` est celui qu'il utilise), puis les emplacements connus.
-pub fn candidats_systeme() -> Vec<PathBuf> {
+/// Les candidats à partir d'un PATH donné : d'abord le PATH hérité (le cas
+/// du développeur, où `node` est celui qu'il utilise), puis les emplacements
+/// connus — sans doublon si l'un d'eux y figure déjà. Pur, pour être
+/// testable sans toucher au vrai environnement.
+pub fn candidats_depuis(path: Option<&str>) -> Vec<PathBuf> {
     let mut v = Vec::new();
-    if let Ok(path) = std::env::var("PATH") {
-        for d in std::env::split_paths(&path) {
+    if let Some(path) = path {
+        for d in std::env::split_paths(path) {
             v.push(d.join("node"));
         }
     }
@@ -83,14 +96,49 @@ pub fn candidats_systeme() -> Vec<PathBuf> {
     v
 }
 
-/// Sonde le système. Impur — la logique est dans `choisir`.
+/// Les candidats réels, lus depuis l'environnement du processus.
+pub fn candidats_systeme() -> Vec<PathBuf> {
+    candidats_depuis(std::env::var("PATH").ok().as_deref())
+}
+
+/// Sonde le système. Impur — la logique est dans `choisir`. Chaque candidat
+/// est sondé avec un délai borné (`DELAI_SONDE`) : un `spawn()` plutôt qu'un
+/// `output()`, une attente non bloquante par `try_wait()`, et un `kill()` au
+/// dépassement — un candidat qui ne répond pas est écarté, il ne bloque
+/// jamais la recherche.
 pub fn resoudre() -> Verdict {
     choisir(&candidats_systeme(), |chemin| {
-        let sortie = Command::new(chemin).arg("--version").output().ok()?;
-        sortie
-            .status
-            .success()
-            .then(|| String::from_utf8_lossy(&sortie.stdout).trim().to_string())
+        let mut enfant = Command::new(chemin)
+            .arg("--version")
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .ok()?;
+
+        let debut = Instant::now();
+        loop {
+            match enfant.try_wait() {
+                Ok(Some(statut)) => {
+                    let mut sortie = String::new();
+                    if let Some(mut out) = enfant.stdout.take() {
+                        let _ = out.read_to_string(&mut sortie);
+                    }
+                    return statut.success().then(|| sortie.trim().to_string());
+                }
+                Ok(None) => {
+                    if debut.elapsed() >= DELAI_SONDE {
+                        // Écarté, pas attendu indéfiniment. On tue le
+                        // processus pour ne pas laisser un enfant orphelin.
+                        let _ = enfant.kill();
+                        let _ = enfant.wait();
+                        return None;
+                    }
+                    std::thread::sleep(PAS_SONDE);
+                }
+                Err(_) => return None,
+            }
+        }
     })
 }
 
@@ -153,6 +201,45 @@ mod tests {
         assert_eq!(
             v,
             Verdict::Trouve { chemin: p("/opt/homebrew/bin/node"), version: "v20.0.0".into() }
+        );
+    }
+
+    #[test]
+    fn le_path_precede_les_candidats_connus_dans_l_ordre() {
+        let v = candidats_depuis(Some("/custom/bin"));
+        assert_eq!(
+            v,
+            vec![
+                p("/custom/bin/node"),
+                p("/opt/homebrew/bin/node"),
+                p("/usr/local/bin/node"),
+                p("/usr/bin/node"),
+            ]
+        );
+    }
+
+    #[test]
+    fn pas_de_doublon_quand_un_candidat_connu_est_deja_dans_le_path() {
+        // /opt/homebrew/bin est déjà dans le PATH : il ne doit pas
+        // réapparaître quand on ajoute les emplacements connus.
+        let v = candidats_depuis(Some("/opt/homebrew/bin:/custom/bin"));
+        assert_eq!(
+            v,
+            vec![
+                p("/opt/homebrew/bin/node"),
+                p("/custom/bin/node"),
+                p("/usr/local/bin/node"),
+                p("/usr/bin/node"),
+            ]
+        );
+        assert_eq!(v.iter().filter(|c| **c == p("/opt/homebrew/bin/node")).count(), 1);
+    }
+
+    #[test]
+    fn sans_path_les_candidats_connus_suffisent() {
+        assert_eq!(
+            candidats_depuis(None),
+            vec![p("/opt/homebrew/bin/node"), p("/usr/local/bin/node"), p("/usr/bin/node")]
         );
     }
 }

@@ -87,10 +87,19 @@ mod tests {
 
     #[test]
     fn le_service_est_celui_du_script_de_dev() {
-        // scripts/dev-sidecar.sh : KEYCHAIN_SERVICE="raindrop-api-token".
-        // S'ils divergent, l'utilisateur saisit son token deux fois et une
-        // rotation n'en change qu'un.
-        assert_eq!(SERVICE, "raindrop-api-token");
+        // Lit le VRAI fichier au lieu de comparer à un littéral recopié :
+        // un littéral ne peut pas détecter une dérive côté script si
+        // quelqu'un renomme le service d'un seul côté (`assert_eq!(SERVICE,
+        // "raindrop-api-token")` reste vrai même si le script change, tant
+        // qu'on ne touche pas à cette ligne). En interpolant SERVICE dans
+        // l'attendu, ce test tombe si le SCRIPT dérive de la constante —
+        // exactement le sens de la dérive qui coûterait une double saisie.
+        let script = include_str!("../../scripts/dev-sidecar.sh");
+        let attendu = format!("KEYCHAIN_SERVICE=\"{SERVICE}\"");
+        assert!(
+            script.contains(&attendu),
+            "scripts/dev-sidecar.sh ne définit pas {attendu} — dev et app auraient chacun leur propre entrée de trousseau"
+        );
     }
 
     // Test NON tautologique : comparer compte() à std::env::var("USER") ne
@@ -115,18 +124,39 @@ mod tests {
         assert!(verifier_compte("alice").is_ok());
     }
 
+    /// Garde qui réinscrit le token d'avant dans son `drop()`, donc même si
+    /// le thread de test se déroule à cause d'un `assert`/`expect` qui
+    /// panique en cours de route. Sans ça, la restauration à la fin de la
+    /// fonction ne s'exécute que sur le chemin heureux : un panic entre
+    /// l'écriture du témoin et la restauration laisserait le vrai token
+    /// Raindrop de l'utilisateur écrasé ou effacé, sans un mot.
+    struct RestaurerAuDrop(Option<String>);
+
+    impl Drop for RestaurerAuDrop {
+        fn drop(&mut self) {
+            if let Some(t) = self.0.take() {
+                // On ne peut pas paniquer dans un `drop()` appelé pendant un
+                // déroulement de pile (double panic = abort) : on avale
+                // l'erreur, au pire un message sur stderr.
+                if let Err(e) = ecrire(&t) {
+                    eprintln!("[trousseau] échec de la restauration du token après test : {e}");
+                }
+            }
+        }
+    }
+
     #[test]
     #[ignore = "touche le vrai trousseau : `cargo test -- --ignored`"]
     fn aller_retour_ecrire_lire_effacer() {
         let temoin = "jeton-de-test-ne-pas-utiliser";
         let avant = lire().expect("lecture possible");
+        // Construite avant la moindre écriture : elle porte `avant` et le
+        // restaurera à la sortie de la fonction, panic ou pas.
+        let _garde = RestaurerAuDrop(avant);
+
         ecrire(temoin).expect("écriture possible");
         assert_eq!(lire().unwrap().as_deref(), Some(temoin));
         effacer().expect("effacement possible");
         assert_eq!(lire().unwrap(), None, "après effacement : absent, pas erreur");
-        // Restaurer ce qui s'y trouvait, pour ne pas casser le dev.
-        if let Some(t) = avant {
-            ecrire(&t).expect("restauration");
-        }
     }
 }
