@@ -1,6 +1,8 @@
 import { t } from "../i18n/fr";
 import { useCollections, useTags } from "../hooks/useStaticData";
 import { useAppState } from "../state/appState";
+import { useDrag } from "../state/drag";
+import { depotPermis } from "../hooks/useDragBookmark";
 
 // Entrée de navigation : 28 px de haut (DESIGN.md §8 — leading-5 + py-1),
 // 13 px du corps (§7). Survol et sélection par les jetons dédiés de §6
@@ -12,11 +14,30 @@ const count = "text-xs text-app-muted";
 // DESIGN.md §9 « masqué si nul » : un compteur à 0 ne s'affiche pas. Le
 // fragment porte l'espace séparateur — sans lui, masquer le chiffre
 // laisserait une espace pendante derrière le titre.
+// Cible active d'un déplacement : la surface `sel` (§6), jamais une teinte —
+// c'est la même marque que la sélection, et pour la même raison (« ceci est
+// l'endroit courant »).
+const cibleActive = " bg-app-sel";
+
 const Compteur = ({ n }: { n: number }) =>
   n > 0 ? <> <span className={count}>{n}</span></> : null;
 
 export function Sidebar() {
   const { view, go } = useAppState();
+  // Pendant un déplacement, chaque collection devient une cible. Le survol se
+  // signale au contexte : c'est lui que le relâchement interrogera.
+  const { ids: enDeplacement, cible, survoler } = useDrag();
+  // Handlers de cible, posés sur les seules entrées qui acceptent un dépôt —
+  // ni la corbeille, ni « Tous », ni les marqueurs d'état (depotPermis).
+  const accueil = (collectionId: number) =>
+    enDeplacement === null || !depotPermis(collectionId)
+      ? {}
+      : {
+          onPointerEnter: () => survoler(collectionId),
+          onPointerLeave: () => survoler(null),
+        };
+  const survolee = (collectionId: number) =>
+    enDeplacement !== null && cible === collectionId ? cibleActive : "";
   const collections = useCollections();
   const tags = useTags();
   const isList = (id: number) => view.kind === "list" && view.collectionId === id;
@@ -41,7 +62,7 @@ export function Sidebar() {
         <h2 className="px-2 text-xs font-medium text-app-muted">{t("nav.collections")}</h2>
         {roots.map((c) => (
           <div key={c.id}>
-            <button className={item} onClick={() => go({ kind: "list", collectionId: c.id, label: c.title })}>
+            <button className={item + survolee(c.id)} {...accueil(c.id)} onClick={() => go({ kind: "list", collectionId: c.id, label: c.title })}>
               {c.title}<Compteur n={c.count} />
             </button>
             {childrenOf(c.id).map((ch) => (
@@ -49,7 +70,7 @@ export function Sidebar() {
               // padding de base de `item` (px-2 = 8 px) → 22 px au niveau 1
               // (l'ancien pl-6, 24 px, ne suivait pas la lettre). Style
               // inline : la valeur exacte compte, pas une classe approximative.
-              <button key={ch.id} className={item} style={{ paddingLeft: "22px" }} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
+              <button key={ch.id} className={item + survolee(ch.id)} {...accueil(ch.id)} style={{ paddingLeft: "22px" }} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
                 {ch.title}<Compteur n={ch.count} />
               </button>
             ))}

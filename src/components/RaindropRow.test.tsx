@@ -13,7 +13,7 @@ const ligne = (props: Partial<Parameters<typeof RaindropRow>[0]> = {}) =>
       r={raindrop({ tags: ["python", "zzz-inconnu"] })}
       selected={false}
       isDetail={false}
-      onOpen={noop}
+      poignee={{ onPointerDown: noop, onClick: noop }}
       onToggle={noop}
       onTag={noop}
       {...props}
@@ -53,7 +53,7 @@ describe("RaindropRow — signalétique (DESIGN.md §2)", () => {
     const { container, rerender } = ligne({ etat: "redirect" });
     const row = () => container.querySelector("[data-testid='row-1000']")!;
     expect(row()).toHaveClass("filet", "filet-moved");
-    const props = { r: raindrop(), selected: false, isDetail: false, onOpen: noop, onToggle: noop, onTag: noop };
+    const props = { r: raindrop(), selected: false, isDetail: false, poignee: { onPointerDown: noop, onClick: noop }, onToggle: noop, onTag: noop };
     rerender(<RaindropRow {...props} etat="dead" />);
     expect(row()).toHaveClass("filet", "filet-broken");
     rerender(<RaindropRow {...props} etat="duplicate" />);
@@ -86,11 +86,11 @@ describe("RaindropRow — signalétique (DESIGN.md §2)", () => {
 
   it("cliquer une étiquette filtre sans ouvrir la fiche", async () => {
     const onTag = vi.fn();
-    const onOpen = vi.fn();
-    ligne({ onTag, onOpen });
+    const onClick = vi.fn();
+    ligne({ onTag, poignee: { onPointerDown: noop, onClick } });
     await userEvent.click(screen.getByRole("button", { name: "python" }));
     expect(onTag).toHaveBeenCalledWith("python");
-    expect(onOpen).not.toHaveBeenCalled();
+    expect(onClick).not.toHaveBeenCalled();
   });
 
   it("collection inconnue de l'arbre : carré gris, jamais de repli coloré", () => {

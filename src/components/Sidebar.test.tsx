@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { collections } from "../test/fixtures";
 import { Sidebar } from "./Sidebar";
 import { AppStateProvider, useAppState } from "../state/appState";
+import { DragProvider, useDrag } from "../state/drag";
 
 // « Masqué si nul » (§9) : une collection racine et une étiquette à 0 item
 // s'ajoutent aux fixtures — elles n'existent que pour ce contrat.
@@ -24,10 +25,23 @@ const Spy = () => {
   return <span data-testid="view">{JSON.stringify(view)}</span>;
 };
 
-const renderSidebar = () =>
+// Déclencheur de déplacement : ce que fait la liste quand le seuil est
+// franchi (useDragBookmark.commencer).
+const Tirer = () => {
+  const { commencer } = useDrag();
+  return <button type="button" onClick={() => commencer([1000])}>tirer</button>;
+};
+
+const renderSidebar = (avecDrag = false) =>
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <AppStateProvider><Spy /><Sidebar /></AppStateProvider>
+      <AppStateProvider>
+        <DragProvider>
+          <Spy />
+          {avecDrag && <Tirer />}
+          <Sidebar />
+        </DragProvider>
+      </AppStateProvider>
     </QueryClientProvider>,
   );
 
@@ -74,6 +88,38 @@ describe("Sidebar", () => {
     // Contrôle positif : les compteurs non nuls restent posés.
     expect(screen.getByText("Dev").closest("button")!.textContent).toContain("12");
     expect(screen.getByText("typescript").closest("button")!.textContent).toContain("8");
+  });
+
+  // Une collection n'est une cible que PENDANT un déplacement : au repos,
+  // survoler la sidebar ne doit rien allumer.
+  it("les collections ne s'allument qu'en cours de déplacement", async () => {
+    renderSidebar(true);
+    const dev = screen.getByText("Dev").closest("button")!;
+    await userEvent.hover(dev);
+    expect(dev.className).not.toContain("bg-app-sel");
+
+    await userEvent.click(screen.getByText("tirer"));
+    await userEvent.hover(dev);
+    expect(dev.className).toContain("bg-app-sel");
+    await userEvent.unhover(dev);
+    expect(dev.className).not.toContain("bg-app-sel");
+  });
+
+  // La corbeille n'accueille rien : y glisser un signet l'effacerait d'un
+  // geste, sans confirmation — la mise à la corbeille est un verbe (§10).
+  // « Tous » et les marqueurs d'état ne sont pas davantage des lieux.
+  it("corbeille, Tous, Non-lus et Favoris n'accueillent aucun dépôt", async () => {
+    renderSidebar(true);
+    await userEvent.click(screen.getByText("tirer"));
+    for (const nom of ["Corbeille", "Tous", "Non-lus", "Favoris"]) {
+      const entree = screen.getByText(nom).closest("button")!;
+      // Comparer l'avant et l'après : « Tous » est la vue COURANTE et porte
+      // déjà `bg-app-sel` de ce fait — c'est la même surface pour dire deux
+      // choses, seul son apparition au survol trahirait une cible.
+      const avant = entree.className;
+      await userEvent.hover(entree);
+      expect(entree.className).toBe(avant);
+    }
   });
 
   // R11P-1 : cliquer un tag FILTRE la liste — la vue porte search `#tag`

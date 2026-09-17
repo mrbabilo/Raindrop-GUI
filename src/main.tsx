@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { AppStateProvider } from "./state/appState";
+import { DragProvider } from "./state/drag";
 import App from "./App";
 import "./styles.css";
 
@@ -16,7 +17,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <AppStateProvider>
-        <App />
+        <DragProvider>
+          <App />
+        </DragProvider>
       </AppStateProvider>
     </QueryClientProvider>
   </React.StrictMode>,

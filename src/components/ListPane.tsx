@@ -7,6 +7,7 @@ import { useCollections } from "../hooks/useStaticData";
 import { racine } from "../design/Signaux";
 import { listQueryArgs } from "../hooks/listQuery";
 import { useAppState } from "../state/appState";
+import { useDragBookmark } from "../hooks/useDragBookmark";
 import { RaindropRow } from "./RaindropRow";
 import { MosaicTile } from "./MosaicTile";
 import { BulkBar } from "./BulkBar";
@@ -28,6 +29,10 @@ export function ListPane() {
   // virtualisée. Arbre pas encore chargé : titre absent → carré gris.
   const arbre = useCollections().data ?? [];
   const titreRacine = (collectionId: number) => racine(arbre, collectionId)?.title;
+  // Déplacement d'un signet vers une collection : la ligne porte la poignée,
+  // la Sidebar les cibles (useDragBookmark). L'échec s'affiche sous la liste
+  // plutôt que de disparaître (R8P-1).
+  const drag = useDragBookmark();
   const parentRef = useRef<HTMLDivElement>(null);
   // estimateSize suit la densité §8 (36 px) : measureElement (R7P) corrige
   // ensuite chaque hauteur réelle, mais un estimate faux ferait sauter la
@@ -71,7 +76,8 @@ export function ListPane() {
                 <div key={r.id} data-index={v.index} ref={virtual.measureElement} style={{ position: "absolute", top: 0, left: 0, width: "100%", transform: `translateY(${v.start}px)` }}>
                   <RaindropRow r={r} selected={selectedIds.has(r.id)} isDetail={selectedRaindropId === r.id}
                     collectionRacine={titreRacine(r.collectionId)}
-                    onOpen={() => selectRaindrop(r.id)} onToggle={() => toggleSelect(r.id)} onTag={(name) => patchList({ search: `#${name}` })} />
+                    poignee={drag.poignee(r.id, () => selectRaindrop(r.id))}
+                    onToggle={() => toggleSelect(r.id)} onTag={(name) => patchList({ search: `#${name}` })} />
                 </div>
               );
             })}
@@ -90,6 +96,12 @@ export function ListPane() {
           }} className="p-4 text-center text-app-muted">{query.isFetchingNextPage ? t("list.loadingMore") : ""}</div>
         )}
       </main>
+      {/* R8P-1 : un déplacement raté se dit, il ne disparaît pas en silence. */}
+      {drag.erreur !== null && (
+        <p role="alert" className="border-t border-app-border px-3 py-2 text-xs text-app-broken">
+          {t("state.error", { message: drag.erreur })}
+        </p>
+      )}
       {/* Invisible sans sélection (rend null) : aucune layout shift au repos. */}
       <BulkBar items={items} />
     </div>

@@ -28,7 +28,12 @@ export function RaindropRow(props: {
   // Diagnostic de l'analyse locale (§5.1). Aucune donnée d'analyse n'atteint
   // encore le front : absent = sain = aucun filet, jusqu'aux Tasks 12-13.
   etat?: EtatLien | null;
-  onOpen(): void;
+  // Handlers du geste de déplacement (useDragBookmark) : ils portent AUSSI
+  // le clic d'ouverture, qui ne se joue que si le geste est resté un clic.
+  poignee: {
+    onPointerDown(e: { clientX: number; clientY: number; button?: number }): void;
+    onClick(): void;
+  };
   onToggle(): void;
   onTag(name: string): void;
 }) {
@@ -42,7 +47,7 @@ export function RaindropRow(props: {
         (props.isDetail ? "bg-app-panel " : "") +
         (etat ? "filet " + etat : "")
       }
-      onClick={props.onOpen}
+      {...props.poignee}
     >
       {/* stopPropagation : cocher ne doit pas ouvrir le détail. */}
       <input type="checkbox" aria-label={t("list.select", { title: r.title })} checked={props.selected} onClick={(e) => e.stopPropagation()} onChange={props.onToggle} />
