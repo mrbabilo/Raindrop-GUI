@@ -1,4 +1,5 @@
 mod commandes;
+mod etat_connexion;
 mod jeton;
 mod node;
 mod sidecar;
@@ -8,7 +9,7 @@ mod verrou;
 use std::path::PathBuf;
 use tauri::Manager;
 
-use commandes::Etat;
+use etat_connexion::Etat;
 
 /// Racine des ressources : le dépôt en développement, le dossier embarqué
 /// dans le .app une fois empaqueté (Task 12).
@@ -60,7 +61,7 @@ pub fn run() {
             // port ouvert et un lockfile menteur.
             if let tauri::RunEvent::Exit = evenement {
                 if let Some(etat) = app.try_state::<Etat>() {
-                    etat.arreter_sidecar();
+                    etat.arreter_sidecar(commandes::GRACE);
                 }
             }
         });

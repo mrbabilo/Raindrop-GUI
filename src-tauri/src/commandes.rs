@@ -1,100 +1,25 @@
-//! L'état de la connexion locale, et les deux commandes du webview.
+//! Orchestration de la séquence de démarrage, et les trois commandes que le
+//! webview invoque. Le contrat sérialisé lui-même (`EtatConnexion`) et son
+//! état de synchronisation (`Etat`) vivent dans `crate::etat_connexion`
+//! (ronde de correction 1 : ce fichier dépassait le plafond dur de 400
+//! lignes une fois les commandes passées en `async` et les tests de la ronde
+//! ajoutés — découpé par frontière naturelle plutôt que tassé).
 
 use std::path::{Path, PathBuf};
-use std::sync::{Condvar, Mutex};
 use std::time::Duration;
 
-use serde::Serialize;
-use tauri::State;
+use tauri::{AppHandle, Manager};
 
+use crate::etat_connexion::{verdict_en_etat, Etat, EtatConnexion};
 use crate::{node, sidecar, trousseau, verrou};
 
 /// Le sidecar a jusque-là pour publier son port. Large : au premier
 /// lancement, Node compile et le serveur MCP se connecte.
 const DELAI_PORT: Duration = Duration::from_secs(25);
-/// Puis `etat_connexion` cesse d'attendre la séquence elle-même.
-const DELAI_SEQUENCE: Duration = Duration::from_secs(40);
-/// Laissé à un sidecar pour s'arrêter proprement avant SIGKILL.
-const GRACE: Duration = Duration::from_secs(3);
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum EtatConnexion {
-    Pret { port: u16, token: String },
-    JetonRequis,
-    NodeAbsent { detail: String },
-    Panne { detail: String },
-}
-
-pub struct Etat {
-    pub token_local: String,
-    pub base: PathBuf,
-    pub dossier: PathBuf,
-    sidecar: Mutex<Option<sidecar::Sidecar>>,
-    resolu: (Mutex<Option<EtatConnexion>>, Condvar),
-}
-
-impl Etat {
-    pub fn new(token_local: String, base: PathBuf, dossier: PathBuf) -> Self {
-        Self {
-            token_local,
-            base,
-            dossier,
-            sidecar: Mutex::new(None),
-            resolu: (Mutex::new(None), Condvar::new()),
-        }
-    }
-
-    pub fn poser(&self, e: EtatConnexion) {
-        *self.resolu.0.lock().unwrap() = Some(e);
-        self.resolu.1.notify_all();
-    }
-
-    /// Attend que la séquence de démarrage ait tranché.
-    pub fn attendre(&self) -> EtatConnexion {
-        let (m, cv) = &self.resolu;
-        let mut g = m.lock().unwrap();
-        while g.is_none() {
-            let (suite, delai) = cv.wait_timeout(g, DELAI_SEQUENCE).unwrap();
-            g = suite;
-            if delai.timed_out() && g.is_none() {
-                return EtatConnexion::Panne {
-                    detail: "le sidecar local n'a pas démarré dans le temps imparti".into(),
-                };
-            }
-        }
-        g.clone().expect("posé")
-    }
-
-    /// Arrêt propre à la fermeture de l'application.
-    pub fn arreter_sidecar(&self) {
-        if let Some(mut s) = self.sidecar.lock().unwrap().take() {
-            s.arreter(GRACE);
-        }
-    }
-}
-
-/// Traduit un verdict Node en état montrable. Pur — testé.
-pub fn verdict_en_etat(v: node::Verdict) -> EtatConnexion {
-    match v {
-        node::Verdict::Trouve { .. } => EtatConnexion::Panne {
-            detail: "verdict_en_etat appelé sur un node conforme".into(),
-        },
-        node::Verdict::TropVieux { chemin, version } => EtatConnexion::NodeAbsent {
-            detail: format!(
-                "Node {version} trouvé ({}), mais la version {} ou supérieure est requise.",
-                chemin.display(),
-                node::MAJEURE_MINIMALE
-            ),
-        },
-        node::Verdict::Absent => EtatConnexion::NodeAbsent {
-            detail: format!(
-                "Aucun interpréteur Node n'a été trouvé. Node {} ou supérieur est requis.",
-                node::MAJEURE_MINIMALE
-            ),
-        },
-    }
-}
+/// Laissé à un sidecar pour s'arrêter proprement avant SIGKILL. `pub(crate)`
+/// : `lib.rs` le réutilise pour `Etat::arreter_sidecar` à la fermeture, afin
+/// de ne pas dupliquer la constante dans `etat_connexion`.
+pub(crate) const GRACE: Duration = Duration::from_secs(3);
 
 /// Décision explicite (ronde de relecture du 2026-09-17, absente du brief) :
 /// `verrou::verifier_dossier` était sans point d'appel. Sans lui,
@@ -125,6 +50,14 @@ pub fn sequence(etat: &Etat) -> EtatConnexion {
 }
 
 fn lancer_sidecar(etat: &Etat, chemin_node: PathBuf, token_raindrop: &str) -> EtatConnexion {
+    // Exclusion mutuelle sur la fonction ENTIÈRE (constat important, couplé
+    // au constat critique du gel — voir la doc du champ
+    // `etat_connexion::Etat::verrou_lancement`). Tenue jusqu'à la fin de la
+    // fonction, tous les `return` inclus : le garde est une variable locale
+    // de cette portée, il se relâche au drop de fin de portée quel que soit
+    // le chemin de sortie.
+    let _garde = etat.verrou_lancement.lock().unwrap();
+
     // Vérifié avant toute utilisation du dossier — c'est aussi le chemin de
     // `enregistrer_jeton`, qui appelle `lancer_sidecar` directement sans
     // passer par `sequence()` : un contrôle placé seulement dans `sequence()`
@@ -142,7 +75,13 @@ fn lancer_sidecar(etat: &Etat, chemin_node: PathBuf, token_raindrop: &str) -> Et
     // réessai buterait sur le GRACE complet avant de SIGKILL un cadavre. On
     // arrête proprement NOTRE ancien enfant ici, avant de considérer un
     // éventuel survivant d'un lancement précédent de l'application (D2).
-    if let Some(mut ancien) = etat.sidecar.lock().unwrap().take() {
+    //
+    // Constat court n°1 : `take()` d'abord, `if let` ensuite — pas
+    // `if let Some(..) = etat.sidecar.lock().unwrap().take()`, dont
+    // l'extension de portée des temporaires garderait le MutexGuard verrouillé
+    // pendant tout `arreter()` (jusqu'à 3 s).
+    let ancien = etat.sidecar.lock().unwrap().take();
+    if let Some(mut ancien) = ancien {
         ancien.arreter(GRACE);
     }
 
@@ -194,9 +133,34 @@ fn lancer_sidecar(etat: &Etat, chemin_node: PathBuf, token_raindrop: &str) -> Et
     }
 }
 
+/// `etat_connexion`, `relancer` et `enregistrer_jeton` sont `async` et
+/// déplacent leur corps bloquant dans `tauri::async_runtime::spawn_blocking`
+/// (ronde de correction 1, constat critique) : une commande Tauri `pub fn`
+/// non-`async` est appelée EN LIGNE sur le thread principal — jusqu'au
+/// délégué Objective-C de WebKit lui-même — donc `etat_connexion` (jusqu'à
+/// 40 s) et `enregistrer_jeton` (jusqu'à 25 s) gelaient la fenêtre pendant
+/// toute leur durée.
+///
+/// `State<'_, Etat>` n'est pas `Send` et ne peut pas traverser la frontière
+/// `'static` de la closure passée à `spawn_blocking`. La forme retenue prend
+/// `tauri::AppHandle` (`Send + Sync + 'static`, `Clone`) en paramètre de
+/// commande, et récupère l'état par `app.state::<Etat>()` À L'INTÉRIEUR de la
+/// closure — le `State` emprunté qui en résulte est créé et consommé
+/// entièrement dans ce thread bloquant, sans jamais franchir de point de
+/// suspension `async`.
+///
+/// Une tâche qui panique (`JoinError`) rend une `Panne` plutôt que de
+/// propager le panic jusqu'à faire tomber le processus.
 #[tauri::command]
-pub fn etat_connexion(etat: State<'_, Etat>) -> EtatConnexion {
-    etat.attendre()
+pub async fn etat_connexion(app: AppHandle) -> EtatConnexion {
+    tauri::async_runtime::spawn_blocking(move || {
+        let etat = app.state::<Etat>();
+        etat.attendre()
+    })
+    .await
+    .unwrap_or_else(|e| EtatConnexion::Panne {
+        detail: format!("tâche etat_connexion interrompue : {e}"),
+    })
 }
 
 /// Rejoue la séquence entière.
@@ -207,74 +171,51 @@ pub fn etat_connexion(etat: State<'_, Etat>) -> EtatConnexion {
 /// transformerait l'écran de panne en cul-de-sac : une panne passagère, ou un
 /// jeton refusé, enfermeraient l'utilisateur pour de bon.
 #[tauri::command]
-pub fn relancer(etat: State<'_, Etat>) -> EtatConnexion {
-    let e = sequence(&etat);
-    etat.poser(e.clone());
-    e
+pub async fn relancer(app: AppHandle) -> EtatConnexion {
+    tauri::async_runtime::spawn_blocking(move || {
+        let etat = app.state::<Etat>();
+        let e = sequence(&etat);
+        etat.poser(e.clone());
+        e
+    })
+    .await
+    .unwrap_or_else(|e| EtatConnexion::Panne {
+        detail: format!("tâche relancer interrompue : {e}"),
+    })
 }
 
 /// Premier lancement (§6) : le token saisi est enregistré au trousseau, puis
 /// le sidecar démarre. Sert aussi à REMPLACER un token refusé — la même
 /// commande, le même chemin.
 #[tauri::command]
-pub fn enregistrer_jeton(jeton_raindrop: String, etat: State<'_, Etat>) -> EtatConnexion {
-    let jeton = jeton_raindrop.trim().to_string();
-    if jeton.is_empty() {
-        return EtatConnexion::Panne { detail: "token vide".into() };
-    }
-    if let Err(detail) = trousseau::ecrire(&jeton) {
-        return EtatConnexion::Panne { detail };
-    }
-    let chemin_node = match node::resoudre() {
-        node::Verdict::Trouve { chemin, .. } => chemin,
-        autre => return verdict_en_etat(autre),
-    };
-    let e = lancer_sidecar(&etat, chemin_node, &jeton);
-    etat.poser(e.clone());
-    e
+pub async fn enregistrer_jeton(jeton_raindrop: String, app: AppHandle) -> EtatConnexion {
+    tauri::async_runtime::spawn_blocking(move || {
+        let etat = app.state::<Etat>();
+        let jeton = jeton_raindrop.trim().to_string();
+        if jeton.is_empty() {
+            return EtatConnexion::Panne { detail: "token vide".into() };
+        }
+        if let Err(detail) = trousseau::ecrire(&jeton) {
+            return EtatConnexion::Panne { detail };
+        }
+        let chemin_node = match node::resoudre() {
+            node::Verdict::Trouve { chemin, .. } => chemin,
+            autre => return verdict_en_etat(autre),
+        };
+        let e = lancer_sidecar(&etat, chemin_node, &jeton);
+        etat.poser(e.clone());
+        e
+    })
+    .await
+    .unwrap_or_else(|e| EtatConnexion::Panne {
+        detail: format!("tâche enregistrer_jeton interrompue : {e}"),
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn json(e: &EtatConnexion) -> String {
-        serde_json::to_string(e).unwrap()
-    }
-
-    #[test]
-    fn pret_porte_son_port_et_son_token() {
-        let e = EtatConnexion::Pret { port: 51234, token: "abc".into() };
-        assert_eq!(json(&e), r#"{"kind":"pret","port":51234,"token":"abc"}"#);
-    }
-
-    #[test]
-    fn les_etats_sans_donnee_ne_portent_que_leur_kind() {
-        // Le front distingue les écrans sur `kind` seul : une faute ici est
-        // invisible côté Rust et rend un écran blanc côté webview.
-        assert_eq!(json(&EtatConnexion::JetonRequis), r#"{"kind":"jeton_requis"}"#);
-    }
-
-    #[test]
-    fn node_absent_et_panne_portent_leur_detail() {
-        let n = EtatConnexion::NodeAbsent { detail: "rien trouvé".into() };
-        assert_eq!(json(&n), r#"{"kind":"node_absent","detail":"rien trouvé"}"#);
-        let p = EtatConnexion::Panne { detail: "boum".into() };
-        assert_eq!(json(&p), r#"{"kind":"panne","detail":"boum"}"#);
-    }
-
-    #[test]
-    fn un_node_trop_vieux_dit_sa_version_et_le_plancher() {
-        // Spec §3.2 et §7 : l'écran doit pouvoir écrire une instruction
-        // utile, donc porter le constat, pas un « erreur ».
-        let e = verdict_en_etat(crate::node::Verdict::TropVieux {
-            chemin: "/usr/bin/node".into(),
-            version: "v18.19.0".into(),
-        });
-        let EtatConnexion::NodeAbsent { detail } = e else { panic!("attendu node_absent") };
-        assert!(detail.contains("v18.19.0"), "la version trouvée : {detail}");
-        assert!(detail.contains("20"), "le plancher exigé : {detail}");
-    }
+    use std::time::Instant;
 
     #[test]
     fn un_dossier_de_donnees_indeterminable_devient_une_panne() {
@@ -283,12 +224,40 @@ mod tests {
         // se transformerait silencieusement en chemin relatif au répertoire
         // courant — tout le cycle de vie du sidecar se jouerait au mauvais
         // endroit, sans un mot.
-        use std::path::PathBuf;
         let e = dossier_en_panne(&PathBuf::new());
         let Some(EtatConnexion::Panne { detail }) = e else {
             panic!("attendu Some(Panne) pour un dossier vide")
         };
         assert!(!detail.is_empty());
         assert!(dossier_en_panne(&PathBuf::from("/tmp/x")).is_none());
+    }
+
+    #[test]
+    fn le_verrou_de_lancement_serialise_les_executions_concurrentes() {
+        // Constat important : `verrou_lancement` doit empêcher deux
+        // exécutions de `lancer_sidecar` de s'entrelacer. `lancer_sidecar`
+        // prend ce même verrou comme toute première instruction de son
+        // corps (voir son commentaire) et le tient jusqu'à la fin de la
+        // fonction — ce test prouve le mécanisme d'exclusion mutuelle
+        // lui-même : un `attendre_port()` ou un spawn de process réels dans
+        // un test rendrait la preuve directe sur `lancer_sidecar` beaucoup
+        // trop lente (`DELAI_PORT` = 25 s, non paramétrable pour les tests).
+        use std::sync::Arc;
+        let etat = Arc::new(Etat::new("t".into(), PathBuf::new(), PathBuf::new()));
+        let e2 = Arc::clone(&etat);
+
+        let debut = Instant::now();
+        let garde = etat.verrou_lancement.lock().unwrap();
+        let poignee = std::thread::spawn(move || {
+            let _g2 = e2.verrou_lancement.lock().unwrap();
+            debut.elapsed()
+        });
+        std::thread::sleep(Duration::from_millis(100));
+        drop(garde);
+        let ecoule_avant_acquisition = poignee.join().unwrap();
+        assert!(
+            ecoule_avant_acquisition >= Duration::from_millis(90),
+            "le second thread a acquis le verrou avant sa libération : {ecoule_avant_acquisition:?}"
+        );
     }
 }
