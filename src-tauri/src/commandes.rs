@@ -7,9 +7,9 @@
 
 use tauri::{AppHandle, Manager};
 
-use crate::demarrage::{lancer_sidecar, sequence};
+use crate::demarrage::{lancer_sidecar, sequence, GRACE};
 use crate::etat_connexion::{verdict_en_etat, Etat, EtatConnexion};
-use crate::{node, trousseau};
+use crate::{node, trousseau, verrou};
 
 #[tauri::command]
 pub async fn etat_connexion(app: AppHandle) -> EtatConnexion {
@@ -117,6 +117,31 @@ pub async fn installer_runtime(app: AppHandle) -> EtatConnexion {
 
 /// Le poll du front pendant une installation : l'étape courante, ou `None`
 /// (rien en cours). Lecture instantanée, pas d'événements Tauri.
+/// Déconnexion (spec §6, réglages) : efface le jeton du trousseau et
+/// arrête le sidecar — l'écran de premier lancement reprend la main.
+/// L'effacement AVANT l'arrêt : si l'app meurt entre les deux, aucun
+/// sidecar ne tourne avec un jeton que le trousseau a oublié. Le
+/// lockfile est effacé explicitement : le sidecar a son propre handler
+/// d'arrêt, mais ne pas dépendre de sa course avec notre exit.
+#[tauri::command]
+pub async fn deconnecter(app: AppHandle) -> EtatConnexion {
+    tauri::async_runtime::spawn_blocking(move || {
+        let etat = app.state::<Etat>();
+        if let Err(detail) = trousseau::effacer() {
+            return EtatConnexion::Panne { detail };
+        }
+        etat.arreter_sidecar(GRACE);
+        let _ = std::fs::remove_file(verrou::chemin(&etat.dossier));
+        let e = EtatConnexion::JetonRequis;
+        etat.poser(e.clone());
+        e
+    })
+    .await
+    .unwrap_or_else(|e| EtatConnexion::Panne {
+        detail: format!("déconnexion interrompue : {e}"),
+    })
+}
+
 #[tauri::command]
 pub async fn progression_installation(app: AppHandle) -> Option<String> {
     tauri::async_runtime::spawn_blocking(move || app.state::<Etat>().lire_progression())

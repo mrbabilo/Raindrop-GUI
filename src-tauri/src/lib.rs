@@ -63,6 +63,7 @@ fn ressources_depuis_exe(exe: &Path) -> Option<PathBuf> {
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            commandes::deconnecter,
             commandes::etat_connexion,
             commandes::enregistrer_jeton,
             commandes::relancer,
