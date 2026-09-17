@@ -132,4 +132,20 @@ describe("useRaindrops", () => {
     expect(url).toContain("search=custom");
     expect(url).not.toContain("status%3Aunread");
   });
+
+  // `notag` n'était éprouvé qu'à `undefined` : rien ne prouvait que la vue
+  // « Non-taggés » du nettoyage filtrait réellement. `false` compte aussi —
+  // c'est un filtre explicite, pas une absence (même piège que `important`,
+  // et que le `z.coerce.boolean()` corrigé côté sidecar).
+  it("notag part sur le fil, à true comme à false", async () => {
+    const fetchMock = stubFetch(3);
+    const { result } = renderHook(() => useRaindrops({ collectionId: 0, notag: true }), { wrapper });
+    await waitFor(() => expect(result.current.data?.pages).toHaveLength(1));
+    expect(fetchMock.mock.calls[0]![0] as string).toContain("notag=true");
+
+    const fetch2 = stubFetch(3);
+    const { result: r2 } = renderHook(() => useRaindrops({ collectionId: 0, notag: false }), { wrapper });
+    await waitFor(() => expect(r2.current.data?.pages).toHaveLength(1));
+    expect(fetch2.mock.calls[0]![0] as string).toContain("notag=false");
+  });
 });

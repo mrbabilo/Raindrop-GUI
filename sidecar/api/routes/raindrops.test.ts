@@ -1,7 +1,6 @@
+import { repertoireTemporaire } from "../../testing/tmp.js";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { Hono } from "hono";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp, type SidecarDeps } from "../app.js";
 import { connectFake } from "../../testing/fakeServer.js";
@@ -75,7 +74,7 @@ const unrestoreApp = (calls: [number[], number][], origins: ReturnType<typeof ma
 
 /** Vrai store dont TOUTE écriture échoue (répertoire parent inexistant → ENOENT) :
  *  verrouille « un échec d'écriture du store ne fait jamais échouer la route ». */
-const brokenOrigins = () => makeOriginStore({ file: join(mkdtempSync(join(tmpdir(), "origines-ko-")), "pas-de-rep", "origins.json") });
+const brokenOrigins = () => makeOriginStore({ file: join(repertoireTemporaire("origines-ko-"), "pas-de-rep", "origins.json") });
 
 beforeEach(async () => {
   const fake = await connectFake({ raindropCount: 30 });

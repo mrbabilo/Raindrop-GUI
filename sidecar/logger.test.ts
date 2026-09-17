@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { mkdtempSync, writeFileSync, existsSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { repertoireTemporaire } from "./testing/tmp.js";
+import { describe, it, expect, afterAll } from "vitest";
+import {writeFileSync, existsSync, readFileSync} from "node:fs";
 import { join } from "node:path";
 import { createLogger } from "./logger.js";
 
-const dir = () => mkdtempSync(join(tmpdir(), "logs-"));
+const dir = () => repertoireTemporaire("logs-");
 
 /** Les writes du logger sont asynchrones : borne l'attente au lieu de courser
  *  sur le scheduling (flake 27 % sous charge). Échoue si jamais apparu. */

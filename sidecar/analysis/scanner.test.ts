@@ -1,6 +1,5 @@
+import { repertoireTemporaire } from "../testing/tmp.js";
 import { describe, it, expect, beforeEach } from "vitest";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { connectFake } from "../testing/fakeServer.js";
 import { McpConnection } from "../mcp/connection.js";
@@ -31,7 +30,7 @@ describe("Scanner", () => {
     const fake = await connectFake({ raindropCount: 25 });
     conn = McpConnection.fromClient(fake.client);
     store = new JobStore();
-    file = join(mkdtempSync(join(tmpdir(), "scan-")), "analysis.json");
+    file = join(repertoireTemporaire("scan-"), "analysis.json");
     cache = await AnalysisCache.load(file);
   });
 

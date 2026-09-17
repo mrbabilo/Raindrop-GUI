@@ -1,12 +1,12 @@
+import { repertoireTemporaire } from "../testing/tmp.js";
 import { describe, it, expect, beforeEach } from "vitest";
-import { mkdtempSync, readFileSync, writeFileSync, existsSync } from "node:fs";
-import { tmpdir } from "node:os";
+import {readFileSync, writeFileSync, existsSync} from "node:fs";
 import { join } from "node:path";
 import { makeOriginStore } from "./origins.js";
 
 let dir: string;
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "origins-"));
+  dir = repertoireTemporaire("origins-");
 });
 
 describe("makeOriginStore", () => {

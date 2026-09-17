@@ -1,10 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { repertoireTemporaire } from "./testing/tmp.js";
+import { describe, it, expect, afterAll } from "vitest";
 import { join } from "node:path";
 import { acquireLock, readLockfile, clearLockfile } from "./lockfile.js";
 
-const dir = () => mkdtempSync(join(tmpdir(), "lock-"));
+const dir = () => repertoireTemporaire("lock-");
 
 describe("acquireLock", () => {
   it("crée le lockfile {port,pid,startedAt} — SANS token (R15, spec §3.7)", async () => {

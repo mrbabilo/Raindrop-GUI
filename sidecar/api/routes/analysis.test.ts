@@ -1,6 +1,5 @@
+import { repertoireTemporaire } from "../../testing/tmp.js";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Hono } from "hono";
 import { createApp, type SidecarDeps } from "../app.js";
@@ -26,7 +25,7 @@ beforeEach(async () => {
   const fake = await connectFake({ raindropCount: 20 });
   conn = McpConnection.fromClient(fake.client);
   jobs = new JobStore();
-  cache = await AnalysisCache.load(join(mkdtempSync(join(tmpdir(), "ra-")), "analysis.json"));
+  cache = await AnalysisCache.load(join(repertoireTemporaire("ra-"), "analysis.json"));
   const scanner = new Scanner({
     mcp: (t, a) => conn.call(t, a),
     jobs,

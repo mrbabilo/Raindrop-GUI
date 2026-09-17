@@ -1,7 +1,5 @@
+import { repertoireTemporaire } from "../testing/tmp.js";
 import { describe, it, expect } from "vitest";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { McpLifecycle } from "./lifecycle.js";
@@ -40,7 +38,7 @@ describe("McpLifecycle", () => {
   it("redémarre automatiquement après un crash du subprocess", async () => {
     // crash-once : seul le premier spawn crashe (marqueur dans stateDir) —
     // la reconnexion suivante reste stable, le test est déterministe.
-    const stateDir = mkdtempSync(join(tmpdir(), "lifecycle-"));
+    const stateDir = repertoireTemporaire("lifecycle-");
     const lc = new McpLifecycle({
       factory: fixtureFactory("crash-once", stateDir),
       restartBackoffMs: 50,

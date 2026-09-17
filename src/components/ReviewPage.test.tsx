@@ -111,13 +111,41 @@ describe("ReviewPage — niveau 1 (corbeille)", () => {
     // jsdom n'implémente ni createObjectURL ni revokeObjectURL : stubs posés
     // à la main (vi.spyOn exige une propriété existante). Le contrat précis
     // du CSV (BOM, a[download], revoke) est prouvé dans csv.test.ts.
+    //
+    // Ils sont RENDUS ensuite : posés sur le `URL` global, ils survivaient au
+    // fichier et tout test suivant héritait d'un `createObjectURL` truqué.
+    const avant = {
+      creer: Object.getOwnPropertyDescriptor(URL, "createObjectURL"),
+      revoquer: Object.getOwnPropertyDescriptor(URL, "revokeObjectURL"),
+    };
     Object.defineProperty(URL, "createObjectURL", { configurable: true, value: () => "blob:test" });
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: () => undefined });
-    const click = vi.fn();
-    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(click);
+    try {
+      const click = vi.fn();
+      vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(click);
+      renderReview();
+      await userEvent.click(screen.getByRole("button", { name: /Exporter en CSV/ }));
+      expect(click).toHaveBeenCalled();
+    } finally {
+      for (const [nom, d] of [["createObjectURL", avant.creer], ["revokeObjectURL", avant.revoquer]] as const) {
+        if (d === undefined) delete (URL as unknown as Record<string, unknown>)[nom];
+        else Object.defineProperty(URL, nom, d);
+      }
+    }
+  });
+
+  // « Tout désélectionner » n'avait aucun test : c'est pourtant le geste qui
+  // vide la Revue de sa portée — après lui, l'action ne doit plus pouvoir
+  // partir.
+  it("« Tout désélectionner » vide la portée et désarme l'exécution", async () => {
     renderReview();
-    await userEvent.click(screen.getByRole("button", { name: /Exporter en CSV/ }));
-    expect(click).toHaveBeenCalled();
+    expect(screen.getByText(/3 item\(s\) affecté/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Tout désélectionner" }));
+    expect(screen.getByText(/0 item\(s\) affecté/)).toBeInTheDocument();
+    // Même confirmée, une action sans item ne s'exécute pas.
+    await userEvent.click(screen.getByRole("checkbox", { name: /Je confirme l'action sur 0/ }));
+    expect(screen.getByRole("button", { name: "Exécuter" })).toBeDisabled();
+    expect(sendMock).not.toHaveBeenCalled();
   });
 });
 

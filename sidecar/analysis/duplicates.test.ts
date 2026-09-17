@@ -7,6 +7,10 @@ function item(id: number, url: string, title: string): RaindropItem {
     id, url, title, excerpt: "", note: "", domain: new URL(url).hostname,
     tags: [], created: "2025-01-01T00:00:00Z", lastUpdate: "2025-01-01T00:00:00Z",
     important: false, type: "link", cover: null, collectionId: 0,
+    // Requis par le DTO : les omettre laissait la factory diverger du type
+    // qu'elle prétend produire, et un test bâti sur une forme fausse ne
+    // prouve rien de la vraie.
+    cache: null, broken: false, highlights: [],
   };
 }
 

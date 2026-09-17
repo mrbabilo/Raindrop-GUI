@@ -158,11 +158,23 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       nom disparu ; renommage vers le nom identique traité en no-op ; et le
       garde anti-course `seq`, qui n'avait aucun test, en a un qui retient
       une réponse lente jusqu'après le changement d'URL.
-- [ ] **Hygiène tests** : useMutations sans tests unitaires (7 hooks/9) ;
-      invalidation T8-5 non assertée ; untagged sans test ; « Tout
-      désélectionner » non testé ; stubs URL ReviewPage.test sans
-      nettoyage ; `broken: true` jamais testé ; factory `item()`
-      duplicates.test non conforme au type ; mkdtemp sans nettoyage.
+- [x] **Hygiène tests** — fait le 2026-09-17 : les neuf hooks de
+      `useMutations` ont leur test unitaire (route, corps, conversions DTO,
+      et surtout les invalidations — une invalidation manquante ne lève
+      rien, elle laisse l'écran mentir après une écriture réussie, dont
+      celle de T8-5) ; `notag` éprouvé à `true` comme à `false` ; « Tout
+      désélectionner » testé, portée ET désarmement de l'exécution ; les
+      stubs `URL` de ReviewPage.test sont rendus ; la factory `item()` de
+      duplicates.test rend un vrai `RaindropItem`.
+      **Les répertoires temporaires fuyaient depuis HUIT fichiers**, pas un
+      (le triage n'en voyait qu'un) : `sidecar/testing/tmp.ts` les rend
+      désormais, et la fuite est mesurée à zéro sur la suite entière —
+      plusieurs milliers s'étaient accumulés dans le dossier temporaire du
+      système. Purge manuelle des anciens, si besoin :
+      `ls -d /var/folders/*/*/T/{lock,logs,cache,origins,scan,lifecycle}-*`
+      puis `rm -rf`.
+      `broken: true` était en fait DÉJÀ couvert (mappers.test.ts) — le
+      triage se trompait sur ce point.
 - [ ] **Sidecar défensif** : `?? id!` silencieux de `collections.ts:24` →
       `ShapeError` (en tête de file — famille « forme supposée ») ;
       `purge()` des origines sur empty-trash (croissance bornée mais

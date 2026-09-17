@@ -1,11 +1,11 @@
+import { repertoireTemporaire } from "../testing/tmp.js";
 import { describe, it, expect, beforeEach } from "vitest";
-import { mkdtempSync, readFileSync, writeFileSync, existsSync } from "node:fs";
-import { tmpdir } from "node:os";
+import {readFileSync, writeFileSync, existsSync} from "node:fs";
 import { join } from "node:path";
 import { AnalysisCache } from "./cache.js";
 
 let dir: string;
-beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "cache-")); });
+beforeEach(() => { dir = repertoireTemporaire("cache-"); });
 
 const result = (url: string, status: "ok" | "dead") => ({
   raindropId: 1, url, status, httpStatus: status === "ok" ? 200 : 404,
