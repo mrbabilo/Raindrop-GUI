@@ -47,14 +47,41 @@ finale de branche).*
 
 ## Polissage du plan 2 (issu du triage de la revue finale, 2026-09-17)
 
-Six familles, ~45 items condensés — aucun ne bloque le merge.
+Six familles, ~45 items condensés — aucun ne bloque le merge. S'y
+ajoutent deux designs validés par l'utilisateur après comparaison avec
+app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
+
+- [ ] **Vue collection parente** — design validé le 2026-09-17 :
+      collections triées **alphanumérique naturel** (`localeCompare` fr
+      `numeric: true` — aujourd'hui l'ordre affiché est celui de l'API) ;
+      **chevron de parent ouvert au survol** de sa ligne dans la sidebar
+      (repli au leave, délai ~250 ms — l'arbre s'explore au pointeur) ;
+      **clic sur une collection principale → ses signets directs puis
+      chaque sous-collection en intertitre** (carré teinté + nom + compte,
+      28 px §8) suivi de ses signets en lignes 36 px, tout déplié,
+      contrôles globaux en tête uniques (rien de dupliqué par section,
+      contrairement à Raindrop). Chargement progressif par la file 550 ms.
+      Front uniquement.
+- [ ] **Navigation clavier fluide** — directive transversale du
+      2026-09-17 : roving tabindex (Tab entre dans la liste, ↑↓ prennent
+      le relais — jamais 300 stops de Tab) ; **→/←** déplient/replient un
+      parent dans la sidebar ; Entrée navigue/ouvre le détail ; **Échap
+      remonte d'un niveau et rend le focus** ; ligne active avec suivi du
+      scroll dans le virtualizer (`scrollToIndex`) ; `:focus-visible`
+      uniquement — **ajouter à DESIGN.md §9** : « le focus clavier est un
+      anneau `--color-app-sel`, le clic ne montre rien » ; après une
+      action, le focus passe à la ligne suivante ; la ligne active suit
+      aussi le survol souris (un seul état de pointeur). La palette ⌘K
+      (T11) sert déjà de référence.
+- [ ] **Passe design** : « Tout désélectionner » testé ; étiquettes
 
 - [ ] **Passe design** : « Tout désélectionner » testé ; étiquettes
       évanouies par `shrink` (plancher min-w) ; `leading-tight` tuile ;
       `.wash` vs `.coll-icon` à fusionner ; `filetEtat` demi-paire ;
       `racine()` à déplacer ; moyenne d'icônes §8 ; sélection persistante
       collections/tags ; media select retiré (7b) — rester cohérent.
-- [ ] **Lot a11y** : aria-label recherche ; chaîne ARIA palette
+- [ ] **Lot a11y** : la **navigation clavier** ci-dessus (par zone) ;
+      aria-label recherche ; chaîne ARIA palette
       (`aria-controls`/`aria-activedescendant`, ownership listbox→option) ;
       input de renommage de tag sans nom accessible ; désarmement au clic
       extérieur du confirm inline ; double `role="alert"` imbriqué
