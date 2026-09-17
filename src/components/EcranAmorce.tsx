@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { t } from "../i18n/fr";
-import { relancer, type Amorce } from "../lib/amorce";
+import { installerRuntime, progressionInstallation, relancer, type Amorce } from "../lib/amorce";
 
 // Les deux écrans qui disent pourquoi l'application ne peut PAS s'ouvrir.
 // Même forme : un constat (venu de Rust), une instruction, et AU MOINS UNE
@@ -52,13 +52,60 @@ function BoutonReessayer({ onEtat }: { onEtat: (a: Amorce) => void }) {
   );
 }
 
+/** Le geste principal de l'écran Node absent (spec §3.2 amendée, décision du
+ *  2026-09-17) : installer le runtime géré, PUIS suivre le nouvel état via
+ *  `appliquer` — Rust rejoue la séquence entière. Pendant l'installation, le
+ *  libellé devient l'étape courante, pollée toutes les 500 ms
+ *  (`progression_installation` — même modèle que `etat_connexion`, pas
+ *  d'événements Tauri). */
+function BoutonInstaller({ onEtat }: { onEtat: (a: Amorce) => void }) {
+  const [occupe, setOccupe] = useState(false);
+  const [progression, setProgression] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!occupe) return;
+    const sonde = window.setInterval(() => {
+      void progressionInstallation().then((p) => {
+        if (p) setProgression(p);
+      });
+    }, 500);
+    // Un bouton démonté (l'écran a changé) arrête de sonder.
+    return () => window.clearInterval(sonde);
+  }, [occupe]);
+
+  return (
+    <button
+      type="button"
+      className="btn"
+      disabled={occupe}
+      onClick={() => {
+        setOccupe(true);
+        setProgression(t("boot.installing"));
+        void installerRuntime().then((a) => {
+          setOccupe(false);
+          onEtat(a);
+        });
+      }}
+    >
+      {occupe ? (progression ?? t("boot.installing")) : t("boot.installNode")}
+    </button>
+  );
+}
+
 export function Diagnostic({ detail, onEtat }: { detail: string; onEtat: (a: Amorce) => void }) {
   return (
     <Ecran
       titre={t("boot.nodeTitle")}
       detail={detail}
       aide={t("boot.nodeHelp")}
-      actions={<BoutonReessayer onEtat={onEtat} />}
+      actions={
+        <>
+          {/* Le geste PRINCIPAL (spec §3.2 amendée) : installer le runtime
+              géré — visible et consenti, pas une fenêtre blanche muette. */}
+          <BoutonInstaller onEtat={onEtat} />
+          <BoutonReessayer onEtat={onEtat} />
+        </>
+      }
     />
   );
 }

@@ -67,6 +67,10 @@ pub struct Etat {
     /// l'est dès que les commandes tournent sur le pool de tâches
     /// bloquantes.
     pub(crate) verrou_lancement: Mutex<()>,
+    /// Progression d'une installation de runtime (task 13), lue par le poll
+    /// du front (`progression_installation` — même modèle que
+    /// `etat_connexion`, PAS d'événements Tauri). `None` = rien en cours.
+    progression: Mutex<Option<String>>,
 }
 
 impl Etat {
@@ -78,7 +82,26 @@ impl Etat {
             sidecar: Mutex::new(None),
             resolu: (Mutex::new(None), Condvar::new()),
             verrou_lancement: Mutex::new(()),
+            progression: Mutex::new(None),
         }
+    }
+
+    /// Étape d'installation à montrer au front (téléchargement,
+    /// vérification, extraction…).
+    pub fn poser_progression(&self, message: String) {
+        *self.progression.lock().unwrap() = Some(message);
+    }
+
+    /// Le poll du front. Une copie : le message reste lisible après coup,
+    /// le front cesse de sonder quand l'état d'amorce change.
+    pub fn lire_progression(&self) -> Option<String> {
+        self.progression.lock().unwrap().clone()
+    }
+
+    /// Au début d'une installation : les messages d'une précédente ne
+    /// doivent pas se superposer.
+    pub fn effacer_progression(&self) {
+        *self.progression.lock().unwrap() = None;
     }
 
     pub fn poser(&self, e: EtatConnexion) {
@@ -250,5 +273,15 @@ mod tests {
         // Si le budget était relancé à chaque réveil, on dépasserait
         // largement 200 ms (5 réveils, un budget relancé donnerait ~1 s).
         assert!(ecoule < Duration::from_millis(500), "écoulé : {ecoule:?}");
+    }
+
+    #[test]
+    fn la_progression_se_pose_se_lit_et_s_efface() {
+        let etat = Etat::new("t".into(), PathBuf::new(), PathBuf::new());
+        assert_eq!(etat.lire_progression(), None, "rien en cours au départ");
+        etat.poser_progression("Téléchargement…".into());
+        assert_eq!(etat.lire_progression(), Some("Téléchargement…".into()));
+        etat.effacer_progression();
+        assert_eq!(etat.lire_progression(), None);
     }
 }

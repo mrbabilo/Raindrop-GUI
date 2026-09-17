@@ -2,15 +2,24 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Diagnostic, EcranPanne } from "./EcranAmorce";
+import type { Amorce } from "../lib/amorce";
 
-const { relancerMock } = vi.hoisted(() => ({ relancerMock: vi.fn() }));
+const { relancerMock, installerMock, progressionMock } = vi.hoisted(() => ({
+  relancerMock: vi.fn(),
+  installerMock: vi.fn(),
+  progressionMock: vi.fn(),
+}));
 vi.mock("../lib/amorce", async (vrai) => ({
   ...(await vrai<object>()),
   relancer: relancerMock,
+  installerRuntime: installerMock,
+  progressionInstallation: progressionMock,
 }));
 
 beforeEach(() => {
   relancerMock.mockReset().mockResolvedValue({ ecran: "app" });
+  installerMock.mockReset().mockResolvedValue({ ecran: "app" });
+  progressionMock.mockReset().mockResolvedValue(null);
 });
 
 describe("Diagnostic", () => {
@@ -25,10 +34,51 @@ describe("Diagnostic", () => {
     );
     expect(screen.getByRole("heading", { name: "Node est introuvable" })).toBeInTheDocument();
     expect(screen.getByText(/v18\.19\.0/)).toBeInTheDocument();
+    // Les instructions manuelles restent le repli (amendement spec §3.2).
     expect(screen.getByText(/brew install node/)).toBeInTheDocument();
   });
 
-  it("« Réessayer » REJOUE la séquence et remonte le nouvel état", async () => {
+  // Le bouton PRINCIPAL : installer le runtime géré (spec §3.2 amendée —
+  // décision du 2026-09-17, un téléchargement de 25 Mo mérite un geste de
+  // consentement, pas une fenêtre blanche muette).
+  it("propose « Installer Node » en geste principal, qui installe PUIS suit le nouvel état", async () => {
+    const onEtat = vi.fn();
+    render(<Diagnostic detail="rien trouvé" onEtat={onEtat} />);
+    await userEvent.click(screen.getByRole("button", { name: "Installer Node" }));
+    expect(installerMock).toHaveBeenCalled();
+    await waitFor(() => expect(onEtat).toHaveBeenCalledWith({ ecran: "app" }));
+  });
+
+  it("affiche la progression pollée pendant l'installation", async () => {
+    // L'installation ne finit QUE quand on la laisse : le poll doit
+    // rafraîchir le libellé pendant qu'elle tourne.
+    let terminer: (a: Amorce) => void = () => {};
+    installerMock.mockImplementation(
+      () =>
+        new Promise<Amorce>((resoudre) => {
+          terminer = resoudre;
+        }),
+    );
+    progressionMock.mockResolvedValue("Téléchargement de Node v22.23.0…");
+    render(<Diagnostic detail="rien trouvé" onEtat={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Installer Node" }));
+    const bouton = screen.getByRole("button", { name: "Installation de Node…" });
+    expect(bouton).toBeDisabled();
+    // Le poll (500 ms) remplace le libellé générique par l'étape de Rust.
+    await waitFor(
+      () =>
+        expect(
+          screen.getByRole("button", { name: "Téléchargement de Node v22.23.0…" }),
+        ).toBeInTheDocument(),
+      { timeout: 2000 },
+    );
+    terminer({ ecran: "app" });
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /Téléchargement/ })).not.toBeInTheDocument(),
+    );
+  });
+
+  it("« Réessayer » reste disponible en repli et REJOUE la séquence", async () => {
     const onEtat = vi.fn();
     render(<Diagnostic detail="rien trouvé" onEtat={onEtat} />);
     await userEvent.click(screen.getByRole("button", { name: "Réessayer" }));

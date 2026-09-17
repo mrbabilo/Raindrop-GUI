@@ -96,9 +96,26 @@ pub fn candidats_depuis(path: Option<&str>) -> Vec<PathBuf> {
     v
 }
 
-/// Les candidats réels, lus depuis l'environnement du processus.
+/// Le runtime géré par l'app, s'il est installé, PASSE EN TÊTE (amendement
+/// spec §3.2 du 2026-09-17) : un Node installé par l'app bat toujours ce
+/// que le PATH propose — déterminisme. Pur, testé.
+pub fn avec_runtime_en_tete(gere: Option<PathBuf>, mut candidats: Vec<PathBuf>) -> Vec<PathBuf> {
+    if let Some(g) = gere {
+        if !candidats.contains(&g) {
+            candidats.insert(0, g);
+        }
+    }
+    candidats
+}
+
+/// Les candidats réels : d'abord le runtime géré s'il existe dans le dossier
+/// de données (`verrou::dossier_donnees()`, le même que le lockfile), puis le
+/// PATH hérité et les emplacements connus.
 pub fn candidats_systeme() -> Vec<PathBuf> {
-    candidats_depuis(std::env::var("PATH").ok().as_deref())
+    let dossier = crate::verrou::dossier_donnees();
+    let gere = crate::runtime::chemin_runtime(&dossier);
+    let present = !dossier.as_os_str().is_empty() && gere.exists();
+    avec_runtime_en_tete(present.then_some(gere), candidats_depuis(std::env::var("PATH").ok().as_deref()))
 }
 
 /// Sonde un candidat avec un délai borné : `spawn()` plutôt qu'un `output()`,
@@ -244,6 +261,34 @@ mod tests {
             candidats_depuis(None),
             vec![p("/opt/homebrew/bin/node"), p("/usr/local/bin/node"), p("/usr/bin/node")]
         );
+    }
+
+    // Le cas qui motive la task 13 : une fois installé par l'app, le runtime
+    // géré gagne TOUJOURS — un Node vérifié par l'app bat ce que le PATH
+    // propose, même un Node trop vieux placé plus tôt.
+    #[test]
+    fn le_runtime_gere_passe_en_tete_quand_il_existe() {
+        let v = avec_runtime_en_tete(
+            Some(p("/donnees/runtime/v22.23.0/bin/node")),
+            vec![p("/usr/bin/node"), p("/opt/homebrew/bin/node")],
+        );
+        assert_eq!(
+            v,
+            vec![
+                p("/donnees/runtime/v22.23.0/bin/node"),
+                p("/usr/bin/node"),
+                p("/opt/homebrew/bin/node"),
+            ]
+        );
+    }
+
+    #[test]
+    fn sans_runtime_gere_ou_en_doublon_la_liste_reste_saine() {
+        let candidats = vec![p("/usr/bin/node")];
+        assert_eq!(avec_runtime_en_tete(None, candidats.clone()), candidats);
+        let gere = p("/donnees/runtime/v22.23.0/bin/node");
+        let v = avec_runtime_en_tete(Some(gere.clone()), vec![gere.clone(), p("/usr/bin/node")]);
+        assert_eq!(v, vec![gere, p("/usr/bin/node")]);
     }
 }
 

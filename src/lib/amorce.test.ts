@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { appliquer, amorcer, relancer } from "./amorce";
+import { appliquer, amorcer, relancer, installerRuntime, progressionInstallation } from "./amorce";
 
 const { invokeMock, isTauriMock } = vi.hoisted(() => ({
   invokeMock: vi.fn(),
@@ -73,5 +73,57 @@ describe("relancer", () => {
     invokeMock.mockResolvedValue({ kind: "pret", port: 9, token: "t" });
     expect(await relancer()).toEqual({ ecran: "app" });
     expect(invokeMock).toHaveBeenCalledWith("relancer");
+  });
+});
+
+describe("installerRuntime", () => {
+  // Même contrat que « Réessayer » : Rust installe PUIS rejoue la séquence
+  // — l'état rendu doit passer par appliquer(), pas être relu.
+  it("appelle la commande d'installation et applique l'état rendu", async () => {
+    invokeMock.mockResolvedValue({ kind: "pret", port: 11, token: "t" });
+    expect(await installerRuntime()).toEqual({ ecran: "app" });
+    expect(invokeMock).toHaveBeenCalledWith("installer_runtime");
+    expect(window.RAINDROP_GUI).toEqual({ port: 11, token: "t" });
+  });
+
+  it("une installation refusée mène à l'écran de panne, pas à une page blanche", async () => {
+    invokeMock.mockResolvedValue({
+      kind: "panne",
+      detail: "somme sha256 refusée — installez Node manuellement",
+    });
+    expect(await installerRuntime()).toEqual({
+      ecran: "panne",
+      detail: "somme sha256 refusée — installez Node manuellement",
+    });
+  });
+
+  it("hors Tauri, ne demande rien", async () => {
+    isTauriMock.mockReturnValue(false);
+    expect(await installerRuntime()).toEqual({ ecran: "app" });
+    expect(invokeMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("progressionInstallation", () => {
+  it("sonde la commande de progression sous Tauri", async () => {
+    invokeMock.mockResolvedValue("Téléchargement de Node v22.23.0…");
+    expect(await progressionInstallation()).toBe("Téléchargement de Node v22.23.0…");
+    expect(invokeMock).toHaveBeenCalledWith("progression_installation");
+  });
+
+  it("rend null hors Tauri — le dev navigateur n'a rien à sonder", async () => {
+    isTauriMock.mockReturnValue(false);
+    expect(await progressionInstallation()).toBeNull();
+    expect(invokeMock).not.toHaveBeenCalled();
+  });
+
+  it("rend null sur une commande qui rejette — jamais d'écran blanc", async () => {
+    invokeMock.mockRejectedValue(new Error("pont IPC coupé"));
+    expect(await progressionInstallation()).toBeNull();
+  });
+
+  it("rend null quand rien n'est en cours", async () => {
+    invokeMock.mockResolvedValue(null);
+    expect(await progressionInstallation()).toBeNull();
   });
 });

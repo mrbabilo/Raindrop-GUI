@@ -20,3 +20,7 @@ keyring = "4"
 # Déjà dans l'arbre en transitive (0.2.189) : ajouté comme directe pour
 # `signaux.rs` — interception de SIGTERM, impossible sans appels libc.
 libc = "0.2"
+# Vérification SHASUMS256 du tarball du runtime Node géré (spec §3.2
+# amendée) : un contrôle de sécurité ne se délègue pas à un binaire qui peut
+# être absent — /usr/bin/shasum dépend du CLT.
+sha2 = "0.10"

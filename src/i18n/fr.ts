@@ -125,7 +125,11 @@ export const fr = {
   "boot.account": "Compte détecté : {name} ({email}) — {count} signets",
   "boot.enter": "Ouvrir la bibliothèque",
   "boot.nodeTitle": "Node est introuvable",
-  "boot.nodeHelp": "Installez Node 20 ou supérieur (par exemple « brew install node »), puis relancez l'application.",
+  // Amendement spec §3.2 (2026-09-17) : le geste principal est l'installation
+  // du runtime géré ; les instructions manuelles restent le repli.
+  "boot.nodeHelp": "Un runtime Node vérifié peut être installé dans le dossier de données de l'application. En repli, installez Node 20 ou supérieur manuellement (par exemple « brew install node »), puis relancez l'application.",
+  "boot.installNode": "Installer Node",
+  "boot.installing": "Installation de Node…",
   "boot.panneTitle": "Le service local n'a pas démarré",
   "boot.panneHelp": "Relancez l'application. Si le problème persiste, le journal de démarrage se trouve dans le dossier de données de l'application.",
   "boot.retrySaisie": "Saisir un autre jeton",

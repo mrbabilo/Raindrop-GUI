@@ -228,6 +228,58 @@ pub async fn enregistrer_jeton(jeton_raindrop: String, app: AppHandle) -> EtatCo
     })
 }
 
+/// Installe le runtime Node géré (amendement spec §3.2 du 2026-09-17),
+/// PUIS rejoue la séquence entière — le même chemin que `relancer` : le
+/// runtime fraîchement installé est résolu EN TÊTE (`node::candidats_
+/// systeme`) et le sidecar démarre. Un échec d'installation est une `Panne`
+/// qui porte les instructions manuelles (le repli hors-ligne).
+#[tauri::command]
+pub async fn installer_runtime(app: AppHandle) -> EtatConnexion {
+    tauri::async_runtime::spawn_blocking(move || {
+        let etat = app.state::<Etat>();
+        etat.effacer_progression();
+        // L'installation est sérialisée sous le MÊME verrou que le lancement
+        // du sidecar : deux « Installer Node » simultanés (ou une course
+        // avec « Réessayer ») ne doivent pas se marcher dessus. Relâché
+        // AVANT `sequence()` — `lancer_sidecar` le reprend, et un
+        // std::sync::Mutex n'est pas réentrant.
+        let dossier = etat.dossier.clone();
+        let ponton = app.clone();
+        let installe = {
+            let _garde = etat.verrou_lancement.lock().unwrap();
+            crate::runtime::installer(&dossier, std::env::consts::ARCH, move |message| {
+                if let Some(e) = ponton.try_state::<Etat>() {
+                    e.poser_progression(message);
+                }
+            })
+        };
+        let e = match installe {
+            Ok(_chemin) => sequence(&etat),
+            Err(detail) => EtatConnexion::Panne {
+                detail: format!(
+                    "{detail} En repli, installez Node {} ou supérieur manuellement (par exemple « brew install node »), puis relancez l'application.",
+                    node::MAJEURE_MINIMALE
+                ),
+            },
+        };
+        etat.poser(e.clone());
+        e
+    })
+    .await
+    .unwrap_or_else(|e| EtatConnexion::Panne {
+        detail: format!("tâche installer_runtime interrompue : {e}"),
+    })
+}
+
+/// Le poll du front pendant une installation : l'étape courante, ou `None`
+/// (rien en cours). Lecture instantanée, pas d'événements Tauri.
+#[tauri::command]
+pub async fn progression_installation(app: AppHandle) -> Option<String> {
+    tauri::async_runtime::spawn_blocking(move || app.state::<Etat>().lire_progression())
+        .await
+        .unwrap_or(None)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

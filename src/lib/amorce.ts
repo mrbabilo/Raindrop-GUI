@@ -38,7 +38,9 @@ export function appliquer(etat: EtatConnexion): Amorce {
   }
 }
 
-async function demander(commande: "etat_connexion" | "relancer"): Promise<Amorce> {
+async function demander(
+  commande: "etat_connexion" | "relancer" | "installer_runtime",
+): Promise<Amorce> {
   // Hors webview (développement au navigateur), le proxy Vite et
   // VITE_LOCAL_API_TOKEN suffisent : rien à demander à personne.
   if (!isTauri()) return { ecran: "app" };
@@ -60,3 +62,25 @@ export const amorcer = (): Promise<Amorce> => demander("etat_connexion");
  * l'écran de panne serait un cul-de-sac.
  */
 export const relancer = (): Promise<Amorce> => demander("relancer");
+
+/**
+ * Ce qu'appelle « Installer Node » (runtime géré, spec §3.2 amendée) :
+ * Rust installe PUIS rejoue la séquence — l'état rendu remplace l'écran
+ * courant via `appliquer`, exactement comme `relancer`.
+ */
+export const installerRuntime = (): Promise<Amorce> => demander("installer_runtime");
+
+/**
+ * La progression de l'installation en cours (poll toutes les 500 ms côté
+ * écran de diagnostic — même modèle que `etat_connexion`, pas d'événements
+ * Tauri). Hors Tauri, ou commande en échec : `null` — l'écran garde alors
+ * son libellé générique.
+ */
+export async function progressionInstallation(): Promise<string | null> {
+  if (!isTauri()) return null;
+  try {
+    return await invoke<string | null>("progression_installation");
+  } catch {
+    return null;
+  }
+}

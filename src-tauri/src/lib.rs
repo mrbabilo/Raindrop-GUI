@@ -2,6 +2,7 @@ mod commandes;
 mod etat_connexion;
 mod jeton;
 mod node;
+mod runtime;
 mod sidecar;
 mod signaux;
 mod sonde_mcp;
@@ -63,7 +64,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commandes::etat_connexion,
             commandes::enregistrer_jeton,
-            commandes::relancer
+            commandes::relancer,
+            commandes::installer_runtime,
+            commandes::progression_installation
         ])
         .setup(|app| {
             let token_local = match jeton::engendrer() {
