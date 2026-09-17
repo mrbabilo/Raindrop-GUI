@@ -2,13 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n/fr";
 import { useAppState } from "../state/appState";
 import { NatureChips } from "./NatureChips";
+import { Icone } from "../design/icones";
 
 // Champs : classe .input de styles.css (28 px, rayon 7, 13 px — DESIGN.md
-// §7-§8). Bascule liste/mosaïque : l'état actif se marque par la surface
-// (§6 sel/work), jamais par une teinte.
-const toggle =
-  "rounded border border-app-border px-2 py-1 text-xs cursor-pointer bg-transparent hover:bg-app-hover";
-const toggleOn = " bg-app-panel font-medium";
+// §7-§8). Commandes en icône seule : .btn, carré, le nom accessible venant
+// de l'aria-label (§9 — sans lui l'épure fabrique une dette d'a11y).
+const commande = "btn px-0 w-[28px] justify-center";
 
 export function TopBar() {
   const { view, patchList } = useAppState();
@@ -32,6 +31,8 @@ export function TopBar() {
 
   if (!isList) return <div />;
 
+  const enMosaique = view.viewMode === "mosaic";
+
   return (
     <div ref={containerRef} className="border-b border-app-border">
       <div className="flex items-center gap-2 px-3 py-2">
@@ -51,19 +52,34 @@ export function TopBar() {
             setFocused(false);
           }}
         />
-        <select aria-label={t("filter.sort")} className="input" value={view.sort ?? "-created"} onChange={(e) => patchList({ sort: e.target.value })}>
-          <option value="-created">{t("sort.created-desc")}</option>
-          <option value="created">{t("sort.created-asc")}</option>
-          <option value="title">{t("sort.title-asc")}</option>
-          <option value="-title">{t("sort.title-desc")}</option>
-          <option value="domain">{t("sort.domain-asc")}</option>
-        </select>
+        {/* §9 : bouton-état — le contrôle nomme son tri courant. Toujours un
+            <select> natif : sur macOS il s'ouvre en menu, et le clavier,
+            Échap et VoiceOver viennent avec. */}
+        <span className="etat">
+          <select aria-label={t("filter.sort")} value={view.sort ?? "-created"} onChange={(e) => patchList({ sort: e.target.value })}>
+            <option value="-created">{t("sort.created-desc")}</option>
+            <option value="created">{t("sort.created-asc")}</option>
+            <option value="title">{t("sort.title-asc")}</option>
+            <option value="-title">{t("sort.title-desc")}</option>
+            <option value="domain">{t("sort.domain-asc")}</option>
+          </select>
+          <Icone nom="chevron" />
+        </span>
         <input aria-label={t("filter.domain")} className="input w-32" placeholder={t("filter.domainPlaceholder")} value={view.domain ?? ""} onChange={(e) => patchList({ domain: e.target.value || undefined })} />
         <input aria-label={t("filter.from")} type="date" className="input" value={view.createdStart ?? ""} onChange={(e) => patchList({ createdStart: e.target.value || undefined })} />
         <input aria-label={t("filter.to")} type="date" className="input" value={view.createdEnd ?? ""} onChange={(e) => patchList({ createdEnd: e.target.value || undefined })} />
+        {/* §9 : un geste, un contrôle. L'icône montre le mode VERS LEQUEL on
+            bascule, et son nom accessible le dit — pas d'aria-pressed, ce
+            n'est plus un état à deux boutons mais une action nommée. */}
         <div className="ml-auto flex gap-1">
-          <button type="button" aria-pressed={view.viewMode !== "mosaic"} className={toggle + (view.viewMode !== "mosaic" ? toggleOn : "")} onClick={() => patchList({ viewMode: "list" })}>{t("view.list")}</button>
-          <button type="button" aria-pressed={view.viewMode === "mosaic"} className={toggle + (view.viewMode === "mosaic" ? toggleOn : "")} onClick={() => patchList({ viewMode: "mosaic" })}>{t("view.mosaic")}</button>
+          <button
+            type="button"
+            aria-label={enMosaique ? t("view.showList") : t("view.showMosaic")}
+            className={commande}
+            onClick={() => patchList({ viewMode: enMosaique ? "list" : "mosaic" })}
+          >
+            <Icone nom={enMosaique ? "liste" : "mosaique"} />
+          </button>
         </div>
       </div>
       <NatureChips focused={focused} />

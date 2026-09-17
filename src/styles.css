@@ -213,6 +213,43 @@ body {
   font-size: 13px;
 }
 
+/* DESIGN.md §9 : bouton-état — un contrôle qui NOMME son état courant au
+   lieu d'occuper un champ. Reste un <select> natif (clavier, Échap et
+   VoiceOver gratuits) ; seul l'habillage change. Le chevron est un vrai SVG
+   posé par-dessus, §9 ne connaît pas d'ornement CSS. */
+.etat {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.etat > select {
+  appearance: none;
+  height: 28px;
+  padding: 0 22px 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.etat > select:hover {
+  background: var(--color-app-hover);
+}
+
+.etat > select:focus-visible {
+  outline: 1px solid var(--color-app-muted);
+}
+
+.etat > svg {
+  position: absolute;
+  right: 5px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .input:focus {
   outline: none;
   border-color: var(--color-app-muted);

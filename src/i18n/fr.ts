@@ -14,8 +14,10 @@ export const fr = {
   "sort.title-asc": "Titre A→Z",
   "sort.title-desc": "Titre Z→A",
   "sort.domain-asc": "Domaine",
-  "view.list": "Liste",
-  "view.mosaic": "Mosaïque",
+  // §9 « une icône par geste » : la bascule d'affichage est une seule icône,
+  // nommée par le mode VERS LEQUEL elle bascule.
+  "view.showList": "Afficher en liste",
+  "view.showMosaic": "Afficher en mosaïque",
   "list.select": "Sélectionner {title}",
   "list.loadingMore": "…",
   "filter.sort": "Tri",

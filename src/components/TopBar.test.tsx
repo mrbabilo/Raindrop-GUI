@@ -44,10 +44,41 @@ describe("TopBar", () => {
     renderTop();
     const user = userEvent.setup();
     await user.selectOptions(screen.getByLabelText("Tri"), "title");
-    await user.click(screen.getByRole("button", { name: "Mosaïque" }));
+    await user.click(screen.getByRole("button", { name: "Afficher en mosaïque" }));
     const v = JSON.parse(screen.getByTestId("view").textContent!);
     expect(v.sort).toBe("title");
     expect(v.viewMode).toBe("mosaic");
+  });
+
+  // DESIGN.md §9 : « un seul point d'entrée par geste » et « une icône par
+  // geste ». Deux boutons texte pour un seul geste deviennent une icône qui
+  // montre le mode VERS LEQUEL elle bascule ; le nom accessible le dit.
+  it("bascule d'affichage : une seule icône, nommée par sa destination (§9)", async () => {
+    renderTop();
+    const user = userEvent.setup();
+    const bouton = screen.getByRole("button", { name: "Afficher en mosaïque" });
+    expect(bouton.textContent).toBe("");
+    expect(bouton.querySelector("svg")).not.toBeNull();
+    // L'autre mode n'a pas son propre bouton : un geste, un contrôle.
+    expect(screen.queryByRole("button", { name: "Afficher en liste" })).not.toBeInTheDocument();
+    await user.click(bouton);
+    expect(await screen.findByRole("button", { name: "Afficher en liste" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Afficher en mosaïque" })).not.toBeInTheDocument();
+  });
+
+  // §9 : le tri nomme son état courant au lieu d'occuper un champ de saisie.
+  // Le contrôle reste un <select> natif — clavier, Échap et VoiceOver
+  // gratuits, là où un menu maison les devrait au lot a11y.
+  it("le tri est un bouton-état, pas un champ (§9)", () => {
+    renderTop();
+    const tri = screen.getByLabelText("Tri") as HTMLSelectElement;
+    expect(tri.className).not.toContain("input");
+    // Le libellé affiché EST l'état courant.
+    expect(tri.selectedOptions[0]!.textContent).toBe("Récents");
+    // Habillage bouton-état : le conteneur porte la classe et son chevron.
+    const etat = tri.closest(".etat")!;
+    expect(etat).not.toBeNull();
+    expect(etat.querySelector("svg")).not.toBeNull();
   });
 
   it("filtres avancés : domaine, nature (puce au focus), dates → query", async () => {
