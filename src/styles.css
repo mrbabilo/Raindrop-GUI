@@ -44,6 +44,7 @@
      sous-collection part de là. */
   --nav-retrait: 35px;
   --app-nav-ombre: 0 1px 2px rgb(23 23 26 / 0.10);
+  --app-nav-ombre-survol: 0 2px 6px rgb(23 23 26 / 0.16);
   --app-nav-l: 0.9;
   --app-nav-enfant-l: 0.945;
   --app-nav-sel-l: 0.82;
@@ -81,6 +82,7 @@
   --app-wash-l: 0.32;
   --app-wash-c: 0.05;
   --app-nav-ombre: 0 1px 2px rgb(0 0 0 / 0.35);
+  --app-nav-ombre-survol: 0 2px 6px rgb(0 0 0 / 0.5);
   --app-nav-l: 0.34;
   --app-nav-enfant-l: 0.26;
   --app-nav-sel-l: 0.44;
@@ -182,6 +184,14 @@ body {
      relief — elle pose la bande sur le fond et la sépare de ses voisines,
      que douze teintes proches et 2 px d'air ne suffisaient pas à détacher. */
   box-shadow: var(--app-nav-ombre);
+  /* §9 : le mouvement répond à une action, et le survol en est une. 140 ms —
+     assez pour qu'on voie la bande réagir, trop court pour qu'on attende.
+     Jamais la géométrie : animer une largeur ou une marge ferait travailler
+     la mise en page de la barre entière à chaque passage du pointeur. */
+  transition:
+    box-shadow 140ms ease-out,
+    background-color 140ms ease-out,
+    outline-color 140ms ease-out;
 }
 
 /* La bande d'une sous-collection démarre SOUS la pastille de sa mère : le
@@ -206,6 +216,17 @@ body {
 .nav-ligne:hover {
   outline: 1.5px solid oklch(var(--app-icon-l) calc(var(--app-icon-c) * var(--sat, 1)) var(--h));
   outline-offset: -1.5px;
+  /* La bande se soulève d'un cran sous le pointeur — l'ombre s'ouvre, elle
+     ne se déplace pas : rien ne bouge autour. */
+  box-shadow: var(--app-nav-ombre-survol);
+}
+
+/* Le mouvement est une préférence, pas un dû : qui demande moins d'animation
+   garde tous les états, sans transition. */
+@media (prefers-reduced-motion: reduce) {
+  .nav-ligne {
+    transition: none;
+  }
 }
 
 .nav-ligne[data-courante="true"] {

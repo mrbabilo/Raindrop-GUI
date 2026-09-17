@@ -296,7 +296,12 @@ séparer douze familles. Aucun autre élément n'en prend.
 - **Espacement par `gap`**, jamais par marges successives ni par espaces dans la
   source.
 - **Mouvement réservé aux réponses à une action** (pliage, ouverture,
-  confirmation). Aucune animation d'entrée.
+  confirmation, **survol**). Aucune animation d'entrée. Le survol d'une bande
+  de collection ouvre son ombre en 140 ms — assez pour qu'on voie la bande
+  réagir, trop court pour qu'on attende. **Jamais la géométrie** : animer une
+  largeur ou une marge ferait travailler la mise en page de toute la barre à
+  chaque passage du pointeur. Et `prefers-reduced-motion` coupe la
+  transition sans rien retirer des états.
 - **Le vide signale l'irréversible** : la Revue est le seul écran aéré, et c'est
   ce contraste qui avertit, mieux qu'un bandeau rouge.
 
