@@ -191,7 +191,10 @@ Pas d'ombre portée : la hiérarchie vient du **niveau de surface**, pas de l'om
     verbes qui détruisent ou exécutent (« Mettre à la corbeille »,
     « Exécuter »).
   - **Masqué si nul** — compteurs, sections et contrôles sans contenu
-    courant ne s'affichent pas.
+    courant ne s'affichent pas. *Exception : un tableau de bord dont le
+    rôle est d'annoncer ce qu'on peut lancer garde ses entrées à zéro —
+    les six compteurs du Nettoyage restent posés, sinon l'écran cesse de
+    dire ce qu'il sait faire.*
   - **Un seul point d'entrée par geste** — un même geste n'a qu'un seul
     contrôle visible à l'écran.
   - **Le texte est l'exception** — l'identité se dessine (icône, teinte,

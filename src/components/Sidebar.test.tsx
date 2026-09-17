@@ -9,9 +9,14 @@ import { collections } from "../test/fixtures";
 import { Sidebar } from "./Sidebar";
 import { AppStateProvider, useAppState } from "../state/appState";
 
+// « Masqué si nul » (§9) : une collection racine et une étiquette à 0 item
+// s'ajoutent aux fixtures — elles n'existent que pour ce contrat.
 vi.mock("../hooks/useStaticData", () => ({
-  useCollections: () => ({ data: collections, isLoading: false }),
-  useTags: () => ({ data: [{ name: "typescript", count: 8 }], isLoading: false }),
+  useCollections: () => ({
+    data: [...collections, { id: 103, title: "Vide", parentId: null, count: 0, public: false, view: "list", cover: null, color: null }],
+    isLoading: false,
+  }),
+  useTags: () => ({ data: [{ name: "typescript", count: 8 }, { name: "orphelin", count: 0 }], isLoading: false }),
 }));
 
 const Spy = () => {
@@ -56,6 +61,19 @@ describe("Sidebar", () => {
     // Le parent, racine, ne porte aucun retrait supplémentaire.
     const racine = screen.getByText("Dev").closest("button")!;
     expect(racine).not.toHaveStyle({ paddingLeft: "22px" });
+  });
+
+  // DESIGN.md §9 « masqué si nul » : un compteur à 0 ne s'affiche pas — le
+  // nom de la collection (ou de l'étiquette) reste, seul le chiffre sort.
+  it("compteur masqué à 0, affiché sinon (§9)", () => {
+    renderSidebar();
+    const vide = screen.getByText("Vide").closest("button")!;
+    expect(vide.textContent).not.toContain("0");
+    const orphelin = screen.getByText("orphelin").closest("button")!;
+    expect(orphelin.textContent).not.toContain("0");
+    // Contrôle positif : les compteurs non nuls restent posés.
+    expect(screen.getByText("Dev").closest("button")!.textContent).toContain("12");
+    expect(screen.getByText("typescript").closest("button")!.textContent).toContain("8");
   });
 
   // R11P-1 : cliquer un tag FILTRE la liste — la vue porte search `#tag`

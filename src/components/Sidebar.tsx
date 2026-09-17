@@ -9,6 +9,12 @@ const item = "block w-full text-left rounded px-2 py-1 leading-5 hover:bg-app-ho
 const selected = " bg-app-sel font-medium";
 const count = "text-xs text-app-muted";
 
+// DESIGN.md §9 « masqué si nul » : un compteur à 0 ne s'affiche pas. Le
+// fragment porte l'espace séparateur — sans lui, masquer le chiffre
+// laisserait une espace pendante derrière le titre.
+const Compteur = ({ n }: { n: number }) =>
+  n > 0 ? <> <span className={count}>{n}</span></> : null;
+
 export function Sidebar() {
   const { view, go } = useAppState();
   const collections = useCollections();
@@ -36,7 +42,7 @@ export function Sidebar() {
         {roots.map((c) => (
           <div key={c.id}>
             <button className={item} onClick={() => go({ kind: "list", collectionId: c.id, label: c.title })}>
-              {c.title} <span className={count}>{c.count}</span>
+              {c.title}<Compteur n={c.count} />
             </button>
             {childrenOf(c.id).map((ch) => (
               // DESIGN.md §8 : retrait d'arbre de 14 px PAR NIVEAU, sur le
@@ -44,7 +50,7 @@ export function Sidebar() {
               // (l'ancien pl-6, 24 px, ne suivait pas la lettre). Style
               // inline : la valeur exacte compte, pas une classe approximative.
               <button key={ch.id} className={item} style={{ paddingLeft: "22px" }} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
-                {ch.title} <span className={count}>{ch.count}</span>
+                {ch.title}<Compteur n={ch.count} />
               </button>
             ))}
           </div>
@@ -60,7 +66,7 @@ export function Sidebar() {
             filtré. */}
         {(tags.data ?? []).map((tg) => (
           <button key={tg.name} className={item} onClick={() => go({ kind: "list", collectionId: 0, label: `#${tg.name}`, search: `#${tg.name}` })}>
-            #<span>{tg.name}</span> <span className={count}>{tg.count}</span>
+            #<span>{tg.name}</span><Compteur n={tg.count} />
           </button>
         ))}
       </section>

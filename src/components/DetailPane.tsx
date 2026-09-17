@@ -192,6 +192,9 @@ export function DetailPane() {
           {t("state.error", { message: String((update.error ?? trash.error)?.message ?? "") })}
         </p>
       )}
+      {/* §9 « masqué si nul » : pas de surlignage, pas de section — le titre
+          seul annoncerait un contenu que la fiche n'a pas. */}
+      {r.highlights.length > 0 && (
       <section className="flex flex-col gap-2">
         <h3 className="text-xs font-medium text-app-muted">{t("detail.highlights")}</h3>
         {r.highlights.map((h) => (
@@ -201,6 +204,7 @@ export function DetailPane() {
           </blockquote>
         ))}
       </section>
+      )}
     </aside>
   );
 }

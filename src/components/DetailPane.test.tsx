@@ -211,6 +211,22 @@ describe("DetailPane", () => {
     expect(screen.queryByDisplayValue("Brouillon")).not.toBeInTheDocument();
   });
 
+  // DESIGN.md §9 « masqué si nul » : la section des surlignages — titre
+  // compris — n'existe pas quand l'item n'en porte aucun. L'item 2000 des
+  // fixtures a highlights: [], l'item 1000 en a un.
+  it("section Surlignages masquée quand l'item n'en a aucun (§9)", async () => {
+    renderDetail(
+      <>
+        <Preselect id={1000} />
+        <Bascule />
+      </>,
+    );
+    expect(await screen.findByText("Surlignages")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "vers-2000" }));
+    expect(await screen.findByText("Second")).toBeInTheDocument();
+    expect(screen.queryByText("Surlignages")).not.toBeInTheDocument();
+  });
+
   // Revue finale : l'état d'ÉCHEC d'une mutation suit l'observateur (pas la
   // clé) — sans reset, l'alerte d'un PATCH raté sur A s'affiche encore sur B.
   it("un échec d'écriture sur A ne s'affiche pas sur B au changement d'item", async () => {
