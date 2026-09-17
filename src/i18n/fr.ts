@@ -25,6 +25,9 @@ export const fr = {
   "filter.domainPlaceholder": "domaine",
   "filter.from": "Depuis",
   "filter.to": "Jusqu'à",
+  // §9 « révélé, pas posé » : domaine et dates se déplient depuis la barre.
+  "filter.advanced": "Filtres avancés",
+  "filter.clear": "Effacer les filtres",
   "nature.link": "Liens",
   "nature.article": "Articles",
   "nature.image": "Images",

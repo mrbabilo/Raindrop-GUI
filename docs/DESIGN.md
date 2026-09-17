@@ -225,11 +225,19 @@ invitation à agir, pas un constat.
 
 ## 11. Filtrer par nature
 
-La spec §4.1 promet des « filtres avancés » que rien n'annonce à l'écran, et la
-TopBar aligne aujourd'hui sept contrôles de même poids — dont un `<select>` de
-nature que personne ne remarque. Au **focus** du champ de recherche, une rangée
-de puces apparaît sous le champ et nomme les natures disponibles ; elle
+La spec §4.1 promet des « filtres avancés » que rien n'annonçait à l'écran,
+tandis que la TopBar alignait sept contrôles de même poids — dont un `<select>`
+de nature que personne ne remarquait. Au **focus** du champ de recherche, une
+rangée de puces apparaît sous le champ et nomme les natures disponibles ; elle
 disparaît au blur si aucune n'est active.
+
+Les filtres **rares** — domaine, dates — suivent la même mécanique un cran plus
+bas : l'icône de réglages de la barre déplie un panneau sous la rangée de
+nature, et ce panneau reste déplié tant qu'un de ses filtres est actif. Il
+porte alors, et alors seulement, « Effacer les filtres » (§9, « masqué si
+nul ») — sans quoi replier laisserait un filtre posé que plus rien ne retire.
+La barre ne garde donc que trois commandes : la recherche, le tri (bouton-état)
+et la bascule d'affichage (une icône).
 
 - Une puce par nature — glyphe §2.1 + libellé français (`Liens`, `Articles`,
   `Images`, `Vidéos`, `Documents`, `Audio`).

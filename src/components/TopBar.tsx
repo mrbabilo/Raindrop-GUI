@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n/fr";
 import { useAppState } from "../state/appState";
 import { NatureChips } from "./NatureChips";
+import { PanneauFiltres, actifs } from "./PanneauFiltres";
 import { Icone } from "../design/icones";
 
 // Champs : classe .input de styles.css (28 px, rayon 7, 13 px — DESIGN.md
@@ -17,6 +18,9 @@ export function TopBar() {
   // de recherche et reste visible tant qu'une nature est active, même après
   // le blur (sinon désactiver le filtre exigerait de re-focaliser).
   const [focused, setFocused] = useState(false);
+  // §9 : le panneau des filtres rares est replié par défaut — PanneauFiltres
+  // décide seul de rester déplié tant qu'un de ses filtres est actif.
+  const [reglages, setReglages] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => { if (isList) setDraft(view.search ?? ""); }, [isList, view.kind === "list" ? view.search : ""]);
 
@@ -65,9 +69,16 @@ export function TopBar() {
           </select>
           <Icone nom="chevron" />
         </span>
-        <input aria-label={t("filter.domain")} className="input w-32" placeholder={t("filter.domainPlaceholder")} value={view.domain ?? ""} onChange={(e) => patchList({ domain: e.target.value || undefined })} />
-        <input aria-label={t("filter.from")} type="date" className="input" value={view.createdStart ?? ""} onChange={(e) => patchList({ createdStart: e.target.value || undefined })} />
-        <input aria-label={t("filter.to")} type="date" className="input" value={view.createdEnd ?? ""} onChange={(e) => patchList({ createdEnd: e.target.value || undefined })} />
+        <button
+          type="button"
+          aria-label={t("filter.advanced")}
+          aria-expanded={reglages || actifs(view)}
+          aria-controls="panneau-filtres"
+          className={commande}
+          onClick={() => setReglages((v) => !v)}
+        >
+          <Icone nom="reglages" />
+        </button>
         {/* §9 : un geste, un contrôle. L'icône montre le mode VERS LEQUEL on
             bascule, et son nom accessible le dit — pas d'aria-pressed, ce
             n'est plus un état à deux boutons mais une action nommée. */}
@@ -83,6 +94,7 @@ export function TopBar() {
         </div>
       </div>
       <NatureChips focused={focused} />
+      <PanneauFiltres ouvert={reglages} />
     </div>
   );
 }

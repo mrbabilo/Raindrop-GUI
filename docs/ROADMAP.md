@@ -83,27 +83,20 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       flash jeton `moved` sur la ligne, échec = retour à la place +
       pattern R8P-1. Pas de réordonnancement (ordre alphanumérique
       acté). Front uniquement, `useBulk` existe.
-- [ ] **Épure (principe §9 de DESIGN.md, amendé le 2026-09-17 — « l'écran
-      ne surcharge jamais »)**, audit de l'existant à reprendre :
-      les filtres domaine/dates de la TopBar sont posés en permanence pour
-      un usage rare → révélés dans le panneau « paramètres » incorporé au
-      champ de recherche (généraliser le pattern §11 de la nature) ; le
-      select de tri devient le bouton-état acté ; la bascule
-      liste/mosaïque, deux boutons *texte* pour un seul geste, devient une
-      icône unique ; dans le BulkBar, l'option muette « — Déplacer — » et
-      le placeholder « Tagger » répètent le verbe de leur bouton — un seul
-      point d'entrée par geste ; dans le détail, les gestes non
-      destructeurs (favori, ouvrir) passent en icônes seules — le texte
-      reste aux verbes §10 (Modifier, Enregistrer, Mettre à la corbeille)
-      ; les futures actions de ligne seront des icônes seules.
-      **Décisions requises avant code** (DESIGN.md fait foi) : forme du
-      panneau « paramètres » (rien ne le décrit — §11 ne prescrit que la
-      rangée de nature) ; forme du bouton-état ; l'étoile n'a pas de
-      variante pleine (acté §9) — comment une étoile seule porte-t-elle
-      l'état favori ; « Ouvrir » doublonne déjà le lien de l'URL —
-      icône ou suppression ; toute icône seule prend son nom accessible
-      d'un `aria-label` de `fr.ts`, sans quoi l'épure fabrique la dette
-      que le lot a11y doit solder.
+- [x] **Épure (principe §9 de DESIGN.md, amendé le 2026-09-17 — « l'écran
+      ne surcharge jamais »)** — fait le 2026-09-17 : compteurs masqués à 0
+      (sidebar, section Surlignages) ; puces de nature absentes retirées
+      (§11 réécrit, la puce active survit à zéro) ; favori en étoile seule
+      et « Ouvrir » supprimé (la ligne d'URL était déjà le lien) ; verbes
+      dédoublés du BulkBar et de CleanupRows ; tri en bouton-état
+      (`.etat`, `<select>` natif conservé pour le clavier) ; bascule
+      liste/mosaïque en une icône nommée par sa destination ; domaine et
+      dates repliés dans `PanneauFiltres`. Icônes d'interface dans
+      `src/design/icones.tsx`. Chaque icône seule porte son `aria-label`.
+      Exception écrite en §9 : le tableau de bord du Nettoyage garde ses
+      six compteurs à zéro.
+      Reste à reprendre au fil de l'eau : les futures actions de ligne
+      seront des icônes seules.
 - [ ] **Passe design** : « Tout désélectionner » testé ; étiquettes
       évanouies par `shrink` (plancher min-w) ; `leading-tight` tuile ;
       `.wash` vs `.coll-icon` à fusionner ; `filetEtat` demi-paire ;

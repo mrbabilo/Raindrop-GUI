@@ -84,8 +84,10 @@ describe("TopBar", () => {
   it("filtres avancés : domaine, nature (puce au focus), dates → query", async () => {
     // Task 6b : le <select> de nature est remplacé par les puces de
     // NatureChips, révélées au focus du champ de recherche (DESIGN.md §11).
+    // Épure §9 : domaine et dates vivent désormais dans le panneau replié.
     renderTop();
     const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Filtres avancés" }));
     await user.type(screen.getByLabelText("Domaine"), "example.com");
     await user.click(screen.getByPlaceholderText("Rechercher…"));
     await user.click(screen.getByRole("button", { name: "Articles" }));
@@ -93,5 +95,44 @@ describe("TopBar", () => {
     await user.type(screen.getByLabelText("Jusqu'à"), "2025-12-31");
     const v = JSON.parse(screen.getByTestId("view").textContent!);
     expect(v).toMatchObject({ domain: "example.com", media: "article", createdStart: "2025-01-01", createdEnd: "2025-12-31" });
+  });
+
+  // DESIGN.md §9 « révélé, pas posé » : domaine et dates servent rarement —
+  // ils quittent la barre pour un panneau que l'icône de réglages déplie.
+  it("domaine et dates sont repliés dans le panneau de réglages (§9)", async () => {
+    renderTop();
+    const user = userEvent.setup();
+    expect(screen.queryByLabelText("Domaine")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Depuis")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Jusqu'à")).not.toBeInTheDocument();
+
+    const reglages = screen.getByRole("button", { name: "Filtres avancés" });
+    expect(reglages).toHaveAttribute("aria-expanded", "false");
+    await user.click(reglages);
+    expect(reglages).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByLabelText("Domaine")).toBeInTheDocument();
+    // Le panneau que le bouton annonce est bien celui qu'il commande.
+    expect(document.getElementById(reglages.getAttribute("aria-controls")!)).not.toBeNull();
+
+    await user.click(reglages);
+    expect(screen.queryByLabelText("Domaine")).not.toBeInTheDocument();
+  });
+
+  // Même contrat qu'en §11 pour les puces : un filtre posé ne peut pas
+  // devenir invisible, sinon plus rien ne permet de le retirer.
+  it("le panneau reste déplié tant qu'un filtre y est actif (§9)", async () => {
+    renderTop();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Filtres avancés" }));
+    // « Effacer » est masqué tant qu'il n'y a rien à effacer (§9).
+    expect(screen.queryByRole("button", { name: "Effacer les filtres" })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Domaine"), "example.com");
+    await user.click(screen.getByRole("button", { name: "Filtres avancés" }));
+    expect(screen.getByLabelText("Domaine")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Effacer les filtres" }));
+    expect(JSON.parse(screen.getByTestId("view").textContent!).domain).toBeUndefined();
+    expect(screen.queryByLabelText("Domaine")).not.toBeInTheDocument();
   });
 });
