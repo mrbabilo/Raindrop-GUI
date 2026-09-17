@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n/fr";
+import { EtatListe } from "./EtatListe";
 import { useTags } from "../hooks/useStaticData";
 import { useTagManage } from "../hooks/useMutations";
 import type { Tag } from "../../shared/types";
@@ -154,10 +155,16 @@ export function TagsView() {
         <h1 className="titre-fiche">{t("nav.tags")}</h1>
         {liste.length > 0 && <span className="text-xs text-app-muted">({liste.length})</span>}
       </header>
-      {!!q.isLoading ? (
-        <p className="p-4 text-app-muted">{t("state.loading")}</p>
-      ) : liste.length === 0 ? (
-        <p className="p-4 text-app-muted">{t("state.empty")}</p>
+      {q.isLoading || q.isError || liste.length === 0 ? (
+        // L'échec des étiquettes s'affichait comme « Rien ici » : une
+        // bibliothèque sans étiquette et un sidecar injoignable disaient la
+        // même chose.
+        <EtatListe
+          chargement={!!q.isLoading}
+          erreur={q.isError ? q.error?.message : null}
+          vide={liste.length === 0}
+          reessayer={() => void q.refetch()}
+        />
       ) : (
         <ul className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-4 pb-2">
           {liste.map((tg) => (

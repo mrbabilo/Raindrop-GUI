@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { t } from "../i18n/fr";
+import { EtatListe } from "./EtatListe";
 import type { View } from "../state/appState";
 import { useAppState } from "../state/appState";
 import { useAnalysisResults, useDuplicateGroups } from "../hooks/useAnalysis";
@@ -41,14 +42,6 @@ function Entete({ label, count, action }: { label: string; count?: number; actio
       {action && <div className="ml-auto">{action}</div>}
     </header>
   );
-}
-
-// §10 : un écran vide est une invitation à agir — « Rien ici » dit qu'il n'y
-// a plus rien à réparer, pas un échec.
-function Etat({ chargement, vide }: { chargement: boolean; vide: boolean }) {
-  if (chargement) return <p className="p-4 text-app-muted">{t("state.loading")}</p>;
-  if (vide) return <p className="p-4 text-app-muted">{t("state.empty")}</p>;
-  return null;
 }
 
 // Pagination des vues de scan (dead/redirect) : page/total côté sidecar.
@@ -108,7 +101,12 @@ function ResultatsLiens({ type }: { type: "dead" | "redirect" }) {
   return (
     <>
       <Entete label={LABELS[type]} count={q.data?.total} />
-      <Etat chargement={!!q.isLoading} vide={items.length === 0 && !q.isLoading} />
+      <EtatListe
+        chargement={!!q.isLoading}
+        erreur={q.isError ? q.error?.message : null}
+        vide={items.length === 0 && !q.isLoading}
+        reessayer={() => void q.refetch()}
+      />
       <div className="min-h-0 flex-1 overflow-y-auto">{items.map(ligne)}</div>
       {q.data && <Paginateur page={page} total={q.data.total} perPage={q.data.perPage} onPage={setPage} />}
     </>
@@ -134,7 +132,12 @@ function Doublons() {
     <>
       {/* Même sémantique que le compteur T12 : le chip compte les groupes. */}
       <Entete label={LABELS.duplicates} count={groupes.length} />
-      <Etat chargement={!!q.isLoading} vide={groupes.length === 0 && !q.isLoading} />
+      <EtatListe
+        chargement={!!q.isLoading}
+        erreur={q.isError ? q.error?.message : null}
+        vide={groupes.length === 0 && !q.isLoading}
+        reessayer={() => void q.refetch()}
+      />
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
         {KINDS.map((kind) => {
           const gs = data?.[kind] ?? [];
@@ -166,7 +169,12 @@ function NonTaggues() {
   return (
     <>
       <Entete label={LABELS.untagged} count={q.data?.pages[0]?.count} />
-      <Etat chargement={!!q.isLoading} vide={items.length === 0 && !q.isLoading} />
+      <EtatListe
+        chargement={!!q.isLoading}
+        erreur={q.isError ? q.error?.message : null}
+        vide={items.length === 0 && !q.isLoading}
+        reessayer={() => void q.refetch()}
+      />
       <div className="min-h-0 flex-1 overflow-y-auto">
         {items.map((r) => (
           <div
@@ -217,7 +225,12 @@ function Corbeille() {
           </button>
         }
       />
-      <Etat chargement={!!q.isLoading} vide={items.length === 0 && !q.isLoading} />
+      <EtatListe
+        chargement={!!q.isLoading}
+        erreur={q.isError ? q.error?.message : null}
+        vide={items.length === 0 && !q.isLoading}
+        reessayer={() => void q.refetch()}
+      />
       <div className="min-h-0 flex-1 overflow-y-auto">
         {items.map((r) => (
           <TrashRow key={r.id} r={r} />
@@ -263,7 +276,7 @@ function CollectionsVides() {
           </button>
         }
       />
-      <Etat chargement={collections === undefined} vide={vides.length === 0 && collections !== undefined} />
+      <EtatListe chargement={collections === undefined} vide={vides.length === 0 && collections !== undefined} />
       <div className="min-h-0 flex-1 overflow-y-auto">
         {vides.map((c) => (
           <EmptyCollectionRow key={c.id} c={c} />

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
@@ -9,11 +9,15 @@ import { raindrop, collections } from "../test/fixtures";
 import { ListPane } from "./ListPane";
 import { AppStateProvider, useAppState } from "../state/appState";
 
+// `etatListe` pilote la réponse par test : sans lui, on ne pourrait pas
+// éprouver l'ÉCHEC, qui s'affichait jusqu'ici comme « Rien ici ».
+const { etatListe } = vi.hoisted(() => ({ etatListe: { valeur: null as null | Record<string, unknown> } }));
 vi.mock("../hooks/useRaindrops", () => ({
-  useRaindrops: () => ({
-    data: { pages: [{ items: [raindrop({ id: 1000 }), raindrop({ id: 1001, title: "Second", tags: ["rust", "design"], collectionId: 201 })], count: 2, page: 0, perPage: 50 }] },
-    fetchNextPage: vi.fn(), hasNextPage: false, isFetchingNextPage: false,
-  }),
+  useRaindrops: () =>
+    etatListe.valeur ?? {
+      data: { pages: [{ items: [raindrop({ id: 1000 }), raindrop({ id: 1001, title: "Second", tags: ["rust", "design"], collectionId: 201 })], count: 2, page: 0, perPage: 50 }] },
+      fetchNextPage: vi.fn(), hasNextPage: false, isFetchingNextPage: false,
+    },
 }));
 
 // L'arbre des collections sert la signalétique §4 (la couleur appartient à la
@@ -59,6 +63,10 @@ const renderList = () =>
       <AppStateProvider><Spy /><ListPane /></AppStateProvider>
     </QueryClientProvider>,
   );
+
+beforeEach(() => {
+  etatListe.valeur = null;
+});
 
 describe("ListPane", () => {
   it("affiche les items virtualisés (titre, domaine, étiquettes, date fr)", () => {
@@ -158,5 +166,34 @@ describe("ListPane", () => {
     await userEvent.hover(document.querySelector<HTMLElement>('[data-index="1"]')!);
     expect(document.querySelector<HTMLElement>('[data-index="1"]')!.tabIndex).toBe(0);
     expect(premiere).toHaveFocus();
+  });
+
+  // Le grief : `items.length === 0 && !isFetching` attrapait aussi l'échec,
+  // et la vue annonçait « Rien ici » — « cette collection est vide » — quand
+  // la vérité était « je n'ai pas pu regarder ».
+  it("un échec de chargement se dit, il ne se déguise pas en collection vide", async () => {
+    const refetch = vi.fn();
+    etatListe.valeur = {
+      data: undefined, isError: true, error: new Error("réseau perdu"), isFetching: false,
+      fetchNextPage: vi.fn(), hasNextPage: false, isFetchingNextPage: false, refetch,
+    };
+    renderList();
+    expect(screen.getByRole("alert")).toHaveTextContent("réseau perdu");
+    expect(screen.queryByText("Rien ici")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Réessayer" }));
+    expect(refetch).toHaveBeenCalled();
+    // Le composer reste monté : c'est LUI qui crée le premier bookmark.
+    expect(screen.getByTestId("composer-input")).toBeInTheDocument();
+  });
+
+  it("une collection réellement vide dit « Rien ici »", () => {
+    etatListe.valeur = {
+      data: { pages: [{ items: [], count: 0, page: 0, perPage: 50 }] },
+      isError: false, isFetching: false,
+      fetchNextPage: vi.fn(), hasNextPage: false, isFetchingNextPage: false, refetch: vi.fn(),
+    };
+    renderList();
+    expect(screen.getByText("Rien ici")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

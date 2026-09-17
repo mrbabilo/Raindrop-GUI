@@ -75,6 +75,11 @@ Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
   - **Le survol explore, le clic fixe** : survoler une collection déplie
     ses sous-collections le temps qu'on y passe ; cliquer la collection ou
     son chevron les garde ouvertes, et le clic suivant les referme.
+- **Un échec de chargement se dit.** La liste, les étiquettes et les vues
+  de nettoyage affichaient « Rien ici » quand une requête échouait —
+  « cette collection est vide » là où la vérité était « je n'ai pas pu
+  regarder ». Elles montrent désormais l'erreur et un bouton pour
+  réessayer.
 - **Navigation au clavier** : chaque zone ne prend qu'un arrêt de
   tabulation au lieu d'un par ligne, et les flèches y circulent — y
   compris en deux dimensions dans la mosaïque. →/← déplient une

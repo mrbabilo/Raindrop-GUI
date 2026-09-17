@@ -121,6 +121,7 @@ export const fr = {
   "state.loading": "Chargement…",
   "state.empty": "Rien ici",
   "state.error": "Erreur : {message}",
+  "state.retry": "Réessayer",
   "theme.toDark": "Passer au thème sombre",
   "theme.toLight": "Passer au thème clair",
 } as const;

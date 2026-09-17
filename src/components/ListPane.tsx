@@ -10,6 +10,7 @@ import { useAppState } from "../state/appState";
 import { useDragBookmark } from "../hooks/useDragBookmark";
 import { useIndexClavier } from "../hooks/useIndexClavier";
 import { useRovingFocus } from "../hooks/useRovingFocus";
+import { EtatListe } from "./EtatListe";
 import { RaindropRow } from "./RaindropRow";
 import { MosaicTile } from "./MosaicTile";
 import { BulkBar } from "./BulkBar";
@@ -87,11 +88,22 @@ export function ListPane() {
 
   // À vide aussi le composer reste monté : c'est LUI qui crée le premier
   // bookmark de la collection — l'état vide seul le priverait de raison d'être.
-  if (items.length === 0 && !query.isFetching)
+  //
+  // L'échec compte ici comme un vide : sans lui, une requête en erreur
+  // tombait dans cette branche et annonçait « Rien ici » — « cette collection
+  // ne contient rien », quand la vérité était « je n'ai pas pu regarder ».
+  if (items.length === 0 && (!query.isFetching || query.isError))
     return (
       <div className="flex h-full min-h-0 flex-col">
         <Composer />
-        <main className="grid min-h-0 flex-1 place-items-center p-4 text-app-muted">{t("state.empty")}</main>
+        <main className="grid min-h-0 flex-1 place-items-center">
+          <EtatListe
+            chargement={false}
+            erreur={query.isError ? query.error?.message : null}
+            vide
+            reessayer={() => void query.refetch()}
+          />
+        </main>
       </div>
     );
 

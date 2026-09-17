@@ -12,9 +12,15 @@ import { tags } from "../test/fixtures";
 // factory asynchrone (pattern App.test.tsx, TDZ).
 const { sendMock } = vi.hoisted(() => ({ sendMock: vi.fn(async () => ({})) }));
 vi.mock("../lib/api", () => ({ api: { send: sendMock } }));
+// `etatTags` pilote la réponse par test : sans lui, on ne pourrait pas
+// éprouver l'ÉCHEC, qui est justement ce qui s'affichait comme « Rien ici ».
+const { etatTags } = vi.hoisted(() => ({ etatTags: { valeur: null as null | Record<string, unknown> } }));
 vi.mock("../hooks/useStaticData", async () => {
   const { tags } = await import("../test/fixtures");
-  return { useTags: () => ({ data: tags }), useCollections: () => ({ data: [] }) };
+  return {
+    useTags: () => etatTags.valeur ?? { data: tags },
+    useCollections: () => ({ data: [] }),
+  };
 });
 
 const wrapper = ({ children }: { children: ReactNode }) => (
@@ -23,7 +29,10 @@ const wrapper = ({ children }: { children: ReactNode }) => (
   </QueryClientProvider>
 );
 
-beforeEach(() => sendMock.mockReset().mockResolvedValue({}));
+beforeEach(() => {
+  sendMock.mockReset().mockResolvedValue({});
+  etatTags.valeur = null;
+});
 
 describe("TagsView", () => {
   it("renomme un tag (rename → new_name)", async () => {
@@ -103,5 +112,25 @@ describe("TagsView", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Erreur : boom");
     expect(screen.getByRole("checkbox", { name: "rust" })).toBeChecked();
     expect(screen.getByPlaceholderText("Nouveau nom")).toHaveValue("dev");
+  });
+
+  // Le grief : une requête en échec laissait `isLoading` retomber et la liste
+  // vide — l'écran annonçait donc « Rien ici », soit « vous n'avez aucune
+  // étiquette », là où le sidecar était injoignable.
+  it("un échec de chargement se dit, il ne se déguise pas en liste vide", async () => {
+    const refetch = vi.fn();
+    etatTags.valeur = { data: undefined, isLoading: false, isError: true, error: new Error("sidecar injoignable"), refetch };
+    render(<TagsView />, { wrapper });
+    expect(screen.getByRole("alert")).toHaveTextContent("sidecar injoignable");
+    expect(screen.queryByText("Rien ici")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Réessayer" }));
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it("une bibliothèque réellement sans étiquette dit « Rien ici »", () => {
+    etatTags.valeur = { data: [], isLoading: false, isError: false, refetch: vi.fn() };
+    render(<TagsView />, { wrapper });
+    expect(screen.getByText("Rien ici")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

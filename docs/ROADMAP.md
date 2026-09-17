@@ -138,9 +138,18 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       input de renommage de tag sans nom accessible ; désarmement au clic
       extérieur du confirm inline ; double `role="alert"` imbriqué
       (Banners) ; désélection d'arbre RTL.
-- [ ] **États d'erreur de chargement** : TagsView/CleanupView/ListPane
-      rendent l'échec en liste vide ou chargement éternel — aligner sur le
-      pattern Banners (`isError` distingué).
+- [x] **États d'erreur de chargement** — fait le 2026-09-17
+      (`components/EtatListe.tsx`, partagé par ListPane, TagsView et les six
+      vues de CleanupView) : l'échec prime sur le vide, puisque c'est lui
+      qui l'explique, et un bouton « Réessayer » relance la requête — sans
+      quoi il ne restait qu'à recharger la page. Vérifié en coupant le
+      sidecar en marche : « Erreur : http 500 » au lieu de « Rien ici ».
+- [ ] **La bannière de crash ne couvre pas le sidecar mort** (constaté en
+      coupant le sidecar, 2026-09-17) : `Banners` lit `useHealth`, qui
+      échoue elle aussi — `data` est alors `undefined` et la bannière se
+      tait. Elle ne sait dire que « sidecar vivant, MCP en rade ». Les vues
+      affichent bien leur erreur, mais rien n'explique en tête que c'est
+      toute la connexion locale qui est tombée.
 - [ ] **Lot Composer/Tags** : garde `^https?://` insensible à la casse ;
       `soumettre` sans garde `isPending` ; test du garde anti-course `seq` ;
       double-Entrée sur le renommage de tag ; rename no-op vers nom
