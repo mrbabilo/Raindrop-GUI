@@ -119,4 +119,22 @@ describe("ListPane", () => {
     await userEvent.keyboard("{ArrowDown}{Enter}");
     expect(screen.getByTestId("detail-id").textContent).not.toBe("");
   });
+
+  // Mesuré au navigateur avant correction : vingt-neuf lignes montées
+  // faisaient cent vingt-six arrêts de tabulation, parce que chaque case et
+  // chaque étiquette en était un. La LIGNE est l'arrêt, pas ses contrôles.
+  it("les contrôles d'une ligne ne sont pas des arrêts de tabulation", () => {
+    renderList();
+    const dansLignes = [...document.querySelectorAll<HTMLElement>('[data-index] button, [data-index] input')];
+    expect(dansLignes.length).toBeGreaterThan(2);
+    expect(dansLignes.filter((e) => e.tabIndex === 0)).toHaveLength(0);
+  });
+
+  // La case sortant du parcours, le geste doit rester : l'espace la remplace.
+  it("la barre d'espace coche la ligne active", async () => {
+    renderList();
+    document.querySelector<HTMLElement>('[data-index="0"]')!.focus();
+    await userEvent.keyboard(" ");
+    expect(screen.getAllByRole("checkbox")[0]).toBeChecked();
+  });
 });

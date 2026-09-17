@@ -72,6 +72,14 @@ export function ListPane() {
     }
     if (e.key === "Home") { e.preventDefault(); setActif(0); return; }
     if (e.key === "End") { e.preventDefault(); setActif(items.length - 1); return; }
+    // La case à cocher d'une ligne n'est plus un arrêt de tabulation : la
+    // barre d'espace la remplace depuis la ligne active.
+    if (e.key === " " && actif !== null) {
+      e.preventDefault();
+      const r = items[actif];
+      if (r !== undefined) toggleSelect(r.id);
+      return;
+    }
     if (e.key === "Enter" && actif !== null) {
       e.preventDefault();
       const r = items[actif];

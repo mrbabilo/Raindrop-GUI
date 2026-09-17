@@ -71,9 +71,13 @@ export function PiluleEtiquette({
   const className = "tag" + (taille === "detail" ? " tag-detail" : "");
   const style = variablesTeinte(nom);
   if (!onClick) return <span className={className} style={style}>{nom}</span>;
+  // `tabIndex={-1}` : dans une liste, les étiquettes d'une ligne ne sont pas
+  // des arrêts de tabulation — la ligne l'est. Sans cela, trois étiquettes
+  // par ligne multiplient les arrêts par quatre.
   return (
     <button
       type="button"
+      tabIndex={-1}
       className={className}
       style={style}
       // La pilule vit dans une ligne cliquable : filtrer sur une étiquette ne

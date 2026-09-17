@@ -232,6 +232,13 @@ body {
   outline-offset: 2px;
 }
 
+/* « le clic ne montre rien » : sans cette règle, le navigateur pose son
+   propre anneau au focus à la souris — mesuré à 3 px, alors que le nôtre en
+   fait 2. La règle vaut pour le focus qui n'est PAS `:focus-visible`. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* DESIGN.md §9 : bouton-état — un contrôle qui NOMME son état courant au
    lieu d'occuper un champ. Reste un <select> natif (clavier, Échap et
    VoiceOver gratuits) ; seul l'habillage change. Le chevron est un vrai SVG

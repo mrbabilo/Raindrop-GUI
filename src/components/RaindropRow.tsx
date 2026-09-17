@@ -49,8 +49,12 @@ export function RaindropRow(props: {
       }
       {...props.poignee}
     >
-      {/* stopPropagation : cocher ne doit pas ouvrir le détail. */}
-      <input type="checkbox" aria-label={t("list.select", { title: r.title })} checked={props.selected} onClick={(e) => e.stopPropagation()} onChange={props.onToggle} />
+      {/* stopPropagation : cocher ne doit pas ouvrir le détail.
+          `tabIndex={-1}` : c'est la LIGNE qui est l'arrêt de tabulation, pas
+          ses contrôles — mesuré au navigateur, vingt-neuf lignes montées
+          faisaient cent vingt-six arrêts à elles seules. La case reste
+          cliquable, et la barre d'espace la coche depuis la ligne active. */}
+      <input type="checkbox" tabIndex={-1} aria-label={t("list.select", { title: r.title })} checked={props.selected} onClick={(e) => e.stopPropagation()} onChange={props.onToggle} />
       <CarreCollection collectionId={r.collectionId} titre={props.collectionRacine} />
       <span className="min-w-[8rem] flex-1 truncate font-medium">{r.title}</span>
       {r.important && <span role="img" className="shrink-0 text-app-muted" aria-label={t("detail.favorite")}><Etoile /></span>}
