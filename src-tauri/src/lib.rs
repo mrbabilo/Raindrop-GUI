@@ -1,6 +1,7 @@
 mod jeton;
 mod node;
 mod verrou;
+mod trousseau;
 
 pub fn run() {
     tauri::Builder::default()
