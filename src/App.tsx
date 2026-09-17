@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { t } from "./i18n/fr";
 import { useTheme } from "./lib/theme";
-import { useHealth } from "./hooks/useStaticData";
 import { useAppState } from "./state/appState";
 import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
@@ -12,6 +11,7 @@ import { ReviewPage } from "./components/ReviewPage";
 import { TagsView } from "./components/TagsView";
 import { DetailPane } from "./components/DetailPane";
 import { CommandPalette } from "./components/CommandPalette";
+import { Banners } from "./components/Banners";
 
 // Icônes SVG (DESIGN.md §9 : jamais d'emoji), grille 16px, trait 1,7.
 function SunIcon() {
@@ -41,7 +41,6 @@ function MoonIcon() {
 
 export default function App() {
   const { resolved, setMode } = useTheme();
-  const { data: health } = useHealth();
   const { view, go } = useAppState();
   // R15P-3 : le retour de la Revue revient à la vue d'origine qu'elle porte
   // (posée par BulkBar/CleanupView) ; sans origine notée, repli sur « Tous ».
@@ -52,7 +51,6 @@ export default function App() {
         : { kind: "list", collectionId: 0, label: t("nav.all") },
     );
   const isDark = resolved === "dark";
-  const mcpDown = health !== undefined && health.mcp !== "connected";
   // Task 10 : ⌘E amène le focus dans le composer, quel que soit le champ
   // occupé — le data-testid="composer-input" est le contrat du focus (plan).
   // En vue review, pas de composer monté : le raccourci ne fait rien.
@@ -79,50 +77,52 @@ export default function App() {
   }
 
   return (
-    <div className="grid h-screen grid-cols-[240px_minmax(0,1fr)_320px] grid-rows-[auto_1fr] bg-app text-app-ink">
-      <header className="flex items-center gap-3 border-b border-app-border bg-app px-4 py-2">
-        <span className="font-medium">{t("app.title")}</span>
-        {mcpDown && (
-          <span className="text-app-broken" role="status">
-            {t("banner.crashed")}
-          </span>
+    // Task 16 : les bannières dégradées (spec §7) vivent au-dessus de la
+    // grille — en état sain Banners rend null et la géométrie est inchangée.
+    <div className="flex h-screen min-h-0 flex-col bg-app text-app-ink">
+      <Banners />
+      <div className="grid min-h-0 flex-1 grid-cols-[240px_minmax(0,1fr)_320px] grid-rows-[auto_1fr]">
+        <header className="flex items-center gap-3 border-b border-app-border bg-app px-4 py-2">
+          <span className="font-medium">{t("app.title")}</span>
+          {/* L'indicateur MCP de l'en-tête (Task 2) est subsumé par <Banners /> :
+              un seul émetteur du message, la bannière porte en plus l'action. */}
+          <button
+            type="button"
+            className="btn ml-auto"
+            aria-label={isDark ? t("theme.toLight") : t("theme.toDark")}
+            onClick={toggleTheme}
+          >
+            {isDark ? <SunIcon /> : <MoonIcon />}
+          </button>
+        </header>
+        {/* Row 1 col 2 : la barre recherche/filtres/tri de la vue courante
+            (rend une cellule vide hors vue list). */}
+        <TopBar />
+        <div className="border-b border-app-border bg-app" aria-hidden="true" />
+        <Sidebar />
+        {/* Task 12 : la vue cleanup prend la place de la liste — dashboard de
+            nettoyage (compteurs, fraîcheur, scans SSE annulables). Task 13 :
+            les vues de traitement cleanupView/* qu'il rend joignables.
+            Task 14 : la vue tags (renommer, fusionner, supprimer).
+            Task 15 : la Revue de l'action — deux niveaux de confirmation,
+            exécution puis retour (goBack, R15P-3). */}
+        {view.kind === "review" ? (
+          <ReviewPage review={view} goBack={goBack} />
+        ) : view.kind === "cleanup" ? (
+          <CleanupDashboard />
+        ) : view.kind === "cleanupView" ? (
+          <CleanupView type={view.type} />
+        ) : view.kind === "tags" ? (
+          <TagsView />
+        ) : (
+          <ListPane />
         )}
-        <button
-          type="button"
-          className="btn ml-auto"
-          aria-label={isDark ? t("theme.toLight") : t("theme.toDark")}
-          onClick={toggleTheme}
-        >
-          {isDark ? <SunIcon /> : <MoonIcon />}
-        </button>
-      </header>
-      {/* Row 1 col 2 : la barre recherche/filtres/tri de la vue courante
-          (rend une cellule vide hors vue list). */}
-      <TopBar />
-      <div className="border-b border-app-border bg-app" aria-hidden="true" />
-      <Sidebar />
-      {/* Task 12 : la vue cleanup prend la place de la liste — dashboard de
-          nettoyage (compteurs, fraîcheur, scans SSE annulables). Task 13 :
-          les vues de traitement cleanupView/* qu'il rend joignables.
-          Task 14 : la vue tags (renommer, fusionner, supprimer).
-          Task 15 : la Revue de l'action — deux niveaux de confirmation,
-          exécution puis retour (goBack, R15P-3). */}
-      {view.kind === "review" ? (
-        <ReviewPage review={view} goBack={goBack} />
-      ) : view.kind === "cleanup" ? (
-        <CleanupDashboard />
-      ) : view.kind === "cleanupView" ? (
-        <CleanupView type={view.type} />
-      ) : view.kind === "tags" ? (
-        <TagsView />
-      ) : (
-        <ListPane />
-      )}
-      {/* Row 2 col 3 : détail permanent — aperçu, édition inline, actions,
-          surlignages (Task 8). */}
-      <DetailPane />
-      {/* Palette ⌘K (Task 11) : overlay fixed, hors flux de la grille. */}
-      {cmdkOpen && <CommandPalette open onClose={() => setCmdkOpen(false)} />}
+        {/* Row 2 col 3 : détail permanent — aperçu, édition inline, actions,
+            surlignages (Task 8). */}
+        <DetailPane />
+        {/* Palette ⌘K (Task 11) : overlay fixed, hors flux de la grille. */}
+        {cmdkOpen && <CommandPalette open onClose={() => setCmdkOpen(false)} />}
+      </div>
     </div>
   );
 }
