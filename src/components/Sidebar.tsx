@@ -14,15 +14,20 @@ import { useRovingFocus } from "../hooks/useRovingFocus";
 // (hover, sel) — la sélection se marque par une surface, jamais une teinte.
 const item = "flex w-full items-center gap-2 text-left rounded px-2 py-1 leading-5 hover:bg-app-hover cursor-pointer";
 const selected = " bg-app-sel font-medium";
+// Une entrée de COLLECTION porte le lavis de sa teinte (§4) : la surface
+// vient de `.nav-ligne`, le bouton n'y pose donc plus la sienne. Le retrait
+// d'arbre est à l'intérieur, sinon l'indentation mangerait la bande.
+const itemColl = "flex w-full items-center gap-2 text-left px-2 py-1 leading-5 cursor-pointer bg-transparent";
 const count = "text-xs text-app-muted";
 
 // DESIGN.md §9 « masqué si nul » : un compteur à 0 ne s'affiche pas. Le
 // fragment porte l'espace séparateur — sans lui, masquer le chiffre
 // laisserait une espace pendante derrière le titre.
-// Cible active d'un déplacement : la surface `sel` (§6), jamais une teinte —
-// c'est la même marque que la sélection, et pour la même raison (« ceci est
-// l'endroit courant »).
-const cibleActive = " bg-app-sel";
+// Cible active d'un déplacement. Le survol entoure déjà d'un trait dans la
+// teinte de la collection : la cible d'un dépôt en prend un plus épais et
+// NEUTRE, sinon rien ne distinguerait « je passe au-dessus » de « c'est ici
+// que ça tombe » — et seules les destinations permises le portent.
+const cibleActive = " outline outline-[2.5px] outline-app-ink";
 
 // §4 : chaque collection porte sa signalétique dans la barre — icône Raindrop
 // quand elle existe, sinon le dossier teinté. La teinte cascade (sa couleur,
@@ -108,16 +113,23 @@ export function Sidebar() {
               {(deplie, chevron, pliage) => (
                 <>
                   {/* Le chevron vit DANS la ligne, devant le titre : c'est la
-                      poignée du groupe, pas une commande de la barre. */}
-                  <div className="flex items-center">
+                      poignée du groupe, pas une commande de la barre.
+                      `.nav-ligne` porte le lavis sur TOUTE la largeur — sans
+                      elle, le chevron raccourcissait le fond des parents et
+                      les bandes n'étaient pas de même longueur. */}
+                  <div
+                    className={"nav-ligne" + survolee(c.id)}
+                    data-courante={vueCourante === c.id}
+                    style={teinteCollection(arbre, c.id)}
+                    {...accueil(c.id)}
+                  >
                     {chevron}
                     {/* Une collection QUI A des enfants ouvre la vue
                         composite ; une feuille ouvre la liste ordinaire. */}
                     <button
                       data-nav
                       ref={(el) => noterPliage(el, pliage)}
-                      className={item + survolee(c.id)}
-                      {...accueil(c.id)}
+                      className={itemColl}
                       onClick={() =>
                         go(
                           enfants.length > 0
@@ -137,11 +149,18 @@ export function Sidebar() {
                       // padding de base de `item` (px-2 = 8 px) → 22 px au niveau 1
                       // (l'ancien pl-6, 24 px, ne suivait pas la lettre). Style
                       // inline : la valeur exacte compte, pas une classe approximative.
-                      <button key={ch.id} data-nav className={item + survolee(ch.id)} {...accueil(ch.id)} style={{ paddingLeft: "22px" }} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
+                      <div
+                        key={ch.id}
+                        className={"nav-ligne" + survolee(ch.id)}
+                        data-courante={vueCourante === ch.id}
+                        style={teinteCollection(arbre, ch.id)}
+                      >
+                      <button data-nav className={itemColl} {...accueil(ch.id)} style={{ paddingLeft: "22px" }} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
                         <Signe arbre={arbre} c={ch} />
                         <span className="truncate">{ch.title}</span>
                         <Compteur n={ch.count} />
                       </button>
+                      </div>
                     ))}
                 </>
               )}

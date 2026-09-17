@@ -237,15 +237,15 @@ describe("Sidebar", () => {
   // survoler la sidebar ne doit rien allumer.
   it("les collections ne s'allument qu'en cours de déplacement", async () => {
     renderSidebar(true);
-    const dev = screen.getByText("Dev").closest("button")!;
-    await userEvent.hover(dev);
-    expect(dev.className).not.toContain("bg-app-sel");
+    const ligne = screen.getByText("Dev").closest(".nav-ligne")!;
+    await userEvent.hover(ligne);
+    expect(ligne.className).not.toContain("outline");
 
     await userEvent.click(screen.getByText("tirer"));
-    await userEvent.hover(dev);
-    expect(dev.className).toContain("bg-app-sel");
-    await userEvent.unhover(dev);
-    expect(dev.className).not.toContain("bg-app-sel");
+    await userEvent.hover(ligne);
+    expect(ligne.className).toContain("outline");
+    await userEvent.unhover(ligne);
+    expect(ligne.className).not.toContain("outline");
   });
 
   // La corbeille n'accueille rien : y glisser un signet l'effacerait d'un
@@ -255,7 +255,7 @@ describe("Sidebar", () => {
     renderSidebar(true);
     await userEvent.click(screen.getByText("tirer"));
     for (const nom of ["Corbeille", "Tous", "Non-lus", "Favoris"]) {
-      const entree = screen.getByText(nom).closest("button")!;
+      const entree = screen.getByText(nom).closest(".nav-ligne") ?? screen.getByText(nom).closest("button")!;
       // Comparer l'avant et l'après : « Tous » est la vue COURANTE et porte
       // déjà `bg-app-sel` de ce fait — c'est la même surface pour dire deux
       // choses, seul son apparition au survol trahirait une cible.

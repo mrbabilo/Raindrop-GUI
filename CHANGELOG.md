@@ -55,10 +55,12 @@ Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
   doublons, non-taggés, collections vides, corbeille.
 - **Vue des étiquettes** : renommer, fusionner, supprimer.
 - **Les collections portent leur icône et leur couleur**, comme dans
-  Raindrop : l'icône quand elles en ont une, sinon un dossier dans leur
-  teinte. Les teintes restent pastel quelle que soit la vivacité de la
-  couleur d'origine, et une sous-collection sans couleur hérite de celle
-  de sa racine.
+  Raindrop : l'icône quand elles en ont une, posée sur sa teinte, sinon un
+  dossier teinté. Dans la barre latérale, l'entrée entière porte le lavis
+  de sa couleur, en bandes de même longueur ; le survol l'entoure d'un
+  trait au lieu d'en changer le fond. Les teintes restent pastel quelle
+  que soit la vivacité de la couleur d'origine, et une sous-collection
+  sans couleur hérite de celle de sa racine.
 - **Navigation au clavier** : chaque zone ne prend qu'un arrêt de
   tabulation au lieu d'un par ligne, et les flèches y circulent — y
   compris en deux dimensions dans la mosaïque. →/← déplient une

@@ -106,9 +106,21 @@ chroma sont des jetons du thème (0,95/0,035 en clair, 0,32/0,05 en sombre).
 Fournir la teinte suffit — un rouge vif de Raindrop et une teinte du lexique
 sortent au même niveau de douceur, dans les deux thèmes.
 
-L'icône vient de Raindrop quand elle existe (champ `cover`). Sinon, ou si la
-vignette distante ne se charge pas, un dossier teinté : **jamais une case
-vide**.
+L'icône vient de Raindrop quand elle existe (champ `cover`), **posée sur** sa
+teinte et non à sa place : à pleine taille elle masquait le fond, et les
+collections qui en ont une perdaient toute couleur. Sinon, ou si la vignette
+distante ne se charge pas, un dossier teinté : **jamais une case vide**.
+
+Dans la barre latérale, la teinte ne se limite pas à l'icône : **l'entrée
+entière porte le lavis**, sur toute la largeur et d'une bande à l'autre de
+même longueur — parents et enfants compris, le retrait d'arbre vivant à
+l'intérieur de la bande. Le **survol entoure** d'un trait de la même teinte,
+plus soutenu ; il ne recolore pas le fond, qui appartient à la collection.
+La vue courante, elle, assombrit son propre lavis : §6 dit que l'état se
+marque par la surface, et « jamais une teinte » s'y lit désormais « jamais
+une teinte **étrangère** ». La cible d'un dépôt prend un trait plus épais et
+neutre — sur une barre où tout est teinté, un lavis de plus ne dirait pas
+« c'est ici que ça tombe ».
 
 **Chaque lien reprend la signalétique de sa collection** : carré arrondi dans la
 liste, teinte de la vignette en mosaïque, fil d'Ariane dans la fiche.

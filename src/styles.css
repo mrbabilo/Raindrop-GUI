@@ -30,6 +30,11 @@
   --app-icon-c: 0.11;
   --app-wash-l: 0.95;
   --app-wash-c: 0.035;
+  /* §6 : l'état se marque par la SURFACE. Une entrée de collection portant
+     déjà le lavis de sa teinte, le survol et la sélection l'assombrissent
+     au lieu de le recouvrir d'un gris étranger. */
+  --app-wash-hover-l: 0.91;
+  --app-wash-sel-l: 0.87;
 }
 
 .dark {
@@ -53,6 +58,8 @@
   --app-icon-c: 0.11;
   --app-wash-l: 0.32;
   --app-wash-c: 0.05;
+  --app-wash-hover-l: 0.38;
+  --app-wash-sel-l: 0.44;
 }
 
 body {
@@ -102,6 +109,38 @@ body {
 .wash {
   background: oklch(var(--app-wash-l) calc(var(--app-wash-c) * var(--sat, 1)) var(--h));
   color: oklch(var(--app-icon-l) calc(var(--app-icon-c) * var(--sat, 1)) var(--h));
+}
+
+/* §4 : une entrée de collection porte le lavis de sa teinte sur TOUTE la
+   largeur de la barre — parents et enfants compris, dont les fonds étaient
+   jusqu'ici de longueurs inégales (le chevron raccourcissait celui des
+   parents). Le retrait d'arbre vit à l'intérieur, sur le contenu, pour que
+   l'indentation ne mange pas la bande.
+
+   Le survol et la sélection assombrissent CETTE teinte : §6 dit que l'état
+   se marque par la surface, et « jamais une teinte » s'y lit désormais
+   « jamais une teinte étrangère ». */
+.nav-ligne {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border-radius: 5px;
+  background: oklch(var(--app-wash-l) calc(var(--app-wash-c) * var(--sat, 1)) var(--h));
+}
+
+/* Le survol ENTOURE, il ne recolore pas : le fond appartient au lavis de la
+   collection, l'état passe par le trait. La bordure est posée en `outline`
+   pour ne rien pousser — une bordure réelle décalerait la ligne d'un pixel
+   à chaque passage du pointeur. Elle prend la teinte de la collection, plus
+   soutenue que son lavis. */
+.nav-ligne:hover {
+  outline: 1.5px solid oklch(var(--app-icon-l) calc(var(--app-icon-c) * var(--sat, 1)) var(--h));
+  outline-offset: -1.5px;
+}
+
+.nav-ligne[data-courante="true"] {
+  background: oklch(var(--app-wash-sel-l) calc(var(--app-wash-c) * var(--sat, 1)) var(--h));
 }
 
 /* Densité « détail » (DESIGN.md §2) : la pilule passe de 18 à 21 px dans la
