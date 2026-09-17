@@ -119,12 +119,22 @@ describe("CommandPalette", () => {
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ kind: "list", collectionId: 0 });
   });
 
+  // R15P-5 : la vue tags (T14) est joignable depuis la palette — elle
+  // n'avait plus aucune entrée (vue inatteignable depuis T14).
+  it("l'entrée Tags navigue vers la vue tags (R15P-5)", async () => {
+    renderPalette("tags");
+    // Filtre local « tags » : aucune collection ni tag fixtures ne matche —
+    // l'entrée de vue est seule (le serveur renvoie vide, sans « rust »).
+    await userEvent.click(screen.getByText("Tags"));
+    expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ kind: "tags" });
+  });
+
   it("les flèches déplacent la sélection, Échap ferme sans naviguer", async () => {
     const onClose = vi.fn();
     renderPalette("", onClose);
-    // Requête vide : tout le local matche — 3 collections + 3 tags + 4 vues,
-    // serveur au repos (0 < 2 caractères).
-    expect(screen.getAllByRole("option")).toHaveLength(10);
+    // Requête vide : tout le local matche — 3 collections + 3 tags + 5 vues
+    // (nettoyage, morts, doublons, tags, corbeille), serveur au repos.
+    expect(screen.getAllByRole("option")).toHaveLength(11);
     await userEvent.type(screen.getByRole("combobox"), "{ArrowDown}{ArrowDown}");
     expect(screen.getAllByRole("option")[2]).toHaveAttribute("aria-selected", "true");
     await userEvent.type(screen.getByRole("combobox"), "{ArrowUp}");

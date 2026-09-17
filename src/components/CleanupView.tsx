@@ -206,6 +206,7 @@ function Corbeille() {
                 items: items.map((i) => ({ id: i.id, url: i.url, title: i.title, collectionId: i.collectionId })),
                 action: { op: "empty-trash" },
                 sourceLabel: t("cleanup.trash"),
+                returnView: { kind: "cleanupView", type: "trash" }, // R15P-3
               })
             }
           >
@@ -248,6 +249,7 @@ function CollectionsVides() {
                 items: [],
                 action: { op: "delete-empty-collections" },
                 sourceLabel: t("cleanup.empty-collections"),
+                returnView: { kind: "cleanupView", type: "empty-collections" }, // R15P-3
               })
             }
           >

@@ -8,20 +8,10 @@ import { TopBar } from "./components/TopBar";
 import { ListPane } from "./components/ListPane";
 import { CleanupDashboard } from "./components/CleanupDashboard";
 import { CleanupView } from "./components/CleanupView";
+import { ReviewPage } from "./components/ReviewPage";
 import { TagsView } from "./components/TagsView";
 import { DetailPane } from "./components/DetailPane";
 import { CommandPalette } from "./components/CommandPalette";
-
-// Task 9 : la vue review prend la place de la liste — stub en attendant la
-// Revue de l'action (Task 15 : aperçu filtrable, export CSV, exécution,
-// frappe « SUPPRIMER » pour le vidage — spec §4.2).
-function RevueStub() {
-  return (
-    <section aria-label={t("review.title")} className="flex h-full items-center justify-center bg-app text-app-muted">
-      {t("review.title")}
-    </section>
-  );
-}
 
 // Icônes SVG (DESIGN.md §9 : jamais d'emoji), grille 16px, trait 1,7.
 function SunIcon() {
@@ -52,7 +42,15 @@ function MoonIcon() {
 export default function App() {
   const { resolved, setMode } = useTheme();
   const { data: health } = useHealth();
-  const { view } = useAppState();
+  const { view, go } = useAppState();
+  // R15P-3 : le retour de la Revue revient à la vue d'origine qu'elle porte
+  // (posée par BulkBar/CleanupView) ; sans origine notée, repli sur « Tous ».
+  const goBack = () =>
+    go(
+      view.kind === "review" && view.returnView
+        ? view.returnView
+        : { kind: "list", collectionId: 0, label: t("nav.all") },
+    );
   const isDark = resolved === "dark";
   const mcpDown = health !== undefined && health.mcp !== "connected";
   // Task 10 : ⌘E amène le focus dans le composer, quel que soit le champ
@@ -106,9 +104,11 @@ export default function App() {
       {/* Task 12 : la vue cleanup prend la place de la liste — dashboard de
           nettoyage (compteurs, fraîcheur, scans SSE annulables). Task 13 :
           les vues de traitement cleanupView/* qu'il rend joignables.
-          Task 14 : la vue tags (renommer, fusionner, supprimer). */}
+          Task 14 : la vue tags (renommer, fusionner, supprimer).
+          Task 15 : la Revue de l'action — deux niveaux de confirmation,
+          exécution puis retour (goBack, R15P-3). */}
       {view.kind === "review" ? (
-        <RevueStub />
+        <ReviewPage review={view} goBack={goBack} />
       ) : view.kind === "cleanup" ? (
         <CleanupDashboard />
       ) : view.kind === "cleanupView" ? (

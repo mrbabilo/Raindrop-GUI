@@ -7,14 +7,18 @@ import type { ReactNode } from "react";
 // les référence dans l'implémentation du mock.
 import { raindrop, collections, tags } from "./test/fixtures";
 import App from "./App";
+import { AppStateProvider, useAppState } from "./state/appState";
+import type { View } from "./state/appState";
 
 // App consomme useHealth() et — depuis que ListPane est monté (Task 7) —
 // useRaindrops() : provider + mock du module api ROUTÉ PAR CHEMIN, chaque
 // endpoint recevant la forme de son DTO (jamais de fetch réseau). Seule la
-// réponse health est pilotée par test (mcp connecté/déconnecté).
+// réponse health est pilotée par test (mcp connecté/déconnecté). Le send est
+// mocké pour les tests Revue (R15P-3 : execute() passe par useBulk).
 const getMock = vi.hoisted(() => vi.fn());
+const sendMock = vi.hoisted(() => vi.fn());
 
-vi.mock("./lib/api", () => ({ api: { get: getMock } }));
+vi.mock("./lib/api", () => ({ api: { get: getMock, send: sendMock } }));
 
 function mockApi(mcp: string) {
   getMock.mockReset().mockImplementation((path: string) => {
@@ -51,6 +55,7 @@ describe("App", () => {
     localStorage.clear();
     document.documentElement.className = "";
     mockApi("connected");
+    sendMock.mockReset().mockResolvedValue({});
   });
 
   it("affiche le titre de l'app", () => {
@@ -125,5 +130,72 @@ describe("App", () => {
   it("n'affiche pas d'alerte quand MCP est connecté", () => {
     render(<App />, { wrapper });
     expect(screen.queryByText("Connexion Raindrop interrompue")).not.toBeInTheDocument();
+  });
+
+  // R15P-3 : App construit goBack depuis la returnView portée par la vue
+  // review — après exécution, retour à la vue d'origine (posée par les
+  // constructeurs BulkBar/CleanupView) ; sans origine notée, repli « Tous ».
+  const Spy = () => {
+    const { view } = useAppState();
+    return <span data-testid="view">{JSON.stringify(view)}</span>;
+  };
+  const OuvreRevue = ({ returnView }: { returnView?: View }) => {
+    const { go } = useAppState();
+    return (
+      <button
+        type="button"
+        onClick={() =>
+          go({
+            kind: "review",
+            items: [{ id: 1, url: "https://a.example", title: "Alpha", collectionId: 0 }],
+            action: { op: "trash" },
+            sourceLabel: "sélection",
+            ...(returnView ? { returnView } : {}),
+          })
+        }
+      >
+        ouvrir-revue
+      </button>
+    );
+  };
+  const renderAppAvecDriver = (returnView?: View) =>
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <AppStateProvider>
+          <OuvreRevue returnView={returnView} />
+          <Spy />
+          <App />
+        </AppStateProvider>
+      </QueryClientProvider>,
+    );
+  const executeRevue = async () => {
+    await userEvent.click(screen.getByText("ouvrir-revue"));
+    await userEvent.click(screen.getByRole("checkbox", { name: /Je confirme l'action sur 1/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Exécuter" }));
+  };
+
+  it("revue : après exécution, retour à la vue d'origine (R15P-3)", async () => {
+    renderAppAvecDriver({ kind: "cleanupView", type: "trash" });
+    await executeRevue();
+    await waitFor(() =>
+      expect(sendMock).toHaveBeenCalledWith("POST", "/api/raindrops/bulk", {
+        operation: "delete",
+        collection_id: 0,
+        ids: [1],
+      }),
+    );
+    expect(JSON.parse(screen.getByTestId("view").textContent!)).toEqual({ kind: "cleanupView", type: "trash" });
+  });
+
+  it("revue sans origine notée : repli sur « Tous » (R15P-3)", async () => {
+    renderAppAvecDriver();
+    await executeRevue();
+    await waitFor(() =>
+      expect(JSON.parse(screen.getByTestId("view").textContent!)).toEqual({
+        kind: "list",
+        collectionId: 0,
+        label: "Tous",
+      }),
+    );
   });
 });

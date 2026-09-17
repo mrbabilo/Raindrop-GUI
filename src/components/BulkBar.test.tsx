@@ -17,8 +17,10 @@ vi.mock("../hooks/useStaticData", () => ({ useCollections: () => ({ data: collec
 // Spy que Task 5-8 : asserté hors de App.
 const Spy = () => {
   const { view, selectedIds } = useAppState();
+  // R15P-3 : le Spy expose aussi returnView — la vue d'origine voyagée vers
+  // la Revue, dont App déduit le retour après exécution.
   const revue = view.kind === "review"
-    ? JSON.stringify({ items: view.items.map((i) => i.id), action: view.action, sourceLabel: view.sourceLabel })
+    ? JSON.stringify({ items: view.items.map((i) => i.id), action: view.action, sourceLabel: view.sourceLabel, returnView: view.returnView })
     : view.kind;
   return (
     <>
@@ -66,6 +68,14 @@ describe("BulkBar", () => {
     expect(screen.queryByRole("button", { name: "Corbeille" })).not.toBeInTheDocument();
   });
 
+  // R15P-2 : le compteur dit ce que la Revue embarquera — les items de la
+  // page réellement sélectionnés (selected.length), pas selectedIds.size qui
+  // peut déborder la page chargée (ici 999 n'existe pas dans `items`).
+  it("compteur honnête : seuls les items de la page embarqués sont comptés (R15P-2)", async () => {
+    await renderBar([1000, 999]);
+    expect(screen.getByText("1 sélectionné(s)")).toBeInTheDocument();
+  });
+
   it("corbeille → vue review avec les items sélectionnés, sélection consommée (R9P-1)", async () => {
     await renderBar([1000, 1001]);
     await userEvent.click(screen.getByRole("button", { name: "Corbeille" }));
@@ -73,6 +83,9 @@ describe("BulkBar", () => {
     expect(revue.items).toEqual([1000, 1001]);
     expect(revue.action).toEqual({ op: "trash" });
     expect(revue.sourceLabel).toBe("sélection");
+    // R15P-3 : la vue list courante voyage en returnView — le retour après
+    // exécution reviendra ici.
+    expect(revue.returnView).toEqual({ kind: "list", collectionId: 0, label: "Tous" });
     // R9P-1 : le clear est chirurgical (après le go), pas général — la
     // sélection est vidée PAR l'action, la barre se démonte d'elle-même.
     expect(screen.getByTestId("sel").textContent).toBe("");
@@ -88,7 +101,9 @@ describe("BulkBar", () => {
     await userEvent.click(deplacer);
     const revue = JSON.parse(screen.getByTestId("view").textContent!);
     expect(revue.items).toEqual([1000, 1001]);
-    expect(revue.action).toEqual({ op: "move" });
+    // R15P-4 : la destination choisie part DANS l'action — la Revue l'exécute
+    // (l'ancien jetage R4P produisait un move sans destination).
+    expect(revue.action).toEqual({ op: "move", toCollectionId: 102 });
     // R9P-1 : même contrat sur Déplacer.
     expect(screen.getByTestId("sel").textContent).toBe("");
   });
@@ -101,7 +116,8 @@ describe("BulkBar", () => {
     await userEvent.click(tagger);
     const revue = JSON.parse(screen.getByTestId("view").textContent!);
     expect(revue.items).toEqual([1000, 1001]);
-    expect(revue.action).toEqual({ op: "tag" });
+    // Les tags saisis partent dans l'action — la Revue les envoie au bulk.
+    expect(revue.action).toEqual({ op: "tag", tags: ["lutin", "elfe"] });
     // R9P-1 : même contrat sur Tagger.
     expect(screen.getByTestId("sel").textContent).toBe("");
   });

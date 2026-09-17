@@ -25,8 +25,8 @@ export type View =
   // Task 9 : la Revue de l'action, construite par BulkBar puis exécutée
   // (Task 15). Items réduits au nécessaire — `collectionId` porte
   // l'origine, que la corbeille Raindrop ne garde pas (spec §4.2).
-  // R4P : l'action n'a pas encore de destination (le `dest` du <select>
-  // est jeté en T9).
+  // R15P-4 (ex-R4P) : l'action porte ses paramètres — `move` sa destination,
+  // `tag` ses étiquettes — la Revue les envoie tels quels au bulk.
   // Task 13 : les deux actions de niveau 2 des vues de traitement — la Revue
   // (T15) exécutera empty-trash / collections/cleanup. `items` reste la forme
   // raindrop : empty-trash passe les items de corbeille chargés (aperçu
@@ -37,11 +37,16 @@ export type View =
       items: { id: number; url: string; title: string; collectionId: number }[];
       action:
         | { op: "trash" }
-        | { op: "move" }
-        | { op: "tag" }
+        | { op: "move"; toCollectionId: number }
+        | { op: "tag"; tags: string[] }
         | { op: "empty-trash" }
         | { op: "delete-empty-collections" };
       sourceLabel: string;
+      // R15P-3 : la vue d'origine, posée par les constructeurs (BulkBar : la
+      // vue list courante ; CleanupView : sa vue cleanupView) — App en déduit
+      // le retour après exécution. Absente (vue construite à la main) :
+      // repli « Tous ».
+      returnView?: View;
     };
 
 // Les filtres/tri/mode portés par la vue list — cible du merge de patchList.

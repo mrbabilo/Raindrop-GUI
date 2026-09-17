@@ -55,6 +55,9 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
     { key: "cleanup", label: t("nav.cleanup"), hint: t("cmdk.hintView"), run: () => go({ kind: "cleanup" }) },
     { key: "dead", label: t("cleanup.dead"), hint: t("cmdk.hintView"), run: () => go({ kind: "cleanupView", type: "dead" }) },
     { key: "dup", label: t("cleanup.duplicates"), hint: t("cmdk.hintView"), run: () => go({ kind: "cleanupView", type: "duplicates" }) },
+    // R15P-5 : la vue tags (T14) devient joignable — elle n'avait plus
+    // aucune entrée depuis qu'elle existe.
+    { key: "tags", label: t("nav.tags"), hint: t("cmdk.hintView"), run: () => go({ kind: "tags" }) },
     { key: "trash", label: t("nav.trash"), hint: t("cmdk.hintView"), run: () => go({ kind: "list", collectionId: -99, label: t("nav.trash") }) },
   ];
 
