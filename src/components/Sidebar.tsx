@@ -17,7 +17,10 @@ const selected = " bg-app-sel font-medium";
 // Une entrée de COLLECTION porte le lavis de sa teinte (§4) : la surface
 // vient de `.nav-ligne`, le bouton n'y pose donc plus la sienne. Le retrait
 // d'arbre est à l'intérieur, sinon l'indentation mangerait la bande.
-const itemColl = "flex w-full items-center gap-2 text-left px-2 py-1 leading-5 cursor-pointer bg-transparent";
+// `min-w-0 flex-1` et non `w-full` : dans une bande qui porte aussi le
+// chevron, « toute la largeur » déborde de la largeur du chevron et pousse le
+// compteur hors du fond (mesuré : 3 px).
+const itemColl = "flex min-w-0 flex-1 items-center gap-2 text-left px-2 py-1 leading-5 cursor-pointer bg-transparent";
 const count = "text-xs text-app-muted";
 
 // DESIGN.md §9 « masqué si nul » : un compteur à 0 ne s'affiche pas. Le
@@ -38,7 +41,9 @@ const Signe = ({ arbre, c }: { arbre: Collection[]; c: Collection }) => (
 );
 
 const Compteur = ({ n }: { n: number }) =>
-  n > 0 ? <> <span className={count}>{n}</span></> : null;
+  // `shrink-0` : un compte est court et doit se lire en entier — c'est le
+  // titre qui se tronque, jamais lui.
+  n > 0 ? <span className={count + " shrink-0"}>{n}</span> : null;
 
 export function Sidebar() {
   const { view, go } = useAppState();
@@ -144,7 +149,10 @@ export function Sidebar() {
                           distingue de ses descendantes, qui partagent sa
                           teinte et n'ont donc plus la couleur pour se
                           démarquer d'elle. */}
-                      <span className="truncate font-medium">{c.title}</span>
+                      {/* `min-w-0 flex-1` : c'est le TITRE qui cède, en se
+                          tronquant, et jamais le compteur — sans quoi un
+                          titre long le poussait hors de la bande. */}
+                      <span className="min-w-0 flex-1 truncate font-medium">{c.title}</span>
                       <Compteur n={c.count} />
                     </button>
                   </div>
@@ -168,7 +176,7 @@ export function Sidebar() {
                           le décrochement de la bande, non par un padding. */}
                       <button data-nav className={itemColl} {...accueil(ch.id)} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
                         <Signe arbre={arbre} c={ch} />
-                        <span className="truncate">{ch.title}</span>
+                        <span className="min-w-0 flex-1 truncate">{ch.title}</span>
                         <Compteur n={ch.count} />
                       </button>
                       </div>
@@ -189,7 +197,12 @@ export function Sidebar() {
             filtré. */}
         {(tags.data ?? []).map((tg) => (
           <button key={tg.name} data-nav className={item} onClick={() => go({ kind: "list", collectionId: 0, label: `#${tg.name}`, search: `#${tg.name}` })}>
-            #<span>{tg.name}</span><Compteur n={tg.count} />
+            {/* Le nom garde SON span : le # décoratif reste hors de lui, sinon
+              une requête de test sur « typescript » ne trouve plus rien —
+              elles ne lisent que les nœuds texte directs. L'enveloppe, elle,
+              porte la troncature pour que le compteur ne soit pas poussé. */}
+          <span className="min-w-0 flex-1 truncate">#<span>{tg.name}</span></span>
+          <Compteur n={tg.count} />
           </button>
         ))}
       </section>

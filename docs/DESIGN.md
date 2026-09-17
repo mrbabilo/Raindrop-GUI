@@ -234,8 +234,14 @@ Corps de texte : `line-height: 1.5–1.6`, `text-wrap: pretty`, largeur limitée
 | tuile de mosaïque | 221 px de large | vignette 118 px, titre sur 2 lignes |
 | action engageante | 38 px | Revue uniquement |
 
-Rayons : 5 px (icône), 7 px (ligne, champ), 9–11 px (panneau, tuile).
-Pas d'ombre portée : la hiérarchie vient du **niveau de surface**, pas de l'ombre.
+Rayons : pastille ronde (collection), 7 px (ligne, champ), 9–11 px (panneau,
+tuile, bande de navigation).
+
+**Pas d'ombre portée, sauf une** : la hiérarchie vient du niveau de surface.
+L'exception est la **bande de collection**, qui porte une ombre très basse —
+elle n'imite pas un relief, elle détache la bande du fond et de ses voisines,
+là où douze teintes voisines et un simple filet d'air ne suffisaient pas à
+séparer douze familles. Aucun autre élément n'en prend.
 
 ## 9. Règles
 

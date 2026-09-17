@@ -43,6 +43,7 @@
      chevron (19 px) + le gap (8) + le padding du bouton (8). La bande d'une
      sous-collection part de là. */
   --nav-retrait: 35px;
+  --app-nav-ombre: 0 1px 2px rgb(23 23 26 / 0.10);
   --app-nav-l: 0.9;
   --app-nav-enfant-l: 0.945;
   --app-nav-sel-l: 0.82;
@@ -79,6 +80,7 @@
   --app-icon-c: 0.11;
   --app-wash-l: 0.32;
   --app-wash-c: 0.05;
+  --app-nav-ombre: 0 1px 2px rgb(0 0 0 / 0.35);
   --app-nav-l: 0.34;
   --app-nav-enfant-l: 0.26;
   --app-nav-sel-l: 0.44;
@@ -164,7 +166,9 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
+  /* Pas de `width: 100%` : un bloc prend déjà la largeur disponible, MARGES
+     DÉDUITES. Avec 100%, la bande d'une sous-collection débordait de son
+     décrochement (35 px) hors de la barre, emportant son compteur avec elle. */
   /* Franchement arrondie : une bande de collection se détache ainsi du bord
      de la barre et des bandes voisines, là où un rayon de 5 les laissait se
      lire comme un seul aplat continu. Un filet d'air au-dessous, sans quoi
@@ -174,6 +178,10 @@ body {
   border-radius: 9px;
   margin-bottom: 2px;
   background: oklch(var(--app-nav-l) calc(var(--app-nav-c) * var(--sat, 1)) var(--h));
+  /* L'unique ombre de l'interface (§8) : très basse, elle ne feint aucun
+     relief — elle pose la bande sur le fond et la sépare de ses voisines,
+     que douze teintes proches et 2 px d'air ne suffisaient pas à détacher. */
+  box-shadow: var(--app-nav-ombre);
 }
 
 /* La bande d'une sous-collection démarre SOUS la pastille de sa mère : le
