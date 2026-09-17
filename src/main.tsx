@@ -26,7 +26,7 @@ function Racine({ amorce }: { amorce: Amorce }) {
     case "panne":
       return <EcranPanne detail={etat.detail} onEtat={setEtat} />;
     default:
-      return <App />;
+      return <App onEtat={setEtat} />;
   }
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { t } from "./i18n/fr";
+import type { Amorce } from "./lib/amorce";
 import { useTheme } from "./lib/theme";
 import { useAppState } from "./state/appState";
 import { Sidebar } from "./components/Sidebar";
@@ -13,6 +14,7 @@ import { CollectionView } from "./components/CollectionView";
 import { DetailPane } from "./components/DetailPane";
 import { CommandPalette } from "./components/CommandPalette";
 import { Banners } from "./components/Banners";
+import { Reglages } from "./components/Reglages";
 import { FantomeDrag } from "./components/FantomeDrag";
 
 // Icônes SVG (DESIGN.md §9 : jamais d'emoji), grille 16px, trait 1,7.
@@ -41,7 +43,21 @@ function MoonIcon() {
   );
 }
 
-export default function App() {
+function EngrenageIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="2.3" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M8 1.6v1.5M8 12.9v1.5M14.4 8h-1.5M3.1 8H1.6M12.5 3.5l-1.1 1.1M4.6 11.4l-1.1 1.1M12.5 12.5l-1.1-1.1M4.6 4.6L3.5 3.5"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
   const { resolved, setMode } = useTheme();
   const { view, go } = useAppState();
   // R15P-3 : le retour de la Revue revient à la vue d'origine qu'elle porte
@@ -60,6 +76,8 @@ export default function App() {
   // (portés par le composant). Montée conditionnelle : chaque ouverture
   // repart d'une saisie vide.
   const [cmdkOpen, setCmdkOpen] = useState(false);
+  // ⌘, — le raccourci macOS des réglages, partout dans le système.
+  const [reglagesOuvert, setReglagesOuvert] = useState(false);
   useEffect(() => {
     function surRaccourci(e: KeyboardEvent) {
       if (e.metaKey && e.key === "e") {
@@ -69,6 +87,10 @@ export default function App() {
       if (e.metaKey && e.key === "k") {
         e.preventDefault();
         setCmdkOpen(true);
+      }
+      if (e.metaKey && e.key === ",") {
+        e.preventDefault();
+        setReglagesOuvert(true);
       }
     }
     window.addEventListener("keydown", surRaccourci);
@@ -93,7 +115,15 @@ export default function App() {
               un seul émetteur du message, la bannière porte en plus l'action. */}
           <button
             type="button"
-            className="btn ml-auto"
+            className="btn btn-icone ml-auto"
+            aria-label={t("reglages.titre")}
+            onClick={() => setReglagesOuvert(true)}
+          >
+            <EngrenageIcon />
+          </button>
+          <button
+            type="button"
+            className="btn"
             aria-label={isDark ? t("theme.toLight") : t("theme.toDark")}
             onClick={toggleTheme}
           >
@@ -131,6 +161,11 @@ export default function App() {
         <DetailPane />
         {/* Palette ⌘K (Task 11) : overlay fixed, hors flux de la grille. */}
         {cmdkOpen && <CommandPalette open onClose={() => setCmdkOpen(false)} />}
+        {/* Réglages ⌘, (spec §6) : monté conditionnellement, comme la
+            palette — chaque ouverture repart d'un état neuf. */}
+        {reglagesOuvert && (
+          <Reglages onFermer={() => setReglagesOuvert(false)} onEtat={onEtat} />
+        )}
       </div>
     </div>
   );

@@ -39,13 +39,27 @@ export function appliquer(etat: EtatConnexion): Amorce {
 }
 
 async function demander(
-  commande: "etat_connexion" | "relancer" | "installer_runtime",
+  commande:
+    | "etat_connexion"
+    | "relancer"
+    | "installer_runtime"
+    | "enregistrer_jeton"
+    | "deconnecter",
+  args?: Record<string, unknown>,
 ): Promise<Amorce> {
   // Hors webview (développement au navigateur), le proxy Vite et
   // VITE_LOCAL_API_TOKEN suffisent : rien à demander à personne.
   if (!isTauri()) return { ecran: "app" };
   try {
-    return appliquer(await invoke<EtatConnexion>(commande));
+    // `invoke(cmd)` et `invoke(cmd, undefined)` sont équivalents pour Tauri,
+    // mais pas pour une assertion de test : garder la forme minimale quand
+    // la commande ne prend rien évite de faire fuir un détail
+    // d'implémentation dans les tests des commandes sans argument.
+    const etat =
+      args === undefined
+        ? await invoke<EtatConnexion>(commande)
+        : await invoke<EtatConnexion>(commande, args);
+    return appliquer(etat);
   } catch (e) {
     // Sans cette garde, un rejet laisse une page blanche : le rendu n'a
     // jamais lieu et rien n'explique pourquoi.
@@ -69,6 +83,21 @@ export const relancer = (): Promise<Amorce> => demander("relancer");
  * courant via `appliquer`, exactement comme `relancer`.
  */
 export const installerRuntime = (): Promise<Amorce> => demander("installer_runtime");
+
+/**
+ * Réglages (spec §6) : remplacer le jeton SANS repasser par le premier
+ * lancement — Rust écrit au trousseau, relance le sidecar, attend le MCP
+ * connecté, et rend le nouvel état (Pret, ou Panne si le jeton est refusé
+ * par la suite de l'appel /api/user du front).
+ */
+export const remplacerJeton = (jeton: string): Promise<Amorce> =>
+  demander("enregistrer_jeton", { jetonRaindrop: jeton });
+
+/**
+ * Réglages : déconnexion — efface le jeton du trousseau, arrête le
+ * sidecar, et rend l'écran de premier lancement.
+ */
+export const deconnecter = (): Promise<Amorce> => demander("deconnecter");
 
 /**
  * La progression de l'installation en cours (poll toutes les 500 ms côté

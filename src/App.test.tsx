@@ -59,12 +59,12 @@ describe("App", () => {
   });
 
   it("affiche le titre de l'app", () => {
-    render(<App />, { wrapper });
+    render(<App onEtat={vi.fn()} />, { wrapper });
     expect(screen.getByText("Raindrop GUI")).toBeInTheDocument();
   });
 
   it("affiche le shell trois panneaux (navigation, liste, détail)", () => {
-    render(<App />, { wrapper });
+    render(<App onEtat={vi.fn()} />, { wrapper });
     expect(screen.getByRole("navigation")).toBeInTheDocument();
     expect(screen.getByRole("main")).toBeInTheDocument();
     expect(screen.getByRole("complementary")).toBeInTheDocument();
@@ -73,7 +73,7 @@ describe("App", () => {
   // Task 10 : ⌘E amène le focus dans le composer, quel que soit le champ
   // occupé — le data-testid="composer-input" est le contrat du focus (plan).
   it("⌘E met le focus dans le composer", () => {
-    render(<App />, { wrapper });
+    render(<App onEtat={vi.fn()} />, { wrapper });
     const input = document.querySelector<HTMLInputElement>('[data-testid="composer-input"]');
     expect(input).not.toBeNull();
     expect(document.activeElement).not.toBe(input);
@@ -87,7 +87,7 @@ describe("App", () => {
   // cherche par son placeholder : le <select> de tri de la TopBar porte lui
   // aussi le rôle ARIA implicite « combobox ».
   it("⌘K ouvre la palette, Échap la referme", () => {
-    render(<App />, { wrapper });
+    render(<App onEtat={vi.fn()} />, { wrapper });
     const input = () => screen.queryByPlaceholderText("Rechercher bookmarks, collections, tags, commandes…");
     expect(input()).not.toBeInTheDocument();
     fireEvent.keyDown(window, { key: "k", metaKey: true });
@@ -98,7 +98,7 @@ describe("App", () => {
 
   it("bascule le thème sombre au clic sur le bouton de thème", async () => {
     const user = userEvent.setup();
-    render(<App />, { wrapper });
+    render(<App onEtat={vi.fn()} />, { wrapper });
     const toggle = screen.getByRole("button", { name: "Passer au thème sombre" });
     await user.click(toggle);
     expect(document.documentElement.classList.contains("dark")).toBe(true);
@@ -109,7 +109,7 @@ describe("App", () => {
 
   it("annonce le thème clair dès le premier rendu quand le système préfère le sombre", () => {
     window.matchMedia = matchMediaPrefersDark();
-    render(<App />, { wrapper });
+    render(<App onEtat={vi.fn()} />, { wrapper });
     // L'app est déjà sombre (mode "system" + OS sombre) : le bouton doit
     // annoncer l'action inverse dès le premier rendu, pas seulement après
     // un clic — DESIGN.md §10, « un bouton nomme ce qui va se produire ».
@@ -126,14 +126,14 @@ describe("App", () => {
     // qu'on n'a pas vu connected, sauf crashed — le laissait à juste titre
     // se taire).
     mockApi("crashed");
-    render(<App />, { wrapper });
+    render(<App onEtat={vi.fn()} />, { wrapper });
     await waitFor(() =>
       expect(screen.getByText("Connexion Raindrop interrompue")).toBeInTheDocument(),
     );
   });
 
   it("n'affiche pas d'alerte quand MCP est connecté", () => {
-    render(<App />, { wrapper });
+    render(<App onEtat={vi.fn()} />, { wrapper });
     expect(screen.queryByText("Connexion Raindrop interrompue")).not.toBeInTheDocument();
   });
 
@@ -169,7 +169,7 @@ describe("App", () => {
         <AppStateProvider>
           <OuvreRevue returnView={returnView} />
           <Spy />
-          <App />
+          <App onEtat={vi.fn()} />
         </AppStateProvider>
       </QueryClientProvider>,
     );

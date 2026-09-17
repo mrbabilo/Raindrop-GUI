@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { appliquer, amorcer, relancer, installerRuntime, progressionInstallation } from "./amorce";
+import { appliquer, amorcer, relancer, installerRuntime, progressionInstallation, remplacerJeton, deconnecter } from "./amorce";
 
 const { invokeMock, isTauriMock } = vi.hoisted(() => ({
   invokeMock: vi.fn(),
@@ -62,6 +62,33 @@ describe("amorcer", () => {
   it("une commande qui rejette devient un écran de panne, pas une page blanche", async () => {
     invokeMock.mockRejectedValue(new Error("pont IPC coupé"));
     expect(await amorcer()).toEqual({ ecran: "panne", detail: "pont IPC coupé" });
+  });
+});
+
+describe("remplacerJeton", () => {
+  // Réglages (spec §6) : le remplacement passe par la MÊME commande que le
+  // premier lancement — trousseau, sidecar, attente du MCP — puis
+  // appliquer pose le nouveau global.
+  it("invoque enregistrer_jeton avec le jeton en camelCase", async () => {
+    invokeMock.mockResolvedValue({ kind: "pret", port: 8, token: "t" });
+    expect(await remplacerJeton("abc")).toEqual({ ecran: "app" });
+    expect(invokeMock).toHaveBeenCalledWith("enregistrer_jeton", { jetonRaindrop: "abc" });
+    expect(window.RAINDROP_GUI).toEqual({ port: 8, token: "t" });
+  });
+
+  it("un jeton refusé remonte en écran de panne, pas de page blanche", async () => {
+    invokeMock.mockResolvedValue({ kind: "panne", detail: "refusé" });
+    expect(await remplacerJeton("faux")).toEqual({ ecran: "panne", detail: "refusé" });
+    expect(window.RAINDROP_GUI).toBeUndefined();
+  });
+});
+
+describe("deconnecter", () => {
+  it("invoque la commande et ramène au premier lancement", async () => {
+    invokeMock.mockResolvedValue({ kind: "jeton_requis" });
+    expect(await deconnecter()).toEqual({ ecran: "premier-lancement" });
+    expect(invokeMock).toHaveBeenCalledWith("deconnecter");
+    expect(window.RAINDROP_GUI).toBeUndefined();
   });
 });
 

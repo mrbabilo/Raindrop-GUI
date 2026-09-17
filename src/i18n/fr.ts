@@ -124,6 +124,23 @@ export const fr = {
   "boot.checking": "Vérification…",
   "boot.account": "Compte détecté : {name} ({email}) — {count} signets",
   "boot.enter": "Ouvrir la bibliothèque",
+  // Réglages (spec §6) — remplacer le jeton, voir l'état de la connexion.
+  "reglages.titre": "Réglages",
+  "reglages.connexion": "Connexion",
+  "reglages.pont": "Pont Raindrop",
+  "reglages.note": "Le jeton est conservé dans le trousseau macOS et ne quitte jamais cet ordinateur.",
+  "reglages.remplacer": "Remplacer le jeton",
+  "reglages.deconnecter": "Déconnecter",
+  "reglages.fermer": "Fermer",
+  "reglages.refuse": "Ce jeton n'a pas été accepté par Raindrop.",
+  // Les cinq états de lifecycle.ts, en français. Le front ne montre jamais
+  // les identifiants internes.
+  "reglages.mcp.connected": "Connecté",
+  "reglages.mcp.starting": "Démarrage…",
+  "reglages.mcp.restarting": "Reconnexion…",
+  "reglages.mcp.crashed": "Interrompu",
+  "reglages.mcp.stopped": "Arrêté",
+  "reglages.mcp.inconnu": "—",
   "boot.nodeTitle": "Node est introuvable",
   // Amendement spec §3.2 (2026-09-17) : le geste principal est l'installation
   // du runtime géré ; les instructions manuelles restent le repli.
