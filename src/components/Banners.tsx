@@ -57,8 +57,11 @@ export function Banners() {
           <button type="button" className="btn" disabled={relance} onClick={redemarre}>
             {t("banner.restart")}
           </button>
+          {/* Pas de `role="alert"` ici : la bannière qui l'entoure en porte
+              déjà un, et deux régions live imbriquées font annoncer le
+              message deux fois — ou pas du tout, selon le lecteur. */}
           {erreur && (
-            <p role="alert" className="text-xs text-app-broken">
+            <p className="text-xs text-app-broken">
               {t("state.error", { message: erreur })}
             </p>
           )}

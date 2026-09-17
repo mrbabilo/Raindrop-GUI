@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n/fr";
 import { useTags } from "../hooks/useStaticData";
 import { useTagManage } from "../hooks/useMutations";
@@ -30,16 +30,31 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
   const [edition, setEdition] = useState(false);
   const [nom, setNom] = useState("");
   const [armee, setArmee] = useState(false);
+  const ligneRef = useRef<HTMLLIElement>(null);
   const fermerEdition = () => {
     setEdition(false);
     setNom("");
   };
+  // Le `blur` ne suffit pas à désarmer : cliquer une zone non focalisable —
+  // un fond, un titre, une autre ligne — ne déplace aucun focus, et le
+  // bouton restait armé. Une suppression n'a pas à attendre là, prête à
+  // partir au clic suivant.
+  useEffect(() => {
+    if (!armee) return;
+    const dehors = (e: PointerEvent) => {
+      if (ligneRef.current?.contains(e.target as Node | null)) return;
+      setArmee(false);
+    };
+    document.addEventListener("pointerdown", dehors);
+    return () => document.removeEventListener("pointerdown", dehors);
+  }, [armee]);
   return (
-    <li className="flex min-h-7 items-center gap-2 rounded px-2 py-0.5 hover:bg-app-hover">
+    <li ref={ligneRef} className="flex min-h-7 items-center gap-2 rounded px-2 py-0.5 hover:bg-app-hover">
       <input type="checkbox" aria-label={tag.name} checked={coche} onChange={() => bascule(tag.name)} />
       {edition ? (
         <input
           autoFocus
+          aria-label={t("tags.renameField", { name: tag.name })}
           className="input w-44"
           value={nom}
           onChange={(e) => setNom(e.target.value)}

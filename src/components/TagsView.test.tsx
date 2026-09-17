@@ -72,6 +72,27 @@ describe("TagsView", () => {
 
   // R8P-1 : tout échec est inline (role="alert"), état conservé — cases et
   // saisie restent en place pour retenter.
+  // Le `blur` seul laissait le bouton armé quand le clic ne déplaçait aucun
+  // focus — une suppression restait prête à partir au clic suivant.
+  it("un clic hors de la ligne désarme la suppression", async () => {
+    render(<TagsView />, { wrapper });
+    await userEvent.click(screen.getAllByRole("button", { name: "Supprimer" })[0]!);
+    expect(screen.getByRole("button", { name: "Confirmer" })).toBeInTheDocument();
+    // Un endroit qui ne prend pas le focus : le titre de la vue.
+    await userEvent.click(screen.getByRole("heading", { name: "Tags" }));
+    expect(screen.queryByRole("button", { name: "Confirmer" })).not.toBeInTheDocument();
+    // La ligne est revenue à son état de repos, comme les autres.
+    expect(screen.getAllByRole("button", { name: "Supprimer" }).length).toBeGreaterThan(0);
+  });
+
+  // Un champ sans nom accessible s'annonce « champ de saisie », sans dire
+  // lequel — ici il y en a un par étiquette.
+  it("le champ de renommage porte le nom de son étiquette", async () => {
+    render(<TagsView />, { wrapper });
+    await userEvent.click(screen.getAllByRole("button", { name: "Renommer" })[0]!);
+    expect(screen.getByLabelText("Nouveau nom de typescript")).toBeInTheDocument();
+  });
+
   it("échec de fusion : erreur inline, état conservé", async () => {
     sendMock.mockRejectedValueOnce(new Error("boom"));
     render(<TagsView />, { wrapper });

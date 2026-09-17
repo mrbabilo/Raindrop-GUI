@@ -47,6 +47,20 @@ describe("Banners", () => {
     expect(refetch).not.toHaveBeenCalled();
   });
 
+  // Deux régions live imbriquées font annoncer le message deux fois — ou
+  // pas du tout, selon le lecteur d'écran. La bannière annonce, son texte
+  // d'erreur en fait partie.
+  it("l'erreur ne crée pas une seconde région live dans la bannière", async () => {
+    health("crashed");
+    sendMock.mockRejectedValue(new Error("réseau perdu"));
+    render(<Banners />, { wrapper });
+    await userEvent.click(screen.getByRole("button", { name: /Redémarrer la connexion/ }));
+    const alertes = await screen.findAllByRole("alert");
+    expect(alertes).toHaveLength(1);
+    expect(alertes[0]!.textContent).toContain("réseau perdu");
+  });
+
+
   it("hors-ligne → bannière sans bouton, retour en ligne → disparaît", async () => {
     health("connected");
     vi.stubGlobal("navigator", { onLine: false });

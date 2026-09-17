@@ -43,6 +43,7 @@ export function TopBar() {
     <div ref={containerRef} className="border-b border-app-border">
       <div className="flex items-center gap-2 px-3 py-2">
         <input
+          aria-label={t("search.label")}
           className="input w-64"
           placeholder={t("search.placeholder")}
           value={draft}

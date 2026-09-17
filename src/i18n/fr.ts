@@ -13,6 +13,9 @@ export const fr = {
   "collection.seeAll": "Voir les {n} →",
   "collection.direct": "Signets de cette collection",
   "search.placeholder": "Rechercher…",
+  // Nom accessible du champ : un placeholder ne fait un nom qu'en dernier
+  // recours, et disparaît dès qu'on saisit.
+  "search.label": "Rechercher",
   "sort.created-desc": "Récents",
   "sort.created-asc": "Anciens",
   "sort.title-asc": "Titre A→Z",
@@ -102,6 +105,7 @@ export const fr = {
   "tags.merge": "Fusionner",
   "tags.delete": "Supprimer",
   "tags.newName": "Nouveau nom",
+  "tags.renameField": "Nouveau nom de {name}",
   "tags.confirm": "Confirmer",
   "review.title": "Revue de l'action",
   "review.count": "{n} item(s) affecté(s)",
