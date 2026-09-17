@@ -134,8 +134,12 @@ Developer ID.
 - **Premier lancement** : le jeton d'API se saisit une fois, est vérifié
   auprès de Raindrop — le compte détecté s'affiche — puis rejoint le
   **trousseau macOS**, dans le même enregistrement que le développement.
-- **Si Node manque**, l'écran d'accueil le dit et explique quoi installer,
-  au lieu de s'ouvrir sur une bibliothèque vide.
+- **Si Node manque, l'application peut l'installer.** L'écran d'accueil
+  propose « Installer Node » : téléchargement du tarball officiel épinglé
+  (LTS 22), somme SHASUMS256 vérifiée avant toute extraction, installation
+  dans le dossier de données de l'application — aucun droit administrateur.
+  Une fois posé, le runtime géré passe devant le PATH. Les instructions
+  manuelles restent le repli (hors-ligne, refus).
 - **Un service local éphémère** : le token Bearer de l'API locale est
   régénéré à chaque lancement et jamais écrit sur disque ; un sidecar
   survivant d'un crash précédent est terminé, pas réutilisé — un ancien
