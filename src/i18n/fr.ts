@@ -87,6 +87,7 @@ export const fr = {
   "tags.merge": "Fusionner",
   "tags.delete": "Supprimer",
   "tags.newName": "Nouveau nom",
+  "tags.confirm": "Confirmer",
   "review.title": "Revue de l'action",
   "review.count": "{n} item(s) affecté(s)",
   "review.deselect": "Tout désélectionner",

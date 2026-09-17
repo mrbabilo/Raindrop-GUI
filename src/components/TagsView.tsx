@@ -1,0 +1,158 @@
+import { useState } from "react";
+import { t } from "../i18n/fr";
+import { useTags } from "../hooks/useStaticData";
+import { useTagManage } from "../hooks/useMutations";
+import type { Tag } from "../../shared/types";
+
+// Task 14 — la vue Tags : renommer, fusionner, supprimer. La liste suit la
+// densité « entrée de navigation 28 px » (DESIGN.md §8, comme la sidebar) ;
+// le nom reste du texte précédé du # — pas une pilule : les pilules sont
+// l'étiquette portée par un lien (§2), ici c'est l'objet même du travail.
+// R8P-1 : tout échec reste inline (role="alert"), état conservé. La
+// suppression en masse est l'affaire de la Revue (T15) ; ici unitaire, avec
+// confirm inline — deux gestes réels avant tout envoi (§10 : le bouton nomme
+// ce qui va se produire).
+
+// Erreur d'action inline (pattern T8/T12) : ce qui s'est passé, jamais silencieux.
+function Erreur({ message }: { message: string }) {
+  return (
+    <p role="alert" className="text-xs text-app-broken">
+      {t("state.error", { message })}
+    </p>
+  );
+}
+
+// Une ligne : case (sélection de fusion), #nom (compte), Renommer (input
+// inline : Entrée envoie, Échap/blur abandonne), Supprimer qui devient
+// « Confirmer » (niveau 1 — le second clic seul envoie ; blur/Échap désarme).
+function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: (name: string) => void }) {
+  const manage = useTagManage();
+  const [edition, setEdition] = useState(false);
+  const [nom, setNom] = useState("");
+  const [armee, setArmee] = useState(false);
+  const fermerEdition = () => {
+    setEdition(false);
+    setNom("");
+  };
+  return (
+    <li className="flex min-h-7 items-center gap-2 rounded px-2 py-0.5 hover:bg-app-hover">
+      <input type="checkbox" aria-label={tag.name} checked={coche} onChange={() => bascule(tag.name)} />
+      {edition ? (
+        <input
+          autoFocus
+          className="input w-44"
+          value={nom}
+          onChange={(e) => setNom(e.target.value)}
+          onBlur={fermerEdition}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && nom.trim()) {
+              manage.mutate({ operation: "rename", tags: [tag.name], new_name: nom.trim() }, { onSuccess: fermerEdition });
+            }
+            if (e.key === "Escape") fermerEdition();
+          }}
+        />
+      ) : (
+        <>
+          {/* Nom dans son propre span : le # décoratif reste hors du texte du
+              span (les requêtes RTL ne lisent que les nœuds texte directs). */}
+          <span className="flex-1 truncate">
+            #<span>{tag.name}</span>
+          </span>
+          <span className="text-xs text-app-muted">{tag.count}</span>
+          <button
+            type="button"
+            className="btn shrink-0"
+            onClick={() => {
+              setNom("");
+              setEdition(true);
+            }}
+          >
+            {t("tags.rename")}
+          </button>
+          {armee ? (
+            <button
+              type="button"
+              className="btn shrink-0"
+              disabled={manage.isPending}
+              onBlur={() => setArmee(false)}
+              onKeyDown={(e) => e.key === "Escape" && setArmee(false)}
+              onClick={() => manage.mutate({ operation: "delete", tags: [tag.name] }, { onSuccess: () => setArmee(false) })}
+            >
+              {t("tags.confirm")}
+            </button>
+          ) : (
+            <button type="button" className="btn shrink-0" onClick={() => setArmee(true)}>
+              {t("tags.delete")}
+            </button>
+          )}
+        </>
+      )}
+      {manage.isError && <Erreur message={String(manage.error?.message ?? "")} />}
+    </li>
+  );
+}
+
+// Zone de fusion, en pied de liste, visible dès que deux tags sont cochés
+// (§9 : posée sur surface panel — la hiérarchie vient du niveau de surface).
+function ZoneFusion({ coches, vider }: { coches: string[]; vider: () => void }) {
+  const manage = useTagManage();
+  const [nom, setNom] = useState("");
+  if (coches.length < 2) return null;
+  return (
+    <div className="flex flex-col gap-2 rounded-[11px] bg-app-panel p-3">
+      <div className="flex items-center gap-2">
+        <input
+          className="input"
+          placeholder={t("tags.newName")}
+          aria-label={t("tags.newName")}
+          value={nom}
+          onChange={(e) => setNom(e.target.value)}
+        />
+        <button
+          type="button"
+          className="btn"
+          disabled={!nom.trim() || manage.isPending}
+          onClick={() =>
+            manage.mutate(
+              { operation: "merge", tags: coches, new_name: nom.trim() },
+              { onSuccess: () => { setNom(""); vider(); } },
+            )
+          }
+        >
+          {t("tags.merge")}
+        </button>
+      </div>
+      {manage.isError && <Erreur message={String(manage.error?.message ?? "")} />}
+    </div>
+  );
+}
+
+export function TagsView() {
+  const q = useTags();
+  const [coches, setCoches] = useState<string[]>([]);
+  const bascule = (name: string) =>
+    setCoches((c) => (c.includes(name) ? c.filter((n) => n !== name) : [...c, name]));
+  const liste = q.data ?? [];
+  return (
+    <section aria-label={t("nav.tags")} className="flex h-full min-h-0 flex-col">
+      <header className="flex items-center gap-3 px-4 pt-4">
+        <h1 className="titre-fiche">{t("nav.tags")}</h1>
+        {liste.length > 0 && <span className="text-xs text-app-muted">({liste.length})</span>}
+      </header>
+      {!!q.isLoading ? (
+        <p className="p-4 text-app-muted">{t("state.loading")}</p>
+      ) : liste.length === 0 ? (
+        <p className="p-4 text-app-muted">{t("state.empty")}</p>
+      ) : (
+        <ul className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-4 pb-2">
+          {liste.map((tg) => (
+            <LigneTag key={tg.name} tag={tg} coche={coches.includes(tg.name)} bascule={bascule} />
+          ))}
+        </ul>
+      )}
+      <div className="px-4 pb-4">
+        <ZoneFusion coches={coches} vider={() => setCoches([])} />
+      </div>
+    </section>
+  );
+}

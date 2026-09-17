@@ -8,6 +8,7 @@ import { TopBar } from "./components/TopBar";
 import { ListPane } from "./components/ListPane";
 import { CleanupDashboard } from "./components/CleanupDashboard";
 import { CleanupView } from "./components/CleanupView";
+import { TagsView } from "./components/TagsView";
 import { DetailPane } from "./components/DetailPane";
 import { CommandPalette } from "./components/CommandPalette";
 
@@ -104,13 +105,16 @@ export default function App() {
       <Sidebar />
       {/* Task 12 : la vue cleanup prend la place de la liste — dashboard de
           nettoyage (compteurs, fraîcheur, scans SSE annulables). Task 13 :
-          les vues de traitement cleanupView/* qu'il rend joignables. */}
+          les vues de traitement cleanupView/* qu'il rend joignables.
+          Task 14 : la vue tags (renommer, fusionner, supprimer). */}
       {view.kind === "review" ? (
         <RevueStub />
       ) : view.kind === "cleanup" ? (
         <CleanupDashboard />
       ) : view.kind === "cleanupView" ? (
         <CleanupView type={view.type} />
+      ) : view.kind === "tags" ? (
+        <TagsView />
       ) : (
         <ListPane />
       )}

@@ -65,7 +65,10 @@ export const useTagManage = () => {
   return useMutation({
     mutationFn: (body: { operation: "rename" | "merge" | "delete"; tags: string[]; new_name?: string }) =>
       api.send("POST", "/api/tags/manage", body),
-    onSuccess: () => invalidate("tags", "raindrops"),
+    // "raindrop" aussi (ruling T8-5, T14) : sans lui, une fiche ouverte garde
+    // des tags stales après un renommage/fusion — même famille que les
+    // invalidations de useUpdateRaindrop.
+    onSuccess: () => invalidate("tags", "raindrops", "raindrop"),
   });
 };
 
