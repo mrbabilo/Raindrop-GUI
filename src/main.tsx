@@ -5,6 +5,7 @@ import { AppStateProvider } from "./state/appState";
 import { DragProvider } from "./state/drag";
 import App from "./App";
 import { PremierLancement } from "./components/PremierLancement";
+import { Diagnostic, EcranPanne } from "./components/EcranAmorce";
 import { amorcer, type Amorce } from "./lib/amorce";
 import "./styles.css";
 
@@ -17,9 +18,16 @@ const queryClient = new QueryClient({
 
 function Racine({ amorce }: { amorce: Amorce }) {
   const [etat, setEtat] = useState(amorce);
-  if (etat.ecran === "premier-lancement") return <PremierLancement onPret={setEtat} />;
-  if (etat.ecran !== "app") return <p className="p-6">{etat.detail}</p>; // Task 10
-  return <App />;
+  switch (etat.ecran) {
+    case "premier-lancement":
+      return <PremierLancement onPret={setEtat} />;
+    case "diagnostic":
+      return <Diagnostic detail={etat.detail} onEtat={setEtat} />;
+    case "panne":
+      return <EcranPanne detail={etat.detail} onEtat={setEtat} />;
+    default:
+      return <App />;
+  }
 }
 
 // `then` plutôt qu'un `await` de haut niveau : cela évite d'imposer une

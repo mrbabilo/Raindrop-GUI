@@ -128,6 +128,7 @@ export const fr = {
   "boot.nodeHelp": "Installez Node 20 ou supérieur (par exemple « brew install node »), puis relancez l'application.",
   "boot.panneTitle": "Le service local n'a pas démarré",
   "boot.panneHelp": "Relancez l'application. Si le problème persiste, le journal de démarrage se trouve dans le dossier de données de l'application.",
+  "boot.retrySaisie": "Saisir un autre jeton",
   // Le sidecar ENTIER est injoignable : distinct du crash MCP (le sidecar
   // vit, le pont est tombé) — ici rien ne répond, données et écritures.
   "banner.unreachable": "Sidecar local injoignable — aucune donnée ne peut être lue",
