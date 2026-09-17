@@ -144,9 +144,14 @@ describe("teinteCollection (§4, cascade)", () => {
 });
 
 describe("CarreCollection — icône Raindrop", () => {
-  it("affiche l'icône quand la collection en a une", () => {
-    render(<CarreCollection collectionId={1} titre="Dev" cover="https://up.raindrop.io/x.png" />);
-    expect(screen.getByRole("presentation", { hidden: true })).toHaveAttribute("src", "https://up.raindrop.io/x.png");
+  it("affiche l'icône quand la collection en a une, POSÉE sur sa teinte", () => {
+    const { container } = render(<CarreCollection collectionId={1} titre="Dev" cover="https://up.raindrop.io/x.png" />);
+    const img = container.querySelector("img")!;
+    expect(img).toHaveAttribute("src", "https://up.raindrop.io/x.png");
+    // Mesuré au navigateur : à pleine taille (18 px dans 18), l'icône
+    // masquait entièrement le fond teinté et la couleur disparaissait.
+    expect(img.className).toContain("h-[13px]");
+    expect(img.className).not.toContain("h-full");
   });
 
   // « Jamais une case vide » (§4) vaut aussi pour une image qui ne CHARGE

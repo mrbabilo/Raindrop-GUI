@@ -90,7 +90,11 @@ export function CarreCollection({
       data-testid={`coll-${collectionId}`}
     >
       {typeof cover === "string" && cover !== "" && image ? (
-        <img src={cover} alt="" className="h-full w-full rounded-[5px] object-cover" onError={() => setImage(false)} />
+        // 13 px dans un carré de 18 : l'icône est POSÉE sur sa teinte, elle
+        // ne la remplace pas. À pleine taille elle masquait le fond, et les
+        // collections qui ont une icône perdaient toute couleur (§4 :
+        // « l'icône vient de Raindrop, AVEC sa couleur dominante »).
+        <img src={cover} alt="" className="h-[13px] w-[13px] object-contain" onError={() => setImage(false)} />
       ) : (
         <Dossier />
       )}
