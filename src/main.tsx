@@ -4,6 +4,7 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { AppStateProvider } from "./state/appState";
 import { DragProvider } from "./state/drag";
 import App from "./App";
+import { PremierLancement } from "./components/PremierLancement";
 import { amorcer, type Amorce } from "./lib/amorce";
 import "./styles.css";
 
@@ -15,11 +16,9 @@ const queryClient = new QueryClient({
 });
 
 function Racine({ amorce }: { amorce: Amorce }) {
-  // Les écrans de premier lancement et de diagnostic arrivent aux Tasks 9
-  // et 10 ; en attendant, tout mène à l'application.
-  if (amorce.ecran !== "app") {
-    return <p className="p-6 text-app-ink">{amorce.ecran} — écran à venir</p>;
-  }
+  const [etat, setEtat] = useState(amorce);
+  if (etat.ecran === "premier-lancement") return <PremierLancement onPret={setEtat} />;
+  if (etat.ecran !== "app") return <p className="p-6">{etat.detail}</p>; // Task 10
   return <App />;
 }
 

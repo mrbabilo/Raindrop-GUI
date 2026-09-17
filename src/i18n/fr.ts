@@ -115,6 +115,19 @@ export const fr = {
   "review.confirmL1": "Je confirme l'action sur {n} item(s)",
   "review.execute": "Exécuter",
   "review.typeDelete": "Tapez SUPPRIMER pour confirmer",
+  // Premier lancement (spec §6) et écrans d'amorçage.
+  "boot.title": "Connecter votre compte Raindrop",
+  "boot.explain": "Raindrop GUI a besoin d'un jeton d'API pour lire votre bibliothèque. Il est conservé dans le trousseau macOS et ne quitte jamais cet ordinateur.",
+  "boot.where": "Raindrop.io → Settings → Integrations → Create new app → Test token",
+  "boot.tokenLabel": "Jeton d'API Raindrop",
+  "boot.validate": "Valider",
+  "boot.checking": "Vérification…",
+  "boot.account": "Compte détecté : {name} ({email}) — {count} signets",
+  "boot.enter": "Ouvrir la bibliothèque",
+  "boot.nodeTitle": "Node est introuvable",
+  "boot.nodeHelp": "Installez Node 20 ou supérieur (par exemple « brew install node »), puis relancez l'application.",
+  "boot.panneTitle": "Le service local n'a pas démarré",
+  "boot.panneHelp": "Relancez l'application. Si le problème persiste, le journal de démarrage se trouve dans le dossier de données de l'application.",
   // Le sidecar ENTIER est injoignable : distinct du crash MCP (le sidecar
   // vit, le pont est tombé) — ici rien ne répond, données et écritures.
   "banner.unreachable": "Sidecar local injoignable — aucune donnée ne peut être lue",
