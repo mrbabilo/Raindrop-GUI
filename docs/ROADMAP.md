@@ -40,6 +40,16 @@ finale de branche).*
       une installation ; extraire runtime.rs/node.rs/commandes.rs à la
       première retouche de chacun (400/400/331) ; aligner
       DELAI_SEQUENCE si les délais de boot venaient à croître.
+- [x] **Réglages (spec §6)** — fait le 2026-09-18 : overlay ⌘, +
+      engrenage, état du pont traduit (les cinq états de lifecycle.ts
+      passent par un littéral `satisfies Record<string, FrKey>`),
+      remplacement du jeton avec contrôle `/api/user`, déconnexion
+      (`trousseau::effacer` obtient enfin son appelant — le
+      `#[allow(dead_code)]` devient du code vivant). `commandes.rs`
+      extrait en `demarrage.rs` au passage (331 → 125 + 216), comme le
+      voulait la règle « extraire à la première retouche ».
+      **Préférences d'affichage volontairement absentes** : le thème vit
+      dans l'en-tête, le dupliquer contredirait DESIGN.md §9.
 - [ ] **Dette cliquet** : `sidecar/api/routes/raindrops.test.ts` porte
       **430 lignes** — au-dessus du plafond dur de 400, préexistant au
       plan 3 et exclu du cliquet avec les tests (choix documenté dans

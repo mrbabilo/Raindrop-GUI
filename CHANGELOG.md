@@ -151,6 +151,12 @@ Developer ID.
 - **La bibliothèque n'apparaît que prête** : la validation du jeton
   attend que le pont MCP soit connecté — la course du premier lancement
   (« MCP indisponible » à chaque validation) est morte.
+- **Réglages (⌘,)** : l'état de la connexion au pont Raindrop, le
+  remplacement du jeton sans repasser par l'écran d'accueil, et la
+  déconnexion — qui efface le jeton du trousseau et arrête le service
+  local. Un jeton que Raindrop refuse le dit sur place, sans fermer
+  l'écran ; une panne du service, elle, ramène à l'écran d'accueil, qui
+  porte les issues.
 - **Le compilateur** (`npm run build:app`, `npm run release`, inspiré du
   cliquet de StarHubTH) : vérifications qui échouent en deux secondes,
   cliquet de tailles, tests, puis contrôle du bundle — le sidecar est-il
