@@ -54,17 +54,24 @@ Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
   annulables) et six vues de traitement — liens morts, redirections,
   doublons, non-taggés, collections vides, corbeille.
 - **Vue des étiquettes** : renommer, fusionner, supprimer.
-- **Les collections portent leur icône et leur couleur**, comme dans
-  Raindrop : l'icône quand elles en ont une, posée sur sa teinte, sinon un
-  dossier teinté. Dans la barre latérale, l'entrée entière porte le lavis
-  de sa couleur, en bandes de même longueur ; le survol l'entoure d'un
-  trait au lieu d'en changer le fond. Les teintes restent pastel quelle
-  que soit la vivacité de la couleur d'origine. **Une couleur par
-  famille** : la collection principale la décide, ses sous-collections en
-  héritent et se distinguent d'elle par un lavis plus léger et un retrait.
-  Chaque famille a sa propre teinte, assez éloignée de celle des autres
-  pour se lire — au prix d'un écart parfois net avec la couleur réglée
-  dans Raindrop, dont seul le rang est conservé.
+- **Les collections se repèrent à leur couleur.** Dans la barre latérale,
+  chaque entrée est une bande dans la teinte de sa collection, portant son
+  icône Raindrop — ou un dossier teinté quand elle n'en a pas, y compris
+  si la vignette distante ne se charge pas.
+  - **Une couleur par famille** : la collection principale la décide, ses
+    sous-collections en héritent. Elles s'en distinguent par un lavis plus
+    léger et par leur bande, qui démarre sous l'icône de leur mère.
+  - **Chaque famille a sa propre teinte**, assez éloignée des autres pour
+    se lire. Vos couleurs Raindrop se pressaient dans deux zones du cercle
+    chromatique — deux collections étaient à un dixième de degré l'une de
+    l'autre — et les teintes sont donc redistribuées en gardant leur
+    ordre : une couleur peut s'éloigner franchement de celle réglée dans
+    Raindrop, seul son rang est conservé.
+  - Les teintes restent **pastel** quelle que soit la vivacité de la
+    couleur d'origine, et le texte garde partout un contraste confortable.
+  - **Au survol**, la bande s'entoure d'un trait de sa teinte et son ombre
+    s'ouvre, en 140 ms — rien ne se déplace, et la transition disparaît si
+    le système demande moins d'animation.
 - **Navigation au clavier** : chaque zone ne prend qu'un arrêt de
   tabulation au lieu d'un par ligne, et les flèches y circulent — y
   compris en deux dimensions dans la mosaïque. →/← déplient une
