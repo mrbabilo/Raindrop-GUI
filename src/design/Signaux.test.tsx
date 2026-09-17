@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CarreCollection, PiluleEtiquette, filetEtat, racine } from "./Signaux";
+import { CarreCollection, PiluleEtiquette, filetEtat, racine, teinteCollection } from "./Signaux";
+import type { Collection } from "../../shared/types";
 import { collections } from "../test/fixtures";
 
 // Ce que jsdom PEUT vérifier de DESIGN.md : que les variables de teinte
@@ -104,3 +105,63 @@ describe("filetEtat", () => {
     expect(filetEtat("duplicate")).toBe("filet-duplicate");
   });
 });
+describe("teinteCollection (§4, cascade)", () => {
+  const col = (id: number, title: string, parentId: number | null, color: string | null = null) =>
+    ({ id, title, parentId, count: 0, public: false, view: "list", cover: null, color }) as Collection;
+
+  // 68 collections sur 216 portent une couleur ; les 148 autres héritent.
+  const arbre = [
+    col(1, "Racine", null, "#2394f4"),      // bleu, teinte ~250°
+    col(2, "Enfant coloré", 1, "#f44434"),  // rouge, teinte ~29,5°
+    col(3, "Enfant nu", 1),                 // hérite du bleu de sa racine
+    col(4, "Orpheline", null),              // rien : ni couleur ni racine
+    col(5, "Photo", null),                  // rien, mais le lexique connaît
+  ] as Collection[];
+  const h = (id: number) => Number((teinteCollection(arbre, id) as Record<string, string>)["--h"]);
+  const sat = (id: number) => (teinteCollection(arbre, id) as Record<string, string>)["--sat"];
+
+  it("sa propre couleur prime", () => {
+    expect(h(2)).toBeCloseTo(29.5, 0);
+    expect(h(1)).toBeCloseTo(250, 0);
+  });
+
+  // Sans héritage, la barre latérale serait grise aux deux tiers.
+  it("à défaut, la couleur de sa racine", () => {
+    expect(h(3)).toBeCloseTo(250, 0);
+    expect(sat(3)).toBe("1");
+  });
+
+  it("à défaut encore, la thématique du titre", () => {
+    expect(sat(5)).toBe("1"); // « Photo » est au lexique
+  });
+
+  // §3 : hors de tout, gris — et un --h NUMÉRIQUE malgré tout, sinon
+  // `oklch(L C var(--h))` est invalide et le jeton perd son fond.
+  it("hors de tout : gris, avec une teinte numérique quand même", () => {
+    expect(sat(4)).toBe("0");
+    expect(Number.isFinite(h(4))).toBe(true);
+  });
+});
+
+describe("CarreCollection — icône Raindrop", () => {
+  it("affiche l'icône quand la collection en a une", () => {
+    render(<CarreCollection collectionId={1} titre="Dev" cover="https://up.raindrop.io/x.png" />);
+    expect(screen.getByRole("presentation", { hidden: true })).toHaveAttribute("src", "https://up.raindrop.io/x.png");
+  });
+
+  // « Jamais une case vide » (§4) vaut aussi pour une image qui ne CHARGE
+  // pas : `cover` est une vignette distante, et l'une d'elles a déjà rendu
+  // 403 pendant cette session.
+  it("une icône qui échoue retombe sur le dossier teinté", () => {
+    const { container } = render(<CarreCollection collectionId={1} titre="Dev" cover="https://exemple.invalide/x.png" />);
+    fireEvent.error(container.querySelector("img")!);
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector("svg")).not.toBeNull();
+  });
+
+  it("sans icône, le dossier teinté", () => {
+    const { container } = render(<CarreCollection collectionId={1} titre="Dev" cover={null} />);
+    expect(container.querySelector("svg")).not.toBeNull();
+  });
+});
+

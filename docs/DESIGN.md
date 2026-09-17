@@ -87,19 +87,28 @@ couleur tirée au hasard aurait caché la lacune.
 Le lexique est en français et destiné à grandir. Il vit dans un seul fichier et
 ne demande aucune configuration utilisateur.
 
-## 4. Collections : la couleur appartient à la racine
+## 4. Collections : la teinte cascade
 
-216 collections sur trois niveaux. **La collection racine porte la couleur de sa
-thématique ; ses descendantes en héritent** — filet vertical et fond d'icône
-compris. On repère une famille sans lire les titres.
+216 collections sur trois niveaux. La teinte d'une collection se résout dans
+cet ordre — **sa couleur Raindrop, celle de sa racine, la thématique de son
+titre, rien** (gris, §3) :
 
-L'icône vient de Raindrop quand elle existe (champ `cover`, **68 collections sur
-216**), avec sa couleur dominante (`color`). Sinon : un dossier teinté de la
-thématique, **jamais une case vide**.
+- **sa couleur** — mesuré le 2026-09-17 : 68 collections sur 216 en portent
+  une, dont 56 sous-collections. Les écarter reviendrait à ignorer ce que
+  l'utilisateur a réglé dans Raindrop ;
+- **celle de sa racine** — les 148 restantes en héritent. Sans cela, la barre
+  latérale serait grise aux deux tiers. Une famille se lit donc encore d'un
+  coup d'œil, sauf là où une descendante a délibérément choisi sa couleur.
 
-> ⚠️ `toCollection` (`sidecar/api/mappers.ts`) ne garde aujourd'hui ni `cover`
-> ni `color`. Le type partagé `Collection` doit les exposer pour que ceci soit
-> affichable.
+Le **pastel n'est pas un traitement** : `.coll-icon` peint
+`oklch(var(--app-wash-l) var(--app-wash-c) var(--h))`, dont la clarté et le
+chroma sont des jetons du thème (0,95/0,035 en clair, 0,32/0,05 en sombre).
+Fournir la teinte suffit — un rouge vif de Raindrop et une teinte du lexique
+sortent au même niveau de douceur, dans les deux thèmes.
+
+L'icône vient de Raindrop quand elle existe (champ `cover`). Sinon, ou si la
+vignette distante ne se charge pas, un dossier teinté : **jamais une case
+vide**.
 
 **Chaque lien reprend la signalétique de sa collection** : carré arrondi dans la
 liste, teinte de la vignette en mosaïque, fil d'Ariane dans la fiche.

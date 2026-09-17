@@ -1,8 +1,10 @@
 import { useRef } from "react";
 import { t } from "../i18n/fr";
+import type { Collection } from "../../shared/types";
 import { useCollections, useTags } from "../hooks/useStaticData";
 import { useAppState } from "../state/appState";
 import { useDrag } from "../state/drag";
+import { CarreCollection, teinteCollection } from "../design/Signaux";
 import { depotPermis } from "../hooks/useDragBookmark";
 import { GroupeCollection, type PliageClavier } from "./GroupeCollection";
 import { useRovingFocus } from "../hooks/useRovingFocus";
@@ -10,7 +12,7 @@ import { useRovingFocus } from "../hooks/useRovingFocus";
 // Entrée de navigation : 28 px de haut (DESIGN.md §8 — leading-5 + py-1),
 // 13 px du corps (§7). Survol et sélection par les jetons dédiés de §6
 // (hover, sel) — la sélection se marque par une surface, jamais une teinte.
-const item = "block w-full text-left rounded px-2 py-1 leading-5 hover:bg-app-hover cursor-pointer truncate";
+const item = "flex w-full items-center gap-2 text-left rounded px-2 py-1 leading-5 hover:bg-app-hover cursor-pointer";
 const selected = " bg-app-sel font-medium";
 const count = "text-xs text-app-muted";
 
@@ -21,6 +23,14 @@ const count = "text-xs text-app-muted";
 // c'est la même marque que la sélection, et pour la même raison (« ceci est
 // l'endroit courant »).
 const cibleActive = " bg-app-sel";
+
+// §4 : chaque collection porte sa signalétique dans la barre — icône Raindrop
+// quand elle existe, sinon le dossier teinté. La teinte cascade (sa couleur,
+// celle de sa racine, la thématique du titre) : `teinteCollection` la résout,
+// l'arbre entier étant ici sous la main.
+const Signe = ({ arbre, c }: { arbre: Collection[]; c: Collection }) => (
+  <CarreCollection collectionId={c.id} titre={c.title} teinte={teinteCollection(arbre, c.id)} cover={c.cover} />
+);
 
 const Compteur = ({ n }: { n: number }) =>
   n > 0 ? <> <span className={count}>{n}</span></> : null;
@@ -66,8 +76,9 @@ export function Sidebar() {
   const collections = useCollections();
   const tags = useTags();
   const isList = (id: number) => view.kind === "list" && view.collectionId === id;
-  const roots = (collections.data ?? []).filter((c) => c.parentId === null);
-  const childrenOf = (id: number) => (collections.data ?? []).filter((c) => c.parentId === id);
+  const arbre = collections.data ?? [];
+  const roots = arbre.filter((c) => c.parentId === null);
+  const childrenOf = (id: number) => arbre.filter((c) => c.parentId === id);
 
   // Vues fixes : Tous (0), Non-lus (-2), Favoris (-3), Corbeille (-99).
   // -2/-3 sont des marqueurs front (ruling R3P) : useRaindrops les convertit
@@ -115,7 +126,9 @@ export function Sidebar() {
                         )
                       }
                     >
-                      {c.title}<Compteur n={c.count} />
+                      <Signe arbre={arbre} c={c} />
+                      <span className="truncate">{c.title}</span>
+                      <Compteur n={c.count} />
                     </button>
                   </div>
                   {deplie &&
@@ -125,7 +138,9 @@ export function Sidebar() {
                       // (l'ancien pl-6, 24 px, ne suivait pas la lettre). Style
                       // inline : la valeur exacte compte, pas une classe approximative.
                       <button key={ch.id} data-nav className={item + survolee(ch.id)} {...accueil(ch.id)} style={{ paddingLeft: "22px" }} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
-                        {ch.title}<Compteur n={ch.count} />
+                        <Signe arbre={arbre} c={ch} />
+                        <span className="truncate">{ch.title}</span>
+                        <Compteur n={ch.count} />
                       </button>
                     ))}
                 </>

@@ -54,6 +54,11 @@ Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
   annulables) et six vues de traitement — liens morts, redirections,
   doublons, non-taggés, collections vides, corbeille.
 - **Vue des étiquettes** : renommer, fusionner, supprimer.
+- **Les collections portent leur icône et leur couleur**, comme dans
+  Raindrop : l'icône quand elles en ont une, sinon un dossier dans leur
+  teinte. Les teintes restent pastel quelle que soit la vivacité de la
+  couleur d'origine, et une sous-collection sans couleur hérite de celle
+  de sa racine.
 - **Navigation au clavier** : chaque zone ne prend qu'un arrêt de
   tabulation au lieu d'un par ligne, et les flèches y circulent — y
   compris en deux dimensions dans la mosaïque. →/← déplient une

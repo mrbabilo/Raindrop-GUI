@@ -6,7 +6,7 @@ import { useCollections } from "../hooks/useStaticData";
 import { useDragBookmark } from "../hooks/useDragBookmark";
 import { useRovingFocus } from "../hooks/useRovingFocus";
 import { useRaindrops } from "../hooks/useRaindrops";
-import { CarreCollection } from "../design/Signaux";
+import { CarreCollection, teinteCollection } from "../design/Signaux";
 import { RaindropRow } from "./RaindropRow";
 import { SectionCollection } from "./SectionCollection";
 import { BulkBar } from "./BulkBar";
@@ -63,7 +63,12 @@ export function CollectionView() {
       {/* Contrôles globaux en tête, uniques : le titre de la collection, sa
           teinte et son compte total. §9 « masqué si nul » pour le compte. */}
       <header className="flex items-center gap-2 border-b border-app-border px-3 py-2">
-        <CarreCollection collectionId={parent.id} titre={parent.title} />
+        <CarreCollection
+          collectionId={parent.id}
+          titre={parent.title}
+          teinte={teinteCollection(arbre, parent.id)}
+          cover={parent.cover}
+        />
         <h1 className="font-medium">{parent.title}</h1>
         {totalDirects > 0 && <span className="text-xs text-app-muted">{totalDirects}</span>}
       </header>
@@ -90,6 +95,7 @@ export function CollectionView() {
           <SectionCollection
             key={ch.id}
             collection={ch}
+            arbre={arbre}
             poignee={poignee}
             selection={selectedIds}
             detailId={null}

@@ -1,5 +1,6 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { thematique, teinte } from "./lexique";
+import { teinteDeHex } from "./couleur";
 import type { Collection, LinkStatus } from "../../shared/types";
 
 // DESIGN.md §2 — les signaux colorés, distingués par la FORME : carré arrondi
@@ -34,9 +35,28 @@ export function racine(collections: Collection[], id: number): Collection | unde
   return courant;
 }
 
-// §4 : l'icône de Raindrop (`cover`) n'est pas encore exposée par le sidecar
-// (voir l'avertissement de DESIGN.md §4) — d'ici là, un dossier teinté de la
-// thématique, « jamais une case vide ».
+/**
+ * La teinte d'une collection, par ordre de préséance (§4) :
+ * sa couleur Raindrop, puis celle de sa racine, puis la thématique déduite
+ * de son titre, puis rien — auquel cas la signalétique vire au gris.
+ *
+ * Mesuré sur la bibliothèque : 68 collections sur 216 portent une couleur ;
+ * les 148 autres n'en ont aucune, et la plupart appartiennent à une racine
+ * qui, elle, en a une. Sans l'héritage, la barre latérale serait grise aux
+ * deux tiers.
+ */
+export function teinteCollection(collections: Collection[], id: number): CSSProperties {
+  const soi = collections.find((c) => c.id === id);
+  const h =
+    teinteDeHex(soi?.color) ??
+    teinteDeHex(racine(collections, id)?.color) ??
+    teinte(thematique(soi?.title)) ??
+    null;
+  return { "--h": String(h ?? 0), "--sat": h === null ? "0" : "1" } as CSSProperties;
+}
+
+// §4 : « un dossier teinté de la thématique, jamais une case vide » — le repli
+// quand aucune icône Raindrop n'existe, ou qu'elle n'a pas pu se charger.
 function Dossier() {
   return (
     <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinejoin="round">
@@ -48,10 +68,32 @@ function Dossier() {
 // `titre` est celui de la collection RACINE (§4) : l'appelant l'a résolu, la
 // famille se lit sans avoir lu les titres. Absent (arbre pas encore chargé,
 // collection inconnue) : gris, jamais un repli coloré.
-export function CarreCollection({ collectionId, titre }: { collectionId: number; titre?: string }) {
+export function CarreCollection({
+  collectionId, titre, teinte: style, cover,
+}: {
+  collectionId: number;
+  titre?: string;
+  /** Teinte déjà résolue (teinteCollection) — sinon déduite du titre. */
+  teinte?: CSSProperties;
+  /** Icône Raindrop, quand la collection en a une. */
+  cover?: string | null;
+}) {
+  // « Jamais une case vide » vaut aussi pour une icône qui ne se charge PAS :
+  // `cover` est une vignette distante, et une image morte laisserait un trou
+  // là où la signalétique doit se lire. L'échec retombe sur le dossier teinté.
+  const [image, setImage] = useState(true);
   return (
-    <span className="coll-icon" style={variablesTeinte(titre)} title={titre} data-testid={`coll-${collectionId}`}>
-      <Dossier />
+    <span
+      className="coll-icon"
+      style={style ?? variablesTeinte(titre)}
+      title={titre}
+      data-testid={`coll-${collectionId}`}
+    >
+      {typeof cover === "string" && cover !== "" && image ? (
+        <img src={cover} alt="" className="h-full w-full rounded-[5px] object-cover" onError={() => setImage(false)} />
+      ) : (
+        <Dossier />
+      )}
     </span>
   );
 }

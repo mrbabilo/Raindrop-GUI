@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { t } from "../i18n/fr";
 import type { Collection, RaindropItem } from "../../shared/types";
 import { useRaindrops } from "../hooks/useRaindrops";
-import { CarreCollection } from "../design/Signaux";
+import { CarreCollection, racine, teinteCollection } from "../design/Signaux";
 import { RaindropRow } from "./RaindropRow";
 
 // Une section de la vue collection parente : l'intertitre d'une
@@ -17,9 +17,11 @@ import { RaindropRow } from "./RaindropRow";
 // vue finisse de se peindre. Le compte exact est dans l'intertitre, et
 // « Voir les N » mène à la collection entière.
 export function SectionCollection({
-  collection, poignee, selection, onToggle, onTag, onVoirTout, onCharges,
+  collection, arbre, poignee, selection, onToggle, onTag, onVoirTout, onCharges,
 }: {
   collection: Collection;
+  /** L'arbre entier : la teinte d'une collection peut venir de sa RACINE. */
+  arbre: Collection[];
   poignee(r: RaindropItem): { onPointerDown(e: { clientX: number; clientY: number; button?: number }): void; onClick(): void };
   selection: Set<number>;
   detailId: number | null;
@@ -56,7 +58,12 @@ export function SectionCollection({
           Collant : en défilant une section de cinquante lignes, on perd
           sinon le nom de la collection qu'on est en train de lire. */}
       <h2 className="sticky top-0 z-10 flex items-center gap-2 bg-app-panel px-3 py-1 text-xs font-medium leading-5 text-app-muted">
-        <CarreCollection collectionId={collection.id} titre={collection.title} />
+        <CarreCollection
+          collectionId={collection.id}
+          titre={collection.title}
+          teinte={teinteCollection(arbre, collection.id)}
+          cover={collection.cover}
+        />
         <span>{collection.title}</span>
         {total > 0 && <span className="font-normal">{total}</span>}
       </h2>
@@ -66,7 +73,7 @@ export function SectionCollection({
           r={r}
           selected={selection.has(r.id)}
           isDetail={false}
-          collectionRacine={collection.title}
+          collectionRacine={racine(arbre, collection.id)?.title ?? collection.title}
           navigable
           poignee={poignee(r)}
           onToggle={() => onToggle(r.id)}
