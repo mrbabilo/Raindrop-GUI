@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useIndexClavier } from "../hooks/useIndexClavier";
 import { t } from "../i18n/fr";
 import { toCsv, downloadCsv } from "../lib/csv";
 import { useBulk, useEmptyTrash, useCleanupCollections, useInvalidate } from "../hooks/useMutations";
@@ -39,6 +40,27 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
     estimateSize: () => 36,
     overscan: 10,
   });
+  // Une seule case tabulable, les flèches circulent : la Revue peut porter
+  // des milliers d'items, et autant d'arrêts de tabulation avant d'atteindre
+  // le bouton d'exécution. Même mécanique que la liste — toutes deux sont
+  // virtualisées, et leurs lignes se démontent en défilant.
+  const basculer = (id: number) =>
+    setExcluded((s2) => {
+      const n = new Set(s2);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const clavier = useIndexClavier({
+    nombre: visible.length,
+    zone: parentRef,
+    defilerVers: (i) => virtual.scrollToIndex(i),
+    // Espace ET Entrée basculent l'exclusion : c'est le seul geste d'une
+    // ligne de Revue, autant qu'il réponde aux deux touches.
+    surEspace: (i) => { const it = visible[i]; if (it !== undefined) basculer(it.id); },
+    surEntree: (i) => { const it = visible[i]; if (it !== undefined) basculer(it.id); },
+  });
+
   // Revue finale : sur les deux actions L2, le compteur porte le TOTAL
   // SERVEUR (posé par la vue d'origine) — l'aperçu chargé ne vaut pas la
   // portée réelle de l'action. Absent (L1) : compteur = items portés.
@@ -111,7 +133,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
           {t("review.deselect")}
         </button>
       </div>
-      <div ref={parentRef} className="min-h-0 flex-1 overflow-y-auto">
+      <div ref={parentRef} onKeyDown={clavier.surTouche} className="min-h-0 flex-1 overflow-y-auto">
         <div data-testid="review-virtual" style={{ height: virtual.getTotalSize(), position: "relative" }}>
           {virtual.getVirtualItems().map((v) => {
             const i = visible[v.index]!;
@@ -121,22 +143,18 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
               // que ListPane ; pas de measureElement, la hauteur est exacte).
               <label
                 key={i.id}
-                data-index={v.index}
+                {...clavier.ligne(v.index)}
                 className="absolute left-0 flex h-9 w-full items-center gap-2 border-b border-app-border px-4 text-sm"
                 style={{ transform: `translateY(${v.start}px)` }}
               >
+                {/* C'est la LIGNE qui est l'arrêt de tabulation : la case en
+                    sort, et l'espace la coche depuis la ligne active. */}
                 <input
                   type="checkbox"
+                  tabIndex={-1}
                   aria-label={i.title}
                   checked={!excluded.has(i.id)}
-                  onChange={() =>
-                    setExcluded((s) => {
-                      const n = new Set(s);
-                      if (n.has(i.id)) n.delete(i.id);
-                      else n.add(i.id);
-                      return n;
-                    })
-                  }
+                  onChange={() => basculer(i.id)}
                 />
                 <span className="min-w-0 flex-1 truncate">{i.title}</span>
                 <span className="url shrink-0 text-[11px] text-app-muted">{i.url}</span>

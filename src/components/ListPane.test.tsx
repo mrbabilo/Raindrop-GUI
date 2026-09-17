@@ -137,4 +137,26 @@ describe("ListPane", () => {
     await userEvent.keyboard(" ");
     expect(screen.getAllByRole("checkbox")[0]).toBeChecked();
   });
+
+  // « Après une action, le focus passe à la ligne suivante » : cocher une
+  // série se fait d'une seule main, sans alterner espace et flèche.
+  it("cocher fait avancer d'une ligne", async () => {
+    renderList();
+    document.querySelector<HTMLElement>('[data-index="0"]')!.focus();
+    await userEvent.keyboard(" ");
+    expect(screen.getAllByRole("checkbox")[0]).toBeChecked();
+    expect(document.querySelector<HTMLElement>('[data-index="1"]')!.tabIndex).toBe(0);
+  });
+
+  // « La ligne active suit aussi le survol » — un seul état de pointeur. Mais
+  // le survol ne doit pas VOLER le focus : passer la souris est sans
+  // intention, et la liste sauterait sous le curseur.
+  it("le survol déplace la ligne active sans prendre le focus", async () => {
+    renderList();
+    const premiere = document.querySelector<HTMLElement>('[data-index="0"]')!;
+    premiere.focus();
+    await userEvent.hover(document.querySelector<HTMLElement>('[data-index="1"]')!);
+    expect(document.querySelector<HTMLElement>('[data-index="1"]')!.tabIndex).toBe(0);
+    expect(premiere).toHaveFocus();
+  });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { t } from "../i18n/fr";
 import type { View } from "../state/appState";
@@ -8,6 +8,7 @@ import { racine } from "../design/Signaux";
 import { listQueryArgs } from "../hooks/listQuery";
 import { useAppState } from "../state/appState";
 import { useDragBookmark } from "../hooks/useDragBookmark";
+import { useIndexClavier } from "../hooks/useIndexClavier";
 import { RaindropRow } from "./RaindropRow";
 import { MosaicTile } from "./MosaicTile";
 import { BulkBar } from "./BulkBar";
@@ -41,58 +42,29 @@ export function ListPane() {
   const ioRef = useRef<IntersectionObserver | null>(null);
 
   // Navigation clavier : la liste ne prend qu'UN arrêt de tabulation, et les
-  // flèches y circulent — 12 000 lignes en feraient 12 000.
-  //
-  // L'index actif vit ici, jamais le focus : la ligne active peut être
-  // DÉMONTÉE par le virtualiseur dès qu'elle sort du champ, et le focus
-  // tomberait alors sur `body`. On déplace donc l'index, on demande le
-  // défilement, et on ne focalise qu'APRÈS, dans un effet — quand la ligne
-  // est remontée.
-  const [actif, setActif] = useState<number | null>(null);
-  useEffect(() => {
-    if (actif === null) return;
-    virtual.scrollToIndex(actif);
-    const id = requestAnimationFrame(() => {
-      parentRef.current?.querySelector<HTMLElement>(`[data-index="${actif}"]`)?.focus();
-    });
-    return () => cancelAnimationFrame(id);
-  }, [actif]);
-
-  const surTouche = (e: React.KeyboardEvent) => {
-    if (items.length === 0) return;
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActif((i) => Math.min((i ?? -1) + 1, items.length - 1));
-      return;
-    }
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActif((i) => Math.max((i ?? 1) - 1, 0));
-      return;
-    }
-    if (e.key === "Home") { e.preventDefault(); setActif(0); return; }
-    if (e.key === "End") { e.preventDefault(); setActif(items.length - 1); return; }
+  // flèches y circulent — 12 000 lignes en feraient 12 000. La mécanique est
+  // partagée avec la Revue (useIndexClavier) : toutes deux sont virtualisées,
+  // et c'est le démontage des lignes qui fait la difficulté.
+  const clavier = useIndexClavier({
+    nombre: items.length,
+    zone: parentRef,
+    defilerVers: (i) => virtual.scrollToIndex(i),
+    surEntree: (i) => {
+      const r = items[i];
+      if (r !== undefined) selectRaindrop(r.id);
+    },
     // La case à cocher d'une ligne n'est plus un arrêt de tabulation : la
     // barre d'espace la remplace depuis la ligne active.
-    if (e.key === " " && actif !== null) {
-      e.preventDefault();
-      const r = items[actif];
-      if (r !== undefined) toggleSelect(r.id);
-      return;
-    }
-    if (e.key === "Enter" && actif !== null) {
-      e.preventDefault();
-      const r = items[actif];
-      if (r !== undefined) selectRaindrop(r.id);
-      return;
-    }
-    // « Échap remonte d'un niveau et rend le focus » : la liste rend la main
-    // sans perdre où l'on en était.
-    if (e.key === "Escape") {
-      e.preventDefault();
-      (document.activeElement as HTMLElement | null)?.blur();
-    }
-  };
+    surEspace: (i) => {
+      const r = items[i];
+      if (r === undefined) return;
+      toggleSelect(r.id);
+      // « Après une action, le focus passe à la ligne suivante » : cocher
+      // une série se fait alors d'une seule main, sans alterner espace et
+      // flèche.
+      clavier.avancer();
+    },
+  });
 
   // À vide aussi le composer reste monté : c'est LUI qui crée le premier
   // bookmark de la collection — l'état vide seul le priverait de raison d'être.
@@ -110,7 +82,7 @@ export function ListPane() {
     // fausser la mesure du virtualizer.
     <div className="flex h-full min-h-0 flex-col">
       <Composer />
-      <main ref={parentRef} onKeyDown={surTouche} className="min-h-0 flex-1 overflow-y-auto">
+      <main ref={parentRef} onKeyDown={clavier.surTouche} className="min-h-0 flex-1 overflow-y-auto">
         {q.viewMode === "mosaic" ? (
           // §8 : la tuile fait 221 px de large — une largeur exacte, pas un
           // minmax élastique qui la ferait varier d'un écran à l'autre.
@@ -134,13 +106,7 @@ export function ListPane() {
                 // encore entré.
                 <div
                   key={r.id}
-                  data-index={v.index}
-                  tabIndex={(actif ?? 0) === v.index ? 0 : -1}
-                  // L'index suit le focus RÉEL : tabuler dans la liste, ou
-                  // cliquer une ligne, doit poser le point de départ des
-                  // flèches. Sans cela, la première flèche vers le bas
-                  // rejoue l'entrée dans la liste au lieu d'avancer.
-                  onFocus={() => setActif(v.index)}
+                  {...clavier.ligne(v.index)}
                   ref={virtual.measureElement}
                   style={{ position: "absolute", top: 0, left: 0, width: "100%", transform: `translateY(${v.start}px)` }}
                 >

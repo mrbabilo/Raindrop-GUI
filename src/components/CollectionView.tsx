@@ -1,9 +1,10 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { t } from "../i18n/fr";
 import type { RaindropItem } from "../../shared/types";
 import { useAppState } from "../state/appState";
 import { useCollections } from "../hooks/useStaticData";
 import { useDragBookmark } from "../hooks/useDragBookmark";
+import { useRovingFocus } from "../hooks/useRovingFocus";
 import { useRaindrops } from "../hooks/useRaindrops";
 import { CarreCollection } from "../design/Signaux";
 import { RaindropRow } from "./RaindropRow";
@@ -26,6 +27,13 @@ export function CollectionView() {
   // Les items de chaque section, pour la barre d'actions en masse : sans
   // eux, cocher une ligne d'une section n'aurait aucun effet.
   const [parSection, setParSection] = useState<Record<number, RaindropItem[]>>({});
+  // Vue NON virtualisée : le roving suit l'ordre du DOM, à travers les
+  // sections, sans avoir à tenir un index global. La liste principale, elle,
+  // ne peut pas s'en servir — ses lignes se démontent en défilant.
+  const zone = useRef<HTMLElement>(null);
+  const roving = useRovingFocus(zone, {
+    surEchap: () => (document.activeElement as HTMLElement | null)?.blur(),
+  });
 
   const collectionId = view.kind === "collection" ? view.collectionId : 0;
   const parent = arbre.find((c) => c.id === collectionId);
@@ -59,7 +67,7 @@ export function CollectionView() {
         <h1 className="font-medium">{parent.title}</h1>
         {totalDirects > 0 && <span className="text-xs text-app-muted">{totalDirects}</span>}
       </header>
-      <main className="min-h-0 flex-1 overflow-y-auto">
+      <main ref={zone} onKeyDown={roving.surTouche} className="min-h-0 flex-1 overflow-y-auto">
         {itemsDirects.map((r) => (
           <RaindropRow
             key={r.id}
@@ -67,6 +75,7 @@ export function CollectionView() {
             selected={selectedIds.has(r.id)}
             isDetail={false}
             collectionRacine={parent.title}
+            navigable
             poignee={poignee(r)}
             onToggle={() => toggleSelect(r.id)}
             onTag={filtrerTag}

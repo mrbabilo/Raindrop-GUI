@@ -260,4 +260,21 @@ describe("ReviewPage — rulings", () => {
       expect(screen.queryByText("Item 1")).not.toBeInTheDocument();
     });
   });
+
+  // La Revue peut porter des milliers d'items : autant d'arrêts de
+  // tabulation avant d'atteindre le bouton d'exécution. La ligne est
+  // l'arrêt, sa case n'en est plus un.
+  it("une seule ligne tabulable, et l'espace y coche", async () => {
+    renderReview();
+    const lignes = [...document.querySelectorAll<HTMLElement>("[data-index]")];
+    expect(lignes.length).toBeGreaterThan(1);
+    expect(lignes.filter((l) => l.tabIndex === 0)).toHaveLength(1);
+    expect([...document.querySelectorAll<HTMLElement>('[data-index] input')].filter((c) => c.tabIndex === 0)).toHaveLength(0);
+
+    const compteur = () => screen.getByText(/item\(s\) affecté/).textContent;
+    const avant = compteur();
+    lignes[0]!.focus();
+    await userEvent.keyboard(" ");
+    expect(compteur()).not.toBe(avant);
+  });
 });

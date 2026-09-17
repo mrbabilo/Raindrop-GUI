@@ -131,4 +131,16 @@ describe("CollectionView", () => {
     await userEvent.click(cases[0]!);
     expect(screen.getByText("1 sélectionné(s)")).toBeInTheDocument();
   });
+
+  // Régression constatée en étendant le lot a11y : les lignes de cette vue
+  // n'ont jamais porté de tabIndex, et retirer leurs contrôles internes du
+  // parcours (case, étiquettes) l'a rendue inatteignable au clavier.
+  it("les lignes sont atteignables au clavier", () => {
+    parPage[101] = { n: 2, total: 2 };
+    parPage[201] = { n: 2, total: 2 };
+    rendu();
+    const focalisables = [...document.querySelectorAll<HTMLElement>("main [data-nav]")];
+    expect(focalisables.length).toBeGreaterThan(3);
+    expect(focalisables.filter((e) => e.tabIndex === 0)).toHaveLength(1);
+  });
 });

@@ -67,6 +67,7 @@ export function SectionCollection({
           selected={selection.has(r.id)}
           isDetail={false}
           collectionRacine={collection.title}
+          navigable
           poignee={poignee(r)}
           onToggle={() => onToggle(r.id)}
           onTag={onTag}

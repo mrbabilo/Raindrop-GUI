@@ -36,12 +36,17 @@ export function RaindropRow(props: {
   };
   onToggle(): void;
   onTag(name: string): void;
+  /** Déclare la ligne comme arrêt de navigation de sa zone (useRovingFocus).
+   *  La liste principale ne s'en sert pas : son enveloppe virtualisée porte
+   *  déjà le focus, et son index doit survivre au démontage de la ligne. */
+  navigable?: boolean;
 }) {
   const { r } = props;
   const etat = filetEtat(props.etat);
   return (
     <div
       data-testid={`row-${r.id}`}
+      {...(props.navigable === true ? { "data-nav": true, tabIndex: -1 } : {})}
       className={
         "flex min-h-9 cursor-pointer items-center gap-2 overflow-hidden border-b border-app-border px-3 " +
         (props.isDetail ? "bg-app-panel " : "") +
