@@ -27,13 +27,16 @@ vi.mock("../lib/api", () => ({
 }));
 
 describe("useStaticData", () => {
-  it("collections : la liste plate normalisée côté sidecar est consommée telle quelle", async () => {
+  it("collections : liste PLATE (aucun arbre reconstruit), mais TRIÉE", async () => {
     const { result } = renderHook(() => useCollections(), { wrapper });
     await waitFor(() => expect(result.current.data).toHaveLength(3));
-    // Les fixtures placent l'enfant (Rust, parentId 101) en fin de liste
-    // plate : aucun arbre n'est reconstruit côté front.
-    expect(result.current.data![2]!.parentId).toBe(101);
-    expect(result.current.data![0]!.title).toBe("Dev");
+    // Plate : l'enfant (Rust, parentId 101) reste une entrée comme une autre,
+    // le front ne niche rien — c'est `parentId` qui porte la hiérarchie.
+    expect(result.current.data!.find((c) => c.title === "Rust")!.parentId).toBe(101);
+    // Triée à la source : l'API rend son propre ordre (Dev, Design, Rust),
+    // un seul endroit le range pour que sidebar, palette ⌘K et destinations
+    // de déplacement lisent le même arbre (lib/ordre.ts).
+    expect(result.current.data!.map((c) => c.title)).toEqual(["Design", "Dev", "Rust"]);
   });
 
   it("tags avec compteurs", async () => {

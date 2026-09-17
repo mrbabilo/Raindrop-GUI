@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import { trierCollections } from "../lib/ordre";
 import type { Collection, RaindropUser, Tag } from "../../shared/types";
 
 // Noms du brief, formes du DTO partagé : une seule définition des DTO
@@ -8,10 +9,14 @@ import type { Collection, RaindropUser, Tag } from "../../shared/types";
 export type UserInfo = RaindropUser;
 export type { Tag };
 
+// Trié ICI, et pas dans chaque écran : l'API rend les collections dans son
+// propre ordre, et un tri par appelant ferait lire le même arbre de trois
+// façons (sidebar, palette ⌘K, destinations de déplacement).
 export const useCollections = () =>
   useQuery({
     queryKey: ["collections"],
-    queryFn: () => api.get<{ items: Collection[] }>("/api/collections").then((r) => r.items),
+    queryFn: () =>
+      api.get<{ items: Collection[] }>("/api/collections").then((r) => trierCollections(r.items)),
   });
 
 export const useTags = () =>
