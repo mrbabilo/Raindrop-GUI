@@ -209,11 +209,16 @@ Pas d'ombre portée : la hiérarchie vient du **niveau de surface**, pas de l'om
     une action qu'un bouton exécute ensuite reste un champ (`.input`) :
     les `<select>` de destination du BulkBar et des lignes de nettoyage
     sont des saisies, pas des états.
-  - **Le focus clavier est un anneau `sel`, le clic ne montre rien.**
+  - **Le focus clavier est un anneau `quiet`, le clic ne montre rien.**
     `:focus-visible` uniquement : un anneau posé au clic ferait clignoter
     l'interface sous la souris, et son absence au clavier rendrait la
-    navigation aveugle. Le même jeton que la sélection — c'est la même
-    idée, « l'endroit où je suis ».
+    navigation aveugle. Le jeton de la sélection (`sel`) avait été retenu
+    d'abord — même idée, « l'endroit où je suis » — mais il est fait pour
+    remplir une surface, pas pour tracer un trait de 2 px : **mesuré à
+    1,10:1 sur le fond clair et 1,26:1 sur le sombre**, contre le seuil de
+    3:1 qu'un indicateur de focus doit tenir. L'anneau ne se voyait pas, et
+    toute la navigation au clavier avec lui. `quiet` tient 4,85:1 en clair
+    et 6,54:1 en sombre, et reste sobre.
   - **Une bascule dont le contenu est la réponse ne marque pas son état** —
     l'icône liste/mosaïque nomme le mode vers lequel elle bascule, et c'est
     la liste elle-même qui dit celui qu'on regarde. Ne pas y remettre une

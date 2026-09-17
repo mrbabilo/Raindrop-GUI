@@ -222,13 +222,14 @@ body {
   font-size: 13px;
 }
 
-/* DESIGN.md §9 : « le focus clavier est un anneau `sel`, le clic ne montre
+/* DESIGN.md §9 : « le focus clavier est un anneau `quiet`, le clic ne montre
    rien ». `:focus-visible` et non `:focus` — le navigateur ne le pose qu'au
-   clavier. L'anneau est décalé de 2 px pour ne pas mordre sur le contenu, et
-   `--color-app-sel` est le jeton de la sélection : c'est la même idée,
-   « l'endroit où je suis ». */
+   clavier. Décalé de 2 px pour ne pas mordre sur le contenu.
+   `--color-app-muted` et non `--color-app-sel` : ce dernier est fait pour
+   remplir une surface, et mesuré en trait il tombe à 1,10:1 sur le fond —
+   trois fois sous le seuil d'un indicateur de focus. */
 :focus-visible {
-  outline: 2px solid var(--color-app-sel);
+  outline: 2px solid var(--color-app-muted);
   outline-offset: 2px;
 }
 
