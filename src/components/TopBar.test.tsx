@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { raindrop } from "../test/fixtures";
+import { injecterRegles } from "../test/injectStyles";
 import { TopBar } from "./TopBar";
 import { AppStateProvider, useAppState } from "../state/appState";
 
@@ -95,6 +96,25 @@ describe("TopBar", () => {
     await user.type(screen.getByLabelText("Jusqu'à"), "2025-12-31");
     const v = JSON.parse(screen.getByTestId("view").textContent!);
     expect(v).toMatchObject({ domain: "example.com", media: "article", createdStart: "2025-01-01", createdEnd: "2025-12-31" });
+  });
+
+  // Vérifié au navigateur le 2026-09-17 : avec `btn px-0`, le padding
+  // horizontal de `.btn` l'emportait sur l'utilitaire Tailwind et écrasait
+  // l'icône à 6 px de large pour 15 de haut. Les commandes en icône seule
+  // ont donc leur propre classe, et c'est la VRAIE feuille qu'on relit ici —
+  // jsdom ne fait pas de mise en page, mais il lit une déclaration.
+  it("une commande en icône seule laisse la place à son icône (§9)", () => {
+    injecterRegles(".btn-icone");
+    renderTop();
+    const bouton = screen.getByRole("button", { name: "Filtres avancés" });
+    expect(bouton.className).toContain("btn-icone");
+    // Aucun utilitaire de padding ou de largeur : la classe suffit, sinon
+    // la cascade rejoue contre nous.
+    expect(bouton.className).not.toMatch(/\bpx-|\bw-\[/);
+    const style = getComputedStyle(bouton);
+    expect(style.paddingLeft).toBe("0px");
+    expect(style.paddingRight).toBe("0px");
+    expect(style.width).toBe("28px");
   });
 
   // DESIGN.md §9 « révélé, pas posé » : domaine et dates servent rarement —

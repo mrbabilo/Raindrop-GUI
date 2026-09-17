@@ -102,6 +102,14 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       `.wash` vs `.coll-icon` à fusionner ; `filetEtat` demi-paire ;
       `racine()` à déplacer ; moyenne d'icônes §8 ; sélection persistante
       collections/tags ; media select retiré (7b) — rester cohérent.
+- [ ] **Le champ Domaine ne filtre rien** (constaté au navigateur pendant
+      l'épure, 2026-09-17, puis isolé par sonde réelle) : le MCP envoie
+      `domain` en paramètre d'URL, l'API Raindrop l'ignore. Le front et le
+      sidecar sont corrects, le bug est dans le pont épinglé. Correction
+      côté sidecar : composer `domain:<valeur>` dans le `search` transmis
+      (prouvé en réel : 64 résultats, tous du domaine) plutôt que passer
+      `domain`. Attention à la composition avec une recherche déjà saisie
+      et avec `#tag` (R11P-1). Détail et contre-épreuves : CLAUDE.md §Traps.
 - [ ] **Lot a11y** : la **navigation clavier** ci-dessus (par zone) ;
       aria-label recherche ; chaîne ARIA palette
       (`aria-controls`/`aria-activedescendant`, ownership listbox→option) ;

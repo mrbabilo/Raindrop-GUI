@@ -199,6 +199,15 @@ body {
   cursor: pointer;
 }
 
+/* §9 « une icône par geste » : commande en icône seule — carrée, sans le
+   padding horizontal de .btn, qui écraserait le dessin (constaté au
+   navigateur : 6 px de large pour 15 de haut). Posée ici et non en
+   utilitaires : la cascade ne doit pas décider de la géométrie. */
+.btn-icone {
+  width: 28px;
+  padding: 0;
+}
+
 .btn:hover {
   background: var(--color-app-hover);
 }

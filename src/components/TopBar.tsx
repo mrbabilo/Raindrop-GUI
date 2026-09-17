@@ -6,9 +6,11 @@ import { PanneauFiltres, actifs } from "./PanneauFiltres";
 import { Icone } from "../design/icones";
 
 // Champs : classe .input de styles.css (28 px, rayon 7, 13 px — DESIGN.md
-// §7-§8). Commandes en icône seule : .btn, carré, le nom accessible venant
-// de l'aria-label (§9 — sans lui l'épure fabrique une dette d'a11y).
-const commande = "btn px-0 w-[28px] justify-center";
+// §7-§8). Commandes en icône seule : .btn-icone, carrée — sa géométrie vit
+// dans la feuille, pas en utilitaires (le padding de .btn gagnait contre
+// `px-0` et écrasait l'icône). Le nom accessible vient de l'aria-label
+// (§9 — sans lui l'épure fabrique une dette d'a11y).
+const commande = "btn btn-icone";
 
 export function TopBar() {
   const { view, patchList } = useAppState();
