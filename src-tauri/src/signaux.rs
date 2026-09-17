@@ -31,7 +31,7 @@ extern "C" fn noter_sigterm(_: libc::c_int) {
 /// déroule `arreter` et quitte le processus.
 ///
 /// `arreter` est le même geste que le branchement `RunEvent::Exit` de
-/// `lib.rs` : `etat.arreter_sidecar(commandes::GRACE)`. Borné (GRACE = 3 s
+/// `lib.rs` : `etat.arreter_sidecar(demarrage::GRACE)`. Borné (GRACE = 3 s
 /// avant SIGKILL), il reste dans le budget que macOS accorde à une app
 /// pendant une déconnexion.
 ///

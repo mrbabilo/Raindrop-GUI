@@ -11,6 +11,24 @@ use crate::demarrage::{lancer_sidecar, sequence, GRACE};
 use crate::etat_connexion::{verdict_en_etat, Etat, EtatConnexion};
 use crate::{node, trousseau, verrou};
 
+/// `etat_connexion`, `relancer` et `enregistrer_jeton` sont `async` et
+/// déplacent leur corps bloquant dans `tauri::async_runtime::spawn_blocking`
+/// (ronde de correction 1, constat critique) : une commande Tauri `pub fn`
+/// non-`async` est appelée EN LIGNE sur le thread principal — jusqu'au
+/// délégué Objective-C de WebKit lui-même — donc `etat_connexion` (jusqu'à
+/// 40 s) et `enregistrer_jeton` (jusqu'à 25 s) gelaient la fenêtre pendant
+/// toute leur durée.
+///
+/// `State<'_, Etat>` n'est pas `Send` et ne peut pas traverser la frontière
+/// `'static` de la closure passée à `spawn_blocking`. La forme retenue prend
+/// `tauri::AppHandle` (`Send + Sync + 'static`, `Clone`) en paramètre de
+/// commande, et récupère l'état par `app.state::<Etat>()` À L'INTÉRIEUR de la
+/// closure — le `State` emprunté qui en résulte est créé et consommé
+/// entièrement dans ce thread bloquant, sans jamais franchir de point de
+/// suspension `async`.
+///
+/// Une tâche qui panique (`JoinError`) rend une `Panne` plutôt que de
+/// propager le panic jusqu'à faire tomber le processus.
 #[tauri::command]
 pub async fn etat_connexion(app: AppHandle) -> EtatConnexion {
     tauri::async_runtime::spawn_blocking(move || {
@@ -117,21 +135,36 @@ pub async fn installer_runtime(app: AppHandle) -> EtatConnexion {
 
 /// Le poll du front pendant une installation : l'étape courante, ou `None`
 /// (rien en cours). Lecture instantanée, pas d'événements Tauri.
+
 /// Déconnexion (spec §6, réglages) : efface le jeton du trousseau et
 /// arrête le sidecar — l'écran de premier lancement reprend la main.
-/// L'effacement AVANT l'arrêt : si l'app meurt entre les deux, aucun
-/// sidecar ne tourne avec un jeton que le trousseau a oublié. Le
-/// lockfile est effacé explicitement : le sidecar a son propre handler
-/// d'arrêt, mais ne pas dépendre de sa course avec notre exit.
+/// L'effacement précède l'arrêt pour ce que lit le PROCHAIN lancement :
+/// un trousseau vide y mène à l'écran d'accueil, quel que soit l'état du
+/// sidecar. (Il ne protège pas d'un crash entre les deux — c'est même ce
+/// qu'il rend possible ; le lockfile effacé et la décision D2 rattrapent
+/// ce cas au lancement suivant.)
+///
+/// **Le verrou de lancement est tenu sur toute la fonction** : sans lui,
+/// une déconnexion concurrente à un remplacement de jeton (fenêtre
+/// réaliste — `lancer_sidecar` peut attendre jusqu'à 45 s) laisserait
+/// `lancer_sidecar` installer un enfant que personne n'arrêterait, et le
+/// dernier `poser()` gagnerait : trousseau effacé, sidecar vivant, état
+/// mémorisé `Pret`. Même ordre de verrous que partout — `verrou_lancement`
+/// puis `sidecar`, jamais l'inverse.
 #[tauri::command]
 pub async fn deconnecter(app: AppHandle) -> EtatConnexion {
     tauri::async_runtime::spawn_blocking(move || {
         let etat = app.state::<Etat>();
+        let _garde = etat.verrou_lancement.lock().unwrap();
         if let Err(detail) = trousseau::effacer() {
             return EtatConnexion::Panne { detail };
         }
         etat.arreter_sidecar(GRACE);
-        let _ = std::fs::remove_file(verrou::chemin(&etat.dossier));
+        // Même garde que `lancer_sidecar` : un dossier indéterminable rend
+        // un chemin RELATIF au répertoire courant, qu'il ne faut pas effacer.
+        if verrou::verifier_dossier(&etat.dossier).is_ok() {
+            let _ = std::fs::remove_file(verrou::chemin(&etat.dossier));
+        }
         let e = EtatConnexion::JetonRequis;
         etat.poser(e.clone());
         e

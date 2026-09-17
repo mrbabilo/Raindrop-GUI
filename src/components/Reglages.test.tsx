@@ -87,6 +87,43 @@ describe("Reglages", () => {
     await waitFor(() => expect(onEtat).toHaveBeenCalledWith({ ecran: "premier-lancement" }));
   });
 
+  // Le constat critique de la relecture : « Déconnecter » n'était pas gardé,
+  // donc cliquable pendant un remplacement en vol (jusqu'à 45 s). Deux
+  // commandes concurrentes sur le même état pouvaient laisser le trousseau
+  // effacé ET un sidecar vivant, avec « Pret » mémorisé.
+  it("« Déconnecter » est hors service pendant un remplacement en vol", async () => {
+    const user = userEvent.setup();
+    let resoudre: (a: { ecran: string }) => void = () => undefined;
+    remplacerMock.mockReturnValue(new Promise((r) => { resoudre = r; }));
+    render(<Reglages onFermer={vi.fn()} onEtat={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Remplacer le jeton" }));
+    await user.type(screen.getByLabelText("Jeton d'API Raindrop"), "x");
+    await user.click(screen.getByRole("button", { name: "Valider" }));
+    expect(screen.getByRole("button", { name: "Déconnecter" })).toBeDisabled();
+    resoudre({ ecran: "app" });
+  });
+
+  // Et son corollaire : après un refus, refermer l'écran laisserait une
+  // application incapable de lire SANS aucun signal (le sidecar tourne, donc
+  // la bannière se tait). La sortie propage la panne, qui porte ses issues.
+  it("après un jeton refusé, fermer ne ment pas — la panne remonte", async () => {
+    const onFermer = vi.fn();
+    const onEtat = vi.fn();
+    const user = userEvent.setup();
+    getMock.mockRejectedValue(new Error("http 401"));
+    render(<Reglages onFermer={onFermer} onEtat={onEtat} />);
+    await user.click(screen.getByRole("button", { name: "Remplacer le jeton" }));
+    await user.type(screen.getByLabelText("Jeton d'API Raindrop"), "faux");
+    await user.click(screen.getByRole("button", { name: "Valider" }));
+    await screen.findByRole("alert");
+    await user.click(screen.getByRole("button", { name: "Fermer" }));
+    expect(onFermer).not.toHaveBeenCalled();
+    expect(onEtat).toHaveBeenCalledWith({
+      ecran: "panne",
+      detail: "Ce jeton n'a pas été accepté par Raindrop.",
+    });
+  });
+
   it("Échap ferme", async () => {
     const onFermer = vi.fn();
     render(<Reglages onFermer={onFermer} onEtat={vi.fn()} />);

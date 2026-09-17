@@ -12,11 +12,11 @@ use crate::{node, sidecar, sonde_mcp, trousseau, verrou};
 
 /// Le sidecar a jusque-là pour publier son port. Large : au premier
 /// lancement, Node compile et le serveur MCP se connecte.
-pub(crate) const DELAI_PORT: Duration = Duration::from_secs(25);
+const DELAI_PORT: Duration = Duration::from_secs(25);
 /// Après le port, le temps laissé au serveur MCP du sidecar pour se
 /// connecter — ~160 ms en réel (constat du 2026-09-17), 20 s = marge large
 /// avant de rendre `Pret` sans MCP (voir l'appel à `sonde_mcp`).
-pub(crate) const DELAI_MCP: Duration = Duration::from_secs(20);
+const DELAI_MCP: Duration = Duration::from_secs(20);
 /// Laissé à un sidecar pour s'arrêter proprement avant SIGKILL. `pub(crate)`
 /// : `lib.rs` le réutilise pour `Etat::arreter_sidecar` à la fermeture, afin
 /// de ne pas dupliquer la constante dans `etat_connexion`.
@@ -30,7 +30,7 @@ pub(crate) const GRACE: Duration = Duration::from_secs(3);
 /// sans un mot. `None` = dossier utilisable, rien à faire.
 ///
 /// Pure — testée sans toucher au système de fichiers.
-pub(crate) fn dossier_en_panne(d: &Path) -> Option<EtatConnexion> {
+fn dossier_en_panne(d: &Path) -> Option<EtatConnexion> {
     verrou::verifier_dossier(d)
         .err()
         .map(|detail| EtatConnexion::Panne { detail })
@@ -145,25 +145,6 @@ pub(crate) fn lancer_sidecar(etat: &Etat, chemin_node: PathBuf, token_raindrop: 
         }
     }
 }
-
-/// `etat_connexion`, `relancer` et `enregistrer_jeton` sont `async` et
-/// déplacent leur corps bloquant dans `tauri::async_runtime::spawn_blocking`
-/// (ronde de correction 1, constat critique) : une commande Tauri `pub fn`
-/// non-`async` est appelée EN LIGNE sur le thread principal — jusqu'au
-/// délégué Objective-C de WebKit lui-même — donc `etat_connexion` (jusqu'à
-/// 40 s) et `enregistrer_jeton` (jusqu'à 25 s) gelaient la fenêtre pendant
-/// toute leur durée.
-///
-/// `State<'_, Etat>` n'est pas `Send` et ne peut pas traverser la frontière
-/// `'static` de la closure passée à `spawn_blocking`. La forme retenue prend
-/// `tauri::AppHandle` (`Send + Sync + 'static`, `Clone`) en paramètre de
-/// commande, et récupère l'état par `app.state::<Etat>()` À L'INTÉRIEUR de la
-/// closure — le `State` emprunté qui en résulte est créé et consommé
-/// entièrement dans ce thread bloquant, sans jamais franchir de point de
-/// suspension `async`.
-///
-/// Une tâche qui panique (`JoinError`) rend une `Panne` plutôt que de
-/// propager le panic jusqu'à faire tomber le processus.
 
 #[cfg(test)]
 mod tests {

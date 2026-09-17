@@ -37,12 +37,13 @@ finale de branche).*
       d'exécution, non commité). Le **sélecteur du dossier de
       sauvegarde** reste hors plan : spec sauvegarde non validée. Les
       finitions parkées (revue finale) : « Réessayer » désactivé pendant
-      une installation ; extraire runtime.rs/node.rs/commandes.rs à la
-      première retouche de chacun (400/400/331) ; aligner
-      DELAI_SEQUENCE si les délais de boot venaient à croître.
+      une installation ; extraire runtime.rs et node.rs à la première
+      retouche de chacun (400/400 — `commandes.rs` l'a été avec les
+      Réglages) ; aligner DELAI_SEQUENCE si les délais de boot venaient
+      à croître.
 - [x] **Réglages (spec §6)** — fait le 2026-09-18 : overlay ⌘, +
-      engrenage, état du pont traduit (les cinq états de lifecycle.ts
-      passent par un littéral `satisfies Record<string, FrKey>`),
+      engrenage, état du pont traduit en français (un état inconnu
+      tombe sur « — » plutôt que d'afficher son identifiant interne),
       remplacement du jeton avec contrôle `/api/user`, déconnexion
       (`trousseau::effacer` obtient enfin son appelant — le
       `#[allow(dead_code)]` devient du code vivant). `commandes.rs`

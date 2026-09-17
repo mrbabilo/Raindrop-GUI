@@ -6,9 +6,16 @@ import { useHealth } from "../hooks/useStaticData";
 import { remplacerJeton, deconnecter, type Amorce } from "../lib/amorce";
 import type { UserInfo } from "../hooks/useStaticData";
 
-// Les états de `sidecar/mcp/lifecycle.ts`, traduits. Le littéral prouve au
-// typecheck que chaque état a sa clé — le front ne montre jamais un
-// identifiant interne (« starting » à l'écran serait une fuite de jargon).
+// Les cinq états de `sidecar/mcp/lifecycle.ts`, traduits — le front ne
+// montre jamais un identifiant interne (« starting » à l'écran serait une
+// fuite de jargon).
+//
+// Ce que le `satisfies` garantit, exactement : que chaque VALEUR est une clé
+// réelle du dictionnaire. Il ne lie PAS cet ensemble de clés à
+// `LifecycleState` (`data.mcp` arrive en `string` brut de l'API locale) : un
+// sixième état ajouté côté sidecar ne serait pas attrapé au typecheck. Le
+// contrôle `in` ci-dessous est ce qui le rattrape — il tomberait sur « — »
+// plutôt que d'afficher son identifiant.
 const ETAT_MCP = {
   connected: "reglages.mcp.connected",
   starting: "reglages.mcp.starting",
@@ -33,16 +40,24 @@ export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (
   const [jeton, setJeton] = useState("");
   const [occupe, setOccupe] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  // Un jeton refusé par Raindrop laisse l'application incapable de lire : le
+  // sidecar tourne (donc `useHealth` répond « connected » et la bannière se
+  // tait), mais chaque appel 401. Refermer sur cet écran-là serait le piège
+  // muet que ce projet refuse — la sortie propage alors la panne, qui porte
+  // ses issues. Retaper un jeton reste possible sans quitter le panneau.
+  const [refuse, setRefuse] = useState<string | null>(null);
+  const fermer = () =>
+    refuse === null ? onFermer() : onEtat({ ecran: "panne", detail: refuse });
 
   // Échap ferme, comme la Palette. Écouteur de fenêtre plutôt que onKeyDown :
   // l'overlay n'a pas de champ toujours focalisé sur lequel l'accrocher.
   useEffect(() => {
     const surTouche = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onFermer();
+      if (e.key === "Escape") fermer();
     };
     window.addEventListener("keydown", surTouche);
     return () => window.removeEventListener("keydown", surTouche);
-  }, [onFermer]);
+  });
 
   const etatMcp = data?.mcp && data.mcp in ETAT_MCP
     ? t(ETAT_MCP[data.mcp as keyof typeof ETAT_MCP])
@@ -53,6 +68,7 @@ export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (
     if (occupe || jeton.trim() === "") return;
     setOccupe(true);
     setErreur(null);
+    setRefuse(null);
     const amorce = await remplacerJeton(jeton.trim());
     if (amorce.ecran !== "app") {
       // Sidecar mort, Node disparu : l'application EST en panne — la montrer
@@ -69,11 +85,12 @@ export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (
     } catch {
       setOccupe(false);
       setErreur(t("reglages.refuse"));
+      setRefuse(t("reglages.refuse"));
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 p-4 pt-24" onClick={onFermer}>
+    <div className="fixed inset-0 z-50 bg-black/40 p-4 pt-24" onClick={fermer}>
       <div
         className="mx-auto max-w-lg rounded border border-app-border bg-app-panel p-5"
         onClick={(e) => e.stopPropagation()}
@@ -120,11 +137,16 @@ export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (
           <button
             type="button"
             className="btn"
+            // Gardé pendant un remplacement en vol : les deux commandes
+            // touchent le même état, et `lancer_sidecar` peut attendre
+            // jusqu'à 45 s. Le verrou côté Rust les sérialise désormais ;
+            // ce `disabled` évite d'y entrer pour rien.
+            disabled={occupe}
             onClick={() => void deconnecter().then(onEtat)}
           >
             {t("reglages.deconnecter")}
           </button>
-          <button type="button" className="btn ml-auto" onClick={onFermer}>
+          <button type="button" className="btn ml-auto" onClick={fermer}>
             {t("reglages.fermer")}
           </button>
         </div>
