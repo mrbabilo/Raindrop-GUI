@@ -97,4 +97,36 @@ describe("Banners", () => {
     await userEvent.click(screen.getByRole("button", { name: "Réessayer" }));
     expect(refetch).toHaveBeenCalled();
   });
+
+  it("au démarrage à froid, « starting » ne déclenche aucune alarme", () => {
+    // Rien n'a été « interrompu » : la connexion n'a jamais été établie.
+    healthMock.mockReset().mockReturnValue({
+      data: { status: "ok", mcp: "starting" }, isError: false, refetch: vi.fn(),
+    });
+    const { container } = render(<Banners />, { wrapper });
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("un « crashed » franc parle dès la première réponse", () => {
+    // Pas d'ambiguïté possible : inutile d'attendre d'avoir vu connected.
+    healthMock.mockReset().mockReturnValue({
+      data: { status: "ok", mcp: "crashed" }, isError: false, refetch: vi.fn(),
+    });
+    render(<Banners />, { wrapper });
+    expect(screen.getByRole("alert")).toHaveTextContent(/interrompue/);
+  });
+
+  it("après avoir vu connected, « restarting » parle", () => {
+    const refetch = vi.fn();
+    healthMock.mockReset().mockReturnValue({
+      data: { status: "ok", mcp: "connected" }, isError: false, refetch,
+    });
+    const { rerender } = render(<Banners />, { wrapper });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    healthMock.mockReturnValue({
+      data: { status: "ok", mcp: "restarting" }, isError: false, refetch,
+    });
+    rerender(<Banners />);
+    expect(screen.getByRole("alert")).toHaveTextContent(/interrompue/);
+  });
 });

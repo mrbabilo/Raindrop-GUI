@@ -25,10 +25,20 @@ export function Banners() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [relance, setRelance] = useState(false);
 
-  // Le sidecar ne rapporte « connected » qu'une fois le MCP prêt ; tout autre
-  // état de lifecycle.ts (starting/restarting/crashed/stopped) est dégradé —
-  // le « crashed » du plan est couvert, sans bande morte pour les transitoires.
-  const mcpEnRade = data !== undefined && data.mcp !== "connected";
+  // Au démarrage à froid le sidecar répond « starting » quelques secondes :
+  // annoncer « interrompue » y serait faux — rien n'a été interrompu, la
+  // connexion n'a jamais encore été établie. On attend donc d'avoir vu
+  // `connected` une fois... SAUF pour un « crashed » franc, sans ambiguïté
+  // dès la première réponse (sinon un sidecar qui ne se connecte jamais
+  // resterait muet pour toujours).
+  const [dejaConnecte, setDejaConnecte] = useState(false);
+  useEffect(() => {
+    if (data?.mcp === "connected") setDejaConnecte(true);
+  }, [data?.mcp]);
+  const mcpEnRade =
+    data !== undefined &&
+    data.mcp !== "connected" &&
+    (dejaConnecte || data.mcp === "crashed");
   // Le sidecar ENTIER est injoignable : `useHealth` a échoué, `data` est
   // resté undefined — et l'ancien test `mcpEnRade` restait faux, la bannière
   // se taisait précisément quand tout était tombé (constaté en coupant le

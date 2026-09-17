@@ -120,7 +120,12 @@ describe("App", () => {
   });
 
   it("signale l'interruption MCP quand health le rapporte", async () => {
-    mockApi("disconnected");
+    // « crashed » : un état RÉEL de LifecycleState, sans ambiguïté dès la
+    // première réponse (l'ancien fixture « disconnected » n'existe pas dans
+    // le vocabulaire du sidecar, et la règle Task 11 — bannière muette tant
+    // qu'on n'a pas vu connected, sauf crashed — le laissait à juste titre
+    // se taire).
+    mockApi("crashed");
     render(<App />, { wrapper });
     await waitFor(() =>
       expect(screen.getByText("Connexion Raindrop interrompue")).toBeInTheDocument(),
