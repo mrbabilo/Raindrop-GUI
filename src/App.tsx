@@ -6,6 +6,7 @@ import { useAppState } from "./state/appState";
 import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { ListPane } from "./components/ListPane";
+import { CleanupDashboard } from "./components/CleanupDashboard";
 import { DetailPane } from "./components/DetailPane";
 import { CommandPalette } from "./components/CommandPalette";
 
@@ -100,7 +101,10 @@ export default function App() {
       <TopBar />
       <div className="border-b border-app-border bg-app" aria-hidden="true" />
       <Sidebar />
-      {view.kind === "review" ? <RevueStub /> : <ListPane />}
+      {/* Task 12 : la vue cleanup prend la place de la liste — dashboard de
+          nettoyage (compteurs, fraîcheur, scans SSE annulables). Les vues de
+          traitement cleanupView/* sont remplies par la Task 13. */}
+      {view.kind === "review" ? <RevueStub /> : view.kind === "cleanup" ? <CleanupDashboard /> : <ListPane />}
       {/* Row 2 col 3 : détail permanent — aperçu, édition inline, actions,
           surlignages (Task 8). */}
       <DetailPane />
