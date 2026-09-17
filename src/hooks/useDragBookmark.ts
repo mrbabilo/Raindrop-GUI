@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { t } from "../i18n/fr";
 import { useAppState } from "../state/appState";
 import { useDrag } from "../state/drag";
 import { useBulk } from "./useMutations";
@@ -36,7 +37,7 @@ export function useDragBookmark() {
 
   // Origine du geste et signets embarqués, hors du rendu : ils changent à
   // chaque pixel parcouru, et un rendu par pixel ferait ramer la liste.
-  const geste = useRef<{ x: number; y: number; ids: number[]; franchi: boolean } | null>(null);
+  const geste = useRef<{ x: number; y: number; ids: number[]; libelle: string; franchi: boolean } | null>(null);
   // Vrai tant que le clic de fin appartient à un déplacement. Sans cette
   // garde, relâcher au-dessus d'une ligne ouvrirait la fiche en prime.
   const etaitDrag = useRef(false);
@@ -65,7 +66,7 @@ export function useDragBookmark() {
       if (Math.hypot(e.clientX - g.x, e.clientY - g.y) < SEUIL_PX) return;
       g.franchi = true;
       etaitDrag.current = true;
-      commencer(g.ids);
+      commencer(g.ids, g.libelle);
     };
     const lache = () => {
       const g = geste.current;
@@ -86,14 +87,17 @@ export function useDragBookmark() {
    * n'est jouée que si le geste est resté un clic.
    */
   const poignee = useCallback(
-    (id: number, ouvrir: () => void) => ({
+    (id: number, ouvrir: () => void, titre = "") => ({
       onPointerDown: (e: { clientX: number; clientY: number; button?: number }) => {
         if (e.button !== undefined && e.button !== 0) return; // clic droit : pas un déplacement
         // Sélection liée : tirer un signet COCHÉ emmène toute la sélection ;
         // un signet non coché ne s'agrège pas à elle — on tire ce qu'on
         // montre, pas ce qui est coché ailleurs.
         const embarques = selectedIds.has(id) ? [...selectedIds] : [id];
-        geste.current = { x: e.clientX, y: e.clientY, ids: embarques, franchi: false };
+        // Un fantôme qui annonce « 3 signets » vaut mieux que trois titres
+        // empilés : on déplace un LOT, sa taille est la seule chose à savoir.
+        const libelle = embarques.length > 1 ? t("drag.count", { n: embarques.length }) : titre;
+        geste.current = { x: e.clientX, y: e.clientY, ids: embarques, libelle, franchi: false };
         etaitDrag.current = false;
       },
       onClick: () => {

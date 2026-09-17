@@ -11,16 +11,18 @@ export interface DragEtat {
   ids: number[] | null;
   /** Collection survolée, si le dépôt y est permis. `null` : aucune. */
   cible: number | null;
+  /** Ce que le fantôme annonce sous le curseur. */
+  libelle: string;
 }
 
 interface DragApi extends DragEtat {
-  commencer(ids: number[]): void;
+  commencer(ids: number[], libelle: string): void;
   survoler(collectionId: number | null): void;
   /** Termine le geste et rend ce qu'il portait — au consommateur d'agir. */
   terminer(): DragEtat;
 }
 
-const vide: DragEtat = { ids: null, cible: null };
+const vide: DragEtat = { ids: null, cible: null, libelle: "" };
 
 const DragContext = createContext<DragApi>({
   ...vide,
@@ -41,7 +43,7 @@ export function DragProvider({ children }: { children: ReactNode }) {
   const api = useMemo<DragApi>(
     () => ({
       ...etat,
-      commencer: (ids) => setEtat({ ids, cible: null }),
+      commencer: (ids, libelle) => setEtat({ ids, cible: null, libelle }),
       survoler: (collectionId) =>
         setEtat((s) => (s.ids === null ? s : { ...s, cible: collectionId })),
       terminer: () => {

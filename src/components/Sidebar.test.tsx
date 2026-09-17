@@ -29,7 +29,7 @@ const Spy = () => {
 // franchi (useDragBookmark.commencer).
 const Tirer = () => {
   const { commencer } = useDrag();
-  return <button type="button" onClick={() => commencer([1000])}>tirer</button>;
+  return <button type="button" onClick={() => commencer([1000], "un signet")}>tirer</button>;
 };
 
 const renderSidebar = (avecDrag = false) =>

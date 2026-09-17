@@ -19,6 +19,7 @@ export const fr = {
   "view.showList": "Afficher en liste",
   "view.showMosaic": "Afficher en mosaïque",
   "list.select": "Sélectionner {title}",
+  "drag.count": "{n} signets",
   "list.loadingMore": "…",
   "filter.sort": "Tri",
   "filter.domain": "Domaine",

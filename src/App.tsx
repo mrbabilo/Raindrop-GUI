@@ -12,6 +12,7 @@ import { TagsView } from "./components/TagsView";
 import { DetailPane } from "./components/DetailPane";
 import { CommandPalette } from "./components/CommandPalette";
 import { Banners } from "./components/Banners";
+import { FantomeDrag } from "./components/FantomeDrag";
 
 // Icônes SVG (DESIGN.md §9 : jamais d'emoji), grille 16px, trait 1,7.
 function SunIcon() {
@@ -81,6 +82,9 @@ export default function App() {
     // grille — en état sain Banners rend null et la géométrie est inchangée.
     <div className="flex h-screen min-h-0 flex-col bg-app text-app-ink">
       <Banners />
+      {/* Ce que l'on transporte pendant un déplacement — au-dessus de tout,
+          inerte au pointeur (il ne doit jamais masquer sa propre cible). */}
+      <FantomeDrag />
       <div className="grid min-h-0 flex-1 grid-cols-[240px_minmax(0,1fr)_320px] grid-rows-[auto_1fr]">
         <header className="flex items-center gap-3 border-b border-app-border bg-app px-4 py-2">
           <span className="font-medium">{t("app.title")}</span>

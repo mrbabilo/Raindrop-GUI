@@ -76,7 +76,7 @@ export function ListPane() {
                 <div key={r.id} data-index={v.index} ref={virtual.measureElement} style={{ position: "absolute", top: 0, left: 0, width: "100%", transform: `translateY(${v.start}px)` }}>
                   <RaindropRow r={r} selected={selectedIds.has(r.id)} isDetail={selectedRaindropId === r.id}
                     collectionRacine={titreRacine(r.collectionId)}
-                    poignee={drag.poignee(r.id, () => selectRaindrop(r.id))}
+                    poignee={drag.poignee(r.id, () => selectRaindrop(r.id), r.title)}
                     onToggle={() => toggleSelect(r.id)} onTag={(name) => patchList({ search: `#${name}` })} />
                 </div>
               );
