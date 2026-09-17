@@ -116,4 +116,25 @@ describe("useRovingFocus", () => {
     expect(screen.getByRole("button", { name: "suivant" }).tabIndex).toBe(-1);
     expect(screen.getByRole("button", { name: "parent" }).tabIndex).toBe(0);
   });
+
+  // En grille, descendre d'un élément mènerait à la case d'à côté. Le pas
+  // vertical vaut une rangée.
+  it("en grille, ↑↓ sautent une rangée et ←→ une case", async () => {
+    render(<Zone noms={["a", "b", "c", "d", "e", "f"]} colonnes={() => 3} />);
+    screen.getByRole("button", { name: "a" }).focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(screen.getByRole("button", { name: "d" })).toHaveFocus(); // +3
+    await userEvent.keyboard("{ArrowLeft}");
+    expect(screen.getByRole("button", { name: "c" })).toHaveFocus(); // -1
+    await userEvent.keyboard("{ArrowUp}");
+    expect(screen.getByRole("button", { name: "a" })).toHaveFocus(); // -3, borné
+  });
+
+  // Dernière rangée incomplète : descendre s'arrête au dernier, sans sortir.
+  it("en grille, descendre depuis la dernière rangée s'arrête au bout", async () => {
+    render(<Zone noms={["a", "b", "c", "d"]} colonnes={() => 3} />);
+    screen.getByRole("button", { name: "c" }).focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(screen.getByRole("button", { name: "d" })).toHaveFocus();
+  });
 });

@@ -74,19 +74,26 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       ne charger une section qu'à son entrée dans le champ de vision.
       Reste non fait : les sous-collections de niveau 2+ (la sidebar
       comme la vue ne connaissent qu'un niveau d'enfants).
-- [~] **Navigation clavier fluide** — barre latérale et liste faites le
-      2026-09-17 (`hooks/useRovingFocus.ts`) : une zone = UN arrêt de
-      tabulation, ↑↓ et Début/Fin circulent, →/← déplient un parent depuis
-      sa ligne, Entrée ouvre la fiche, Échap rend le focus. L'index actif
-      de la liste vit dans l'état et jamais le focus — le virtualiseur
-      démonte la ligne dès qu'elle sort du champ — et il suit le focus
-      réel, sinon la première flèche rejoue l'entrée au lieu d'avancer.
-      `:focus-visible` et la règle de DESIGN.md §9 sont posés.
-      **Reste à faire** : la mosaïque (grille, donc ↑↓←→ en deux
-      dimensions) ; les vues de traitement, la vue collection et la Revue,
-      qui gardent un arrêt par ligne ; « après une action, le focus passe
-      à la ligne suivante » ; « la ligne active suit aussi le survol
-      souris ».
+- [x] **Navigation clavier fluide** — fait le 2026-09-17. Deux hooks,
+      selon que la zone est virtualisée ou non :
+      `hooks/useRovingFocus.ts` suit l'ordre du DOM (barre latérale, vue
+      collection, mosaïque en GRILLE — ↑↓ sautent une rangée, ←→ une
+      case, colonnes comptées sur la mise en page réelle car `auto-fill`
+      en pose autant que la largeur le permet) ;
+      `hooks/useIndexClavier.ts` suit un INDEX (liste principale, Revue)
+      parce que la ligne active se démonte en défilant — on déplace
+      l'index, on défile, on ne focalise qu'après.
+      Une zone = UN arrêt de tabulation : **compté au navigateur, 9 en
+      tout contre 134**. ↑↓, Début/Fin, →/← sur l'arbre, Entrée, Échap,
+      espace qui coche et fait avancer d'une ligne, ligne active liée au
+      survol (sans voler le focus ni défiler). `:focus-visible` seul, et
+      l'anneau est passé en `quiet` après mesure — `sel` tenait 1,10:1
+      contre un seuil de 3:1 (DESIGN.md §9).
+      **Reste, à dessein** : les vues de traitement gardent un arrêt par
+      ligne — leurs lignes portent plusieurs actions (Restaurer, choisir
+      une destination), et les sortir du parcours sans autre accès serait
+      une régression, pas un progrès. Le motif « grille ARIA » (→ entre
+      dans les contrôles d'une ligne) est la voie, le jour où ça gêne.
 - [x] **Drag & drop d'un signet vers les collections** — fait le
       2026-09-17 (`state/drag.tsx`, `hooks/useDragBookmark.ts`,
       `components/FantomeDrag.tsx`). Pointer events et non le drag & drop

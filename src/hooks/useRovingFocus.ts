@@ -15,6 +15,15 @@ export interface RovingOptions {
   surHorizontale?(element: HTMLElement, direction: "droite" | "gauche"): void;
   /** Échap : remonter d'un niveau et rendre le focus à l'écran. */
   surEchap?(): void;
+  /**
+   * Zone en GRILLE (la mosaïque) : ↑↓ sautent d'une rangée entière et ←→
+   * d'une case. Sur une grille, descendre d'un élément mènerait à la case
+   * d'à côté, pas à celle du dessous.
+   *
+   * Compté à la demande et non passé en nombre : la mosaïque se remplit en
+   * `auto-fill`, ses colonnes changent avec la largeur de la fenêtre.
+   */
+  colonnes?(): number;
 }
 
 export function useRovingFocus(
@@ -49,13 +58,21 @@ export function useRovingFocus(
     const i = courant === null ? -1 : els.indexOf(courant);
     if (i === -1) return; // le focus est ailleurs : ce n'est pas notre affaire
 
-    if (e.key === "ArrowDown") { e.preventDefault(); deplacer(els[i + 1]); return; }
-    if (e.key === "ArrowUp") { e.preventDefault(); deplacer(els[i - 1]); return; }
+    // Sur une grille, un cran vertical vaut une rangée entière.
+    const pas = options.colonnes === undefined ? 1 : Math.max(1, options.colonnes());
+    if (e.key === "ArrowDown") { e.preventDefault(); deplacer(els[Math.min(i + pas, els.length - 1)]); return; }
+    if (e.key === "ArrowUp") { e.preventDefault(); deplacer(els[Math.max(i - pas, 0)]); return; }
     if (e.key === "Home") { e.preventDefault(); deplacer(els[0]); return; }
     if (e.key === "End") { e.preventDefault(); deplacer(els[els.length - 1]); return; }
     if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-      // Consommé seulement si la zone en fait quelque chose : sur une liste
-      // plate, les flèches horizontales appartiennent au texte.
+      // En grille, elles déplacent d'une case.
+      if (options.colonnes !== undefined) {
+        e.preventDefault();
+        deplacer(els[e.key === "ArrowRight" ? i + 1 : i - 1]);
+        return;
+      }
+      // Sinon, consommées seulement si la zone en fait quelque chose : sur
+      // une liste plate, les flèches horizontales appartiennent au texte.
       if (options.surHorizontale === undefined) return;
       e.preventDefault();
       options.surHorizontale(els[i]!, e.key === "ArrowRight" ? "droite" : "gauche");

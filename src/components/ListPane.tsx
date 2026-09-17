@@ -9,6 +9,7 @@ import { listQueryArgs } from "../hooks/listQuery";
 import { useAppState } from "../state/appState";
 import { useDragBookmark } from "../hooks/useDragBookmark";
 import { useIndexClavier } from "../hooks/useIndexClavier";
+import { useRovingFocus } from "../hooks/useRovingFocus";
 import { RaindropRow } from "./RaindropRow";
 import { MosaicTile } from "./MosaicTile";
 import { BulkBar } from "./BulkBar";
@@ -66,6 +67,24 @@ export function ListPane() {
     },
   });
 
+  // La mosaïque n'est pas virtualisée et se lit en GRILLE : ↑↓ y sautent une
+  // rangée, ←→ une case. Les colonnes se comptent sur la mise en page réelle
+  // — `auto-fill` en pose autant que la largeur le permet.
+  const mosaique = useRovingFocus(parentRef, {
+    colonnes: () => {
+      const tuiles = parentRef.current?.querySelectorAll<HTMLElement>("[data-nav]");
+      if (tuiles === undefined || tuiles.length === 0) return 1;
+      const premiere = tuiles[0]!.offsetTop;
+      let n = 0;
+      for (const t of tuiles) {
+        if (t.offsetTop !== premiere) break;
+        n++;
+      }
+      return n;
+    },
+    surEchap: () => (document.activeElement as HTMLElement | null)?.blur(),
+  });
+
   // À vide aussi le composer reste monté : c'est LUI qui crée le premier
   // bookmark de la collection — l'état vide seul le priverait de raison d'être.
   if (items.length === 0 && !query.isFetching)
@@ -82,7 +101,11 @@ export function ListPane() {
     // fausser la mesure du virtualizer.
     <div className="flex h-full min-h-0 flex-col">
       <Composer />
-      <main ref={parentRef} onKeyDown={clavier.surTouche} className="min-h-0 flex-1 overflow-y-auto">
+      <main
+        ref={parentRef}
+        onKeyDown={q.viewMode === "mosaic" ? mosaique.surTouche : clavier.surTouche}
+        className="min-h-0 flex-1 overflow-y-auto"
+      >
         {q.viewMode === "mosaic" ? (
           // §8 : la tuile fait 221 px de large — une largeur exacte, pas un
           // minmax élastique qui la ferait varier d'un écran à l'autre.

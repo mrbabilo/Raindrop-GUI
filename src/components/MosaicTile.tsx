@@ -19,7 +19,7 @@ export function MosaicTile({
 }) {
   const marque = filetEtat(etat);
   return (
-    <button type="button" className="flex w-[221px] flex-col overflow-hidden rounded-[9px] border border-app-border text-left" onClick={onOpen}>
+    <button type="button" data-nav className="flex w-[221px] flex-col overflow-hidden rounded-[9px] border border-app-border text-left" onClick={onOpen}>
       {marque && <div className={"coiffe " + marque} data-testid={`coiffe-${r.id}`} />}
       {/* Le lavis thématique est sous la vignette : il tient lieu d'image
           quand `cover` est absent, « jamais une case vide » (§4). */}
