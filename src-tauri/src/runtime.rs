@@ -38,6 +38,14 @@ pub fn arch_tarball(arch: &str) -> Result<&'static str, String> {
     }
 }
 
+/// Le membre à extraire du tarball. Pur, testé — LE test qui aurait attrapé
+/// le défaut du premier jet : les archives nodejs.org s'archivent sous
+/// `node-<version>-<plateforme>/` (constat du 2026-09-17, `tar -tzf`), et
+/// bsdtar exige `-C <dir>` AVANT le membre (voir `extraire`).
+pub fn membre_bin_node(version: &str, arch: &str) -> Result<String, String> {
+    Ok(format!("node-{version}-darwin-{}/bin/node", arch_tarball(arch)?))
+}
+
 /// Les ressources d'une installation, dérivées de la version et de l'arch.
 /// Pur, testé : le nommage doit rester exactement celui de nodejs.org,
 /// sinon la ligne SHASUMS ne se retrouve jamais.
@@ -121,12 +129,32 @@ fn telecharger(url: &str, destination: &Path) -> Result<(), String> {
         .ok_or_else(|| format!("téléchargement échoué : {url}"))
 }
 
+/// Extrait UN membre du tarball vers `travail`. L'ordre n'est pas décoratif :
+/// bsdtar lit les opérandes dans l'ordre — un `-C` après le membre est pris
+/// pour un nom de membre (« -C: Not found in archive », reproduit le 2026-09-17).
+fn extraire(tarball: &Path, travail: &Path, membre: &str) -> Result<(), String> {
+    let statut = Command::new("tar")
+        .arg("-xzf")
+        .arg(tarball)
+        .arg("-C")
+        .arg(travail)
+        .arg(membre)
+        .stdin(Stdio::null())
+        .status()
+        .map_err(|e| format!("tar indisponible : {e}"))?;
+    if !statut.success() {
+        return Err("extraction du tarball impossible".into());
+    }
+    Ok(())
+}
+
 /// Télécharge, vérifie, extrait dans `travail` ; rend le chemin du binaire
 /// extrait. Découpée d'`installer` pour séparer le ménage du répertoire
 /// temporaire (fait quoi qu'il arrive) de la pose du binaire.
 fn installer_dans(
     travail: &Path,
     r: &Ressources,
+    arch: &str,
     progresser: &impl Fn(String),
 ) -> Result<PathBuf, String> {
     progresser(format!("Téléchargement de Node {}…", VERSION_PINNEE));
@@ -155,19 +183,8 @@ fn installer_dans(
     // SEUL bin/node est extrait — le tarball fait ~25 Mo décompressés, tout
     // le reste (docs, headers, npm) ne sert pas au sidecar.
     progresser("Extraction…".into());
-    let entre = format!("node-{}/bin/node", VERSION_PINNEE);
-    let statut = Command::new("tar")
-        .arg("-xzf")
-        .arg(&tarball)
-        .arg(&entre)
-        .arg("-C")
-        .arg(travail)
-        .stdin(Stdio::null())
-        .status()
-        .map_err(|e| format!("tar indisponible : {e}"))?;
-    if !statut.success() {
-        return Err("extraction du tarball impossible".into());
-    }
+    let entre = membre_bin_node(VERSION_PINNEE, arch)?;
+    extraire(&tarball, travail, &entre)?;
     let extrait = travail.join(&entre);
     if !extrait.exists() {
         return Err("le tarball ne contenait pas bin/node — installation refusée".into());
@@ -190,7 +207,7 @@ pub fn installer(base: &Path, arch: &str, progresser: impl Fn(String)) -> Result
     ));
     let _ = fs::remove_dir_all(&travail);
     fs::create_dir_all(&travail).map_err(|e| format!("répertoire de travail impossible : {e}"))?;
-    let resultat = installer_dans(&travail, &r, &progresser);
+    let resultat = installer_dans(&travail, &r, arch, &progresser);
 
     // Pose par dossier temporaire voisin puis renommage : un
     // `<runtime>/<version>` à moitié écrit ne doit jamais exister — la
@@ -232,8 +249,10 @@ fn poser(extrait: &Result<PathBuf, String>, pose: &Path, destination: &Path) -> 
 mod tests {
     use super::*;
 
-    /// Lignes réelles de https://nodejs.org/dist/v22.23.0/SHASUMS256.txt
-    /// (constat du 2026-09-17, tronquées aux darwin qui nous concernent).
+    /// Lignes de https://nodejs.org/dist/v22.23.0/SHASUMS256.txt — les deux
+    /// darwin sont RÉELLES (constat du 2026-09-17) ; la ligne linux est du
+    /// rembourrage fabriqué (somme fictive) pour prouver que seules les
+    /// lignes darwin comptent.
     const SHASUMS_REEL: &str = "\
 e0f383a215dd3093de6d2c74f87056dc2306a2e09ad494cbffdba28f89046f56  node-v22.23.0-darwin-arm64.tar.gz
 dc2ccab261fd70c347e4cc52085d8d226f471ccba1fc2a7252283949b31ca9f9  node-v22.23.0-darwin-x64.tar.gz
@@ -266,6 +285,23 @@ a1b2c3d4e5f6a7b8a1b2c3d4e5f6a7b8a1b2c3d4e5f6a7b8a1b2c3d4e5f6a7b8  node-v22.23.0-
     #[test]
     fn une_arch_refusee_ne_produit_pas_de_ressources() {
         assert!(ressources("v22.23.0", "x86").is_err());
+    }
+
+    // LE test qui aurait attrapé le défaut du premier jet (remonté en réel
+    // par l'utilisateur, reproduit en shell le 2026-09-17) : le préfixe des
+    // archives nodejs.org INCLUT la plateforme — `node-v22.23.0/bin/node`
+    // n'existe dans aucun tarball, « Not found in archive » à l'extraction.
+    #[test]
+    fn le_membre_extrait_porte_la_plateforme_dans_son_prefixe() {
+        assert_eq!(
+            membre_bin_node("v22.23.0", "aarch64").as_deref(),
+            Ok("node-v22.23.0-darwin-arm64/bin/node")
+        );
+        assert_eq!(
+            membre_bin_node("v22.23.0", "x86_64").as_deref(),
+            Ok("node-v22.23.0-darwin-x64/bin/node")
+        );
+        assert!(membre_bin_node("v22.23.0", "wasm32").is_err());
     }
 
     #[test]
@@ -326,5 +362,39 @@ a1b2c3d4e5f6a7b8a1b2c3d4e5f6a7b8a1b2c3d4e5f6a7b8a1b2c3d4e5f6a7b8  node-v22.23.0-
     #[test]
     fn un_fichier_absent_ne_hache_pas() {
         assert!(sha256_fichier(Path::new("/raindrop-n-existe-pas")).is_err());
+    }
+
+    // Le test de régression sur l'ORDRE des arguments, contre un vrai tar
+    // local (aucun réseau) : membre avant `-C`, bsdtar lit `-C` comme un
+    // nom de membre — l'erreur vue par l'utilisateur le 2026-09-17.
+    #[test]
+    fn l_extraction_place_le_membre_sous_le_repertoire_cible_et_refuse_un_membre_absent() {
+        let base = std::env::temp_dir().join(format!("raindrop-tar-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&base);
+        let source = base.join("src");
+        let racine = "node-v22.23.0-darwin-arm64";
+        fs::create_dir_all(source.join(racine).join("bin")).expect("arborescence à archiver");
+        fs::write(source.join(racine).join("bin/node"), b"#!/bin/sh\n").expect("faux binaire");
+        let statut = Command::new("tar")
+            .args(["-czf"])
+            .arg(base.join("t.tar.gz"))
+            .arg(racine)
+            .current_dir(&source)
+            .status()
+            .expect("tar disponible");
+        assert!(statut.success(), "création du tarball de test");
+        let cible = base.join("out");
+        fs::create_dir_all(&cible).expect("répertoire cible");
+
+        extraire(&base.join("t.tar.gz"), &cible, &format!("{racine}/bin/node"))
+            .expect("le membre correct s'extrait sous la cible");
+        assert_eq!(
+            fs::read_to_string(cible.join(racine).join("bin/node")).expect("binaire extrait"),
+            "#!/bin/sh\n"
+        );
+        // Le membre sans plateforme doit être un ÉCHEC — pas un succès
+        // mensonger suivi d'un « binaire introuvable » plus loin.
+        assert!(extraire(&base.join("t.tar.gz"), &cible, "node-v22.23.0/bin/node").is_err());
+        let _ = fs::remove_dir_all(&base);
     }
 }
