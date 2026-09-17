@@ -119,6 +119,7 @@ export function Sidebar() {
                       les bandes n'étaient pas de même longueur. */}
                   <div
                     className={"nav-ligne" + survolee(c.id)}
+                    data-niveau="0"
                     data-courante={vueCourante === c.id}
                     style={teinteCollection(arbre, c.id)}
                     {...accueil(c.id)}
@@ -139,7 +140,11 @@ export function Sidebar() {
                       }
                     >
                       <Signe arbre={arbre} c={c} />
-                      <span className="truncate">{c.title}</span>
+                      {/* §4 : la racine NOMME la famille — sa graisse la
+                          distingue de ses descendantes, qui partagent sa
+                          teinte et n'ont donc plus la couleur pour se
+                          démarquer d'elle. */}
+                      <span className="truncate font-medium">{c.title}</span>
                       <Compteur n={c.count} />
                     </button>
                   </div>
@@ -152,10 +157,17 @@ export function Sidebar() {
                       <div
                         key={ch.id}
                         className={"nav-ligne" + survolee(ch.id)}
+                        data-niveau="1"
                         data-courante={vueCourante === ch.id}
                         style={teinteCollection(arbre, ch.id)}
                       >
-                      <button data-nav className={itemColl} {...accueil(ch.id)} style={{ paddingLeft: "22px" }} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
+                      {/* DESIGN.md §8 : retrait de 14 px PAR NIVEAU — mais
+                          mesuré depuis le contenu du PARENT, pas depuis le
+                          bord. Le chevron pousse celui-ci à 35 px (19 de
+                          gouttière + 8 de gap + 8 de padding) ; l'ancien
+                          22 px plaçait donc l'enfant 13 px À GAUCHE de son
+                          parent, et la hiérarchie se lisait à l'envers. */}
+                      <button data-nav className={itemColl} {...accueil(ch.id)} style={{ paddingLeft: "49px" }} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
                         <Signe arbre={arbre} c={ch} />
                         <span className="truncate">{ch.title}</span>
                         <Compteur n={ch.count} />

@@ -35,6 +35,10 @@
      au lieu de le recouvrir d'un gris étranger. */
   --app-wash-hover-l: 0.91;
   --app-wash-sel-l: 0.87;
+  /* §4 : la famille se lit à la TEINTE, le rang à l'INTENSITÉ. Une
+     descendante tire vers le fond de l'application — elle appartient à la
+     même famille, elle ne la domine pas. */
+  --app-wash-enfant-l: 0.975;
 }
 
 .dark {
@@ -60,6 +64,7 @@
   --app-wash-c: 0.05;
   --app-wash-hover-l: 0.38;
   --app-wash-sel-l: 0.44;
+  --app-wash-enfant-l: 0.25;
 }
 
 body {
@@ -134,6 +139,12 @@ body {
    pour ne rien pousser — une bordure réelle décalerait la ligne d'un pixel
    à chaque passage du pointeur. Elle prend la teinte de la collection, plus
    soutenue que son lavis. */
+/* Rang 1 : le lavis s'éclaircit (s'assombrit en thème sombre) vers le fond
+   de l'application. La teinte reste celle de la famille. */
+.nav-ligne[data-niveau="1"] {
+  background: oklch(var(--app-wash-enfant-l) calc(var(--app-wash-c) * var(--sat, 1)) var(--h));
+}
+
 .nav-ligne:hover {
   outline: 1.5px solid oklch(var(--app-icon-l) calc(var(--app-icon-c) * var(--sat, 1)) var(--h));
   outline-offset: -1.5px;

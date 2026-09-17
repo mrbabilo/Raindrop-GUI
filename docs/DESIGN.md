@@ -87,18 +87,24 @@ couleur tirée au hasard aurait caché la lacune.
 Le lexique est en français et destiné à grandir. Il vit dans un seul fichier et
 ne demande aucune configuration utilisateur.
 
-## 4. Collections : la teinte cascade
+## 4. Collections : une couleur par famille
 
-216 collections sur trois niveaux. La teinte d'une collection se résout dans
-cet ordre — **sa couleur Raindrop, celle de sa racine, la thématique de son
-titre, rien** (gris, §3) :
+216 collections sur trois niveaux. **Une seule teinte par famille : la racine
+la décide, toutes ses descendantes en héritent** — sa couleur Raindrop, sinon
+la thématique de son titre, sinon rien (gris, §3).
 
-- **sa couleur** — mesuré le 2026-09-17 : 68 collections sur 216 en portent
-  une, dont 56 sous-collections. Les écarter reviendrait à ignorer ce que
-  l'utilisateur a réglé dans Raindrop ;
-- **celle de sa racine** — les 148 restantes en héritent. Sans cela, la barre
-  latérale serait grise aux deux tiers. Une famille se lit donc encore d'un
-  coup d'œil, sauf là où une descendante a délibérément choisi sa couleur.
+Une première version faisait primer la couleur de chaque collection. Les onze
+sous-collections de « PASSIONS » arrivaient alors en onze teintes : la famille
+ne se lisait plus. Repérer une famille d'un coup d'œil vaut mieux que
+restituer 56 couleurs individuelles.
+
+**La hiérarchie ne passe donc pas par la teinte, mais par l'intensité et le
+retrait.** Une descendante tire son lavis vers le fond de l'application (0,975
+en clair, 0,25 en sombre, contre 0,95 et 0,32 pour sa racine), et se pose
+**14 px à droite du contenu de sa racine** — mesuré depuis ce contenu et non
+depuis le bord : le chevron pousse la racine à 35 px, et un retrait de 22 px
+plaçait l'enfant à gauche d'elle, hiérarchie inversée. Le titre d'une racine
+porte enfin la graisse : c'est elle qui nomme la famille.
 
 Le **pastel n'est pas un traitement** : `.coll-icon` peint
 `oklch(var(--app-wash-l) var(--app-wash-c) var(--h))`, dont la clarté et le

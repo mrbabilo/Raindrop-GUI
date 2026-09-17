@@ -120,18 +120,20 @@ describe("teinteCollection (§4, cascade)", () => {
   const h = (id: number) => Number((teinteCollection(arbre, id) as Record<string, string>)["--h"]);
   const sat = (id: number) => (teinteCollection(arbre, id) as Record<string, string>)["--sat"];
 
-  it("sa propre couleur prime", () => {
-    expect(h(2)).toBeCloseTo(29.5, 0);
+  // UNE couleur par famille : c'est la racine qui décide.
+  it("la racine donne sa couleur", () => {
     expect(h(1)).toBeCloseTo(250, 0);
   });
 
-  // Sans héritage, la barre latérale serait grise aux deux tiers.
-  it("à défaut, la couleur de sa racine", () => {
+  // Le grief : les cinq sous-collections de « PASSIONS » arrivaient en cinq
+  // teintes différentes, et la famille ne se lisait plus.
+  it("une descendante hérite, même si elle a sa propre couleur", () => {
+    expect(h(2)).toBeCloseTo(250, 0); // et non 29,5 — sa couleur est écartée
     expect(h(3)).toBeCloseTo(250, 0);
     expect(sat(3)).toBe("1");
   });
 
-  it("à défaut encore, la thématique du titre", () => {
+  it("à défaut de couleur, la thématique du titre de la RACINE", () => {
     expect(sat(5)).toBe("1"); // « Photo » est au lexique
   });
 

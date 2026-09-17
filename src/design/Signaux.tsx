@@ -36,22 +36,22 @@ export function racine(collections: Collection[], id: number): Collection | unde
 }
 
 /**
- * La teinte d'une collection, par ordre de préséance (§4) :
- * sa couleur Raindrop, puis celle de sa racine, puis la thématique déduite
- * de son titre, puis rien — auquel cas la signalétique vire au gris.
+ * La teinte d'une collection : **une couleur par famille** (§4). C'est la
+ * RACINE qui décide — sa couleur Raindrop, sinon la thématique de son titre —
+ * et toutes ses descendantes en héritent, quelle que soit la couleur qu'elles
+ * portent en propre.
  *
- * Mesuré sur la bibliothèque : 68 collections sur 216 portent une couleur ;
- * les 148 autres n'en ont aucune, et la plupart appartiennent à une racine
- * qui, elle, en a une. Sans l'héritage, la barre latérale serait grise aux
- * deux tiers.
+ * Une première version faisait primer la couleur de chacune : les cinq
+ * sous-collections de « PASSIONS » arrivaient alors en cinq teintes
+ * différentes, et la famille ne se lisait plus. Repérer une famille d'un coup
+ * d'œil vaut mieux que restituer 56 couleurs individuelles.
+ *
+ * La hiérarchie, elle, ne passe pas par la teinte mais par l'intensité du
+ * lavis et le retrait (`.nav-ligne[data-niveau]`) : même famille, deux rangs.
  */
 export function teinteCollection(collections: Collection[], id: number): CSSProperties {
-  const soi = collections.find((c) => c.id === id);
-  const h =
-    teinteDeHex(soi?.color) ??
-    teinteDeHex(racine(collections, id)?.color) ??
-    teinte(thematique(soi?.title)) ??
-    null;
+  const tete = racine(collections, id);
+  const h = teinteDeHex(tete?.color) ?? teinte(thematique(tete?.title)) ?? null;
   return { "--h": String(h ?? 0), "--sat": h === null ? "0" : "1" } as CSSProperties;
 }
 

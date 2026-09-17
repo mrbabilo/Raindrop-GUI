@@ -87,18 +87,19 @@ describe("Sidebar", () => {
     });
   });
 
-  // FIX ledger (revue finale) : DESIGN.md §8 — « retrait 14 px par niveau ».
-  // L'enfant (niveau 1) porte donc 8 px (px-2 de la classe item) + 14 px de
-  // retrait = 22 px ; l'ancien pl-6 (24 px) ne suivait pas la lettre.
-  it("retrait d'arbre : 14 px par niveau — 22 px au niveau 1 (§8)", async () => {
+  // DESIGN.md §8 : « retrait 14 px par niveau » — mesuré depuis le contenu du
+  // PARENT, pas depuis le bord de la barre. Le chevron pousse le parent à
+  // 35 px (19 de gouttière + 8 de gap + 8 de padding) : l'enfant se pose donc
+  // à 49. Mesuré au navigateur, l'ancien 22 px le plaçait 13 px À GAUCHE de
+  // son parent, et la hiérarchie se lisait à l'envers.
+  it("retrait d'arbre : l'enfant est 14 px à DROITE du contenu de son parent (§8)", async () => {
     renderSidebar();
     await userEvent.hover(screen.getByText("Dev"));
     const enfant = (await screen.findByText("Rust")).closest("button")!;
-    expect(enfant).toHaveStyle({ paddingLeft: "22px" });
-    expect(enfant.className).not.toContain("pl-6");
+    expect(enfant).toHaveStyle({ paddingLeft: "49px" });
     // Le parent, racine, ne porte aucun retrait supplémentaire.
     const racine = screen.getByText("Dev").closest("button")!;
-    expect(racine).not.toHaveStyle({ paddingLeft: "22px" });
+    expect(racine).not.toHaveStyle({ paddingLeft: "49px" });
   });
 
   // DESIGN.md §9 « masqué si nul » : un compteur à 0 ne s'affiche pas — le
@@ -231,6 +232,18 @@ describe("Sidebar", () => {
     dev.focus();
     await userEvent.keyboard("{Escape}");
     expect(dev).not.toHaveFocus();
+  });
+
+  // §4 : UNE couleur par famille, le rang se lit à l'intensité du lavis et
+  // au retrait — pas à la teinte, qu'ils partagent désormais.
+  it("parent et enfant partagent la teinte, pas le rang", async () => {
+    renderSidebar();
+    fireEvent.click(screen.getByRole("button", { name: "Déplier Dev" }));
+    const parent = screen.getByText("Dev").closest(".nav-ligne") as HTMLElement;
+    const enfant = screen.getByText("Rust").closest(".nav-ligne") as HTMLElement;
+    expect(parent.style.getPropertyValue("--h")).toBe(enfant.style.getPropertyValue("--h"));
+    expect(parent.getAttribute("data-niveau")).toBe("0");
+    expect(enfant.getAttribute("data-niveau")).toBe("1");
   });
 
   // Une collection n'est une cible que PENDANT un déplacement : au repos,
