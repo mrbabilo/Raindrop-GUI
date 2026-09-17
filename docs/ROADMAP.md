@@ -73,16 +73,25 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       action, le focus passe à la ligne suivante ; la ligne active suit
       aussi le survol souris (un seul état de pointeur). La palette ⌘K
       (T11) sert déjà de référence.
-- [ ] **Drag & drop d'un signet vers les collections** — design validé le
-      2026-09-17 : seuil ~5 px, source fantôme ; **sélection liée**
-      (drag d'un item coché = toute la sélection, le BulkBar suit) ;
-      sidebar cible active (survol = `bg-app-sel`), **survol prolongé
-      d'un parent ~500 ms = dépliage automatique**, auto-scroll des bords
-      ; dépôt interdit sur la collection source, la corbeille et les vues
-      de traitement ; drop = `useBulk` move (1 ou N ids) + invalidation,
-      flash jeton `moved` sur la ligne, échec = retour à la place +
-      pattern R8P-1. Pas de réordonnancement (ordre alphanumérique
-      acté). Front uniquement, `useBulk` existe.
+- [x] **Drag & drop d'un signet vers les collections** — fait le
+      2026-09-17 (`state/drag.tsx`, `hooks/useDragBookmark.ts`,
+      `components/FantomeDrag.tsx`). Pointer events et non le drag & drop
+      HTML5, qui n'est pas pilotable sous jsdom : chaque règle du geste
+      garde un contrat testé. Seuil 5 px, fantôme sous le curseur
+      (« N signets » pour un lot), sélection liée, cible allumée en
+      `bg-app-sel`, dépôt refusé sur la corbeille, « Tous » et les
+      marqueurs d'état, clic de fin neutralisé, échec inline (R8P-1).
+      Vérifié en réel : aller-retour d'un signet entre NAS et
+      « 10 - SERVEURS », compteurs de la sidebar suivis, données rendues
+      à l'identique.
+      **Reste de ce design, non fait** : l'auto-scroll des bords pendant
+      le glissement (pur comportement navigateur, sans test possible en
+      jsdom) et le flash du jeton `moved` sur la ligne déplacée — qui
+      suppose de devenir le premier appelant de `RaindropRow.etat`, encore
+      sans appelant. Le **dépliage automatique d'un parent au survol
+      prolongé est sans objet** tant que la sidebar n'a pas de pliage :
+      elle affiche aujourd'hui tout l'arbre déplié. Il viendra avec la
+      vue collection parente ci-dessus, pas avant.
 - [x] **Épure (principe §9 de DESIGN.md, amendé le 2026-09-17 — « l'écran
       ne surcharge jamais »)** — fait le 2026-09-17 : compteurs masqués à 0
       (sidebar, section Surlignages) ; puces de nature absentes retirées

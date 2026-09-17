@@ -54,6 +54,11 @@ Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
   annulables) et six vues de traitement — liens morts, redirections,
   doublons, non-taggés, collections vides, corbeille.
 - **Vue des étiquettes** : renommer, fusionner, supprimer.
+- **Déplacement par glissement** : tirer un signet — ou toute une
+  sélection — sur une collection de la barre latérale l'y range. Un
+  fantôme dit ce qu'on transporte, la collection visée s'allume, et la
+  corbeille n'accueille rien : y glisser un signet l'effacerait d'un
+  geste, alors que la mise à la corbeille est un verbe que l'on nomme.
 - **Bannières dégradées** : pont MCP tombé, hors-ligne.
 
 #### Conception et outillage
