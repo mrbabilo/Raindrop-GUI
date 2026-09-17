@@ -5,11 +5,100 @@ versionnement [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+Rien n'est encore publié : l'application se lance en développement
+(`./scripts/dev-sidecar.sh` puis `npm run dev`). Le **plan 3/3 — le shell
+Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
+
 ### Ajouté
 
-- Spécification de conception Phase 1 (brainstorming ; inspirations
-  karakeep, Linkwarden, Bookmarks Organizer) — 2026-09-15.
-- Plan d'implémentation 1/3 : sidecar (pont MCP, API REST locale, moteur
-  d'analyse), 16 tasks — 2026-09-15.
-- Conventions projet : `CLAUDE.md`, `docs/DOMAINE.md`, `docs/ROADMAP.md`,
-  `scripts/dev-sidecar.sh` (token au trousseau macOS) — 2026-09-15.
+#### Sidecar — plan 1/3, 16 tasks (2026-09-15 → 2026-09-16)
+
+- Pont vers `@kud/mcp-raindrop-io` **épinglé à 1.3.1**, lancé en
+  sous-processus : connexion typée, erreurs distinguées
+  (`MCP_TIMEOUT` / `MCP_CRASHED` / `RAINDROP_API`), redémarrage
+  automatique ×3 avec backoff.
+- **API REST locale** (Hono) bindée sur `127.0.0.1` port 0, jeton Bearer,
+  erreurs uniformes : raindrops, collections, tags, highlights, user,
+  maintenance. Le token Raindrop ne traverse jamais HTTP.
+- **File d'appels espacée de 550 ms** (≈ 109 req/min sous la limite de
+  120) : le 429 étant indétectable à travers le MCP, la prévention est
+  proactive. Retry sur les lectures seulement, jamais sur les écritures.
+- **Moteur d'analyse local** : normalisation d'URL et doublons (exacts,
+  normalisés, approchants) ; vérificateur de liens suivant les chaînes de
+  redirection (concurrence 6, timeout, retry, annulation).
+- **Jobs SSE** : progression, annulation, battement de cœur ; snapshot
+  paginé 50/page et cache `analysis.json` écrit atomiquement, avec durée
+  de vie.
+- Démarrage : configuration par l'environnement, journaux JSONL gardés
+  7 jours, fichier de verrou porteur du port (jamais du token).
+- `POST /api/raindrops/unrestore` — restauration depuis la corbeille, avec
+  mémoire de la collection d'origine (Raindrop ne la conserve pas).
+
+#### Interface — plan 2/3 (2026-09-16 → 2026-09-17)
+
+- Shell à **trois panneaux**, textes en français centralisés, thème clair
+  et sombre.
+- **Navigation** : vues fixes, collections arborescentes, étiquettes
+  cliquables (filtre serveur `#tag`).
+- **Liste** virtualisée à défilement infini, avec sélection multiple, et
+  **mosaïque** en second mode. Recherche débouncée, tri, filtres domaine
+  et dates, puces de **nature du contenu**.
+- **Détail permanent** : aperçu, édition en ligne, favori, mise à la
+  corbeille, surlignages en lecture seule.
+- **Actions en masse** : la sélection construit une page **Revue de
+  l'action** — compteur exact, désélection, recherche, export CSV,
+  confirmation à deux niveaux pour l'irréversible.
+- **Composer ⌘E** : collage d'URL, préremplissage, alerte de doublon.
+- **Palette ⌘K** : bookmarks, collections, étiquettes et vues au clavier.
+- **Nettoyage** : tableau de bord (compteurs, fraîcheur, scans SSE
+  annulables) et six vues de traitement — liens morts, redirections,
+  doublons, non-taggés, collections vides, corbeille.
+- **Vue des étiquettes** : renommer, fusionner, supprimer.
+- **Bannières dégradées** : pont MCP tombé, hors-ligne.
+
+#### Conception et outillage
+
+- Spécification de conception Phase 1 (2026-09-15) et sa relecture
+  critique ; spécification de sauvegarde (2026-09-16), en attente de
+  validation.
+- `docs/DESIGN.md` — direction visuelle, qui **fait foi sur l'apparence** :
+  symbolique des couleurs, signalétique de collection, états, densités,
+  jetons, signalétique de la nature du contenu.
+- `tools/check_sources.py` — veille des sources externes (le pont MCP
+  épinglé est **archivé en amont**, son candidat de reprise est évalué
+  sans migration décidée).
+- Conventions : `CLAUDE.md`, `docs/DOMAINE.md`, `docs/ROADMAP.md`,
+  `scripts/dev-sidecar.sh` (token lu du trousseau macOS) — 2026-09-15.
+- Licence propriétaire, tous droits réservés (2026-09-16).
+
+### Modifié
+
+- **Principe d'épure — « l'écran ne surcharge jamais »** (DESIGN.md §9,
+  2026-09-17). Seuls les contrôles nécessaires au geste courant sont
+  posés ; le reste est révélé au survol ou au focus, ou nulle part.
+  Appliqué à l'existant :
+  - la barre de liste ne garde que trois commandes — recherche, tri,
+    affichage ; **domaine et dates se replient** dans un panneau que
+    l'icône de réglages déplie, et qui refuse de se replier tant qu'un de
+    ses filtres est actif ;
+  - le **tri devient un bouton-état** qui nomme son tri courant ;
+  - la bascule liste/mosaïque, **deux boutons texte pour un seul geste**,
+    devient une icône unique nommée par sa destination ;
+  - le **favori se réduit à l'étoile** ; « Ouvrir » disparaît, la ligne
+    d'adresse étant déjà le lien ;
+  - les **compteurs à zéro** sortent de l'écran, comme les puces des
+    natures absentes de la vue et la section des surlignages vide ;
+  - les verbes ne sont plus répétés entre un champ et son bouton.
+
+  Toute commande réduite à une icône porte son nom accessible : l'épure
+  ne déplace pas sa dette vers l'accessibilité.
+
+### Problèmes connus
+
+- **Le champ Domaine ne filtre rien** (constaté en réel le 2026-09-17) :
+  le pont MCP envoie `domain` en paramètre d'URL, que l'API Raindrop
+  ignore. La voie qui fonctionne est `domain:<valeur>` dans la recherche.
+  Sondes et contre-épreuves : `CLAUDE.md`, section Traps ; correction à
+  faire côté sidecar : `docs/ROADMAP.md`.
+- Écriture des surlignages, agent IA, moteur de règles et packaging
+  restent hors périmètre de la Phase 1 (spécification §12).
