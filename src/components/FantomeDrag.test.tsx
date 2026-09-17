@@ -56,6 +56,17 @@ describe("FantomeDrag", () => {
     expect(el.style.transform).toBe("translate(62px, 70px)");
   });
 
+  // Sans cela, tirer sélectionne le texte traversé : la page vire au bleu
+  // et le geste s'achève sur une sélection dont personne n'a voulu.
+  it("suspend la sélection de texte le temps du geste, et la rend ensuite", () => {
+    rendu();
+    expect(document.body.style.userSelect).toBe("");
+    act(() => { screen.getByText("tirer-un").click(); });
+    expect(document.body.style.userSelect).toBe("none");
+    act(() => { screen.getByText("lacher").click(); });
+    expect(document.body.style.userSelect).toBe("");
+  });
+
   // Inerte au pointeur : posé sous le curseur, il intercepterait le survol
   // de la collection que l'on vise, et le dépôt tomberait à côté.
   it("n'intercepte jamais le pointeur", () => {
