@@ -9,6 +9,7 @@ import { CleanupDashboard } from "./components/CleanupDashboard";
 import { CleanupView } from "./components/CleanupView";
 import { ReviewPage } from "./components/ReviewPage";
 import { TagsView } from "./components/TagsView";
+import { CollectionView } from "./components/CollectionView";
 import { DetailPane } from "./components/DetailPane";
 import { CommandPalette } from "./components/CommandPalette";
 import { Banners } from "./components/Banners";
@@ -118,6 +119,10 @@ export default function App() {
           <CleanupView type={view.type} />
         ) : view.kind === "tags" ? (
           <TagsView />
+        ) : view.kind === "collection" ? (
+          // Vue d'une collection parente : signets directs puis une section
+          // par sous-collection (design validé 2026-09-17).
+          <CollectionView />
         ) : (
           <ListPane />
         )}

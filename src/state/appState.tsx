@@ -19,6 +19,12 @@ export type View =
       createdStart?: string;
       createdEnd?: string;
     }
+  // Vue d'une collection PARENTE : ses signets directs, puis une section par
+  // sous-collection. Un `kind` à part et non un drapeau sur `list` : la forme
+  // des requêtes (N+1), le rendu (sections) et les contrôles diffèrent — sans
+  // quoi listQueryArgs, NatureChips et BulkBar devraient partout se demander
+  // dans lequel des deux cas ils sont.
+  | { kind: "collection"; collectionId: number; label: string }
   | { kind: "cleanup" }
   | { kind: "cleanupView"; type: "dead" | "redirect" | "duplicates" | "untagged" | "empty-collections" | "trash" }
   | { kind: "tags" }

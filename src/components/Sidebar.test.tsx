@@ -59,10 +59,32 @@ describe("Sidebar", () => {
     expect(screen.getByText("8")).toBeInTheDocument();
   });
 
-  it("cliquer une collection change la vue", async () => {
+  // Une collection QUI A des enfants ouvre la vue composite (ses signets
+  // directs, puis une section par sous-collection) ; une feuille ouvre la
+  // liste ordinaire. C'est la seule branche de navigation à deux issues.
+  it("cliquer une collection parente ouvre la vue collection", async () => {
     renderSidebar();
-    await userEvent.click(screen.getByText("Dev"));
-    expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ kind: "list", collectionId: 101 });
+    await userEvent.click(screen.getByText("Dev")); // Dev a Rust pour enfant
+    expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({
+      kind: "collection", collectionId: 101,
+    });
+  });
+
+  it("cliquer une collection sans enfant ouvre la liste", async () => {
+    renderSidebar();
+    await userEvent.click(screen.getByText("Design")); // aucune enfant
+    expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({
+      kind: "list", collectionId: 102,
+    });
+  });
+
+  it("cliquer une sous-collection ouvre la liste, jamais la vue composite", async () => {
+    renderSidebar();
+    fireEvent.click(screen.getByRole("button", { name: "Déplier Dev" }));
+    await userEvent.click(screen.getByText("Rust"));
+    expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({
+      kind: "list", collectionId: 201,
+    });
   });
 
   // FIX ledger (revue finale) : DESIGN.md §8 — « retrait 14 px par niveau ».

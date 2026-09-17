@@ -63,9 +63,11 @@ export function Sidebar() {
         <h2 className="px-2 text-xs font-medium text-app-muted">{t("nav.collections")}</h2>
         {roots.map((c) => {
           const enfants = childrenOf(c.id);
+          const vueCourante =
+            view.kind === "list" || view.kind === "collection" ? view.collectionId : null;
           const porteLaVue =
-            view.kind === "list" &&
-            (view.collectionId === c.id || enfants.some((ch) => ch.id === view.collectionId));
+            vueCourante !== null &&
+            (vueCourante === c.id || enfants.some((ch) => ch.id === vueCourante));
           return (
             <GroupeCollection key={c.id} parent={c} enfants={enfants} contientLaVue={porteLaVue} enDeplacement={enDeplacement !== null}>
               {(deplie, chevron) => (
@@ -74,7 +76,19 @@ export function Sidebar() {
                       poignée du groupe, pas une commande de la barre. */}
                   <div className="flex items-center">
                     {chevron}
-                    <button className={item + survolee(c.id)} {...accueil(c.id)} onClick={() => go({ kind: "list", collectionId: c.id, label: c.title })}>
+                    {/* Une collection QUI A des enfants ouvre la vue
+                        composite ; une feuille ouvre la liste ordinaire. */}
+                    <button
+                      className={item + survolee(c.id)}
+                      {...accueil(c.id)}
+                      onClick={() =>
+                        go(
+                          enfants.length > 0
+                            ? { kind: "collection", collectionId: c.id, label: c.title }
+                            : { kind: "list", collectionId: c.id, label: c.title },
+                        )
+                      }
+                    >
                       {c.title}<Compteur n={c.count} />
                     </button>
                   </div>

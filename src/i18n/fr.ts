@@ -10,6 +10,8 @@ export const fr = {
   "nav.collapse": "Replier {title}",
   "nav.tags": "Tags",
   "nav.cleanup": "Nettoyage",
+  "collection.seeAll": "Voir les {n} →",
+  "collection.direct": "Signets de cette collection",
   "search.placeholder": "Rechercher…",
   "sort.created-desc": "Récents",
   "sort.created-asc": "Anciens",
