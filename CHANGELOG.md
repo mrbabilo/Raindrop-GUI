@@ -59,8 +59,12 @@ Tauri — n'est pas commencé**, il n'y a donc pas d'application packagée.
   dossier teinté. Dans la barre latérale, l'entrée entière porte le lavis
   de sa couleur, en bandes de même longueur ; le survol l'entoure d'un
   trait au lieu d'en changer le fond. Les teintes restent pastel quelle
-  que soit la vivacité de la couleur d'origine, et une sous-collection
-  sans couleur hérite de celle de sa racine.
+  que soit la vivacité de la couleur d'origine. **Une couleur par
+  famille** : la collection principale la décide, ses sous-collections en
+  héritent et se distinguent d'elle par un lavis plus léger et un retrait.
+  Chaque famille a sa propre teinte, assez éloignée de celle des autres
+  pour se lire — au prix d'un écart parfois net avec la couleur réglée
+  dans Raindrop, dont seul le rang est conservé.
 - **Navigation au clavier** : chaque zone ne prend qu'un arrêt de
   tabulation au lieu d'un par ligne, et les flèches y circulent — y
   compris en deux dimensions dans la mosaïque. →/← déplient une
