@@ -15,9 +15,11 @@ export function useInvalidate() {
 export const useUpdateRaindrop = (id: number) => {
   const invalidate = useInvalidate();
   return useMutation({
+    // `url` (Task 13, correction des redirections) : le sidecar l'exige SEUL
+    // (refine du patchBody) et le route en REST direct — n'envoyer que {url}.
     // `collectionId` est le nom du DTO front ; le sidecar attend `collection_id`
     // — la conversion reste à la frontière (le front ne parle que DTO).
-    mutationFn: (patch: Partial<Pick<RaindropItem, "title" | "excerpt" | "note" | "tags" | "important" | "collectionId">>) =>
+    mutationFn: (patch: Partial<Pick<RaindropItem, "url" | "title" | "excerpt" | "note" | "tags" | "important" | "collectionId">>) =>
       api.send<RaindropItem>("PATCH", `/api/raindrops/${id}`, {
         ...patch, ...(patch.collectionId !== undefined ? { collection_id: patch.collectionId } : {}),
       }),

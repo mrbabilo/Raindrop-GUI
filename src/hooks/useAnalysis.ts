@@ -37,21 +37,36 @@ export const useAnalysisStatus = () =>
     refetchInterval: 5_000,
   });
 
-// Posé pour la Task 13 (vues cleanupView paginées) : désactivé ici, la Task 13
-// activera le hook dans la vue concernée (résolution contrôleur 1).
+// Les filtres que le zod du sidecar accepte réellement (sidecar/api/routes/
+// analysis.ts — revue T12 : l'enum « mort côté serveur » a été vérifiée) :
+// le front ne passe que ces valeurs, jamais une chaîne libre.
+export type LinksFilter = "all" | "dead" | "indeterminate" | "redirect" | "ok";
+
+// Task 13 : activé par les vues cleanupView dead/redirect (résolution
+// contrôleur 1). `enabled` garde la porte ouverte à un hook monté sans fetch ;
+// les vues ne montent la branche concernée que si nécessaire.
 export const useAnalysisResults = (
   type: "links",
-  filter: string,
+  filter: LinksFilter,
   page: number,
   perPage = 50,
+  enabled = true,
 ): UseQueryResult<LinksResultsPage> =>
   useQuery({
     queryKey: ["analysis", "results", type, filter, page],
     queryFn: () =>
       api.get<LinksResultsPage>(`/api/analysis/results/${type}`, { page, per_page: perPage, filter }),
-    enabled: false, // activé par T13
+    enabled,
   });
-// duplicates : api.get<DuplicateGroups>("/api/analysis/results/duplicates")
+
+// Groupes de doublons (GET /api/analysis/results/duplicates) consommés par la
+// vue doublons — mêmes données que useCleanupCounts, clé distincte : le
+// dashboard compte, la vue liste.
+export const useDuplicateGroups = () =>
+  useQuery({
+    queryKey: ["analysis", "results", "duplicates"],
+    queryFn: () => api.get<DuplicateGroups>("/api/analysis/results/duplicates"),
+  });
 
 export const useCancelJob = () =>
   useMutation({ mutationFn: (jobId: string) => api.send<{ cancelled: boolean }>("POST", `/api/jobs/${jobId}/cancel`) });

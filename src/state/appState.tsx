@@ -26,11 +26,21 @@ export type View =
   // (Task 15). Items réduits au nécessaire — `collectionId` porte
   // l'origine, que la corbeille Raindrop ne garde pas (spec §4.2).
   // R4P : l'action n'a pas encore de destination (le `dest` du <select>
-  // est jeté en T9) ; la Task 13 étendra cette union.
+  // est jeté en T9).
+  // Task 13 : les deux actions de niveau 2 des vues de traitement — la Revue
+  // (T15) exécutera empty-trash / collections/cleanup. `items` reste la forme
+  // raindrop : empty-trash passe les items de corbeille chargés (aperçu
+  // gratuit), delete-empty-collections une liste vide (une collection n'a pas
+  // cette forme — l'action porte le sens).
   | {
       kind: "review";
       items: { id: number; url: string; title: string; collectionId: number }[];
-      action: { op: "trash" } | { op: "move" } | { op: "tag" };
+      action:
+        | { op: "trash" }
+        | { op: "move" }
+        | { op: "tag" }
+        | { op: "empty-trash" }
+        | { op: "delete-empty-collections" };
       sourceLabel: string;
     };
 

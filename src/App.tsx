@@ -7,6 +7,7 @@ import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { ListPane } from "./components/ListPane";
 import { CleanupDashboard } from "./components/CleanupDashboard";
+import { CleanupView } from "./components/CleanupView";
 import { DetailPane } from "./components/DetailPane";
 import { CommandPalette } from "./components/CommandPalette";
 
@@ -102,9 +103,17 @@ export default function App() {
       <div className="border-b border-app-border bg-app" aria-hidden="true" />
       <Sidebar />
       {/* Task 12 : la vue cleanup prend la place de la liste — dashboard de
-          nettoyage (compteurs, fraîcheur, scans SSE annulables). Les vues de
-          traitement cleanupView/* sont remplies par la Task 13. */}
-      {view.kind === "review" ? <RevueStub /> : view.kind === "cleanup" ? <CleanupDashboard /> : <ListPane />}
+          nettoyage (compteurs, fraîcheur, scans SSE annulables). Task 13 :
+          les vues de traitement cleanupView/* qu'il rend joignables. */}
+      {view.kind === "review" ? (
+        <RevueStub />
+      ) : view.kind === "cleanup" ? (
+        <CleanupDashboard />
+      ) : view.kind === "cleanupView" ? (
+        <CleanupView type={view.type} />
+      ) : (
+        <ListPane />
+      )}
       {/* Row 2 col 3 : détail permanent — aperçu, édition inline, actions,
           surlignages (Task 8). */}
       <DetailPane />
