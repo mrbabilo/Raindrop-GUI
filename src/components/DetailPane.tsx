@@ -162,17 +162,21 @@ export function DetailPane() {
             {t("detail.edit")}
           </button>
         )}
+        {/* §9 « une icône par geste » : le favori ne garde que l'étoile. Son
+            nom accessible porte l'état (les libellés n'ont pas bougé, ils ont
+            changé de place) ; à l'œil, c'est la surface `sel` qui le dit —
+            l'étoile n'a pas de variante pleine (§9, Etoile.tsx).
+            Plus de bouton « Ouvrir » : la ligne d'URL ci-dessus EST le lien,
+            deux points d'entrée pour un geste (§9). */}
         <button
           type="button"
-          className={bouton}
+          aria-label={r.important ? t("detail.unfavorite") : t("detail.favorite")}
+          aria-pressed={r.important}
+          className={bouton + " inline-flex items-center" + (r.important ? " bg-app-sel" : "")}
           onClick={() => void update.mutateAsync({ important: !r.important }).catch(() => { /* inline via update.isError */ })}
         >
           <Etoile />
-          {r.important ? t("detail.unfavorite") : t("detail.favorite")}
         </button>
-        <a className={bouton + " inline-flex items-center"} href={r.url} target="_blank" rel="noreferrer">
-          {t("detail.open")}
-        </a>
         {/* `from` = collection courante : sans lui le sidecar ne mémorise pas
             l'origine et la restauration devient impossible (spec §4.2, Task 0b).
             --color-app-broken, seul rouge légitime : couleur d'un diagnostic (§6). */}

@@ -46,11 +46,12 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
           diagnostic — le snippet du brief portait un jeton fantôme (R9P-2). */}
       <button type="button" className="rounded border border-app-broken px-2 py-1 text-app-broken" onClick={() => build({ op: "trash" })}>{t("bulk.trash")}</button>
       <select aria-label={t("bulk.destination")} className="input" value={dest} onChange={(e) => setDest(e.target.value)}>
-        <option value="">— {t("bulk.move")} —</option>
+        {/* §9 : l'option muette ne répète plus le verbe du bouton. */}
+        <option value="">{t("bulk.chooseCollection")}</option>
         {(collections.data ?? []).map((c) => <option key={c.id} value={String(c.id)}>{c.title}</option>)}
       </select>
       <button type="button" className="rounded border border-app-border px-2 py-1 disabled:opacity-40" disabled={!dest} onClick={() => dest && build({ op: "move", toCollectionId: Number(dest) })}>{t("bulk.move")}</button>
-      <input aria-label={t("bulk.tag")} className="input w-40" placeholder={t("bulk.tag")} value={tags} onChange={(e) => setTags(e.target.value)} />
+      <input aria-label={t("bulk.tagField")} className="input w-40" placeholder={t("bulk.tagPlaceholder")} value={tags} onChange={(e) => setTags(e.target.value)} />
       {/* Revue finale : le garde porte la liste PARSÉE, pas la chaîne brute —
           « , , » est truthy mais parse vide, et le bulk update qui en
           résulterait effacerait toutes les étiquettes des items sélectionnés. */}

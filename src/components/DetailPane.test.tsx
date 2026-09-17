@@ -211,6 +211,32 @@ describe("DetailPane", () => {
     expect(screen.queryByDisplayValue("Brouillon")).not.toBeInTheDocument();
   });
 
+  // DESIGN.md §9 : « une icône par geste » et « un seul point d'entrée par
+  // geste ». Le favori ne garde que l'étoile — son nom accessible porte
+  // l'état, que la surface `sel` redit à l'œil (§6, l'étoile n'ayant pas de
+  // variante pleine). « Ouvrir » disparaît : la ligne d'URL EST le lien.
+  it("favori en icône seule, « Ouvrir » retiré (§9)", async () => {
+    const { container } = renderDetail(<Preselect id={1000} />);
+    const favori = await screen.findByRole("button", { name: "Favori" });
+    // Aucun texte : l'étoile seule, et le nom vient de l'aria-label.
+    expect(favori.textContent).toBe("");
+    expect(favori.querySelector("svg")).not.toBeNull();
+    expect(favori).toHaveAttribute("aria-pressed", "false");
+    expect(favori.className).not.toContain("bg-app-sel");
+
+    // Un seul point d'entrée vers l'URL : le lien de la ligne d'adresse.
+    expect(screen.queryByRole("button", { name: "Ouvrir" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Ouvrir" })).not.toBeInTheDocument();
+    const liens = [...container.querySelectorAll('a[href="https://example.com/a"]')];
+    expect(liens).toHaveLength(1);
+
+    // L'état actif se marque par la surface, et le nom accessible bascule.
+    await userEvent.click(favori);
+    const actif = await screen.findByRole("button", { name: "Retirer des favoris" });
+    expect(actif).toHaveAttribute("aria-pressed", "true");
+    expect(actif.className).toContain("bg-app-sel");
+  });
+
   // DESIGN.md §9 « masqué si nul » : la section des surlignages — titre
   // compris — n'existe pas quand l'item n'en porte aucun. L'item 2000 des
   // fixtures a highlights: [], l'item 1000 en a un.

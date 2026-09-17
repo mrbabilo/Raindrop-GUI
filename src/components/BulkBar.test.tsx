@@ -112,7 +112,7 @@ describe("BulkBar", () => {
     await renderBar([1000, 1001]);
     const tagger = screen.getByRole("button", { name: "Tagger" });
     expect(tagger).toBeDisabled(); // pas de tags saisis → pas d'action
-    await userEvent.type(screen.getByLabelText("Tagger"), "lutin, elfe");
+    await userEvent.type(screen.getByLabelText("Étiquettes à ajouter"), "lutin, elfe");
     await userEvent.click(tagger);
     const revue = JSON.parse(screen.getByTestId("view").textContent!);
     expect(revue.items).toEqual([1000, 1001]);
@@ -122,12 +122,25 @@ describe("BulkBar", () => {
     expect(screen.getByTestId("sel").textContent).toBe("");
   });
 
+  // DESIGN.md §9 « un seul point d'entrée par geste » : le verbe appartient
+  // au bouton. L'option muette du select et le champ d'étiquettes ne le
+  // répètent plus — ni à l'écran, ni pour un lecteur d'écran.
+  it("le verbe n'est porté que par son bouton (§9)", async () => {
+    await renderBar([1000]);
+    const muette = screen.getByRole("option", { name: /Choisir une collection/ });
+    expect(muette).toHaveValue("");
+    expect(screen.getAllByText("Déplacer")).toHaveLength(1);
+    expect(screen.getAllByText("Tagger")).toHaveLength(1);
+    const champ = screen.getByLabelText("Étiquettes à ajouter");
+    expect(champ).toHaveAttribute("placeholder", "séparées par des virgules");
+  });
+
   // Revue finale : « , , » est truthy mais parse VIDE — le bulk update qui
   // en résulterait effacerait toutes les étiquettes sous simple confirmation
   // L1. Le bouton se cale sur la liste parsée, pas sur la chaîne brute.
   it("« , , » = liste parsée vide → Tagger désactivé (pas d'effacement des étiquettes)", async () => {
     await renderBar([1000]);
-    await userEvent.type(screen.getByLabelText("Tagger"), ", ,");
+    await userEvent.type(screen.getByLabelText("Étiquettes à ajouter"), ", ,");
     expect(screen.getByRole("button", { name: "Tagger" })).toBeDisabled();
   });
 

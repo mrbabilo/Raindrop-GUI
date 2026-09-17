@@ -141,7 +141,7 @@ export function TrashRow({ r }: { r: RaindropItem }) {
             value={dest}
             onChange={(e) => setDest(e.target.value)}
           >
-            <option value="">— {t("bulk.move")} —</option>
+            <option value="">{t("bulk.chooseCollection")}</option>
             {collections.map((c) => (
               <option key={c.id} value={String(c.id)}>
                 {c.title}

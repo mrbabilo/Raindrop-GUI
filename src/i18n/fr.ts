@@ -34,7 +34,6 @@ export const fr = {
   "detail.cancel": "Annuler",
   "detail.favorite": "Favori",
   "detail.unfavorite": "Retirer des favoris",
-  "detail.open": "Ouvrir",
   "detail.trash": "Mettre à la corbeille",
   "detail.highlights": "Surlignages",
   "detail.guest": "Sélectionnez un bookmark pour voir le détail.",
@@ -45,6 +44,11 @@ export const fr = {
   "bulk.tag": "Tagger",
   "bulk.selection": "sélection",
   "bulk.destination": "Destination",
+  // §9 « un seul point d'entrée par geste » : le verbe reste au bouton — ni
+  // l'option muette du select, ni le champ d'étiquettes ne le répètent.
+  "bulk.chooseCollection": "Choisir une collection…",
+  "bulk.tagField": "Étiquettes à ajouter",
+  "bulk.tagPlaceholder": "séparées par des virgules",
   "bulk.review": "Revue de l'action",
   "composer.placeholder": "Coller une URL à sauvegarder (⌘E)",
   "composer.exists": "Déjà sauvegardé",
