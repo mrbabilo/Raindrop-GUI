@@ -25,6 +25,11 @@ export type View =
   // Task 9 : la Revue de l'action, construite par BulkBar puis exécutée
   // (Task 15). Items réduits au nécessaire — `collectionId` porte
   // l'origine, que la corbeille Raindrop ne garde pas (spec §4.2).
+  // CONTRAT (revue finale) : `collectionId` EST l'origine de restauration
+  // (spec §4.2) — il doit atteindre le bulk (champ `origins` de
+  // POST /raindrops/bulk, transmis par ReviewPage pour `op: "trash"`) pour
+  // que la restauration à l'origine fonctionne ; un item dont le
+  // collectionId n'atteint pas le bulk restaurerait en « Tous » en silence.
   // R15P-4 (ex-R4P) : l'action porte ses paramètres — `move` sa destination,
   // `tag` ses étiquettes — la Revue les envoie tels quels au bulk.
   // Task 13 : les deux actions de niveau 2 des vues de traitement — la Revue
@@ -42,6 +47,12 @@ export type View =
         | { op: "empty-trash" }
         | { op: "delete-empty-collections" };
       sourceLabel: string;
+      // Revue finale : sur les deux actions L2, l'aperçu chargé ne vaut PAS
+      // la portée réelle (empty-trash vide TOUTE la corbeille au-delà des
+      // pages chargées ; delete-empty-collections n'a pas d'items de cette
+      // forme) — la vue d'origine pose ici le VRAI nombre, que le compteur
+      // de la Revue affiche. Absent (actions L1) : compteur = items portés.
+      totalServer?: number;
       // R15P-3 : la vue d'origine, posée par les constructeurs (BulkBar : la
       // vue list courante ; CleanupView : sa vue cleanupView) — App en déduit
       // le retour après exécution. Absente (vue construite à la main) :

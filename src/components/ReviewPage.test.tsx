@@ -15,8 +15,8 @@ vi.mock("../lib/api", () => ({ api: { send: sendMock } }));
 type ReviewView = Extract<View, { kind: "review" }>;
 
 const items = [
-  { id: 1, url: "https://a.example", title: "Alpha", collectionId: 0 },
-  { id: 2, url: "https://b.example", title: "Beta", collectionId: 0 },
+  { id: 1, url: "https://a.example", title: "Alpha", collectionId: 101 },
+  { id: 2, url: "https://b.example", title: "Beta", collectionId: 102 },
   { id: 3, url: "https://c.example", title: "Gamma", collectionId: 0 },
 ];
 const goBack = vi.fn();
@@ -54,7 +54,11 @@ describe("ReviewPage — niveau 1 (corbeille)", () => {
     expect(screen.getByRole("button", { name: "Exécuter" })).toBeEnabled();
   });
 
-  it("exécute bulk delete sur les items restants puis revient", async () => {
+  // Revue finale (changement de contrat assumé) : le bulk delete emporte les
+  // ORIGINES de restauration (§4.2) — collectionId de chaque item — sinon le
+  // sidecar mémoriserait « Tous » et la restauration partirait en silence au
+  // mauvais endroit. L'ancien pin du corps exact est mis à jour d'autant.
+  it("exécute bulk delete sur les items restants, avec leurs origines, puis revient", async () => {
     renderReview();
     await userEvent.click(screen.getByRole("checkbox", { name: /Je confirme l'action sur 3/ }));
     await userEvent.click(screen.getByRole("button", { name: "Exécuter" }));
@@ -63,9 +67,32 @@ describe("ReviewPage — niveau 1 (corbeille)", () => {
         operation: "delete",
         collection_id: 0,
         ids: [1, 2, 3],
+        origins: [
+          { id: 1, from: 101 },
+          { id: 2, from: 102 },
+          { id: 3, from: 0 },
+        ],
       }),
     );
     expect(goBack).toHaveBeenCalled();
+  });
+
+  it("la désélection retire aussi l'origine de l'item écarté", async () => {
+    renderReview();
+    await userEvent.click(screen.getByRole("checkbox", { name: /Beta/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /Je confirme l'action sur 2/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Exécuter" }));
+    await vi.waitFor(() =>
+      expect(sendMock).toHaveBeenCalledWith("POST", "/api/raindrops/bulk", {
+        operation: "delete",
+        collection_id: 0,
+        ids: [1, 3],
+        origins: [
+          { id: 1, from: 101 },
+          { id: 3, from: 0 },
+        ],
+      }),
+    );
   });
 
   it("exporte la sélection courante en CSV", async () => {
@@ -114,6 +141,14 @@ describe("ReviewPage — niveau 2 (vider la corbeille)", () => {
     expect(screen.getByPlaceholderText(/SUPPRIMER/)).toHaveClass("border-app-broken");
     expect(screen.getByRole("button", { name: "Exécuter" })).toHaveClass("bg-app-sel");
   });
+
+  // Revue finale : sur les deux actions L2, l'aperçu chargé NE VAUT PAS la
+  // portée réelle (empty-trash vide TOUTE la corbeille, delete-empty-
+  // collections supprime tout) — le compteur porte le total serveur.
+  it("le compteur porte le total serveur quand la vue l'a fourni (L2)", () => {
+    renderReview({ ...reviewL2, totalServer: 5000 });
+    expect(screen.getByText(/5000 item\(s\) affecté\(s\)/)).toBeInTheDocument();
+  });
 });
 
 describe("ReviewPage — rulings", () => {
@@ -154,5 +189,21 @@ describe("ReviewPage — rulings", () => {
     await userEvent.click(screen.getByRole("button", { name: "Exécuter" }));
     await vi.waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Erreur : réseau"));
     expect(goBack).not.toHaveBeenCalled();
+  });
+
+  // Revue finale : le bouton se désactive PENDANT le vol — un double-clic ne
+  // doit pas émettre deux bulk (empty-trash est la seule écriture définitive
+  // de l'app : le vidage de corbeille, spec §3).
+  it("un double-clic pendant le vol n'émet qu'un seul appel", async () => {
+    let libere!: () => void;
+    sendMock.mockImplementation(() => new Promise((resolve) => { libere = () => resolve({}); }));
+    renderReview();
+    await userEvent.click(screen.getByRole("checkbox", { name: /Je confirme l'action sur 3/ }));
+    const bouton = screen.getByRole("button", { name: "Exécuter" });
+    await userEvent.click(bouton);
+    await userEvent.click(bouton); // second clic pendant que la requête vole
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    libere();
+    await vi.waitFor(() => expect(goBack).toHaveBeenCalled());
   });
 });

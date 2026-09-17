@@ -215,6 +215,53 @@ describe("routes raindrops", () => {
     expect(res.status).toBe(200);
   });
 
+  // Revue finale : le flux nominal (Revue → bulk delete) envoie les origines
+  // RÉELLES de chaque item (collectionId de la vue review) — sinon tout
+  // nettoyage en masse est mémorisé « Tous » et restaurerait en silence au
+  // mauvais endroit (§4.2). Le champ front ne transite PAS au tool MCP.
+  it("POST /bulk delete avec origins mémorise CHAQUE origine fournie, avant l'opération, et les raye des args du tool", async () => {
+    const spy: unknown[] = [];
+    const journal: string[] = [];
+    const connSpy = {
+      call: async (tool: string, args: Record<string, unknown>) => {
+        spy.push([tool, args]);
+        journal.push(`mcp:${tool}`);
+        return conn.call(tool, args);
+      },
+    };
+    const app2 = createApp(
+      { ...baseDeps, mcp: (tool, args) => connSpy.call(tool, args), origins: makeOriginsFake(journal).store },
+      { localToken: "t" },
+    );
+    const res = await req(app2, "/api/raindrops/bulk", {
+      method: "POST",
+      body: JSON.stringify({
+        operation: "delete",
+        collection_id: 0,
+        ids: [1000, 1001],
+        origins: [{ id: 1000, from: 7 }, { id: 1001, from: 102 }],
+      }),
+    }, "t");
+    expect(res.status).toBe(200);
+    expect(journal).toEqual(["remember:1000:7", "remember:1001:102", "mcp:bulk_raindrops"]);
+    expect(spy[0]).toEqual(["bulk_raindrops", { operation: "delete", collection_id: 0, ids: [1000, 1001] }]);
+  });
+
+  it("POST /bulk delete avec origins partielles : les ids absents retombent sur collection_id (dégradé « Tous »)", async () => {
+    const journal: string[] = [];
+    const res = await req(journalApp(journal), "/api/raindrops/bulk", {
+      method: "POST",
+      body: JSON.stringify({
+        operation: "delete",
+        collection_id: 5,
+        ids: [1000, 1001],
+        origins: [{ id: 1000, from: 7 }],
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(journal).toEqual(["remember:1000:7", "remember:1001:5", "mcp:bulk_raindrops"]);
+  });
+
   it("POST /bulk move ne mémorise rien (pas une mise à la corbeille)", async () => {
     const journal: string[] = [];
     const res = await req(journalApp(journal), "/api/raindrops/bulk", {

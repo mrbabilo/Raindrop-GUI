@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { t } from "../i18n/fr";
 import { CarreCollection, filetEtat, type EtatLien } from "../design/Signaux";
 import { useUpdateRaindrop, useUnrestore, useDeleteCollection } from "../hooks/useMutations";
+import { useCollections } from "../hooks/useStaticData";
 import type { Collection, DuplicateGroup, LinkCheckResult, RaindropItem } from "../../shared/types";
 import type { LinksResultsPage } from "../hooks/useAnalysis";
 
@@ -108,17 +109,47 @@ export function DuplicateGroupCard({ g, titreRacine }: { g: DuplicateGroup; titr
 // n'est pas dans la liste, la corbeille Raindrop ne la garde pas, spec §4.2).
 // « Restaurer » appelle POST /unrestore sans destination : le sidecar rend
 // chacun à son origine mémorisée ; un id sans origine revient dans `unknown`
-// SANS être restauré — il reste alors en liste (refetch), rien n'est tu.
+// SANS être restauré — le front inspecte la réponse (§4.2, plan Task 8) et
+// demande alors UNE DESTINATION (sélecteur) avant de rappeler ; l'item reste
+// en liste tant que rien n'a abouti, rien n'est tu.
 export function TrashRow({ r }: { r: RaindropItem }) {
   const unrestore = useUnrestore();
+  const collections = useCollections().data ?? [];
+  const [dest, setDest] = useState("");
+  const [origineInconnue, setOrigineInconnue] = useState(false);
+  const restaurer = () =>
+    unrestore.mutate(
+      dest === "" ? { ids: [r.id] } : { ids: [r.id], toCollectionId: Number(dest) },
+      {
+        onSuccess: (res) => setOrigineInconnue((res.unknown ?? []).includes(r.id)),
+      },
+    );
   return (
     <Ligne etat={null}>
       <CarreCollection collectionId={r.collectionId} />
       <span className="min-w-[8rem] flex-1 truncate font-medium">{r.title}</span>
       <span className="url shrink-0 text-[11px] text-app-muted">{r.url}</span>
-      <button type="button" className="btn shrink-0" disabled={unrestore.isPending} onClick={() => unrestore.mutate({ ids: [r.id] })}>
+      <button type="button" className="btn shrink-0" disabled={unrestore.isPending} onClick={restaurer}>
         {t("cleanup.restore")}
       </button>
+      {origineInconnue && (
+        <>
+          <span className="shrink-0 text-xs text-app-broken">{t("cleanup.unknown-origin")}</span>
+          <select
+            aria-label={t("bulk.destination")}
+            className="input w-32 shrink-0"
+            value={dest}
+            onChange={(e) => setDest(e.target.value)}
+          >
+            <option value="">— {t("bulk.move")} —</option>
+            {collections.map((c) => (
+              <option key={c.id} value={String(c.id)}>
+                {c.title}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
       {unrestore.isError && <ErreurLigne message={String(unrestore.error?.message ?? "")} />}
     </Ligne>
   );

@@ -5,7 +5,7 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { CleanupView } from "./CleanupView";
 import { AppStateProvider, useAppState } from "../state/appState";
-import { raindrop } from "../test/fixtures";
+import { raindrop, collections } from "../test/fixtures";
 
 // Hooks et api mockés (pattern CleanupDashboard.test.tsx) : les mocks sont
 // hisés (vi.hoisted) et rechargés par test via mockReturnValue — les branches
@@ -151,15 +151,45 @@ describe("CleanupView", () => {
     await waitFor(() => expect(sendMock).toHaveBeenCalledWith("POST", "/api/raindrops/unrestore", { ids: [2001] }));
   });
 
-  it("corbeille : « Vider la corbeille » va en Revue niveau 2 (op empty-trash)", async () => {
+  // §4.2 / plan Task 8 : un item mis à la corbeille HORS de l'app n'a pas
+  // d'origine mémorisée — le sidecar le renvoie dans `unknown` SANS le
+  // restaurer ; le front demande alors une destination et rappelle.
+  it("corbeille : origine inconnue → sélecteur de destination, rappel avec toCollectionId (§4.2)", async () => {
     raindropsMock.mockReturnValue({
-      data: { pages: [{ items: [raindrop({ id: 2001, collectionId: -99 })], count: 1, page: 0, perPage: 50 }] },
+      data: {
+        pages: [{ items: [raindrop({ id: 2001, collectionId: -99 })], count: 1, page: 0, perPage: 50 }],
+      },
+    });
+    sendMock.mockImplementation(async (_m: string, p: string, body?: { ids?: number[]; toCollectionId?: number }) =>
+      p === "/api/raindrops/unrestore" && !body?.toCollectionId
+        ? { restored: 0, unknown: [2001] }
+        : { restored: 1, unknown: [] },
+    );
+    collectionsMock.mockReturnValue({ data: collections });
+    render(<CleanupView type="trash" />, { wrapper });
+    await userEvent.click(await screen.findByRole("button", { name: "Restaurer" }));
+    expect(await screen.findByText(/Origine inconnue/)).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Destination"), "102");
+    await userEvent.click(screen.getByRole("button", { name: "Restaurer" }));
+    await waitFor(() =>
+      expect(sendMock).toHaveBeenCalledWith("POST", "/api/raindrops/unrestore", { ids: [2001], toCollectionId: 102 }),
+    );
+    // restauré : la demande de destination se referme
+    await waitFor(() => expect(screen.queryByText(/Origine inconnue/)).not.toBeInTheDocument());
+  });
+
+  it("corbeille : « Vider la corbeille » va en Revue niveau 2 (op empty-trash, total serveur porté)", async () => {
+    raindropsMock.mockReturnValue({
+      // 1 page chargée (aperçu) pour 60 items réels : la Revue doit connaître
+      // le TOTAL SERVEUR, sinon son compteur dirait « 1 » avant de tout vider.
+      data: { pages: [{ items: [raindrop({ id: 2001, collectionId: -99 })], count: 60, page: 0, perPage: 50 }] },
     });
     render(<CleanupView type="trash" />, { wrapper });
     await userEvent.click(await screen.findByRole("button", { name: "Vider la corbeille" }));
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({
       kind: "review",
       action: { op: "empty-trash" },
+      totalServer: 60,
     });
   });
 
@@ -172,15 +202,15 @@ describe("CleanupView", () => {
     await waitFor(() => expect(sendMock).toHaveBeenCalledWith("DELETE", "/api/collections/301"));
   });
 
-  it("collections vides : « Supprimer les collections vides » va en Revue niveau 2", async () => {
-    collectionsMock.mockReturnValue({
-      data: [{ id: 301, title: "Vide", parentId: null, count: 0, public: false, view: "list", cover: null, color: null }],
-    });
+  it("collections vides : « Supprimer les collections vides » va en Revue niveau 2 (total porté)", async () => {
+    const vide = (id: number, titre: string) => ({ id, title: titre, parentId: null, count: 0, public: false, view: "list", cover: null, color: null });
+    collectionsMock.mockReturnValue({ data: [vide(301, "Vide"), vide(302, "Vide aussi"), { id: 303, title: "Pleine", parentId: null, count: 4, public: false, view: "list", cover: null, color: null }] });
     render(<CleanupView type="empty-collections" />, { wrapper });
     await userEvent.click(await screen.findByRole("button", { name: "Supprimer les collections vides" }));
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({
       kind: "review",
       action: { op: "delete-empty-collections" },
+      totalServer: 2, // les DEUX vides — pas 0 (items de Revue vides pour cette action)
     });
   });
 });

@@ -205,6 +205,9 @@ function Corbeille() {
                 kind: "review",
                 items: items.map((i) => ({ id: i.id, url: i.url, title: i.title, collectionId: i.collectionId })),
                 action: { op: "empty-trash" },
+                // Revue finale : le compteur de la Revue porte le total
+                // SERVEUR — le vidage dépasse les pages chargées en aperçu.
+                totalServer: q.data?.pages[0]?.count,
                 sourceLabel: t("cleanup.trash"),
                 returnView: { kind: "cleanupView", type: "trash" }, // R15P-3
               })
@@ -248,6 +251,9 @@ function CollectionsVides() {
                 kind: "review",
                 items: [],
                 action: { op: "delete-empty-collections" },
+                // Revue finale : les items de Revue sont vides (une collection
+                // n'a pas leur forme) — le VRAI nombre est vides.length.
+                totalServer: vides.length,
                 sourceLabel: t("cleanup.empty-collections"),
                 returnView: { kind: "cleanupView", type: "empty-collections" }, // R15P-3
               })

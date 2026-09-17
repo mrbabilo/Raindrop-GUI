@@ -71,6 +71,7 @@ export const fr = {
   "cleanup.scanning": "Analyse en cours… {done}/{total}",
   "cleanup.replace-url": "Remplacer par l'URL finale",
   "cleanup.restore": "Restaurer",
+  "cleanup.unknown-origin": "Origine inconnue — choisir une destination",
   "cleanup.empty-trash": "Vider la corbeille",
   "cleanup.delete-empty": "Supprimer les collections vides",
   "cleanup.wayback": "Chercher une copie archivée",

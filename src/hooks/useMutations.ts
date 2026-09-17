@@ -52,8 +52,17 @@ export const useCreateRaindrop = () => {
 export const useBulk = () => {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: (body: { operation: "update" | "move" | "delete"; collection_id: number; ids?: number[]; to_collection_id?: number; tags?: string[]; important?: boolean }) =>
-      api.send("POST", "/api/raindrops/bulk", body),
+    // `origins` (§4.2, revue finale) : l'origine de restauration de CHAQUE id
+    // — le sidecar la mémorise AVANT l'opération et la raye avant le tool MCP.
+    mutationFn: (body: {
+      operation: "update" | "move" | "delete";
+      collection_id: number;
+      ids?: number[];
+      to_collection_id?: number;
+      tags?: string[];
+      important?: boolean;
+      origins?: { id: number; from: number }[];
+    }) => api.send("POST", "/api/raindrops/bulk", body),
     // delete en masse : le sidecar mémorise les origines (§4.2) — la corbeille
     // reste restaurable, les compteurs de collections bougent aussi.
     onSuccess: () => invalidate("raindrops", "collections", "tags"),

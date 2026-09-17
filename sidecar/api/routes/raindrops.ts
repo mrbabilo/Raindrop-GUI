@@ -52,6 +52,11 @@ const bulkBody = z
     to_collection_id: z.number().int().optional(),
     tags: z.array(z.string()).optional(),
     important: z.boolean().optional(),
+    // §4.2 (revue finale) : le front connaît la collection d'origine de
+    // CHAQUE item (vue review) — il la transmet pour que la mise à la
+    // corbeille en masse soit restaurable À L'ORIGINE. Absent (anciens
+    // clients) : repli sur collection_id, dégradé « Tous ».
+    origins: z.array(z.object({ id: z.number().int(), from: z.number().int() })).optional(),
   })
   .refine((b) => b.operation !== "move" || (b.to_collection_id != null && b.ids != null), {
     message: "move exige ids et to_collection_id",
@@ -184,9 +189,16 @@ export function raindropsRoutes(deps: SidecarDeps): Hono {
     if (body.data.operation === "delete" && body.data.ids) {
       // §4.2 : la corbeille en masse (BulkBar, ReviewPage) est le cas COURANT
       // d'un nettoyage — sans mémorisation ici, tout reviendrait unknown.
-      await Promise.all(body.data.ids.map((id) => deps.origins.remember(id, body.data.collection_id)));
+      // L'origine fournie par item prime ; un id absent de `origins` retombe
+      // sur collection_id (dégradé « Tous », anciens clients).
+      const parId = new Map((body.data.origins ?? []).map((o) => [o.id, o.from]));
+      await Promise.all(
+        body.data.ids.map((id) => deps.origins.remember(id, parId.get(id) ?? body.data.collection_id)),
+      );
     }
-    const out = await deps.mcp("bulk_raindrops", body.data);
+    // `origins` est un contrat front↔sidecar : il n'existe pas côté tool MCP.
+    const { origins: _origines, ...args } = body.data;
+    const out = await deps.mcp("bulk_raindrops", args);
     if (!out.ok) return apiError(c, out.code, out.message, out.tool);
     return c.json(out.data);
   });

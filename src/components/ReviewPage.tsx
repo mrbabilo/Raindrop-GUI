@@ -27,15 +27,33 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
   const level2 = review.action.op === "empty-trash" || review.action.op === "delete-empty-collections";
   const visible = review.items.filter((i) => i.title.toLowerCase().includes(filter.toLowerCase()));
   const remaining = review.items.filter((i) => !excluded.has(i.id));
+  // Revue finale : sur les deux actions L2, le compteur porte le TOTAL
+  // SERVEUR (posé par la vue d'origine) — l'aperçu chargé ne vaut pas la
+  // portée réelle de l'action. Absent (L1) : compteur = items portés.
+  const totalAnnonce = review.totalServer ?? remaining.length;
   // Niveau 2 : vidage/cleanup sont GLOBAUX — la désélection ne retire pas
   // l'action (liste informative, compteur = remaining) et une liste vide
   // n'est pas un obstacle. Niveau 1 : rien à exécuter sans item restant.
   const canRun = (level2 ? typed === "SUPPRIMER" : confirmed) && (level2 || remaining.length > 0);
+  // Revue finale : Exécuter se désactive PENDANT le vol — un double-clic ne
+  // doit pas émettre deux bulk (empty-trash est la seule écriture définitive
+  // de l'app, spec §3).
+  const pending = bulk.isPending || emptyTrash.isPending || cleanup.isPending;
 
   const execute = async () => {
     const ids = remaining.map((i) => i.id);
     try {
-      if (review.action.op === "trash") await bulk.mutateAsync({ operation: "delete", collection_id: 0, ids });
+      if (review.action.op === "trash")
+        // §4.2 (revue finale) : chaque item emporte son ORIGINE de
+        // restauration (collectionId de la vue) — sans elle, le sidecar
+        // mémoriserait « Tous » et la restauration partirait en silence au
+        // mauvais endroit. L'alignement ids/origines vient du même `remaining`.
+        await bulk.mutateAsync({
+          operation: "delete",
+          collection_id: 0,
+          ids,
+          origins: remaining.map((i) => ({ id: i.id, from: i.collectionId })),
+        });
       else if (review.action.op === "move")
         await bulk.mutateAsync({ operation: "move", collection_id: 0, ids, to_collection_id: review.action.toCollectionId });
       else if (review.action.op === "tag")
@@ -65,7 +83,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
     <main className="flex h-full min-h-0 flex-col">
       <header className="flex flex-col gap-1 px-4 pb-3 pt-5">
         <h1 className="titre-fiche">{titre}</h1>
-        <p className="text-xs text-app-muted">{t("review.count", { n: remaining.length })}</p>
+        <p className="text-xs text-app-muted">{t("review.count", { n: totalAnnonce })}</p>
       </header>
       <div className="flex items-center gap-2 px-4 py-2">
         <input
@@ -140,7 +158,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
         <button
           type="button"
           className="btn ml-auto h-[38px] bg-app-sel px-4 disabled:opacity-40"
-          disabled={!canRun}
+          disabled={!canRun || pending}
           onClick={() => void execute()}
         >
           {t("review.execute")}

@@ -122,6 +122,15 @@ describe("BulkBar", () => {
     expect(screen.getByTestId("sel").textContent).toBe("");
   });
 
+  // Revue finale : « , , » est truthy mais parse VIDE — le bulk update qui
+  // en résulterait effacerait toutes les étiquettes sous simple confirmation
+  // L1. Le bouton se cale sur la liste parsée, pas sur la chaîne brute.
+  it("« , , » = liste parsée vide → Tagger désactivé (pas d'effacement des étiquettes)", async () => {
+    await renderBar([1000]);
+    await userEvent.type(screen.getByLabelText("Tagger"), ", ,");
+    expect(screen.getByRole("button", { name: "Tagger" })).toBeDisabled();
+  });
+
   // R9P-2 : le snippet du brief utilisait border/text-app-danger — jeton
   // fantôme, purgé de styles.css (§6 : le seul rouge légitime est
   // --color-app-broken, couleur d'un diagnostic). Même garde-fou que

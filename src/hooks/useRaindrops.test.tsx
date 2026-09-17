@@ -66,6 +66,22 @@ describe("useRaindrops", () => {
     expect(result.current.hasNextPage).toBe(false);
   });
 
+  // Revue finale : une page VIDE (items supprimés en séance, count périmé)
+  // ne doit jamais promettre une suite — sinon l'infinite scroll enchaîne
+  // les requêtes sans fin (hasNextPage resterait vrai pour toujours).
+  it("page vide avec count périmé → hasNextPage=false (pas de boucle de requêtes)", async () => {
+    const f = vi.fn((url: string) => {
+      const p = new URL(url, "http://x").searchParams;
+      return Promise.resolve(
+        new Response(JSON.stringify({ items: [], count: 60, page: Number(p.get("page") ?? 0), perPage: 50 }), { status: 200 }),
+      );
+    });
+    vi.stubGlobal("fetch", f);
+    const { result } = renderHook(() => useRaindrops({ collectionId: 0 }), { wrapper });
+    await waitFor(() => expect(result.current.data?.pages).toHaveLength(1));
+    expect(result.current.hasNextPage).toBe(false);
+  });
+
   it("convertit le marqueur -2 (Non-lus) en search status:unread — il ne sort pas du front", async () => {
     const fetchMock = stubFetch(60);
     const { result } = renderHook(() => useRaindrops({ collectionId: -2 }), { wrapper });

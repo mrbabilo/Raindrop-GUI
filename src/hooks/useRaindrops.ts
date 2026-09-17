@@ -49,7 +49,10 @@ export function useRaindrops(q: RaindropQuery) {
     // Pas de champ « page totale » dans le contrat {items, count, page,
     // perPage} : on déduit du cumul reçu — s'il reste moins d'items que le
     // total, la page suivante est all.length.
+    // Garde (revue finale) : une page VIDE — items supprimés en séance alors
+    // que `count` est périmé — ne promet JAMAIS une suite, sinon l'infinite
+    // scroll enchaîne les requêtes sans fin.
     getNextPageParam: (last, all) =>
-      all.reduce((n, p) => n + p.items.length, 0) < last.count ? all.length : undefined,
+      last.items.length === 0 ? undefined : all.reduce((n, p) => n + p.items.length, 0) < last.count ? all.length : undefined,
   });
 }

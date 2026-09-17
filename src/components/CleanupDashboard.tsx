@@ -85,8 +85,11 @@ function BlocScan({ type, label, lastScan, running }: { type: AnalysisType; labe
             {running ? t("cleanup.scanRunning") : lastScan ? t("cleanup.rescan") : t("cleanup.scan")}
           </button>
           {/* R12P-1 : l'échec de lancement ou du scan ne doit jamais être
-              silencieux — inline, brouillon/état non destructif (pattern T8). */}
-          {start.isError && (
+              silencieux — inline, brouillon/état non destructif (pattern T8).
+              Revue finale : l'AbortError d'une annulation VOLONTAIRE (clic
+              Annuler, qui coupe le flux SSE) n'est pas une erreur — pas
+              d'alerte, la fin du suivi reste affichée par le retour au repos. */}
+          {start.isError && start.error?.name !== "AbortError" && (
             <p role="alert" className="text-xs text-app-broken">
               {t("state.error", { message: String(start.error?.message ?? "") })}
             </p>

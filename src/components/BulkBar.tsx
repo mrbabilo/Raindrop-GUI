@@ -51,7 +51,20 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
       </select>
       <button type="button" className="rounded border border-app-border px-2 py-1 disabled:opacity-40" disabled={!dest} onClick={() => dest && build({ op: "move", toCollectionId: Number(dest) })}>{t("bulk.move")}</button>
       <input aria-label={t("bulk.tag")} className="input w-40" placeholder={t("bulk.tag")} value={tags} onChange={(e) => setTags(e.target.value)} />
-      <button type="button" className="rounded border border-app-border px-2 py-1 disabled:opacity-40" disabled={!tags} onClick={() => tags && build({ op: "tag", tags: tags.split(",").map((s) => s.trim()).filter(Boolean) })}>{t("bulk.tag")}</button>
+      {/* Revue finale : le garde porte la liste PARSÉE, pas la chaîne brute —
+          « , , » est truthy mais parse vide, et le bulk update qui en
+          résulterait effacerait toutes les étiquettes des items sélectionnés. */}
+      <button
+        type="button"
+        className="rounded border border-app-border px-2 py-1 disabled:opacity-40"
+        disabled={tags.split(",").map((s) => s.trim()).filter(Boolean).length === 0}
+        onClick={() => {
+          const parsed = tags.split(",").map((s) => s.trim()).filter(Boolean);
+          if (parsed.length > 0) build({ op: "tag", tags: parsed });
+        }}
+      >
+        {t("bulk.tag")}
+      </button>
     </div>
   );
 }

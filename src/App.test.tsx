@@ -178,10 +178,12 @@ describe("App", () => {
     renderAppAvecDriver({ kind: "cleanupView", type: "trash" });
     await executeRevue();
     await waitFor(() =>
+      // Revue finale : le bulk delete emporte l'origine de l'item (§4.2).
       expect(sendMock).toHaveBeenCalledWith("POST", "/api/raindrops/bulk", {
         operation: "delete",
         collection_id: 0,
         ids: [1],
+        origins: [{ id: 1, from: 0 }],
       }),
     );
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toEqual({ kind: "cleanupView", type: "trash" });

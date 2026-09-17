@@ -48,6 +48,28 @@ function stubSse(jobId: string, kind: "progress" | "error" = "progress") {
   });
 }
 
+// Comme stubSse, mais le flux HONORE le signal : l'abort rejette la lecture
+// du corps avec AbortError — ce que fait le fetch réel (undici) et ce qui
+// produit, sans garde, la fausse alerte à chaque annulation volontaire.
+function stubSseAbordable(jobId: string) {
+  const encoder = new TextEncoder();
+  return vi.fn((url: unknown, init?: { signal?: AbortSignal }) => {
+    if (String(url).includes(`/api/jobs/${jobId}/events`)) {
+      return Promise.resolve(new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(
+            `event: progress\ndata: ${JSON.stringify({ kind: "progress", progress: { done: 1, total: 2, label: null } })}\n\n`,
+          ));
+          init?.signal?.addEventListener("abort", () =>
+            controller.error(new DOMException("The operation was aborted.", "AbortError")),
+          );
+        },
+      }), { status: 200, headers: { "Content-Type": "text/event-stream" } }));
+    }
+    return Promise.reject(new Error(`URL inattendue : ${String(url)}`));
+  });
+}
+
 function mockApi(opts: { linksRunning?: boolean } = {}) {
   getMock.mockReset().mockImplementation((path: string, query?: Record<string, unknown>) => {
     if (path === "/api/analysis/status")
@@ -128,6 +150,24 @@ describe("CleanupDashboard", () => {
     await screen.findByText("Analyse en cours… 1/2");
     await userEvent.click(screen.getByRole("button", { name: "Annuler le scan" }));
     expect(sendMock).toHaveBeenCalledWith("POST", "/api/jobs/job-1/cancel");
+  });
+
+  // Revue finale : l'abort coupe le flux SSE → la mutation rejette en
+  // AbortError — une annulation VOLONTAIRE n'est pas une erreur, l'alerte
+  // inline ne doit jamais apparaître.
+  it("Annuler n'affiche aucune alerte (l'AbortError est filtré)", async () => {
+    vi.stubGlobal("fetch", stubSseAbordable("job-1"));
+    sendMock.mockImplementation(async (_m: string, p: string) =>
+      p === "/api/analysis/scan" ? { jobId: "job-1" } : { cancelled: true });
+    renderDashboard();
+    const blocLiens = await screen.findByRole("region", { name: "Liens" });
+    await userEvent.click(within(blocLiens).getByRole("button", { name: "Lancer l'analyse" }));
+    await screen.findByText("Analyse en cours… 1/2");
+    await userEvent.click(screen.getByRole("button", { name: "Annuler le scan" }));
+    // Le suivi s'est refermé (retour au repos) — sans jamais alerter.
+    await waitFor(() => expect(sendMock).toHaveBeenCalledWith("POST", "/api/jobs/job-1/cancel"));
+    expect(await within(blocLiens).findByRole("button", { name: "Lancer l'analyse" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   // R12P-1 : un échec de lancement ne doit pas être silencieux (pattern T8 :
