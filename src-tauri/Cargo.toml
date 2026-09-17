@@ -17,3 +17,6 @@ tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 keyring = "4"
+# Déjà dans l'arbre en transitive (0.2.189) : ajouté comme directe pour
+# `signaux.rs` — interception de SIGTERM, impossible sans appels libc.
+libc = "0.2"

@@ -2912,6 +2912,7 @@ name = "raindrop-gui"
 version = "0.1.0"
 dependencies = [
  "keyring",
+ "libc",
  "serde",
  "serde_json",
  "tauri",
