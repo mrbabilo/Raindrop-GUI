@@ -1,4 +1,5 @@
 mod commandes;
+mod demarrage;
 mod etat_connexion;
 mod jeton;
 mod node;
@@ -90,7 +91,7 @@ pub fn run() {
             let handle_sigterm = app.handle().clone();
             signaux::intercepter(move || {
                 if let Some(etat) = handle_sigterm.try_state::<Etat>() {
-                    etat.arreter_sidecar(commandes::GRACE);
+                    etat.arreter_sidecar(demarrage::GRACE);
                 }
             });
 
@@ -99,7 +100,7 @@ pub fn run() {
             let handle = app.handle().clone();
             std::thread::spawn(move || {
                 let etat = handle.state::<Etat>();
-                let resultat = commandes::sequence(&etat);
+                let resultat = demarrage::sequence(&etat);
                 etat.poser(resultat);
             });
             Ok(())
@@ -111,7 +112,7 @@ pub fn run() {
             // port ouvert et un lockfile menteur.
             if let tauri::RunEvent::Exit = evenement {
                 if let Some(etat) = app.try_state::<Etat>() {
-                    etat.arreter_sidecar(commandes::GRACE);
+                    etat.arreter_sidecar(demarrage::GRACE);
                 }
             }
         });

@@ -149,7 +149,7 @@ impl Etat {
     }
 
     /// Arrêt propre à la fermeture de l'application. `grace` vient de
-    /// l'appelant (`crate::commandes::GRACE`), pour ne pas dupliquer la
+    /// l'appelant (`crate::demarrage::GRACE`), pour ne pas dupliquer la
     /// constante de délai entre les deux modules.
     pub fn arreter_sidecar(&self, grace: Duration) {
         if let Some(mut s) = self.sidecar.lock().unwrap().take() {
