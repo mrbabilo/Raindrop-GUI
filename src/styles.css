@@ -115,7 +115,11 @@ body {
   justify-content: center;
   width: 18px;
   height: 18px;
-  border-radius: 5px;
+  /* §2 : le signe d'un contenant est une PASTILLE — ronde, là où l'étiquette
+     est une pilule allongée et l'état un filet. Le carré à rayon 5 se
+     confondait avec le coin d'une ligne ; le cercle ne ressemble à rien
+     d'autre dans l'interface. */
+  border-radius: 50%;
   flex-shrink: 0;
   background: oklch(var(--app-wash-l) calc(var(--app-wash-c) * var(--sat, 1)) var(--h));
   color: oklch(var(--app-icon-l) calc(var(--app-icon-c) * var(--sat, 1)) var(--h));
@@ -144,7 +148,14 @@ body {
   align-items: center;
   gap: 8px;
   width: 100%;
-  border-radius: 5px;
+  /* Franchement arrondie : une bande de collection se détache ainsi du bord
+     de la barre et des bandes voisines, là où un rayon de 5 les laissait se
+     lire comme un seul aplat continu. Un filet d'air au-dessous, sans quoi
+     les bandes se touchent et l'arrondi ne se voit qu'aux extrémités d'un
+     groupe — les onze sous-collections de « Passions » formaient un seul
+     aplat. */
+  border-radius: 9px;
+  margin-bottom: 2px;
   background: oklch(var(--app-nav-l) calc(var(--app-nav-c) * var(--sat, 1)) var(--h));
 }
 

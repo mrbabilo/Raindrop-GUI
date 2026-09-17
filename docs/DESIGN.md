@@ -23,7 +23,7 @@ nature du contenu — n'en porte aucune.
 
 | Signal | Forme | Couleur | Sens |
 |---|---|---|---|
-| Collection d'origine | carré arrondi 18 px, rayon 5 | thématique | un contenant |
+| Collection d'origine | pastille ronde, 18 px | thématique | un contenant |
 | Étiquette | pilule, hauteur 18 px (21 en détail) | thématique | une thématique |
 | État du lien | filet de 3 px en bord de ligne | diagnostic | un diagnostic |
 | Nature du contenu | glyphe au trait, 15 px | **aucune** | ce que c'est |
