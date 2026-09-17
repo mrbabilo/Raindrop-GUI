@@ -19,7 +19,9 @@
     "test:watch": "vitest",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "build:app": "python3 scripts/build_app.py",
+    "release": "python3 scripts/release.py"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.0",

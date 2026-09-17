@@ -31,3 +31,7 @@ __pycache__/
 
 # Canvas de design assemblé (~2 Mo, régénérable depuis design/*.dc.html)
 design/raindrop-gui-interface.html
+
+# Ressources assemblées pour le .app (régénérées par scripts/preparer-ressources.sh)
+src-tauri/ressources/
+bundles/
