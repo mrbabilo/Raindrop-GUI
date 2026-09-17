@@ -35,6 +35,13 @@ finale de branche).*
       ad-hoc ; et `node` est **absent** du PATH minimal d'une app lancée du
       Finder (`/usr/gnu/bin:/usr/local/bin:/bin:/usr/bin:.` contre
       `/opt/homebrew/bin/node`) — d'où une task de résolution explicite.
+      **Task 1 exécutée** le 2026-09-17 : squelette du shell (`src-tauri/`),
+      `cargo test` vert. **Icône provisoire** : aucune source carrée
+      ≥ 1024 px trouvée dans `design/` — `src-tauri/icons/` porte un carré
+      uni `#2F6FEB` généré, à remplacer par l'icône définitive (relève de
+      `docs/DESIGN.md`, hors périmètre de ce plan). Icônes iOS/Android/
+      Windows Store générées par `tauri icon` puis supprimées (app
+      macOS uniquement, périmètre Phase 1).
 
 ## Lot sauvegarde et couche de données locale
 

@@ -49,7 +49,14 @@ export default defineConfig(({ command, isPreview }) => ({
   // serait évaluée aussi par `vite build`/`vite preview` (exigerait un
   // sidecar en marche) et par vitest (`npm test`, process.env.VITEST positionné).
   server:
-    command === "serve" && !isPreview && process.env.VITEST === undefined
+    command === "serve" &&
+    !isPreview &&
+    process.env.VITEST === undefined &&
+    // Sous Tauri (`tauri dev` pose TAURI_ENV_PLATFORM avant d'appeler cette
+    // commande), le front parle DIRECTEMENT au sidecar par
+    // window.RAINDROP_GUI : le proxy n'a rien à faire, et sidecarPort()
+    // bloquerait 10 s sur un lockfile que Tauri n'a pas encore écrit.
+    process.env.TAURI_ENV_PLATFORM === undefined
       ? {
           port: 5173,
           proxy: {
@@ -59,7 +66,7 @@ export default defineConfig(({ command, isPreview }) => ({
             },
           },
         }
-      : undefined,
+      : { port: 5173, strictPort: true },
   // Deux environnements : node pour sidecar/shared (leur code lit
   // import.meta.url comme file:// — casse sous jsdom), jsdom pour le front.
   test: {
