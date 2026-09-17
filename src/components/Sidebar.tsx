@@ -3,6 +3,7 @@ import { useCollections, useTags } from "../hooks/useStaticData";
 import { useAppState } from "../state/appState";
 import { useDrag } from "../state/drag";
 import { depotPermis } from "../hooks/useDragBookmark";
+import { GroupeCollection } from "./GroupeCollection";
 
 // Entrée de navigation : 28 px de haut (DESIGN.md §8 — leading-5 + py-1),
 // 13 px du corps (§7). Survol et sélection par les jetons dédiés de §6
@@ -60,22 +61,38 @@ export function Sidebar() {
 
       <section>
         <h2 className="px-2 text-xs font-medium text-app-muted">{t("nav.collections")}</h2>
-        {roots.map((c) => (
-          <div key={c.id}>
-            <button className={item + survolee(c.id)} {...accueil(c.id)} onClick={() => go({ kind: "list", collectionId: c.id, label: c.title })}>
-              {c.title}<Compteur n={c.count} />
-            </button>
-            {childrenOf(c.id).map((ch) => (
-              // DESIGN.md §8 : retrait d'arbre de 14 px PAR NIVEAU, sur le
-              // padding de base de `item` (px-2 = 8 px) → 22 px au niveau 1
-              // (l'ancien pl-6, 24 px, ne suivait pas la lettre). Style
-              // inline : la valeur exacte compte, pas une classe approximative.
-              <button key={ch.id} className={item + survolee(ch.id)} {...accueil(ch.id)} style={{ paddingLeft: "22px" }} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
-                {ch.title}<Compteur n={ch.count} />
-              </button>
-            ))}
-          </div>
-        ))}
+        {roots.map((c) => {
+          const enfants = childrenOf(c.id);
+          const porteLaVue =
+            view.kind === "list" &&
+            (view.collectionId === c.id || enfants.some((ch) => ch.id === view.collectionId));
+          return (
+            <GroupeCollection key={c.id} parent={c} enfants={enfants} contientLaVue={porteLaVue} enDeplacement={enDeplacement !== null}>
+              {(deplie, chevron) => (
+                <>
+                  {/* Le chevron vit DANS la ligne, devant le titre : c'est la
+                      poignée du groupe, pas une commande de la barre. */}
+                  <div className="flex items-center">
+                    {chevron}
+                    <button className={item + survolee(c.id)} {...accueil(c.id)} onClick={() => go({ kind: "list", collectionId: c.id, label: c.title })}>
+                      {c.title}<Compteur n={c.count} />
+                    </button>
+                  </div>
+                  {deplie &&
+                    enfants.map((ch) => (
+                      // DESIGN.md §8 : retrait d'arbre de 14 px PAR NIVEAU, sur le
+                      // padding de base de `item` (px-2 = 8 px) → 22 px au niveau 1
+                      // (l'ancien pl-6, 24 px, ne suivait pas la lettre). Style
+                      // inline : la valeur exacte compte, pas une classe approximative.
+                      <button key={ch.id} className={item + survolee(ch.id)} {...accueil(ch.id)} style={{ paddingLeft: "22px" }} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
+                        {ch.title}<Compteur n={ch.count} />
+                      </button>
+                    ))}
+                </>
+              )}
+            </GroupeCollection>
+          );
+        })}
       </section>
 
       <section>

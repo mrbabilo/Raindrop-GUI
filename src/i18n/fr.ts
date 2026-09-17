@@ -6,6 +6,8 @@ export const fr = {
   "nav.trash": "Corbeille",
   "nav.untagged": "Non-taggés",
   "nav.collections": "Collections",
+  "nav.expand": "Déplier {title}",
+  "nav.collapse": "Replier {title}",
   "nav.tags": "Tags",
   "nav.cleanup": "Nettoyage",
   "search.placeholder": "Rechercher…",

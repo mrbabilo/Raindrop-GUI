@@ -29,6 +29,9 @@ const paths: Record<string, ReactNode> = {
   ),
   // chevron : l'ornement d'un bouton-état, jamais seul
   chevron: <path d="M4.5 6.5L8 10l3.5-3.5" />,
+  // chevrons d'arbre : l'état d'un groupe plié ou déplié
+  chevronBas: <path d="M4.5 6.5L8 10l3.5-3.5" />,
+  chevronDroit: <path d="M6.5 4.5L10 8l-3.5 3.5" />,
 };
 
 export type NomIcone = keyof typeof paths;

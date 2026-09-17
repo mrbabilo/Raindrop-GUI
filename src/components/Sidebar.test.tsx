@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitForElementToBeRemoved } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -53,7 +53,8 @@ describe("Sidebar", () => {
     expect(screen.getByText("Favoris")).toBeInTheDocument();
     expect(screen.getByText("Corbeille")).toBeInTheDocument();
     expect(screen.getByText("Dev")).toBeInTheDocument();
-    expect(screen.getByText("Rust")).toBeInTheDocument(); // enfant indenté
+    // « Rust » est un enfant : replié par défaut, il n'est pas rendu (§9).
+    expect(screen.queryByText("Rust")).not.toBeInTheDocument();
     expect(screen.getByText("typescript")).toBeInTheDocument();
     expect(screen.getByText("8")).toBeInTheDocument();
   });
@@ -67,9 +68,10 @@ describe("Sidebar", () => {
   // FIX ledger (revue finale) : DESIGN.md §8 — « retrait 14 px par niveau ».
   // L'enfant (niveau 1) porte donc 8 px (px-2 de la classe item) + 14 px de
   // retrait = 22 px ; l'ancien pl-6 (24 px) ne suivait pas la lettre.
-  it("retrait d'arbre : 14 px par niveau — 22 px au niveau 1 (§8)", () => {
+  it("retrait d'arbre : 14 px par niveau — 22 px au niveau 1 (§8)", async () => {
     renderSidebar();
-    const enfant = screen.getByText("Rust").closest("button")!;
+    await userEvent.hover(screen.getByText("Dev"));
+    const enfant = (await screen.findByText("Rust")).closest("button")!;
     expect(enfant).toHaveStyle({ paddingLeft: "22px" });
     expect(enfant.className).not.toContain("pl-6");
     // Le parent, racine, ne porte aucun retrait supplémentaire.
@@ -88,6 +90,78 @@ describe("Sidebar", () => {
     // Contrôle positif : les compteurs non nuls restent posés.
     expect(screen.getByText("Dev").closest("button")!.textContent).toContain("12");
     expect(screen.getByText("typescript").closest("button")!.textContent).toContain("8");
+  });
+
+  // DESIGN.md §9 « révélé, pas posé » : l'arbre s'explore au pointeur. Un
+  // parent déplie ses enfants au survol ; les quitter les replie, mais pas
+  // tout de suite — un simple passage du pointeur ne doit pas faire clignoter
+  // la sidebar.
+  it("un parent déplie au survol et replie APRÈS un délai", async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    expect(screen.queryByText("Rust")).not.toBeInTheDocument();
+    await user.hover(screen.getByText("Dev"));
+    expect(screen.getByText("Rust")).toBeInTheDocument();
+
+    await user.unhover(screen.getByText("Dev"));
+    // Toujours là juste après : le repli est différé.
+    expect(screen.getByText("Rust")).toBeInTheDocument();
+    await waitForElementToBeRemoved(() => screen.queryByText("Rust"), { timeout: 1500 });
+  });
+
+  // Survoler un ENFANT ne quitte pas le groupe : sans cela, viser un enfant
+  // le ferait disparaître sous le pointeur.
+  it("survoler un enfant garde le groupe déplié", async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    await user.hover(screen.getByText("Dev"));
+    await user.hover(screen.getByText("Rust"));
+    // Laisser passer largement le délai de repli.
+    await new Promise((r) => setTimeout(r, 600));
+    expect(screen.getByText("Rust")).toBeInTheDocument();
+  });
+
+  // Le survol n'existe pas au clavier : le chevron est le SEUL accès au
+  // pliage pour qui n'a pas de souris. Il n'est pas un doublon du survol,
+  // il en est l'équivalent accessible.
+  // `fireEvent.click` et non `userEvent.click` : ce dernier survole avant de
+  // cliquer, et le survol déplie déjà — on testerait alors le chemin souris,
+  // où le chevron affiche « Replier » et replie bel et bien. Ici c'est le
+  // chemin CLAVIER qui est en cause : activer le chevron sans jamais survoler.
+  it("le chevron plie et déplie sans survol (clavier), et dit son état", async () => {
+    renderSidebar();
+    const chevron = screen.getByRole("button", { name: "Déplier Dev" });
+    expect(chevron).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(chevron);
+    expect(screen.getByText("Rust")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Replier Dev" })).toHaveAttribute("aria-expanded", "true");
+    // Déplié à la main, le groupe ne se replie pas tout seul au leave.
+    fireEvent.pointerLeave(screen.getByText("Dev").closest("div.group")!);
+    await new Promise((r) => setTimeout(r, 600));
+    expect(screen.getByText("Rust")).toBeInTheDocument();
+    // Et le chevron le referme.
+    fireEvent.click(screen.getByRole("button", { name: "Replier Dev" }));
+    expect(screen.queryByText("Rust")).not.toBeInTheDocument();
+  });
+
+  // §9 « masqué si nul » : pas d'enfants, pas de chevron.
+  it("une collection sans enfant n'a pas de chevron", () => {
+    renderSidebar();
+    expect(screen.queryByRole("button", { name: /plier Design/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Déplier Dev" })).toBeInTheDocument();
+  });
+
+  // Sans cela, cliquer un enfant replierait le groupe d'où l'on vient et
+  // ferait perdre le contexte de la vue courante.
+  it("le parent de la vue courante reste déplié", async () => {
+    renderSidebar();
+    fireEvent.click(screen.getByRole("button", { name: "Déplier Dev" }));
+    fireEvent.click(screen.getByText("Rust"));
+    // Le pointeur quitte la sidebar : seul « la vue est là-dedans » retient
+    // encore le groupe ouvert.
+    fireEvent.pointerLeave(screen.getByText("Dev").closest("div.group")!);
+    await new Promise((r) => setTimeout(r, 600));
+    expect(screen.getByText("Rust")).toBeInTheDocument();
   });
 
   // Une collection n'est une cible que PENDANT un déplacement : au repos,
