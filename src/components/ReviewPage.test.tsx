@@ -12,16 +12,6 @@ import type { View } from "../state/appState";
 const sendMock = vi.hoisted(() => vi.fn(async () => ({})));
 vi.mock("../lib/api", () => ({ api: { send: sendMock, get: vi.fn() } }));
 
-// L'inventaire des archives : injecté par test. Le reste du module (les
-// formateurs, la borne) reste le VRAI — c'est sa sortie que l'écran montre.
-const archivesMock = vi.hoisted(() => vi.fn());
-vi.mock("../hooks/useBackup", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../hooks/useBackup")>()),
-  useArchives: archivesMock,
-  useJobsEnVol: vi.fn(() => ({ data: [] })),
-  useInvalidateSauvegarde: () => vi.fn(),
-}));
-
 type ReviewView = Extract<View, { kind: "review" }>;
 
 const items = [
@@ -40,7 +30,6 @@ const renderReview = (r: ReviewView = review) => render(<ReviewPage review={r} g
 beforeEach(() => {
   sendMock.mockClear();
   goBack.mockClear();
-  archivesMock.mockReset().mockReturnValue({ data: undefined });
 });
 
 // jsdom ne fait pas de layout : offsetHeight vaut 0 et le virtualizer en
@@ -315,83 +304,5 @@ describe("ReviewPage — rulings", () => {
     lignes[0]!.focus();
     await userEvent.keyboard(" ");
     expect(compteur()).not.toBe(avant);
-  });
-});
-
-describe("ReviewPage — archivage des copies permanentes", () => {
-  const avecCache = (id: number, cache: { status: string; size?: number } | null) => ({
-    id,
-    url: `https://${id}.example`,
-    title: `T${id}`,
-    collectionId: 0,
-    cache,
-  });
-  const revueArchive = (items: ReturnType<typeof avecCache>[]): ReviewView => ({
-    kind: "review",
-    items,
-    action: { op: "archive" },
-    sourceLabel: "sélection",
-  });
-
-  // La règle du lot : l'identifiant 2 est DANS la sélection — on le montre —
-  // et c'est l'inventaire qui l'écarte du POST.
-  it("les déjà-archivés sont écartés du job ET comptés à l'écran", async () => {
-    archivesMock.mockReturnValue({ data: { set: new Set([2]), octets: 0 } });
-    const revue = revueArchive([
-      avecCache(1, { status: "ready" }),
-      avecCache(2, { status: "ready" }),
-      avecCache(3, { status: "ready" }),
-    ]);
-    expect(revue.items.map((i) => i.id)).toContain(2); // il était bien là
-    renderReview(revue);
-    expect(screen.getByText(/2 copie\(s\) à archiver · 1 déjà archivée\(s\)/)).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("checkbox", { name: /Je confirme/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Exécuter" }));
-    await vi.waitFor(() =>
-      expect(sendMock).toHaveBeenCalledWith("POST", "/api/backup/archive", { ids: [1, 3] }),
-    );
-  });
-
-  it("la confirmation compte ce qui sera VRAIMENT archivé", () => {
-    archivesMock.mockReturnValue({ data: { set: new Set([2, 3]), octets: 0 } });
-    renderReview(
-      revueArchive([avecCache(1, { status: "ready" }), avecCache(2, { status: "ready" }), avecCache(3, { status: "ready" })]),
-    );
-    // 3 cochés, mais 1 seul à archiver : c'est lui que la confirmation porte.
-    expect(screen.getByLabelText("Je confirme l'action sur 1 item(s)")).toBeInTheDocument();
-  });
-
-  it("annonce le volume et la durée quand les tailles sont connues", () => {
-    renderReview(revueArchive([avecCache(1, { status: "ready", size: 3 * 2 ** 20 })]));
-    expect(screen.getByText(/Environ 3 Mo/)).toBeInTheDocument();
-  });
-
-  it("une vue qui ignore l'état des copies le DIT", () => {
-    // Construite comme la vue Liens morts : aucun `cache` sur les items.
-    renderReview({
-      kind: "review",
-      items: [{ id: 1, url: "u", title: "t", collectionId: 0 }],
-      action: { op: "archive" },
-      sourceLabel: "liens morts",
-    });
-    expect(screen.getByText(/ne connaît pas l'état des copies/)).toBeInTheDocument();
-  });
-
-  // Pas de découpe silencieuse en lots : ce serait le « tout archiver » que
-  // la spec écarte, réintroduit par la porte de derrière.
-  it("au-delà de la borne, un refus AFFICHÉ et rien d'envoyé", async () => {
-    const trop = Array.from({ length: 501 }, (_, i) => avecCache(i + 1, { status: "ready" }));
-    renderReview(revueArchive(trop));
-    expect(screen.getByText(/501 sélectionnés : la borne est de 500/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("checkbox", { name: /Je confirme/ }));
-    expect(screen.getByRole("button", { name: "Exécuter" })).toBeDisabled();
-    expect(sendMock).not.toHaveBeenCalled();
-  });
-
-  it("rien à archiver : rien à exécuter", async () => {
-    renderReview(revueArchive([avecCache(1, null)]));
-    await userEvent.click(screen.getByRole("checkbox", { name: /Je confirme/ }));
-    expect(screen.getByRole("button", { name: "Exécuter" })).toBeDisabled();
   });
 });

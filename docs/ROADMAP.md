@@ -149,12 +149,18 @@ fidèle, recompression quand la signature manque, test sabordé pour le prouver.
       plan 2 : **appeler** cette route depuis le front (sur une collection, ou
       sur les liens classés morts — §5.4). Noter pour le front que `faits`
       compte les **tentés**, succès et échecs confondus.
-- [ ] **Un test instable non identifié** : une exécution de `npm test` sur
-      quinze a échoué (1 test), sans jamais se reproduire ensuite — ni sur la
-      suite complète, ni en martelant les fichiers sensibles au temps
-      (`archives.test.ts` et son écart de mtime de 15 ms, `throttle.test.ts`,
-      `lifecycle.test.ts`). Le nom n'a pas été capturé. À reprendre si cela
-      resurgit, en lançant la suite avec la sortie redirigée vers un fichier.
+- [x] **Le test instable est IDENTIFIÉ** (2026-09-18) — ce n'est pas un test,
+      c'en est quatre, et ce n'est pas de l'instabilité mais de la **sensibilité
+      à la charge**. Capturés en redirigeant la sortie, comme la note
+      précédente le demandait : `linkchecker.test.ts` (« 200 → ok », « 301 →
+      redirect permanent ») et `lifecycle.test.ts` (« redémarre après un crash »,
+      « restart() répare un état crashed »). Les quatre échouent quand la suite
+      tourne **en même temps** qu'un `cargo test` — la suite passe alors de 20 s
+      à 191 s, et les délais de 15-20 s de `lifecycle` expirent. Seule, la suite
+      rend **663 tests / 2 ignorés / 0 échec**. Rien à corriger dans le code
+      testé ; à garder en tête : **ne pas lancer `npm test` et `cargo test`
+      concurremment**, ou desserrer les délais de ces quatre tests si le besoin
+      s'en fait sentir en CI.
 - [ ] **Les dossiers d'instantanés échoués fuient** — une exception en cours
       de balayage laisse un dossier partiel que rien ne ramasse : la rotation
       n'itère que sur les horodatages du manifeste. ~11 Mo par échec, hors de
