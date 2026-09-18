@@ -100,6 +100,14 @@ export function dureeEstimee(n: number): string {
   return t("sauvegarde.duree.min", { n: Math.ceil(secondes / 60) });
 }
 
+/** `2026-09-18T08-15-12` (UTC, le nom de dossier d'un instantané) → date
+ *  lisible en heure locale. Un horodatage illisible se rend tel quel plutôt
+ *  que de devenir « Invalid Date » à l'écran. */
+export function formatterHorodatage(h: string): string {
+  const d = new Date(`${h.slice(0, 10)}T${h.slice(11).replace(/-/g, ":")}Z`);
+  return Number.isNaN(d.getTime()) ? h : d.toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
+}
+
 /** Les clés de progression émises par le sidecar, traduites — même motif que
  *  `ETAT_MCP` dans Reglages : le `satisfies` garantit que chaque valeur est
  *  une clé réelle du dictionnaire, et le contrôle `in` rattrape une clé que

@@ -11,6 +11,10 @@ const { healthMock, getMock, remplacerMock, deconnecterMock } = vi.hoisted(() =>
 }));
 vi.mock("../hooks/useStaticData", () => ({ useHealth: healthMock }));
 vi.mock("../lib/api", () => ({ api: { get: getMock, send: vi.fn() } }));
+// La section Sauvegarde a ses propres contrats et son propre fichier de
+// test : ici elle est isolée, pour que les contrats de Reglages restent
+// lisibles seuls.
+vi.mock("./SectionSauvegarde", () => ({ SectionSauvegarde: () => <div data-testid="section-sauvegarde" /> }));
 vi.mock("../lib/amorce", () => ({
   remplacerJeton: remplacerMock,
   deconnecter: deconnecterMock,

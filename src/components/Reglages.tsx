@@ -4,6 +4,7 @@ import type { FrKey } from "../i18n/fr";
 import { api } from "../lib/api";
 import { useHealth } from "../hooks/useStaticData";
 import { remplacerJeton, deconnecter, type Amorce } from "../lib/amorce";
+import { SectionSauvegarde } from "./SectionSauvegarde";
 import type { UserInfo } from "../hooks/useStaticData";
 
 // Les cinq états de `sidecar/mcp/lifecycle.ts`, traduits — le front ne
@@ -127,6 +128,8 @@ export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (
         ) : (
           <p className="mb-4 text-xs text-app-muted">{t("reglages.note")}</p>
         )}
+
+        <SectionSauvegarde onEtat={onEtat} />
 
         <div className="flex gap-2">
           {!saisie && (
