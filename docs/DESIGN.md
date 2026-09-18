@@ -60,6 +60,26 @@ Le glyphe se place **avant le domaine**, dans le même filet de texte secondaire
 et partage sa couleur. Il ne prend ni fond, ni bordure, ni pilule : c'est une
 lettre de plus dans la ligne du domaine, pas un badge.
 
+### 2.2 L'étiquette retenue
+
+Une étiquette **cliquée entre dans le filtre** ; recliquée, elle en sort. Deux
+étiquettes retenues s'**intersectent** — ce n'est pas un choix d'interface :
+l'API n'offre que ça (`#a OR #b` ne rend pas l'union, « OR » y est un mot
+comme un autre). L'interface ne propose donc aucun ET/OU.
+
+La pilule retenue **inverse ses deux valeurs** — le fond prend la clarté de
+l'encre, l'encre celle du fond — **et garde sa teinte**. C'est son rôle qui
+change, pas son identité : elle reste reconnaissable comme l'étiquette de sa
+thématique (§3), et aucune couleur nouvelle n'entre dans le système. Sans
+cette marque, une étiquette déjà posée inviterait à refaire ce qui est fait,
+et son clic surprendrait en défaisant.
+
+Les étiquettes retenues se relisent **en rangée sous la recherche**, chacune
+retirable d'un clic, avec un « et » entre elles. C'est l'application de « un
+filtre posé ne peut pas devenir invisible » (§9) au cas le plus dur : quand
+un filtre à trois étiquettes ne rend rien, il n'y a plus une seule ligne à
+l'écran où lire ce qui filtre.
+
 ## 3. La symbolique des couleurs
 
 La teinte vient de ce qu'un mot **signifie**, jamais de son orthographe. Un

@@ -16,6 +16,10 @@ const searchQuery = z.object({
   important: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
   notag: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
   domain: z.string().optional(),
+  // Le filtre multi-étiquettes. Comme `domain`, ce n'est PAS un paramètre du
+  // tool : il se compose dans la recherche (recherche.ts) et le tableau ne
+  // doit jamais atteindre le pont.
+  tags: z.array(z.string()).optional(),
   media: z.enum(["link", "article", "image", "video", "document", "audio"]).optional(),
   created_start: z.string().optional(),
   created_end: z.string().optional(),
@@ -82,14 +86,25 @@ export function raindropsRoutes(deps: SidecarDeps): Hono {
   const app = new Hono();
 
   app.get("/", async (c) => {
-    const q = searchQuery.safeParse(Object.fromEntries(new URL(c.req.url).searchParams));
+    const params = new URL(c.req.url).searchParams;
+    // ⚠️ `Object.fromEntries` ne garde que la DERNIÈRE valeur d'une clé
+    // répétée : `?tags=a&tags=b` s'y réduirait à `b`, sans la moindre erreur —
+    // un filtre sur deux étiquettes qui n'en applique qu'une, et une liste
+    // trop large qu'aucun message n'explique. Les étiquettes se relisent donc
+    // par `getAll`, APRÈS l'aplatissement, et l'écrasent.
+    const brut: Record<string, unknown> = Object.fromEntries(params);
+    const tagsBruts = params.getAll("tags");
+    if (tagsBruts.length > 0) brut.tags = tagsBruts;
+    else delete brut.tags;
+    const q = searchQuery.safeParse(brut);
     if (!q.success) return apiError(c, "INVALID_INPUT", z.prettifyError(q.error));
     // CLAUDE.md §Traps : `domain` transmis au tool ne filtre RIEN — le pont
     // l'envoie en paramètre d'URL et l'API Raindrop l'ignore. Le filtre par
     // domaine n'existe que dans la recherche : on l'y compose, et on RETIRE
     // le paramètre mort des arguments (sinon le pont l'ajoute quand même).
-    const { domain, ...args } = q.data;
-    const search = composerRecherche(q.data.search, domain);
+    // `tags` suit la même règle, pour la même raison.
+    const { domain, tags, ...args } = q.data;
+    const search = composerRecherche(q.data.search, domain, tags);
     const out = await deps.mcp("search_raindrops", { ...args, ...(search === undefined ? {} : { search }) });
     if (!out.ok) return apiError(c, out.code, out.message, out.tool);
     const raw = out.data as { count: number; items: RawRaindrop[] };

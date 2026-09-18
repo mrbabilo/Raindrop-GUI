@@ -10,6 +10,23 @@
 // `#webdesign` → 1713, `domain:youtube.com` → 64, les deux → 1), ce qui
 // rend la composition par simple espace sûre, y compris avec les termes
 // que le pont ajoute lui-même derrière (`type:`, `created:`, `notag:`).
+//
+// L'ÉTIQUETTE se compose de la même façon, et l'intersection est ce qui rend
+// le filtre multi-étiquettes possible sans rien calculer chez nous (mesuré en
+// réel le 2026-09-19 : `#webdesign` 1713, `#code` 886, les deux 113 ;
+// `#webdesign #code #wordpress` → 1). Trois mesures du même jour cadrent la
+// composition ci-dessous :
+//   • l'opérateur est INSENSIBLE À LA CASSE (`#WEBDESIGN` → 1713) — au
+//     contraire de `domain:`, qui rend zéro sur la moindre majuscule ;
+//   • les guillemets sont TRANSPARENTS (`#"webdesign"` → 1713, `#"code"` avec
+//     lui → 113) : les poser toujours ne coûte rien et protège l'étiquette
+//     qui porterait un espace — aucune n'en porte aujourd'hui, un renommage
+//     en fabrique une demain ;
+//   • il n'y a PAS d'alternative : `OR` n'est pas un opérateur
+//     (`#webdesign OR #code` → 60, soit moins que chacun — « OR » est lu
+//     comme un mot du texte). L'union de deux étiquettes n'existe pas côté
+//     serveur, et l'intersection est la seule sémantique offerte.
+// `tag:` n'existe pas non plus (→ 0) ; seul le `#` filtre.
 
 /**
  * Ramène une saisie d'utilisateur à ce que Raindrop stocke réellement :
@@ -37,18 +54,48 @@ export function domaineRecherche(saisie: string | undefined): string | undefined
 }
 
 /**
- * Assemble la recherche saisie et le filtre de domaine en UN seul terme de
- * recherche. Les guillemets autour de la valeur sont sans effet sur un
- * domaine ordinaire (vérifié : 64 avec et sans) et protègent des espaces
- * qu'une saisie maladroite laisserait passer.
+ * Ramène une liste d'étiquettes aux termes `#"…"` à intersecter.
+ *
+ * Le dédoublonnage est fait SANS ÉGARD À LA CASSE parce que le filtre l'est
+ * (mesuré) : garder `#Code` et `#code` côte à côte n'ajouterait aucun filtre,
+ * juste un terme redondant dans la requête — et, côté front, deux clés de
+ * cache pour un seul résultat.
+ *
+ * Le guillemet interne est RETIRÉ plutôt qu'échappé : il fermerait le terme
+ * en cours et ferait lire la suite comme du texte libre, c'est-à-dire un
+ * filtre silencieusement autre que celui demandé. Une étiquette ne peut pas
+ * en contenir sans que quelqu'un l'y ait mis à la main.
+ */
+export function etiquettesRecherche(tags: readonly string[] | undefined): string[] {
+  const vues = new Set<string>();
+  const out: string[] = [];
+  for (const brut of tags ?? []) {
+    const nom = brut.replace(/"/g, "").trim();
+    if (nom === "") continue;
+    const cle = nom.toLowerCase();
+    if (vues.has(cle)) continue;
+    vues.add(cle);
+    out.push(`#"${nom}"`);
+  }
+  return out;
+}
+
+/**
+ * Assemble la recherche saisie, le filtre de domaine et les étiquettes
+ * retenues en UN seul terme de recherche. Les guillemets autour de la valeur
+ * sont sans effet sur un domaine ordinaire (vérifié : 64 avec et sans) et
+ * protègent des espaces qu'une saisie maladroite laisserait passer.
  */
 export function composerRecherche(
   search: string | undefined,
   domain: string | undefined,
+  tags?: readonly string[],
 ): string | undefined {
   const dom = domaineRecherche(domain);
-  const termes = [search, dom === undefined ? undefined : `domain:"${dom}"`].filter(
-    (t): t is string => t !== undefined && t !== "",
-  );
+  const termes = [
+    search,
+    dom === undefined ? undefined : `domain:"${dom}"`,
+    ...etiquettesRecherche(tags),
+  ].filter((t): t is string => t !== undefined && t !== "");
   return termes.length === 0 ? undefined : termes.join(" ");
 }

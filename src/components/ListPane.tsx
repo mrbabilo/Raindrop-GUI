@@ -6,6 +6,7 @@ import { useRaindrops } from "../hooks/useRaindrops";
 import { useCollections } from "../hooks/useStaticData";
 import { racine } from "../design/Signaux";
 import { listQueryArgs } from "../hooks/listQuery";
+import { useFiltreEtiquettes } from "../hooks/filtreEtiquettes";
 import { useAppState } from "../state/appState";
 import { useArchives } from "../hooks/useBackup";
 import { useDragBookmark } from "../hooks/useDragBookmark";
@@ -21,7 +22,7 @@ import { Composer } from "./Composer";
 type ListView = Extract<View, { kind: "list" }>;
 
 export function ListPane() {
-  const { view, patchList, selectedIds, toggleSelect, selectedRaindropId, selectRaindrop } = useAppState();
+  const { view, selectedIds, toggleSelect, selectedRaindropId, selectRaindrop } = useAppState();
   // Ce qui est archivé EN LOCAL (spec sélection §4.1). Absent tant qu'aucun
   // dossier n'est configuré : la ligne ne porte alors aucun marqueur, ce qui
   // est exact — il n'y a rien d'archivé.
@@ -42,6 +43,10 @@ export function ListPane() {
   // la Sidebar les cibles (useDragBookmark). L'échec s'affiche sous la liste
   // plutôt que de disparaître (R8P-1).
   const drag = useDragBookmark();
+  // Cliquer une étiquette AJOUTE ou RETIRE un filtre — les étiquettes
+  // s'intersectent (recherche.ts) : deux clics valent « les deux à la fois »,
+  // et recliquer la même la retire.
+  const filtreTags = useFiltreEtiquettes();
   const parentRef = useRef<HTMLDivElement>(null);
   // estimateSize suit la densité §8 (36 px) : measureElement (R7P) corrige
   // ensuite chaque hauteur réelle, mais un estimate faux ferait sauter la
@@ -154,7 +159,7 @@ export function ListPane() {
                     collectionRacine={titreRacine(r.collectionId)}
                     archive={archives?.has(r.id) === true}
                     poignee={drag.poignee(r.id, () => selectRaindrop(r.id), r.title)}
-                    onToggle={() => toggleSelect(r.id)} onTag={(name) => patchList({ search: `#${name}` })} />
+                    onToggle={() => toggleSelect(r.id)} onTag={filtreTags.bascule} tagActif={filtreTags.estActive} />
                 </div>
               );
             })}

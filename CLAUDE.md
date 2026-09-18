@@ -382,6 +382,50 @@ rouvrir**. Tester l'état, c'est tester la moitié du contrat ; un interrupteur
 se teste dans les deux sens, et l'on vérifie que la chose commandée a
 réellement disparu — pas seulement que le bouton a changé d'avis.
 
+## Traps filtre multi-étiquettes — lot 2026-09-19
+
+- **L'opérateur `#` ne se comporte PAS comme `domain:`** (mesuré en réel le
+  2026-09-19, lecture seule, 12 210 signets) : il est **insensible à la
+  casse** (`#WEBDESIGN` → 1713 comme `#webdesign`) et les **guillemets sont
+  transparents** (`#"webdesign"` → 1713, `#"webdesign" #"code"` → 113). On
+  peut donc quoter systématiquement, ce qui protège l'étiquette qui porterait
+  un espace — aucune n'en porte aujourd'hui, un renommage en fabrique une.
+  Ce qui reste impitoyable : **pas de préfixe** (`#webdes` → 0) et **`tag:`
+  n'existe pas** (→ 0).
+- **Il n'y a PAS d'union.** `#webdesign OR #code` → **60**, soit moins que
+  chacun : « OR » est lu comme un mot du texte libre et s'intersecte avec le
+  reste. L'intersection (`#a #b` → 113 pour 1713 ∩ 886) est la seule
+  sémantique offerte — ne pas dessiner d'interrupteur ET/OU, il n'y a rien
+  derrière.
+- **`Object.fromEntries(new URL(req.url).searchParams)` ne garde que la
+  DERNIÈRE valeur d'une clé répétée.** `?tags=a&tags=b` s'y réduit à `b`,
+  sans erreur : un filtre sur deux étiquettes qui n'en applique qu'une, et une
+  liste trop large que rien n'explique. Les valeurs répétées se relisent par
+  `getAll` APRÈS l'aplatissement. **Un test à UNE étiquette passe au vert sur
+  cette route cassée** — le piège ne s'attrape qu'à deux.
+- **`String(["a","b"])` rend `"a,b"`.** Un `qs()` qui fait `p.set(k, String(v))`
+  sérialise donc un tableau en une valeur unique, silencieusement. Répéter le
+  paramètre (`p.append`), jamais joindre : un séparateur suppose une étiquette
+  qui ne le contient pas, et rien ne le garantit.
+- **Une liste VIDE ne hache pas comme `undefined`.** La clé de cache de
+  `useRaindrops` est l'objet de requête entier : `{tags: []}` et `{}` sont
+  deux entrées distinctes, donc retirer la dernière étiquette rouvrirait une
+  seconde entrée pour la liste non filtrée déjà chargée. `listQueryArgs`
+  ramène le vide à `undefined`, que `JSON.stringify` efface. Même raison pour
+  **trier** la liste : `["a","b"]` et `["b","a"]` sont le même filtre et
+  doivent produire la même clé.
+- **Un filtre à bascule doit se voir là où on le clique.** Une pilule déjà
+  retenue, rendue comme les autres, invite à refaire ce qui est fait — et son
+  clic surprend en défaisant. `aria-pressed` + inversion des teintes (la
+  TEINTE ne bouge pas : c'est le rôle qui change, pas l'identité).
+- **Le cliquet de `scripts/build_app.py` EXCLUT les tests**, mais pas
+  CLAUDE.md (« tests compris »). `sidecar/api/routes/raindrops.test.ts` vivait
+  à 430 lignes sans que rien ne le signale ; il est découpé (lecture /
+  écriture). Corollaire mesuré : sous un tsconfig incluant les tests, **le
+  dépôt n'est pas type-clean** (une trentaine d'erreurs préexistantes, vitest
+  transpilant sans vérifier). Ne pas confondre avec un faux positif de config
+  — celles-là sont réelles, simplement jamais regardées.
+
 ## Git
 
 Travailler sur `main`. **Pousser uniquement quand l'utilisateur le demande.**

@@ -12,6 +12,13 @@ export type View =
       label: string;
       notag?: boolean;
       search?: string;
+      // Les étiquettes retenues, INTERSECTÉES (voir sidecar/api/recherche.ts :
+      // l'API n'offre que l'intersection). Un champ à part plutôt que des
+      // `#tag` concaténés dans `search` : une étiquette se retire alors d'un
+      // clic, là où la chirurgie de chaîne rendrait le retrait approximatif
+      // et ferait lutter la saisie de la TopBar contre les pilules.
+      // Toujours canonique — voir `canoniser` (hooks/filtreEtiquettes.ts).
+      tags?: string[];
       sort?: string;
       viewMode?: "list" | "mosaic";
       domain?: string;

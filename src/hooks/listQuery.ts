@@ -22,6 +22,11 @@ export function listQueryArgs(view: View, opts: ListQueryOptions = {}): Raindrop
   return {
     collectionId: q.collectionId,
     search: q.search,
+    // Une liste VIDE devient `undefined` : la clé de cache de useRaindrops est
+    // l'objet entier, et `{tags: []}` ne hache pas comme `{}` — retirer la
+    // dernière étiquette ouvrirait donc une SECONDE entrée de cache pour la
+    // liste non filtrée, déjà chargée. `undefined` disparaît du hachage.
+    tags: q.tags && q.tags.length > 0 ? q.tags : undefined,
     sort: q.sort,
     notag: q.notag,
     media: opts.omitMedia ? undefined : q.media,

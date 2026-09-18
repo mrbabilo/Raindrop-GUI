@@ -5,6 +5,10 @@ import type { Paginated, RaindropItem } from "../../shared/types";
 export interface RaindropQuery {
   collectionId: number;
   search?: string;
+  /** Étiquettes intersectées. Canonique (triée, dédoublonnée) — sans quoi
+   *  `["a","b"]` et `["b","a"]` feraient DEUX entrées de cache pour un seul
+   *  résultat : voir `canoniser` (hooks/filtreEtiquettes.ts). */
+  tags?: string[];
   sort?: string;
   important?: boolean;
   notag?: boolean;
@@ -35,6 +39,9 @@ export function useRaindrops(q: RaindropQuery) {
       api.get<Paginated<RaindropItem>>("/api/raindrops", {
         collection_id: isUnread || isFavorites ? 0 : q.collectionId,
         search: q.search ?? (isUnread ? "status:unread" : undefined),
+        // Répété (`?tags=a&tags=b`), jamais joint : un séparateur suppose une
+        // étiquette qui ne le contient pas, et rien ne le garantit.
+        tags: q.tags,
         sort: q.sort,
         important: isFavorites ? "true" : bool(q.important),
         notag: bool(q.notag),

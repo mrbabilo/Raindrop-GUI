@@ -7,11 +7,19 @@ export class ApiError extends Error {
   }
 }
 
-type Query = Record<string, string | number | boolean | undefined>;
+type Query = Record<string, string | number | boolean | readonly string[] | undefined>;
 
+// Un TABLEAU se répète (`?tags=a&tags=b`), il ne se joint pas : `String([...])`
+// rendrait « a,b » — une seule valeur, silencieusement, pour une étiquette qui
+// porterait une virgule. Un tableau VIDE n'émet rien : c'est l'absence de
+// filtre, et non un filtre sur rien.
 function qs(query?: Query): string {
   const p = new URLSearchParams();
-  for (const [k, v] of Object.entries(query ?? {})) if (v !== undefined) p.set(k, String(v));
+  for (const [k, v] of Object.entries(query ?? {})) {
+    if (v === undefined) continue;
+    if (Array.isArray(v)) for (const item of v) p.append(k, item);
+    else p.set(k, String(v));
+  }
   const s = p.toString();
   return s ? `?${s}` : "";
 }

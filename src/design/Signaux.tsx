@@ -143,13 +143,23 @@ export function CarreCollection({
 export function PiluleEtiquette({
   nom,
   taille = "liste",
+  active = false,
+  titre,
   onClick,
 }: {
   nom: string;
   taille?: "liste" | "detail";
+  /** L'étiquette fait partie du filtre courant. Le clic la RETIRE alors —
+   *  `aria-pressed` le dit aux technologies d'assistance, l'inversion des
+   *  teintes à l'œil. Sans cette marque, une pilule déjà retenue inviterait à
+   *  refaire ce qui est fait, et son clic surprendrait en défaisant. */
+  active?: boolean;
+  /** Nom accessible quand le nom de l'étiquette ne suffit pas à dire ce que
+   *  le clic va faire (rangée « étiquettes retenues », où il retire). */
+  titre?: string;
   onClick?: () => void;
 }) {
-  const className = "tag" + (taille === "detail" ? " tag-detail" : "");
+  const className = "tag" + (taille === "detail" ? " tag-detail" : "") + (active ? " tag-actif" : "");
   const style = variablesTeinte(nom);
   if (!onClick) return <span className={className} style={style}>{nom}</span>;
   // `tabIndex={-1}` dans une LISTE seulement : les étiquettes d'une ligne n'y
@@ -161,6 +171,8 @@ export function PiluleEtiquette({
     <button
       type="button"
       {...(taille === "detail" ? {} : { tabIndex: -1 })}
+      aria-pressed={active}
+      {...(titre === undefined ? {} : { "aria-label": titre, title: titre })}
       className={className}
       style={style}
       // La pilule vit dans une ligne cliquable : filtrer sur une étiquette ne

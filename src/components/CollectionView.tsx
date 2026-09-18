@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { t } from "../i18n/fr";
 import type { RaindropItem } from "../../shared/types";
 import { useAppState } from "../state/appState";
+import { useFiltreEtiquettes } from "../hooks/filtreEtiquettes";
 import { useCollections } from "../hooks/useStaticData";
 import { useDragBookmark } from "../hooks/useDragBookmark";
 import { useRovingFocus } from "../hooks/useRovingFocus";
@@ -21,7 +22,7 @@ import { BulkBar } from "./BulkBar";
 // sens plein demanderait onze requêtes espacées de 550 ms sur une collection
 // à dix enfants, et garderait des milliers de lignes hors virtualiseur.
 export function CollectionView() {
-  const { view, go, selectedIds, toggleSelect, selectRaindrop, patchList } = useAppState();
+  const { view, go, selectedIds, toggleSelect, selectRaindrop } = useAppState();
   const arbre = useCollections().data ?? [];
   const drag = useDragBookmark();
   // Les items de chaque section, pour la barre d'actions en masse : sans
@@ -51,7 +52,9 @@ export function CollectionView() {
     [],
   );
   const ouvrirListe = (id: number, label: string) => go({ kind: "list", collectionId: id, label });
-  const filtrerTag = (name: string) => go({ kind: "list", collectionId: 0, label: `#${name}`, search: `#${name}` });
+  // La vue Collection ne porte AUCUN filtre : `bascule` y navigue vers
+  // « Tous » filtré sur l'étiquette (contrat de useFiltreEtiquettes).
+  const filtrerTag = useFiltreEtiquettes().bascule;
   const poignee = (r: RaindropItem) => drag.poignee(r.id, () => selectRaindrop(r.id), r.title);
   const tous = [...itemsDirects, ...Object.values(parSection).flat()];
 

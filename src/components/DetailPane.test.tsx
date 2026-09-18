@@ -338,8 +338,11 @@ describe("DetailPane", () => {
     // cliquer et le prouverait mal.
     const pilule = await screen.findByRole("button", { name: raindrop().tags[0]! });
     await userEvent.click(pilule);
-    const vue = JSON.parse(screen.getByTestId("vue").textContent ?? "{}") as { search?: string };
-    expect(vue.search).toBe(`#${raindrop().tags[0]!}`);
+    const lu = () => JSON.parse(screen.getByTestId("vue").textContent ?? "{}") as { tags?: string[] };
+    expect(lu().tags).toEqual([raindrop().tags[0]!]);
+    // Le retour : la même pilule retire ce qu'elle a posé.
+    await userEvent.click(pilule);
+    expect(lu().tags).toEqual([]);
   });
 
   // `patchList` est un NO-OP hors vue liste : la fiche peut être ouverte
@@ -370,11 +373,11 @@ describe("DetailPane", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: raindrop().tags[0]! }));
     const vue = JSON.parse(screen.getByTestId("vue").textContent ?? "{}") as {
-      kind: string; collectionId: number; search?: string;
+      kind: string; collectionId: number; tags?: string[];
     };
     expect(vue.kind).toBe("list");
     expect(vue.collectionId).toBe(0);
-    expect(vue.search).toBe(`#${raindrop().tags[0]!}`);
+    expect(vue.tags).toEqual([raindrop().tags[0]!]);
   });
 
   // Trois états, jamais confondus (spec sélection §4.1) : archivé EN LOCAL,

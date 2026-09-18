@@ -37,6 +37,11 @@ export function RaindropRow(props: {
   };
   onToggle(): void;
   onTag(name: string): void;
+  /** L'étiquette fait-elle partie du filtre courant ? La pilule le montre là
+   *  où on la clique : sans cette marque, recliquer une étiquette déjà
+   *  retenue la RETIRE sans que rien n'ait annoncé qu'elle était posée.
+   *  Absent = aucune retenue (la vue Collection, par exemple, n'en porte pas). */
+  tagActif?: (name: string) => boolean;
   /** Déclare la ligne comme arrêt de navigation de sa zone (useRovingFocus).
    *  La liste principale ne s'en sert pas : son enveloppe virtualisée porte
    *  déjà le focus, et son index doit survivre au démontage de la ligne. */
@@ -96,7 +101,7 @@ export function RaindropRow(props: {
           Au-delà, elles sont rognées — la ligne ne grandit pas. */}
       <div className="flex min-w-0 max-w-[33%] shrink items-center gap-1 overflow-hidden">
         {r.tags.map((tag) => (
-          <PiluleEtiquette key={tag} nom={tag} onClick={() => props.onTag(tag)} />
+          <PiluleEtiquette key={tag} nom={tag} active={props.tagActif?.(tag) ?? false} onClick={() => props.onTag(tag)} />
         ))}
       </div>
       {/* §2.1 : le glyphe se place AVANT le domaine, dans le même filet de

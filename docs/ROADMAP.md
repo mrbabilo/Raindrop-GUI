@@ -51,11 +51,20 @@ finale de branche).*
       voulait la règle « extraire à la première retouche ».
       **Préférences d'affichage volontairement absentes** : le thème vit
       dans l'en-tête, le dupliquer contredirait DESIGN.md §9.
-- [ ] **Dette cliquet** : `sidecar/api/routes/raindrops.test.ts` porte
-      **430 lignes** — au-dessus du plafond dur de 400, préexistant au
-      plan 3 et exclu du cliquet avec les tests (choix documenté dans
-      `scripts/build_app.py`). À découper selon ses frontières naturelles
-      à la première retouche.
+- [x] **Dette cliquet** — `sidecar/api/routes/raindrops.test.ts` portait
+      **430 lignes**, au-dessus du plafond dur de 400, exclu du cliquet avec
+      les tests (choix documenté dans `scripts/build_app.py`). **Découpé le
+      2026-09-19**, à sa frontière naturelle : `raindrops.lecture.test.ts`
+      (141, les GET et les filtres, sans aucun échafaudage d'écriture) et
+      `raindrops.test.ts` (364, les écritures). Fait au moment où le lot
+      « filtre multi-étiquettes » devait y ajouter des tests — « à la
+      première retouche », comme prévu.
+      **Découvert au passage, non traité** : sous un tsconfig incluant les
+      tests, le sidecar porte une trentaine d'erreurs de typage
+      préexistantes (`SidecarDeps` importé d'`app.js` qui ne l'exporte pas,
+      `hono.request` rendant `Response | Promise<Response>`, fixtures
+      incomplètes). Vitest transpile sans vérifier : rien ne les voit. Le
+      nouveau fichier, lui, est type-clean.
       **Vérifié avant d'écrire** : `tauri build` produit `.app` **et**
       `.dmg` avec les seuls Command Line Tools (1 min 31 s), signature
       ad-hoc ; et `node` est **absent** du PATH minimal d'une app lancée du

@@ -93,14 +93,16 @@ describe("CommandPalette", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  // R11P-1 : la navigation tag porte label ET search `#tag` — sinon
-  // listQuery lit view.search absent et affiche « Tous » non filtré.
-  it("cliquer un tag navigue vers la vue filtrée #tag", async () => {
+  // R11P-1 : la navigation tag porte le filtre lui-même — sinon listQuery
+  // lit une vue sans étiquette et affiche « Tous » non filtré. Le filtre a
+  // cessé d'être un `search: "#tag"` : il vit dans `tags`, un champ à part,
+  // pour qu'une seconde étiquette s'y ajoute au lieu de l'écraser.
+  it("cliquer un tag navigue vers la vue filtrée sur ce tag", async () => {
     renderPalette("rust");
     await waitFor(() => expect(screen.getByText("#rust")).toBeInTheDocument());
     await userEvent.click(screen.getByText("#rust"));
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({
-      kind: "list", collectionId: 0, label: "#rust", search: "#rust",
+      kind: "list", collectionId: 0, label: "#rust", tags: ["rust"],
     });
   });
 

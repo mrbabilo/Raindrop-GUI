@@ -233,6 +233,16 @@ body {
   background: oklch(var(--app-nav-sel-l) calc(var(--app-nav-c) * var(--sat, 1)) var(--h));
 }
 
+/* L'étiquette RETENUE par le filtre. L'inversion réutilise les deux jetons de
+   .tag en les échangeant : la teinte thématique (--h) ne bouge pas, donc
+   l'étiquette reste reconnaissable comme la sienne — c'est son rôle qui
+   change, pas son identité. Aucune couleur nouvelle : DESIGN.md §3 tient la
+   thématique pour la seule source de teinte. */
+.tag-actif {
+  background: oklch(var(--app-tag-ink-l) calc(var(--app-tag-ink-c) * var(--sat, 1)) var(--h));
+  color: oklch(var(--app-tag-l) calc(var(--app-tag-c) * var(--sat, 1)) var(--h));
+}
+
 /* Densité « détail » (DESIGN.md §2) : la pilule passe de 18 à 21 px dans la
    fiche, qui est l'un des deux seuls endroits où l'interface respire (§1).
    Variante de .tag — s'ajoute à elle, ne la remplace pas. */

@@ -303,16 +303,17 @@ describe("Sidebar", () => {
     }
   });
 
-  // R11P-1 : cliquer un tag FILTRE la liste — la vue porte search `#tag`
-  // (filtre serveur prouvé en réel : search=#webdesign → count exact du tag).
-  // Sans `search`, listQuery lit view.search absent : « Tous » non filtré.
-  it("cliquer un tag filtre la liste par la recherche #tag", async () => {
+  // R11P-1 : cliquer un tag FILTRE la liste (filtre serveur prouvé en réel :
+  // search=#webdesign → count exact du tag). La barre latérale NAVIGUE : elle
+  // ouvre un écran filtré sur cette seule étiquette, là où la pilule d'une
+  // ligne ajuste le filtre courant.
+  it("cliquer un tag ouvre la liste filtrée sur ce tag", async () => {
     renderSidebar();
     await userEvent.click(screen.getByText("typescript"));
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({
       kind: "list",
       collectionId: 0,
-      search: "#typescript",
+      tags: ["typescript"],
     });
   });
 });

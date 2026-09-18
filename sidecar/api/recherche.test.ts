@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { domaineRecherche, composerRecherche } from "./recherche.js";
+import { domaineRecherche, composerRecherche, etiquettesRecherche } from "./recherche.js";
 
 // Sondes réelles du 2026-09-17 qui fondent ces contrats (API Raindrop,
 // GET /raindrops/0?search=…, lecture seule) :
@@ -55,5 +55,60 @@ describe("composerRecherche", () => {
 
   it("une saisie de domaine inutilisable ne pollue pas la recherche", () => {
     expect(composerRecherche("rust", "  ")).toBe("rust");
+  });
+});
+
+// Sondes réelles du 2026-09-19 qui fondent ces contrats (mêmes conditions,
+// lecture seule) :
+//   #webdesign → 1713   #code → 886   #webdesign #code → 113
+//   #webdesign #code #wordpress → 1   #WEBDESIGN → 1713 (casse ignorée)
+//   #"webdesign" → 1713   #"webdesign" #"code" → 113 (guillemets transparents)
+//   #webdesign OR #code → 60 (« OR » lu comme un mot : pas d'union)
+//   tag:webdesign → 0   #webdes → 0 (pas de préfixe)
+describe("etiquettesRecherche", () => {
+  it("rend un terme #\"…\" par étiquette, guillemets compris", () => {
+    expect(etiquettesRecherche(["webdesign", "code"])).toEqual(['#"webdesign"', '#"code"']);
+  });
+
+  it("les guillemets protègent l'étiquette qui porte un espace", () => {
+    // Aucune n'en porte dans la bibliothèque sondée (0 sur 1 200) — un
+    // renommage en fabrique une, et sans guillemets `#machine learning`
+    // deviendrait « étiquette machine » ET « texte learning ».
+    expect(etiquettesRecherche(["machine learning"])).toEqual(['#"machine learning"']);
+  });
+
+  it("dédoublonne SANS ÉGARD À LA CASSE — le filtre l'ignore (mesuré)", () => {
+    expect(etiquettesRecherche(["Code", "code", "CODE"])).toEqual(['#"Code"']);
+  });
+
+  it("ignore le vide et le blanc — un #\"\" ne filtrerait rien de nommable", () => {
+    expect(etiquettesRecherche(["", "   ", "code"])).toEqual(['#"code"']);
+    expect(etiquettesRecherche(undefined)).toEqual([]);
+    expect(etiquettesRecherche([])).toEqual([]);
+  });
+
+  it("retire le guillemet interne, qui refermerait le terme", () => {
+    // `#"a"b"` ferait lire `b"` comme du texte libre : un filtre autre que
+    // celui demandé, sans la moindre erreur.
+    expect(etiquettesRecherche(['a"b'])).toEqual(['#"ab"']);
+  });
+});
+
+describe("composerRecherche — étiquettes", () => {
+  it("compose DEUX étiquettes, pas seulement la dernière", () => {
+    expect(composerRecherche(undefined, undefined, ["webdesign", "code"])).toBe(
+      '#"webdesign" #"code"',
+    );
+  });
+
+  it("les étiquettes s'ajoutent à la recherche ET au domaine", () => {
+    expect(composerRecherche("rust", "youtube.com", ["code"])).toBe(
+      'rust domain:"youtube.com" #"code"',
+    );
+  });
+
+  it("aucune étiquette : la composition reste celle d'avant", () => {
+    expect(composerRecherche("rust", undefined, [])).toBe("rust");
+    expect(composerRecherche(undefined, undefined, [])).toBeUndefined();
   });
 });

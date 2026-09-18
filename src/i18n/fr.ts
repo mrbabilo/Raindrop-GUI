@@ -40,6 +40,16 @@ export const fr = {
   // §9 « révélé, pas posé » : domaine et dates se déplient depuis la barre.
   "filter.advanced": "Filtres avancés",
   "filter.clear": "Effacer les filtres",
+  // Le filtre par étiquettes. « Retenue » plutôt que « sélectionnée » : la
+  // sélection, dans cette interface, désigne les SIGNETS cochés (BulkBar) —
+  // deux sélections concurrentes à l'écran auraient porté le même nom.
+  "filter.tagsLabel": "Étiquette retenue|Étiquettes retenues",
+  "filter.removeTag": "Retirer l'étiquette {name}",
+  "filter.clearTags": "Retirer toutes les étiquettes",
+  // L'intersection n'est pas un choix d'interface : l'API n'offre que ça
+  // (`OR` n'est pas un opérateur — mesuré). Le dire évite de chercher le
+  // réglage qui n'existe pas.
+  "filter.tagsEt": "et",
   "nature.link": "Liens",
   "nature.article": "Articles",
   "nature.image": "Images",
@@ -115,6 +125,7 @@ export const fr = {
   "tags.newName": "Nouveau nom",
   "tags.renameField": "Nouveau nom de {name}",
   "tags.confirm": "Confirmer",
+  "tags.filterSelection": "Filtrer sur cette étiquette|Filtrer sur ces {n} étiquettes",
   "review.title": "Revue de l'action",
   "review.count": "{n} item(s) affecté(s)",
   "review.deselect": "Tout désélectionner",

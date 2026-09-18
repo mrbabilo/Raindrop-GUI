@@ -4,6 +4,7 @@ import { t } from "../i18n/fr";
 import { api } from "../lib/api";
 import { useCollections, useTags } from "../hooks/useStaticData";
 import { useAppState } from "../state/appState";
+import { vueEtiquette } from "../hooks/filtreEtiquettes";
 
 // Une entrée de la palette : `hint` affiche la catégorie (i18n), `run`
 // porte l'action — une navigation via `go`, ou une sélection de fiche via
@@ -52,7 +53,7 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
       .map((c) => ({ key: `c${c.id}`, label: c.title, hint: t("cmdk.hintCollection"), run: () => go({ kind: "list", collectionId: c.id, label: c.title }) })),
     ...(tags.data ?? [])
       .filter((tg) => tg.name.toLowerCase().includes(lower))
-      .map((tg) => ({ key: `t${tg.name}`, label: `#${tg.name}`, hint: t("cmdk.hintTag"), run: () => go({ kind: "list", collectionId: 0, label: `#${tg.name}`, search: `#${tg.name}` }) })),
+      .map((tg) => ({ key: `t${tg.name}`, label: `#${tg.name}`, hint: t("cmdk.hintTag"), run: () => go(vueEtiquette([tg.name])) })),
     { key: "cleanup", label: t("nav.cleanup"), hint: t("cmdk.hintView"), run: () => go({ kind: "cleanup" }) },
     { key: "dead", label: t("cleanup.dead"), hint: t("cmdk.hintView"), run: () => go({ kind: "cleanupView", type: "dead" }) },
     { key: "dup", label: t("cleanup.duplicates"), hint: t("cmdk.hintView"), run: () => go({ kind: "cleanupView", type: "duplicates" }) },

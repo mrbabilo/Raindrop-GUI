@@ -3,6 +3,7 @@ import { t } from "../i18n/fr";
 import { useAppState } from "../state/appState";
 import { NatureChips } from "./NatureChips";
 import { PanneauFiltres, actifs } from "./PanneauFiltres";
+import { EtiquettesRetenues } from "./EtiquettesRetenues";
 import { Icone } from "../design/icones";
 
 // Champs : classe .input de styles.css (28 px, rayon 7, 13 px — DESIGN.md
@@ -96,6 +97,7 @@ export function TopBar() {
           </button>
         </div>
       </div>
+      <EtiquettesRetenues />
       <NatureChips focused={focused} />
       <PanneauFiltres ouvert={reglages} />
     </div>

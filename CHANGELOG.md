@@ -246,6 +246,32 @@ Developer ID.
   erreur** pour toute autre forme : coller une URL donnait un écran vide
   que rien n'expliquait. Mesuré de bout en bout : 12 210 → 64.
 
+#### Filtre par plusieurs étiquettes (2026-09-19)
+
+- **Une étiquette cliquée entre dans le filtre ; recliquée, elle en sort.**
+  Jusqu'ici le clic *remplaçait* la recherche par `#tag` : une seconde
+  étiquette écrasait la première, et il n'existait aucun moyen de croiser
+  deux étiquettes. Le geste est le même partout — ligne de liste, fiche,
+  vue Collection, vue Tags, barre latérale, palette ⌘K.
+- **Les étiquettes retenues se lisent en rangée sous la recherche**, chacune
+  retirable d'un clic, avec un « et » entre elles et un « tout retirer » à
+  partir de deux. La pilule retenue **inverse ses valeurs en gardant sa
+  teinte** : son rôle change, pas son identité.
+- **La vue Tags sait filtrer sur les cases cochées** — elles ne servaient
+  qu'à la fusion, alors que c'est le seul endroit de l'application qui
+  ressemblait déjà à « cocher plusieurs étiquettes ».
+- Le filtre vit dans un champ `tags` à part, composé en termes `#"…"` **par
+  le sidecar** : le front ignore la syntaxe de recherche de Raindrop, et une
+  étiquette se retire sans chirurgie de chaîne.
+
+**Mesuré en réel avant d'écrire** (12 210 signets, lecture seule) : les
+étiquettes s'intersectent (`#webdesign` 1713, `#code` 886, les deux **113** ;
+trois → 1), l'opérateur ignore la casse, les guillemets sont transparents —
+et **l'union n'existe pas** (`#a OR #b` rend 60, « OR » étant lu comme un mot).
+L'interface ne propose donc aucun choix ET/OU : il n'y a rien derrière.
+Vérifié ensuite de bout en bout à travers le sidecar : mêmes chiffres, au
+signet près, y compris croisé avec le filtre de domaine.
+
 #### Interface — épure et corrections d'usage (2026-09-18 → 2026-09-19)
 
 - **Panneaux rétractables** : la barre latérale se replie et s'en souvient ;

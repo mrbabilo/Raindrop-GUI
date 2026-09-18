@@ -3,6 +3,7 @@ import { t } from "../i18n/fr";
 import type { Collection } from "../../shared/types";
 import { useCollections, useTags } from "../hooks/useStaticData";
 import { useAppState } from "../state/appState";
+import { vueEtiquette } from "../hooks/filtreEtiquettes";
 import { useDrag } from "../state/drag";
 import { CarreCollection, teinteCollection } from "../design/Signaux";
 import { depotPermis } from "../hooks/useDragBookmark";
@@ -200,7 +201,7 @@ export function Sidebar() {
             pas le label ; sans lui, cliquer un tag montre « Tous » non
             filtré. */}
         {(tags.data ?? []).map((tg) => (
-          <button key={tg.name} data-nav className={item} onClick={() => go({ kind: "list", collectionId: 0, label: `#${tg.name}`, search: `#${tg.name}` })}>
+          <button key={tg.name} data-nav className={item} onClick={() => go(vueEtiquette([tg.name]))}>
             {/* Le nom garde SON span : le # décoratif reste hors de lui, sinon
               une requête de test sur « typescript » ne trouve plus rien —
               elles ne lisent que les nœuds texte directs. L'enveloppe, elle,

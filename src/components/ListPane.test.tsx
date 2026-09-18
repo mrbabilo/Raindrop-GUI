@@ -94,8 +94,13 @@ describe("ListPane", () => {
     await userEvent.click(screen.getByText("Article exemple"));
     expect(document.querySelector("[data-testid='detail-id']")?.textContent).toBe("1000");
     await userEvent.click(screen.getByText("rust"));
-    // le tag cliqué déclenche patchList({search:"#rust"}) — asserté via la vue
-    expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ search: "#rust" });
+    // Le tag cliqué pose le filtre — asserté via la vue.
+    expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ tags: ["rust"] });
+    // Et le RETOUR : recliquer la même pilule la retire. Un contrôle qui
+    // bascule ne se prouve pas à l'aller seul — la pilule affichait
+    // « pressée » sur un filtre qu'on n'aurait pas pu retirer.
+    await userEvent.click(screen.getByText("rust"));
+    expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ tags: [] });
     expect(screen.getByRole("checkbox", { name: "Sélectionner Second" })).not.toBeChecked();
     await userEvent.click(screen.getByRole("checkbox", { name: "Sélectionner Second" }));
     expect(screen.getByRole("checkbox", { name: "Sélectionner Second" })).toBeChecked();

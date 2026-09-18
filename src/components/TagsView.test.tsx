@@ -182,17 +182,46 @@ describe("TagsView", () => {
 
 // Une étiquette ressemble partout à la même chose : en rendre une inerte
 // fait douter de toutes. C'était le seul endroit où le nom ne réagissait pas.
+// Les cases existaient pour la seule FUSION. C'est pourtant le seul endroit
+// de l'application qui ressemble déjà à « cocher plusieurs étiquettes » : le
+// filtre multi-étiquettes y a désormais sa commande.
+describe("TagsView — filtrer sur les étiquettes cochées", () => {
+  it("la commande n'apparaît QU'UNE FOIS une case cochée, et porte le nombre", async () => {
+    render(<TagsView />, { wrapper });
+    const cases = await screen.findAllByRole("checkbox");
+    expect(screen.queryByText(/^Filtrer sur/)).toBeNull();
+    await userEvent.click(cases[0]!);
+    expect(screen.getByText("Filtrer sur cette étiquette")).toBeInTheDocument();
+    await userEvent.click(cases[1]!);
+    expect(screen.getByText("Filtrer sur ces 2 étiquettes")).toBeInTheDocument();
+  });
+
+  it("deux cases cochées ouvrent une liste filtrée sur LES DEUX", async () => {
+    render(<TagsView />, { wrapper });
+    const cases = await screen.findAllByRole("checkbox");
+    await userEvent.click(cases[0]!);
+    await userEvent.click(cases[1]!);
+    await userEvent.click(screen.getByText("Filtrer sur ces 2 étiquettes"));
+    const vue = JSON.parse(screen.getByTestId("vue").textContent ?? "{}") as {
+      kind: string; tags: string[];
+    };
+    expect(vue.kind).toBe("list");
+    // DEUX, et non la dernière cochée : c'est tout l'objet de la demande.
+    expect(vue.tags).toHaveLength(2);
+  });
+});
+
 describe("TagsView — le nom mène à ce qu'il range", () => {
   it("cliquer une étiquette ouvre la liste filtrée sur elle", async () => {
     render(<TagsView />, { wrapper });
     const nom = (await screen.findAllByRole("button", { name: /#/ }))[0]!;
     await userEvent.click(nom);
     const vue = JSON.parse(screen.getByTestId("vue").textContent ?? "{}") as {
-      kind: string; collectionId: number; search: string;
+      kind: string; collectionId: number; tags: string[];
     };
     expect(vue.kind).toBe("list");
     // « Tous » : une étiquette ne se limite pas à la collection courante.
     expect(vue.collectionId).toBe(0);
-    expect(vue.search).toMatch(/^#/);
+    expect(vue.tags).toHaveLength(1);
   });
 });

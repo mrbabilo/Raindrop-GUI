@@ -71,6 +71,27 @@ describe("api", () => {
     expect(url).toBe("/api/user");
   });
 
+  // Un tableau se RÉPÈTE, il ne se joint pas. `String(["a","b"])` rendrait
+  // « a,b » : une seule valeur, donc un filtre sur une seule étiquette pour
+  // une demande qui en portait deux — sans erreur, et invisible à l'écran.
+  it("un tableau devient un paramètre répété, jamais une valeur jointe", async () => {
+    const f = vi.fn(async () => okJson({}));
+    vi.stubGlobal("fetch", f);
+    await api.get("/api/raindrops", { tags: ["webdesign", "code"], per_page: 50 });
+    const [url] = f.mock.calls[0] as unknown as [string];
+    const recus = new URL(url, "http://x").searchParams.getAll("tags");
+    expect(recus).toEqual(["webdesign", "code"]);
+    expect(url).not.toContain("webdesign%2Ccode");
+  });
+
+  it("un tableau VIDE n'émet aucun paramètre — c'est l'absence de filtre", async () => {
+    const f = vi.fn(async () => okJson({}));
+    vi.stubGlobal("fetch", f);
+    await api.get("/api/raindrops", { tags: [] });
+    const [url] = f.mock.calls[0] as unknown as [string];
+    expect(url).toBe("/api/raindrops");
+  });
+
   it("send sans body n'envoie ni corps ni Content-Type", async () => {
     const f = vi.fn(async () => okJson({}));
     vi.stubGlobal("fetch", f);

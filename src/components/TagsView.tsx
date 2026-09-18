@@ -3,6 +3,7 @@ import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { EtatListe } from "./EtatListe";
 import { useAppState } from "../state/appState";
+import { vueEtiquette } from "../hooks/filtreEtiquettes";
 import { useTags } from "../hooks/useStaticData";
 import { useTagManage } from "../hooks/useMutations";
 import type { Tag } from "../../shared/types";
@@ -93,7 +94,7 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
           <button
             type="button"
             className="flex-1 truncate text-left hover:underline"
-            onClick={() => go({ kind: "list", collectionId: 0, label: t("nav.all"), search: `#${tag.name}` })}
+            onClick={() => go(vueEtiquette([tag.name]))}
           >
             #<span>{tag.name}</span>
           </button>
@@ -169,6 +170,7 @@ function ZoneFusion({ coches, vider }: { coches: string[]; vider: () => void }) 
 
 export function TagsView() {
   const q = useTags();
+  const { go } = useAppState();
   const [coches, setCoches] = useState<string[]>([]);
   const bascule = (name: string) =>
     setCoches((c) => (c.includes(name) ? c.filter((n) => n !== name) : [...c, name]));
@@ -196,7 +198,19 @@ export function TagsView() {
           ))}
         </ul>
       )}
-      <div className="px-4 pb-4">
+      <div className="flex flex-col gap-2 px-4 pb-4">
+        {/* Les cases servaient à la seule FUSION. Or c'est le seul endroit de
+            l'application qui ressemble déjà à « cocher plusieurs étiquettes » :
+            n'y pas offrir le filtre reproduisait le grief des pilules à moitié
+            cliquables. Dès UNE case cochée — filtrer sur une seule étiquette
+            est une demande légitime, quand fusionner en exige deux. */}
+        {coches.length > 0 && (
+          <div>
+            <button type="button" className="btn" onClick={() => go(vueEtiquette(coches))}>
+              {t("tags.filterSelection", { n: coches.length })}
+            </button>
+          </div>
+        )}
         <ZoneFusion coches={coches} vider={() => setCoches([])} />
       </div>
     </section>
