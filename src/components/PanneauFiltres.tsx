@@ -1,4 +1,5 @@
 import { t } from "../i18n/fr";
+import { Icone } from "../design/icones";
 import { useAppState } from "../state/appState";
 
 // DESIGN.md §9 « révélé, pas posé » : domaine et dates servent rarement —
@@ -51,8 +52,8 @@ export function PanneauFiltres({ ouvert }: { ouvert: boolean }) {
       {/* §9 « masqué si nul » : rien à effacer, pas de commande — et c'est
           elle qui rend le repli possible quand un filtre est posé. */}
       {actifs(view) && (
-        <button type="button" className="btn" onClick={effacer}>
-          {t("filter.clear")}
+        <button type="button" className="btn btn-icone" aria-label={t("filter.clear")} onClick={effacer}>
+          <Icone nom="croix" />
         </button>
       )}
     </div>

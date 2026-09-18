@@ -7,6 +7,7 @@
 
 import { useState } from "react";
 import { t } from "../i18n/fr";
+import { Icone } from "../design/icones";
 import { EtatListe } from "./EtatListe";
 import { useAppState } from "../state/appState";
 import { useAnalysisResults } from "../hooks/useAnalysis";
@@ -22,12 +23,12 @@ function Paginateur({ page, total, perPage, onPage }: { page: number; total: num
   if (pages <= 1) return null;
   return (
     <nav className="flex items-center justify-end gap-2 px-4 pb-4 text-xs text-app-muted">
-      <button type="button" className="btn" disabled={page === 0} onClick={() => onPage(page - 1)}>
-        {t("cleanup.prev")}
+      <button type="button" className="btn btn-icone" aria-label={t("cleanup.prev")} disabled={page === 0} onClick={() => onPage(page - 1)}>
+        <Icone nom="chevronGauche" />
       </button>
       <span>{t("cleanup.page", { n: page + 1, total: pages })}</span>
-      <button type="button" className="btn" disabled={page + 1 >= pages} onClick={() => onPage(page + 1)}>
-        {t("cleanup.next")}
+      <button type="button" className="btn btn-icone" aria-label={t("cleanup.next")} disabled={page + 1 >= pages} onClick={() => onPage(page + 1)}>
+        <Icone nom="chevronDroit" />
       </button>
     </nav>
   );

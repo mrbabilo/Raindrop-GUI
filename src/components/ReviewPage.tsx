@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useIndexClavier } from "../hooks/useIndexClavier";
 import { t } from "../i18n/fr";
+import { Icone } from "../design/icones";
 import { toCsv, downloadCsv } from "../lib/csv";
 import { useBulk, useEmptyTrash, useCleanupCollections, useInvalidate } from "../hooks/useMutations";
 import { useAppState, type View } from "../state/appState";
@@ -153,8 +154,8 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
-        <button type="button" className="btn" onClick={() => downloadCsv("revue.csv", toCsv(remaining))}>
-          {t("review.export")}
+        <button type="button" className="btn btn-icone" aria-label={t("review.export")} onClick={() => downloadCsv("revue.csv", toCsv(remaining))}>
+          <Icone nom="telecharger" />
         </button>
         <button type="button" className="btn" onClick={() => setExcluded(new Set(review.items.map((i) => i.id)))}>
           {t("review.deselect")}

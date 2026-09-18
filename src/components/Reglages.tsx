@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { t } from "../i18n/fr";
+import { Icone } from "../design/icones";
 import type { FrKey } from "../i18n/fr";
 import { api } from "../lib/api";
 import { useHealth } from "../hooks/useStaticData";
@@ -149,8 +150,8 @@ export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (
           >
             {t("reglages.deconnecter")}
           </button>
-          <button type="button" className="btn ml-auto" onClick={fermer}>
-            {t("reglages.fermer")}
+          <button type="button" className="btn btn-icone ml-auto" aria-label={t("reglages.fermer")} onClick={fermer}>
+            <Icone nom="croix" />
           </button>
         </div>
       </div>

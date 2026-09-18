@@ -174,16 +174,16 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
         {editing ? (
           <>
             {/* §6 : l'action primaire se marque par la surface (sel), pas par une teinte. */}
-            <button type="button" className="rounded bg-app-sel px-2 py-1 text-xs font-medium" onClick={enregistrer}>
-              {t("detail.save")}
+            <button type="button" className="btn btn-icone bg-app-sel" aria-label={t("detail.save")} onClick={enregistrer}>
+              <Icone nom="coche" />
             </button>
-            <button type="button" className={bouton} onClick={() => setEditing(false)}>
-              {t("detail.cancel")}
+            <button type="button" className="btn btn-icone" aria-label={t("detail.cancel")} onClick={() => setEditing(false)}>
+              <Icone nom="croix" />
             </button>
           </>
         ) : (
-          <button type="button" className={bouton} onClick={() => setEditing(true)}>
-            {t("detail.edit")}
+          <button type="button" className="btn btn-icone" aria-label={t("detail.edit")} onClick={() => setEditing(true)}>
+            <Icone nom="crayon" />
           </button>
         )}
         {/* §9 « une icône par geste » : le favori ne garde que l'étoile. Son

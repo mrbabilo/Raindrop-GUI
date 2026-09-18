@@ -330,8 +330,19 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       `src/design/icones.tsx`. Chaque icône seule porte son `aria-label`.
       Exception écrite en §9 : le tableau de bord du Nettoyage garde ses
       six compteurs à zéro.
-      Reste à reprendre au fil de l'eau : les futures actions de ligne
-      seront des icônes seules.
+      **Poussée plus loin le 2026-09-19** (« le texte est l'exception ») :
+      pagination en chevrons, éditer/enregistrer/annuler du détail en
+      crayon/coche/croix, renommer une étiquette en crayon, effacer les
+      filtres et fermer les Réglages en croix, exporter en flèche, choisir le
+      dossier de sauvegarde en dossier, annuler un job en croix. Chaque
+      `aria-label` reprend EXACTEMENT le texte qu'il remplace : les 249 tests
+      de composants passent sans retouche, et le nom accessible est conservé.
+      **Gardent leurs mots**, par la règle §9 (« sauf les verbes qui
+      détruisent ou exécutent ») : Corbeille, Mettre à la corbeille,
+      Supprimer, Exécuter, Sauvegarder maintenant, Lancer/Relancer un scan,
+      Valider, Ouvrir la bibliothèque, Déconnecter, Réessayer. Et ce qui
+      porte un COMPTE (« Voir les N », « Archiver la copie (N) ») reste du
+      texte : un nombre ne se dessine pas.
 - [ ] **Passe design** : « Tout désélectionner » testé ; étiquettes
       évanouies par `shrink` (plancher min-w) ; `leading-tight` tuile ;
       `.wash` vs `.coll-icon` à fusionner ; `filetEtat` demi-paire ;

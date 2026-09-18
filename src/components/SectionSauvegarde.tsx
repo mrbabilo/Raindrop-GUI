@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { t } from "../i18n/fr";
+import { Icone } from "../design/icones";
 import { api } from "../lib/api";
 import {
   choisirDossierSauvegarde,
@@ -150,8 +151,14 @@ export function SectionSauvegarde({ onEtat }: { onEtat: (a: Amorce) => void }) {
       {vol !== null && <VolSauvegarde vol={vol} />}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className="btn" disabled={occupe} onClick={() => void geste(choisirDossierSauvegarde)}>
-          {dossier?.dossier ? t("sauvegarde.changer") : t("sauvegarde.choisir")}
+        <button
+          type="button"
+          className="btn btn-icone"
+          aria-label={dossier?.dossier ? t("sauvegarde.changer") : t("sauvegarde.choisir")}
+          disabled={occupe}
+          onClick={() => void geste(choisirDossierSauvegarde)}
+        >
+          <Icone nom="dossier" />
         </button>
         {dossier?.dossier && (
           <button
@@ -249,8 +256,8 @@ function VolSauvegarde({ vol }: { vol: SauvegardeEnVol }) {
                 quoi,
               })}
       </span>
-      <button type="button" className="btn" onClick={() => void annuler(vol.jobId)}>
-        {t("sauvegarde.annuler")}
+      <button type="button" className="btn btn-icone" aria-label={t("sauvegarde.annuler")} onClick={() => void annuler(vol.jobId)}>
+        <Icone nom="croix" />
       </button>
     </p>
   );

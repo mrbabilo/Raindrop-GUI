@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n/fr";
+import { Icone } from "../design/icones";
 import { EtatListe } from "./EtatListe";
 import { useTags } from "../hooks/useStaticData";
 import { useTagManage } from "../hooks/useMutations";
@@ -90,13 +91,14 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
           <span className="text-xs text-app-muted">{tag.count}</span>
           <button
             type="button"
-            className="btn shrink-0"
+            className="btn btn-icone shrink-0"
+            aria-label={t("tags.rename")}
             onClick={() => {
               setNom("");
               setEdition(true);
             }}
           >
-            {t("tags.rename")}
+            <Icone nom="crayon" />
           </button>
           {armee ? (
             <button

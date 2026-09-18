@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { t } from "../i18n/fr";
+import { Icone } from "../design/icones";
 import { useAppState } from "../state/appState";
 import type { AnalysisType } from "../../shared/types";
 import {
@@ -75,8 +76,8 @@ function BlocScan({ type, label, lastScan, running }: { type: AnalysisType; labe
               {t("cleanup.scanning", progress)}
             </span>
           )}
-          <button type="button" className="btn" onClick={annuler}>
-            {t("cleanup.cancel")}
+          <button type="button" className="btn btn-icone" aria-label={t("cleanup.cancel")} onClick={annuler}>
+            <Icone nom="croix" />
           </button>
         </>
       ) : (

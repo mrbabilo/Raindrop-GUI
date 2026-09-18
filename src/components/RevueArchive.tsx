@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n/fr";
+import { Icone } from "../design/icones";
 import { api } from "../lib/api";
 import {
   dureeEstimee,
@@ -163,8 +164,8 @@ export function ArchiveJob({
           total: vol.total.toLocaleString("fr-FR"),
         })}
       </span>
-      <button type="button" className="btn" onClick={() => void annuler(vol.jobId)}>
-        {t("sauvegarde.annuler")}
+      <button type="button" className="btn btn-icone" aria-label={t("sauvegarde.annuler")} onClick={() => void annuler(vol.jobId)}>
+        <Icone nom="croix" />
       </button>
     </p>
   );

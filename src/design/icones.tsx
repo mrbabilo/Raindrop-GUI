@@ -60,6 +60,26 @@ const paths: Record<string, ReactNode> = {
       <path d="M6.2 3v10" />
     </>
   ),
+  // crayon : éditer sur place — la pointe touche la ligne du bas.
+  crayon: (
+    <>
+      <path d="M10.6 2.9l2.5 2.5" />
+      <path d="M11.3 2.2a1.3 1.3 0 0 1 1.8 0l.7.7a1.3 1.3 0 0 1 0 1.8L6 12.5l-3 .5.5-3z" />
+    </>
+  ),
+  // coche : valider une saisie. Jamais un verbe qui détruit (§9).
+  coche: <path d="M3 8.4l3.2 3.2L13 4.6" />,
+  // téléchargement : la flèche entre dans le plateau.
+  telecharger: (
+    <>
+      <path d="M8 2.5v7.4M5 7l3 3 3-3" />
+      <path d="M2.8 12.2v.5a.8.8 0 0 0 .8.8h8.8a.8.8 0 0 0 .8-.8v-.5" />
+    </>
+  ),
+  // dossier : choisir où écrire.
+  dossier: <path d="M2 4.3a1 1 0 0 1 1-1h3l1.3 1.6H13a1 1 0 0 1 1 1v6.8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" />,
+  // chevron gauche : le pendant de chevronDroit, pour la pagination.
+  chevronGauche: <path d="M9.5 4.5L6 8l3.5 3.5" />,
   // croix : fermer, et rien d'autre
   croix: <path d="M4 4l8 8M12 4l-8 8" />,
   // chevron : l'ornement d'un bouton-état, jamais seul
