@@ -245,6 +245,40 @@ les décisions structurantes.
   `*.test.ts` exige un `npx tsc --noEmit` **explicite** sur les fichiers
   touchés.
 
+## Traps sélection du dossier — lot 2026-09-18
+
+- **Sur `done`, le SSE sérialise le RÉSULTAT, pas l'événement**
+  (`sidecar/api/sse.ts` : `"result" in evt ? evt.result : evt`). Côté front,
+  `jobEvents` étale ce qui arrive : les champs du résultat sont donc **à plat**
+  sur l'événement, `kind` mis à part. En revanche la **progression vit sous
+  `progress`** — les deux formes diffèrent, et lire `evt.done` ne marche dans
+  aucun des deux cas.
+- **`tsconfig.front.json` inclut `src` en ENTIER, tests compris** :
+  `npm run typecheck:front` les couvre. La cécité signalée plus haut ne vaut
+  que pour le tsconfig **sidecar**, qui exclut `**/*.test.ts`. Corollaire : un
+  `npx tsc` ad hoc sur un test front, privé des `types` du projet
+  (`@testing-library/jest-dom`), produit des **faux positifs** — ne pas le
+  faire, lancer le script.
+- **Le dépôt n'a pas d'ESLint** : les imports morts ne sont signalés par rien.
+  Après un découpage de fichier, passer
+  `npx tsc -p tsconfig.front.json --noEmit --noUnusedLocals` — le typecheck
+  ordinaire les laisse passer.
+- **`tauri build` échoue au DMG si un volume DMG est resté monté** d'un build
+  précédent interrompu (`bundle_dmg.sh` → « failed to run »). Le `.app`, lui,
+  est déjà produit : ce n'est pas une régression du code. `hdiutil info`,
+  puis `hdiutil detach /Volumes/dmg.XXXXXX -force`, et relancer.
+- **Quatre tests sont SENSIBLES À LA CHARGE**, pas instables :
+  `linkchecker.test.ts` (« 200 → ok », « 301 → redirect ») et
+  `lifecycle.test.ts` (« redémarre après un crash », « restart() répare »).
+  Ils échouent quand `npm test` tourne **en même temps** qu'un `cargo test` —
+  la suite passe de 20 s à 191 s et les délais de 15-20 s expirent. Seule,
+  elle rend 663/0. **Ne pas lancer les deux suites concurremment.**
+- **Chiffres en dur dans l'interface : jamais.** « 2 min 20, 245 requêtes »
+  était la mesure faite sur UNE bibliothèque ; l'écrire dans un libellé la
+  rendait fausse pour toute autre, et pour celle-là dès qu'elle change de
+  taille. Ce qui nous appartient — 50 items par page, file à 550 ms — est une
+  constante ; le reste se CALCULE sur `bookmarksCount` (`coutBalayage`).
+
 ### La règle sortie de ce lot, sur les tests
 
 > **Une assertion d'absence ne vaut que si l'on a montré que l'objet devait
