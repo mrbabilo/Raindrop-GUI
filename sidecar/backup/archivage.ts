@@ -13,7 +13,7 @@
 //! `enMarche`, donc l'interne n'est jamais lancée — un blocage définitif.
 
 import { join } from "node:path";
-import { archiver } from "./archives.js";
+import { archiver, inventorier } from "./archives.js";
 import type { JobHandle } from "../jobs/store.js";
 
 interface File {
@@ -36,6 +36,8 @@ export interface Archivage {
    *  sur un signet n'interrompt jamais les suivants. */
   archiver(ids: number[], job?: JobHandle): Promise<ResultatArchivage>;
   enCours(): boolean;
+  /** Ce qui est archivé, pour le panneau et les marqueurs (spec sélection §4.1). */
+  inventaire(): Promise<{ ids: number[]; octets: number }>;
 }
 
 export function makeArchivage(deps: {
@@ -108,5 +110,6 @@ export function makeArchivage(deps: {
         enVol = false;
       });
     },
+    inventaire: () => inventorier(dossierArchives),
   };
 }

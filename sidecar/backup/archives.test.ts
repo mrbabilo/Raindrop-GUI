@@ -5,7 +5,7 @@ import { gunzipSync, gzipSync } from "node:zlib";
 import { repertoireTemporaire } from "../testing/tmp.js";
 import { startFauxApi, type FauxApi } from "../testing/apiServer.js";
 import { Throttle } from "../mcp/throttle.js";
-import { archiver, purgerOrphelins, appliquerBudget } from "./archives.js";
+import { archiver, inventorier, purgerOrphelins, appliquerBudget } from "./archives.js";
 
 // `repertoireTemporaire` rend une string, pas une fonction (déjà vu dans
 // balayage.test.ts, correction R3) : un nouveau dossier par appel de `dir()`.
@@ -47,6 +47,24 @@ describe("archiver", () => {
     expect(r.ok).toBe(true);
     const octets = await readFile(join(dossier, "7.html.gz"));
     expect(gunzipSync(octets).toString()).toBe("<html>déjà</html>");
+  });
+});
+
+describe("inventorier", () => {
+  it("répertoire absent → inventaire vide", async () => {
+    expect(await inventorier(join(dir(), "inexistant"))).toEqual({ ids: [], octets: 0 });
+  });
+
+  it("compte les <id>.html.gz, ignore le reste, somme les octets", async () => {
+    const dossier = join(dir(), "inv");
+    await mkdir(dossier, { recursive: true });
+    await writeFile(join(dossier, "7.html.gz"), Buffer.alloc(30));
+    await writeFile(join(dossier, "2.html.gz"), Buffer.alloc(10));
+    await writeFile(join(dossier, "manifest.json"), "{}"); // ignoré
+    await writeFile(join(dossier, "notes.txt"), "x"); // ignoré
+    const inv = await inventorier(dossier);
+    expect(inv.ids).toEqual([2, 7]); // tri croissant, déterministe
+    expect(inv.octets).toBe(40);
   });
 });
 

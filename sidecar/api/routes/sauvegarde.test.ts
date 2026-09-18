@@ -166,4 +166,29 @@ describe("routes sauvegarde", () => {
       expect(jobs.get(jobId)?.status).toBe("done");
     });
   });
+
+  // Ce qui est déjà archivé (spec sélection §4.1) — l'interface le lit, le
+  // front le montre (marqueur, volume) et la Revue s'en sert pour écarter.
+  describe("GET /archives", () => {
+    it("sans dossier configuré, refuse lisiblement (400)", async () => {
+      const app = createApp(deps(new JobStore()), { localToken: TOKEN });
+      const res = await req(app, "/api/backup/archives");
+      expect(res.status).toBe(400);
+      const corps = (await res.json()) as { error: { code: string; message: string } };
+      expect(corps.error.code).toBe("INVALID_INPUT");
+      expect(corps.error.message).toMatch(/BACKUP_DIR/);
+    });
+
+    it("avec archivage, rend l'inventaire", async () => {
+      const archivage = {
+        enCours: () => false,
+        archiver: async () => ({ demandes: 0, faits: 0, echecs: [], annule: false }),
+        inventaire: async () => ({ ids: [2, 7], octets: 40 }),
+      } as unknown as Archivage;
+      const app = createApp(deps(new JobStore(), undefined, archivage), { localToken: TOKEN });
+      const res = await req(app, "/api/backup/archives");
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ids: [2, 7], octets: 40 });
+    });
+  });
 });

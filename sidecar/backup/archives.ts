@@ -75,6 +75,30 @@ export async function archiver(deps: {
   }, { rang: "fond" });
 }
 
+/**
+ * Ce qui est archivé, lisible par l'interface (spec sélection §4.1) : un
+ * readdir, les noms déjà parsés par ID_DE, les tailles au stat. Les noms non
+ * conformes sont ignorés (ils ne sont pas des archives) ; le répertoire
+ * absent est l'état normal d'un dossier neuf, pas une erreur.
+ */
+export async function inventorier(dossierArchives: string): Promise<{ ids: number[]; octets: number }> {
+  let noms: string[];
+  try {
+    noms = await readdir(dossierArchives);
+  } catch {
+    return { ids: [], octets: 0 };
+  }
+  const fichiers: { id: number; octets: number }[] = [];
+  for (const nom of noms) {
+    const id = ID_DE(nom);
+    if (id === undefined) continue;
+    const s = await stat(join(dossierArchives, nom));
+    fichiers.push({ id, octets: s.size });
+  }
+  fichiers.sort((a, b) => a.id - b.id);
+  return { ids: fichiers.map((f) => f.id), octets: fichiers.reduce((n, f) => n + f.octets, 0) };
+}
+
 const ID_DE = (nom: string): number | undefined => {
   const m = /^(\d+)\.html\.gz$/.exec(nom);
   return m ? Number(m[1]) : undefined;

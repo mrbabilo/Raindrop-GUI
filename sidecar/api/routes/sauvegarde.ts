@@ -56,5 +56,13 @@ export function sauvegardeRoutes(deps: SidecarDeps): Hono {
     return c.json({ jobId: job.id }, 202);
   });
 
+  // Ce qui est déjà archivé (spec sélection §4.1) — même condition
+  // d'activation que les deux autres routes : sans dossier, pas d'archives.
+  app.get("/archives", async (c) => {
+    const archivage = deps.archivage;
+    if (!archivage) return apiError(c, "INVALID_INPUT", INACTIVE);
+    return c.json(await archivage.inventaire());
+  });
+
   return app;
 }
