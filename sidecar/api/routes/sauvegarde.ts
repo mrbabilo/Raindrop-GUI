@@ -16,9 +16,9 @@ export function sauvegardeRoutes(deps: SidecarDeps): Hono {
   // silence que §6 interdit, pas un état explicite.
   app.post("/run", async (c) => {
     const body = z
-      .object({ mode: z.enum(["complet", "incremental"]) })
+      .object({ mode: z.enum(["balayage", "incremental"]) })
       .safeParse(await c.req.json().catch(() => null));
-    if (!body.success) return apiError(c, "INVALID_INPUT", "mode ∈ {complet, incremental}");
+    if (!body.success) return apiError(c, "INVALID_INPUT", "mode ∈ {balayage, incremental}");
     const sauvegarde = deps.sauvegarde;
     if (!sauvegarde) return apiError(c, "INVALID_INPUT", INACTIVE);
     // Comme `/api/analysis/scan` refuse un second scan concurrent : deux

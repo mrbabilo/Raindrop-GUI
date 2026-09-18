@@ -43,7 +43,12 @@ export interface StatutSauvegarde {
 }
 
 export interface Sauvegarde {
-  executer(mode: "complet" | "incremental", job?: JobHandle): Promise<ResultatSauvegarde>;
+  /** Le mode s'appelle `balayage`, PAS `complet` : `complet` désigne déjà la
+   *  FIDÉLITÉ d'un instantané (`EntreeInstantane.complet`), et ce sens-là est
+   *  écrit sur disque — dans `manifest.json` comme dans `meta.json`. Le
+   *  renommer invaliderait les sauvegardes existantes ; c'est donc le mode
+   *  qui a cédé le mot, et il nomme désormais le geste plutôt qu'une qualité. */
+  executer(mode: "balayage" | "incremental", job?: JobHandle): Promise<ResultatSauvegarde>;
   /** Une sauvegarde est-elle en vol ? La route s'en sert pour refuser la
    *  seconde, comme `scanner.isRunning` pour les scans. */
   enCours(): boolean;
@@ -217,7 +222,7 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
     return finir({ m, horodatage: h, cible, pieces, count: principal.count, watermark: nouveauWatermark });
   };
 
-  // Une seule sauvegarde en vol à la fois. Deux `executer("complet")`
+  // Une seule sauvegarde en vol à la fois. Deux `executer("balayage")`
   // concurrents partageraient le même horodatage (leurs deux `access()`
   // rendent ENOENT), entrelaceraient deux flux sur le MÊME `raindrops.jsonl`,
   // puis écriraient chacun un manifeste depuis un `m` périmé — la seconde
@@ -227,11 +232,11 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
   let enVol: Promise<ResultatSauvegarde> | undefined;
 
   const executerSeul = async (
-    mode: "complet" | "incremental",
+    mode: "balayage" | "incremental",
     job?: JobHandle,
   ): Promise<ResultatSauvegarde> => {
     const m = await lireManifeste(deps.dossier, avertir);
-    if (mode === "complet") return balayerTout(m, job);
+    if (mode === "balayage") return balayerTout(m, job);
     const bascule = await raisonDeBasculer(m);
     if (bascule === undefined) return rafraichir(m, job);
     avertir("sauvegarde : bascule en balayage complet", { cause: bascule });

@@ -26,8 +26,8 @@
 //! pas garanti stable d'une requête à l'autre.
 
 import type { Lecture } from "./lecture.js";
+import { PAR_PAGE } from "./lecture.js";
 
-const PAR_PAGE = 50;
 /** Garde-fou : un watermark absent ou aberrant ne doit pas rapatrier 245 pages. */
 const MAX_PAGES_DEFAUT = 20;
 

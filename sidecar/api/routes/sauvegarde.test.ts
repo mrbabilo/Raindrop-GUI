@@ -42,7 +42,7 @@ describe("routes sauvegarde", () => {
 
   it("sans dossier configuré, POST /api/backup/run refuse lisiblement (400)", async () => {
     const app = createApp(deps(new JobStore()), { localToken: TOKEN });
-    const res = await req(app, "/api/backup/run", { method: "POST", body: JSON.stringify({ mode: "complet" }) });
+    const res = await req(app, "/api/backup/run", { method: "POST", body: JSON.stringify({ mode: "balayage" }) });
     expect(res.status).toBe(400);
     const corps = (await res.json()) as { error: { code: string; message: string } };
     expect(corps.error.code).toBe("INVALID_INPUT");
@@ -92,7 +92,7 @@ describe("routes sauvegarde", () => {
       },
     } as unknown as Sauvegarde;
     const app = createApp(deps(new JobStore(), sauvegarde), { localToken: TOKEN });
-    const res = await req(app, "/api/backup/run", { method: "POST", body: JSON.stringify({ mode: "complet" }) });
+    const res = await req(app, "/api/backup/run", { method: "POST", body: JSON.stringify({ mode: "balayage" }) });
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: { message: string } }).error.message).toMatch(/déjà en cours/);
     expect(lancements).toBe(0); // rien n'a été lancé : l'assertion qui porte

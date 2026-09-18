@@ -29,6 +29,18 @@ interface Tache {
  * file espace les DÉBUTS d'au moins `minIntervalMs` ET attend la FIN de
  * chacune avant de servir la suivante.
  */
+/**
+ * Ce qu'un appelant attend d'une file : soumettre un travail, à un rang.
+ *
+ * Déclarée ICI, chez qui l'implémente, plutôt que recopiée chez chaque
+ * consommateur — elle l'était **trois fois** à l'identique (`lecture.ts`,
+ * `archives.ts`, `archivage.ts`). `Throttle` la satisfait structurellement :
+ * les modules de sauvegarde dépendent du contrat, pas de la classe.
+ */
+export interface File {
+  run<T>(fn: () => Promise<T>, opts?: { rang?: Rang }): Promise<T>;
+}
+
 export class Throttle {
   private readonly attente: Record<Rang, Tache[]> = { interactif: [], fond: [] };
   private enMarche = false;

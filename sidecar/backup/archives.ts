@@ -15,6 +15,7 @@ import { mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { gzip } from "node:zlib";
 import { promisify } from "node:util";
+import type { File } from "../mcp/throttle.js";
 
 const comprimer = promisify(gzip);
 
@@ -23,10 +24,6 @@ const estGzip = (b: Buffer): boolean => b.length >= 2 && b[0] === 0x1f && b[1] =
 
 /** Budget par défaut du dossier d'archives (correction §1bis n°2). */
 export const ARCHIVES_MAX_GO = 5;
-
-interface File {
-  run<T>(fn: () => Promise<T>, o?: { rang?: "interactif" | "fond" }): Promise<T>;
-}
 
 export async function archiver(deps: {
   token: string;

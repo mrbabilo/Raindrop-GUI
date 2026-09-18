@@ -207,10 +207,20 @@ fidèle, recompression quand la signature manque, test sabordé pour le prouver.
       auxiliaires émettent enfin un label, et un numérateur qui recule au rejeu
       s'écrit « reprise du balayage » au lieu de se traduire en recul
       inexplicable.
-- [ ] **Petites dettes du lot** : factoriser `interface File` (déclarée trois
-      fois) et la constante `50` (encodée cinq fois) ; le mot `complet`
-      désigne deux choses (le mode et la fidélité), avec un troisième nom
-      (`Piece.fidele`) pour la seconde.
+- [x] **Petites dettes du lot — réglées** (2026-09-19). `interface File` était
+      déclarée **trois fois** à l'identique : elle vit désormais chez qui
+      l'implémente (`mcp/throttle.ts`), et les modules de sauvegarde dépendent
+      du contrat, pas de la classe. La pagination `50` était recopiée **cinq
+      fois** (dont une dans un test que je venais d'écrire) : elle vit chez le
+      canal qui parle à l'API (`lecture.ts`), parce qu'une valeur qui
+      divergerait d'un module à l'autre ferait sauter des éléments **sans lever
+      la moindre erreur** — la boucle s'arrête sur `items.length < PAR_PAGE`.
+      Le mot `complet` : c'est le **MODE** qui a cédé le nom (`"balayage"`), et
+      non la fidélité — celle-ci est écrite sur disque, dans `manifest.json`
+      comme dans `meta.json`, et la renommer invaliderait les sauvegardes
+      existantes. `Piece.fidele` reste : une pièce est fidèle, un instantané
+      est complet quand toutes le sont — deux portées, deux mots, ce n'est pas
+      la même chose.
       **Les deux trous de COUVERTURE sont comblés** (2026-09-19) : la page de
       recouvrement de l'incrémental a deux tests — le faux serveur HTTP trie
       correctement et ne pouvait pas produire le cas, d'où une `Lecture`

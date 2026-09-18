@@ -6,7 +6,18 @@
 //! en `Error: failed to …`, or un job de plusieurs minutes doit distinguer
 //! un 429 d'une panne réseau (spec §3.2).
 
+import type { File } from "../mcp/throttle.js";
+
 const API_BASE = "https://api.raindrop.io/rest/v1";
+
+/**
+ * **50 items par requête, c'est le plafond de l'API** (CLAUDE.md) — pas un
+ * réglage. Déclaré ICI, chez le canal qui parle à l'API, plutôt que recopié
+ * chez chaque appelant : il l'était quatre fois, et une valeur de pagination
+ * qui divergerait d'un module à l'autre ferait sauter des éléments sans
+ * lever la moindre erreur (la boucle s'arrête sur `items.length < PAR_PAGE`).
+ */
+export const PAR_PAGE = 50;
 
 /**
  * Le code HTTP structuré, pas seulement en sous-chaîne du message.
@@ -42,10 +53,6 @@ export interface Lecture {
   collectionsEnfants(): Promise<unknown[]>;
   highlights(page: number): Promise<PageBrute>;
   user(): Promise<unknown>;
-}
-
-interface File {
-  run<T>(fn: () => Promise<T>, o?: { rang?: "interactif" | "fond" }): Promise<T>;
 }
 
 export function makeLecture(opts: {
@@ -84,7 +91,7 @@ export function makeLecture(opts: {
   };
 
   return {
-    page: (collectionId, { sort, page, perpage = 50 }) =>
+    page: (collectionId, { sort, page, perpage = PAR_PAGE }) =>
       pageBrute(`/raindrops/${collectionId}?sort=${encodeURIComponent(sort)}&page=${page}&perpage=${perpage}`),
     // perpage=1 : un compteur ne doit pas coûter une page entière (§5.3, la
     // comparaison de compteurs se veut « une requête »).

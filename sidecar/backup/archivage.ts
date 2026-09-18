@@ -15,10 +15,7 @@
 import { join } from "node:path";
 import { archiver, inventorier } from "./archives.js";
 import type { JobHandle } from "../jobs/store.js";
-
-interface File {
-  run<T>(fn: () => Promise<T>, o?: { rang?: "interactif" | "fond" }): Promise<T>;
-}
+import type { File } from "../mcp/throttle.js";
 
 export interface ResultatArchivage {
   demandes: number;

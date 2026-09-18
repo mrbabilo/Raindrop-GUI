@@ -147,7 +147,7 @@ if (sauvegarde && dossierSauvegarde) {
   void (async () => {
     const m = await lireManifeste(dossierSauvegarde, (msg) => logger.warn(msg));
     if (!sauvegarde.doitSauvegarderAuDemarrage(m, new Date())) return;
-    const mode = sauvegarde.doitBalayerComplet(m, new Date()) ? "complet" : "incremental";
+    const mode = sauvegarde.doitBalayerComplet(m, new Date()) ? "balayage" : "incremental";
     const job = runJob(jobs, "backup", 0, (j) => sauvegarde.executer(mode, j));
     logger.info("sauvegarde au démarrage", { mode, jobId: job.id });
   })().catch((e: unknown) => {

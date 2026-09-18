@@ -55,7 +55,7 @@ describe("progression nommée (spec sélection §3)", () => {
       },
       isCancelled: () => false,
     } as unknown as JobHandle;
-    await sauv(api, dossier, { maintenant: heure("10") }).executer("complet", job);
+    await sauv(api, dossier, { maintenant: heure("10") }).executer("balayage", job);
     // Les clés sont stables, le front les traduit — une clé inconnue
     // s'afficherait brute, comme un identifiant interne.
     expect(labels).toEqual(
@@ -74,7 +74,7 @@ describe("ce qui ne doit jamais être effacé", () => {
     api = await startFauxApi(items(3));
     const dossier = repertoireTemporaire("degrade-ecrasement-");
     const fige = heure("10");
-    const s1 = await sauv(api, dossier, { maintenant: fige }).executer("complet");
+    const s1 = await sauv(api, dossier, { maintenant: fige }).executer("balayage");
     const empreinteAvant = await sha256Fichier(join(dossier, s1.horodatage, "raindrops.jsonl"));
 
     api.items.push({
@@ -83,7 +83,7 @@ describe("ce qui ne doit jamais être effacé", () => {
       lastUpdate: "2026-02-01T00:00:00.000Z",
       title: "neuf",
     });
-    const s2 = await sauv(api, dossier, { maintenant: fige }).executer("complet");
+    const s2 = await sauv(api, dossier, { maintenant: fige }).executer("balayage");
 
     expect(s2.horodatage).not.toBe(s1.horodatage);
     expect(await sha256Fichier(join(dossier, s1.horodatage, "raindrops.jsonl"))).toBe(empreinteAvant);
@@ -109,7 +109,7 @@ describe("ce qui ne doit jamais être effacé", () => {
     }));
     writeFileSync(join(dossier, "manifest.json"), JSON.stringify({ version: 1, instantanes: futurs }), "utf8");
 
-    const r = await sauv(api, dossier, { maintenant: heure("10") }).executer("complet");
+    const r = await sauv(api, dossier, { maintenant: heure("10") }).executer("balayage");
 
     expect(existsSync(join(dossier, r.horodatage, "raindrops.jsonl"))).toBe(true);
     const m = JSON.parse(readFileSync(join(dossier, "manifest.json"), "utf8")) as Manifeste;
@@ -149,7 +149,7 @@ describe("ce qui ne doit jamais être effacé", () => {
       },
       isCancelled: () => vues >= 1, // annulé dès la première page lue
     } as unknown as JobHandle;
-    const r = await sauv(api, dossier, { maintenant: heure("10") }).executer("complet", job);
+    const r = await sauv(api, dossier, { maintenant: heure("10") }).executer("balayage", job);
 
     expect(r.complet).toBe(false); // un balayage annulé ne ment pas
     // 1059 n'a bel et bien PAS été vu — sans quoi le test ne prouverait rien.
@@ -175,7 +175,7 @@ describe("ce qui ne doit jamais être effacé", () => {
     // 9001 est en corbeille ; 7777 n'existe nulle part — c'est un orphelin.
     for (const id of [9001, 7777]) writeFileSync(join(archives, `${id}.html.gz`), "x", "utf8");
 
-    const r = await sauv(api, dossier, { maintenant: heure("10") }).executer("complet");
+    const r = await sauv(api, dossier, { maintenant: heure("10") }).executer("balayage");
 
     // La prémisse d'abord : 9001 n'est PAS dans la bibliothèque, seulement
     // dans la corbeille. Sans cela l'assertion suivante ne prouverait rien.
@@ -196,13 +196,13 @@ describe("ce qui ne doit jamais être effacé", () => {
     api = await startFauxApi(items(3));
     const dossier = repertoireTemporaire("degrade-rotation-valide-");
     const lundi = () => new Date("2026-09-14T10:00:00Z"); // lundi
-    const bon = await sauv(api, dossier, { maintenant: lundi }).executer("complet");
+    const bon = await sauv(api, dossier, { maintenant: lundi }).executer("balayage");
     expect(bon.complet).toBe(true);
 
     const mercredi = () => new Date("2026-09-16T10:00:00Z"); // même semaine
     const annule = { progress: () => {}, isCancelled: () => true } as unknown as JobHandle;
     for (let i = 0; i < 7; i++) {
-      const r = await sauv(api, dossier, { maintenant: mercredi }).executer("complet", annule);
+      const r = await sauv(api, dossier, { maintenant: mercredi }).executer("balayage", annule);
       expect(r.complet).toBe(false); // ce sont bien 7 instantanés INVALIDES
     }
 
@@ -222,9 +222,9 @@ describe("ce qui ne doit jamais être effacé", () => {
     const dossier = repertoireTemporaire("degrade-concurrence-");
     const s = sauv(api, dossier, { maintenant: heure("10") });
 
-    const premiere = s.executer("complet");
+    const premiere = s.executer("balayage");
     expect(s.enCours()).toBe(true);
-    await expect(s.executer("complet")).rejects.toThrow(/déjà en cours/);
+    await expect(s.executer("balayage")).rejects.toThrow(/déjà en cours/);
 
     const r = await premiere;
     expect(r.complet).toBe(true); // la première n'a pas été perturbée
@@ -239,7 +239,7 @@ describe("ce qui ne doit jamais être effacé", () => {
   it("un incrémental annulé ne se déclare pas complet", async () => {
     api = await startFauxApi(items(3));
     const dossier = repertoireTemporaire("degrade-annul-incr-");
-    await sauv(api, dossier, { maintenant: heure("10") }).executer("complet");
+    await sauv(api, dossier, { maintenant: heure("10") }).executer("balayage");
     const job = { progress: () => {}, isCancelled: () => true } as unknown as JobHandle;
 
     const s2 = await sauv(api, dossier, { maintenant: heure("11") }).executer("incremental", job);
@@ -262,7 +262,7 @@ describe("ce que le manifeste ne cite pas", () => {
     mkdirSync(mort, { recursive: true });
     writeFileSync(join(mort, "raindrops.jsonl"), '{"_id":1}\n', "utf8");
 
-    await sauv(api, dossier, { maintenant: heure("10") }).executer("complet");
+    await sauv(api, dossier, { maintenant: heure("10") }).executer("balayage");
 
     expect(existsSync(mort)).toBe(false);
   });
@@ -282,7 +282,7 @@ describe("ce que le manifeste ne cite pas", () => {
       "utf8",
     );
 
-    await sauv(api, dossier, { maintenant: heure("10") }).executer("complet");
+    await sauv(api, dossier, { maintenant: heure("10") }).executer("balayage");
 
     // Il est de nouveau CONNU : la rotation peut désormais l'atteindre.
     const m = JSON.parse(readFileSync(join(dossier, "manifest.json"), "utf8")) as Manifeste;

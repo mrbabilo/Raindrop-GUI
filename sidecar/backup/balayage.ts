@@ -48,8 +48,8 @@
 
 import { ouvrirJsonl } from "./instantane.js";
 import type { Lecture } from "./lecture.js";
+import { PAR_PAGE } from "./lecture.js";
 
-const PAR_PAGE = 50;
 
 export interface ResultatBalayage {
   ids: Set<number>;

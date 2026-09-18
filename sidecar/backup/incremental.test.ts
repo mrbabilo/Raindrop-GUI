@@ -3,6 +3,7 @@ import { startFauxApi, type FauxApi } from "../testing/apiServer.js";
 import { makeLecture } from "./lecture.js";
 import { Throttle } from "../mcp/throttle.js";
 import { lireModifies } from "./incremental.js";
+import { PAR_PAGE } from "./lecture.js";
 
 let api: FauxApi | undefined;
 afterEach(async () => { await api?.close(); api = undefined; });
@@ -106,7 +107,8 @@ describe("un item sans `_id` numérique", () => {
 // HTTP trie correctement et ne peut donc pas produire ce cas — d'où une
 // `Lecture` fabriquée, qui sert les pages telles qu'on les veut.
 describe("la page de recouvrement", () => {
-  const PAR_PAGE = 50;
+  // Importée, pas recopiée : un test qui figerait 50 cesserait d'exercer la
+  // frontière de page le jour où la constante changerait.
   /** Une `Lecture` qui sert les pages données, et compte ce qu'on lui demande. */
   const lectureDe = (pages: unknown[][]) => {
     const demandees: number[] = [];

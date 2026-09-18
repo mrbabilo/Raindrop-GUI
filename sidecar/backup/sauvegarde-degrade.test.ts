@@ -51,7 +51,7 @@ describe("états dégradés", () => {
     api = await startFauxApi(items(3));
     const dossier = repertoireTemporaire("degrade-empreinte-");
     const avertis: string[] = [];
-    const s1 = await sauv(api, dossier, { maintenant: heure("10") }).executer("complet");
+    const s1 = await sauv(api, dossier, { maintenant: heure("10") }).executer("balayage");
 
     const fichier = join(dossier, s1.horodatage, "raindrops.jsonl");
     writeFileSync(fichier, readFileSync(fichier, "utf8").replace('"t0"', '"corrompu"'), "utf8");
@@ -80,7 +80,7 @@ describe("états dégradés", () => {
   it("l'instantané précédent a disparu du disque : on repart complet, et on le dit", async () => {
     api = await startFauxApi(items(3));
     const dossier = repertoireTemporaire("degrade-disparu-");
-    const s1 = await sauv(api, dossier, { maintenant: heure("10") }).executer("complet");
+    const s1 = await sauv(api, dossier, { maintenant: heure("10") }).executer("balayage");
     rmSync(join(dossier, s1.horodatage), { recursive: true, force: true });
 
     const avant = api.appels.length;
@@ -116,7 +116,7 @@ describe("états dégradés", () => {
   it("le statut dit ce qu'il sait : dernier instantané valide et complétude", async () => {
     api = await startFauxApi(items(2));
     const dossier = repertoireTemporaire("degrade-statut-");
-    const s1 = await sauv(api, dossier, { maintenant: heure("10") }).executer("complet");
+    const s1 = await sauv(api, dossier, { maintenant: heure("10") }).executer("balayage");
     const statut = await sauv(api, dossier).statut();
     expect(statut.actif).toBe(true);
     expect(statut.dossier).toBe(dossier);

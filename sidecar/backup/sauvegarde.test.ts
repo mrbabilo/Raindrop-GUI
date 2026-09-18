@@ -52,7 +52,7 @@ describe("ce que la sauvegarde collecte", () => {
       { _id: 9001, created: "2019-01-01T00:00:00.000Z", lastUpdate: "2026-01-01T00:00:00.000Z", title: "jeté" },
     ]);
     const dossier = repertoireTemporaire("sauv-corbeille-");
-    const r = await sauv(api, dossier).executer("complet");
+    const r = await sauv(api, dossier).executer("balayage");
 
     const listes = api.appels.filter((a) => a.startsWith("/rest/v1/raindrops/"));
     expect(listes.some((a) => a.startsWith("/rest/v1/raindrops/-99?"))).toBe(true);
@@ -69,7 +69,7 @@ describe("ce que la sauvegarde collecte", () => {
   it("les surlignages passent par l'endpoint GLOBAL, jamais bookmark par bookmark", async () => {
     api = await startFauxApi(items(3));
     const dossier = repertoireTemporaire("sauv-surlignages-");
-    const r = await sauv(api, dossier).executer("complet");
+    const r = await sauv(api, dossier).executer("balayage");
 
     expect(api.appels.filter((a) => a.startsWith("/rest/v1/highlights"))).toHaveLength(1);
     expect(api.appels.filter((a) => /\/rest\/v1\/raindrop\/\d+\/highlights/.test(a))).toEqual([]);
@@ -88,7 +88,7 @@ describe("ce que la sauvegarde collecte", () => {
   it("l'arborescence complète : les collections IMBRIQUÉES sont dans l'instantané", async () => {
     api = await startFauxApi(items(1));
     const dossier = repertoireTemporaire("sauv-arborescence-");
-    const r = await sauv(api, dossier).executer("complet");
+    const r = await sauv(api, dossier).executer("balayage");
 
     expect(api.appels).toContain("/rest/v1/collections");
     expect(api.appels).toContain("/rest/v1/collections/childrens");
@@ -123,7 +123,7 @@ describe("ce que la sauvegarde collecte", () => {
       },
     };
     const r = await makeSauvegarde({ lecture: lectureEspionne, dossier })
-      .executer("complet");
+      .executer("balayage");
 
     expect(r.complet).toBe(false);
     // Relu DEPUIS LE DISQUE : c'est ce que `dernierValide()` lira, et c'est
@@ -138,7 +138,7 @@ describe("l'incrémental", () => {
     api = await startFauxApi(items(3));
     const dossier = repertoireTemporaire("sauv-incr-");
     const s1 = await sauv(api, dossier, { maintenant: () => new Date("2026-09-18T10:00:00Z") })
-      .executer("complet");
+      .executer("balayage");
     const avant = api.appels.length;
 
     api.items[1]!.title = "modifié";
@@ -171,7 +171,7 @@ describe("l'incrémental", () => {
   it("un élément supprimé ailleurs : le compte diverge, on escalade en balayage complet", async () => {
     api = await startFauxApi(items(3));
     const dossier = repertoireTemporaire("sauv-divergence-");
-    await sauv(api, dossier, { maintenant: () => new Date("2026-09-18T10:00:00Z") }).executer("complet");
+    await sauv(api, dossier, { maintenant: () => new Date("2026-09-18T10:00:00Z") }).executer("balayage");
     const avant = api.appels.length;
 
     api.items.splice(0, 1); // supprimé ailleurs : aucune date ne bouge

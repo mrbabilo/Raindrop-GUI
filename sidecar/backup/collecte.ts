@@ -16,6 +16,7 @@ import { join } from "node:path";
 import { ouvrirJsonl, verifierJsonl } from "./instantane.js";
 import { balayerComplet } from "./balayage.js";
 import type { Lecture } from "./lecture.js";
+import { PAR_PAGE } from "./lecture.js";
 
 /** Les noms de fichiers de l'arborescence §4.2 — le futur module de copie de
  *  travail lit cet arbre tel quel, ils ne sont pas libres. */
@@ -28,7 +29,6 @@ export const NOMS = {
   meta: "meta.json",
 } as const;
 
-const PAR_PAGE = 50;
 /** Garde-fou : 500 pages de surlignages (25 000) valent mieux qu'une boucle
  *  infinie si l'API cessait de renvoyer une page courte en fin de liste. */
 const MAX_PAGES_SURLIGNAGES = 500;
