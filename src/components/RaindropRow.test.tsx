@@ -107,3 +107,23 @@ describe("RaindropRow — signalétique (DESIGN.md §2)", () => {
     expect(svg).toHaveAttribute("width", "15");
   });
 });
+
+// Le marqueur d'archive LOCALE (spec sélection §4.1) — à ne pas confondre
+// avec `cache`, la copie permanente qui vit chez Raindrop et disparaîtrait
+// avec le compte. C'est justement ce dont l'archive locale protège.
+describe("RaindropRow — marqueur d'archive", () => {
+  it("n'apparaît que quand une archive locale existe", () => {
+    const { unmount } = ligne({ archive: true });
+    expect(screen.getByText("Archivé")).toBeInTheDocument();
+    unmount();
+    // La MÊME ligne, sans archive : la preuve que le marqueur dépend bien de
+    // cette entrée-là et de rien d'autre.
+    ligne({ archive: false });
+    expect(screen.queryByText("Archivé")).not.toBeInTheDocument();
+  });
+
+  it("une copie permanente chez Raindrop ne vaut PAS une archive locale", () => {
+    ligne({ r: raindrop({ cache: { status: "ready" } }), archive: false });
+    expect(screen.queryByText("Archivé")).not.toBeInTheDocument();
+  });
+});

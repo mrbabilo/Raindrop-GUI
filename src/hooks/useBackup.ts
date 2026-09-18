@@ -53,8 +53,12 @@ export const useBackupStatus = () =>
   });
 
 /** L'inventaire en `Set` : le marqueur « Archivé » le teste par identifiant,
- *  à chaque ligne de la liste — un tableau y serait quadratique. */
-export const useArchives = () =>
+ *  à chaque ligne de la liste — un tableau y serait quadratique.
+ *
+ *  `enabled` sert aux écrans qui n'ont rien à marquer tant que rien n'est
+ *  sélectionné : une fiche vide ne demande rien. La requête reste partagée —
+ *  react-query la sert du cache dès qu'un autre écran l'a faite. */
+export const useArchives = (options?: { enabled?: boolean }) =>
   useQuery({
     queryKey: ["backup", "archives"],
     queryFn: async () => {
@@ -62,6 +66,7 @@ export const useArchives = () =>
       return { octets: inv.octets, set: new Set(inv.ids) };
     },
     staleTime: 60_000,
+    enabled: options?.enabled ?? true,
   });
 
 export const useJobsEnVol = () =>

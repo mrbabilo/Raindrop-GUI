@@ -65,6 +65,8 @@ export const fr = {
   "bulk.review": "Revue de l'action",
   "bulk.archive": "Archiver la copie",
   "cleanup.archiver": "Archiver la copie ({n})",
+  "marque.archive": "Archivé",
+  "marque.copiable": "Copie permanente disponible — pas encore archivée en local",
   "composer.placeholder": "Coller une URL à sauvegarder (⌘E)",
   "composer.exists": "Déjà sauvegardé",
   "composer.save": "Sauvegarder",

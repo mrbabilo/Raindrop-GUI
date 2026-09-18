@@ -40,6 +40,11 @@ export function RaindropRow(props: {
    *  La liste principale ne s'en sert pas : son enveloppe virtualisée porte
    *  déjà le focus, et son index doit survivre au démontage de la ligne. */
   navigable?: boolean;
+  /** Une archive LOCALE existe pour ce signet (spec sélection §4.1). À ne pas
+   *  confondre avec `r.cache` : celle-là vit sur les serveurs de Raindrop et
+   *  peut disparaître avec le compte — c'est justement ce dont l'archive
+   *  locale protège. */
+  archive?: boolean;
 }) {
   const { r } = props;
   const etat = filetEtat(props.etat);
@@ -63,6 +68,11 @@ export function RaindropRow(props: {
       <CarreCollection collectionId={r.collectionId} titre={props.collectionRacine} />
       <span className="min-w-[8rem] flex-1 truncate font-medium">{r.title}</span>
       {r.important && <span role="img" className="shrink-0 text-app-muted" aria-label={t("detail.favorite")}><Etoile /></span>}
+      {props.archive === true && (
+        <span className="shrink-0 rounded border border-app-border px-1 text-[10px] uppercase tracking-wide text-app-muted">
+          {t("marque.archive")}
+        </span>
+      )}
       {/* Les étiquettes ne prennent jamais plus du tiers de la ligne : dans un
           outil de diagnostic on identifie un lien par son titre, et une
           poignée d'étiquettes ne doit pas le réduire à sa largeur minimale.

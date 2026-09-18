@@ -7,6 +7,7 @@ import { useCollections } from "../hooks/useStaticData";
 import { racine } from "../design/Signaux";
 import { listQueryArgs } from "../hooks/listQuery";
 import { useAppState } from "../state/appState";
+import { useArchives } from "../hooks/useBackup";
 import { useDragBookmark } from "../hooks/useDragBookmark";
 import { useIndexClavier } from "../hooks/useIndexClavier";
 import { useRovingFocus } from "../hooks/useRovingFocus";
@@ -21,6 +22,10 @@ type ListView = Extract<View, { kind: "list" }>;
 
 export function ListPane() {
   const { view, patchList, selectedIds, toggleSelect, selectedRaindropId, selectRaindrop } = useAppState();
+  // Ce qui est archivé EN LOCAL (spec sélection §4.1). Absent tant qu'aucun
+  // dossier n'est configuré : la ligne ne porte alors aucun marqueur, ce qui
+  // est exact — il n'y a rien d'archivé.
+  const archives = useArchives().data?.set;
   // Hors vue list (Nettoyage, Tags…), la zone centrale retombe sur « Tous ».
   const q: ListView = view.kind === "list" ? view : { kind: "list", collectionId: 0, label: "" };
   // listQueryArgs (partagé avec NatureChips, R6bP-1) : la nature filtre
@@ -147,6 +152,7 @@ export function ListPane() {
                 >
                   <RaindropRow r={r} selected={selectedIds.has(r.id)} isDetail={selectedRaindropId === r.id}
                     collectionRacine={titreRacine(r.collectionId)}
+                    archive={archives?.has(r.id) === true}
                     poignee={drag.poignee(r.id, () => selectRaindrop(r.id), r.title)}
                     onToggle={() => toggleSelect(r.id)} onTag={(name) => patchList({ search: `#${name}` })} />
                 </div>

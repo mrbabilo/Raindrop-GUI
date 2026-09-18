@@ -4,6 +4,7 @@ import { t } from "../i18n/fr";
 import { api } from "../lib/api";
 import { useAppState } from "../state/appState";
 import { useCollections } from "../hooks/useStaticData";
+import { useArchives } from "../hooks/useBackup";
 import { useUpdateRaindrop, useTrashRaindrop } from "../hooks/useMutations";
 import { Glyphe } from "../design/glyphes";
 import { Etoile } from "../design/Etoile";
@@ -53,6 +54,9 @@ export function DetailPane() {
     enabled: selectedRaindropId != null,
   });
   const arbre = useCollections().data ?? [];
+  // Rien de sélectionné : la fiche ne demande RIEN (contrat de son test).
+  const archives = useArchives({ enabled: selectedRaindropId != null }).data?.set;
+  const archive = selectedRaindropId != null && archives?.has(selectedRaindropId) === true;
 
   // Changer d'item ferme l'édition ET purge le brouillon : sinon un brouillon
   // abandonné sur A repartirait vers B au prochain « Enregistrer ».
@@ -196,6 +200,14 @@ export function DetailPane() {
           {t("state.error", { message: String((update.error ?? trash.error)?.message ?? "") })}
         </p>
       )}
+      {/* Trois états, jamais confondus (spec sélection §4.1) : archivé EN
+          LOCAL, copiable mais pas encore archivé, ou rien du tout. Le
+          troisième ne s'affiche pas — §9, « masqué si nul ». */}
+      {archive ? (
+        <p className="text-xs text-app-muted">{t("marque.archive")}</p>
+      ) : r.cache?.status === "ready" ? (
+        <p className="text-xs text-app-muted">{t("marque.copiable")}</p>
+      ) : null}
       {/* §9 « masqué si nul » : pas de surlignage, pas de section — le titre
           seul annoncerait un contenu que la fiche n'a pas. */}
       {r.highlights.length > 0 && (

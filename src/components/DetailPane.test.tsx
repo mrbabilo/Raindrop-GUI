@@ -41,6 +41,9 @@ beforeEach(() => {
       );
     if (path === "/api/raindrops/2000")
       return Promise.resolve(raindrop({ id: 2000, title: "Second", collectionId: 101 }));
+    // L'inventaire des archives (spec sélection §4.1) : 1000 est archivé,
+    // 2000 ne l'est pas — deux états distincts à prouver.
+    if (path === "/api/backup/archives") return Promise.resolve({ ids: [1000], octets: 42 });
     return undefined; // tout autre path : aucun (la query morte /api/highlights ne doit plus être appelée)
   });
   sendApi.mockReset().mockImplementation(async (_m: string, _p: string, body?: { important?: boolean }) => {
@@ -274,5 +277,20 @@ describe("DetailPane", () => {
     await userEvent.click(screen.getByRole("button", { name: "vers-2000" }));
     expect(await screen.findByText("Second")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  // Trois états, jamais confondus (spec sélection §4.1) : archivé EN LOCAL,
+  // copiable mais pas encore archivé, ou rien.
+  it("dit « Archivé » pour un signet de l'inventaire", async () => {
+    renderDetail(<Preselect id={1000} />);
+    expect(await screen.findByText("Archivé")).toBeInTheDocument();
+  });
+
+  it("un signet HORS inventaire ne porte pas le marqueur — c'est l'inventaire qui décide", async () => {
+    // 2000 est absent de l'inventaire servi par le mock ; 1000 y est. Sans
+    // cette paire, l'assertion d'absence ne prouverait rien.
+    renderDetail(<Preselect id={2000} />);
+    expect(await screen.findByText("Second")).toBeInTheDocument();
+    expect(screen.queryByText("Archivé")).not.toBeInTheDocument();
   });
 });
