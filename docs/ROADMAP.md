@@ -182,19 +182,23 @@ fidèle, recompression quand la signature manque, test sabordé pour le prouver.
       (`Piece.fidele`) pour la seconde ; la page de recouvrement de
       l'incrémental n'a aucun test ; pas de test sur les chemins d'erreur
       d'`archiver`.
-- [ ] **Sélecteur du dossier de sauvegarde** — **rien ne peut déclencher une
-      sauvegarde depuis l'application** : `BACKUP_DIR` n'existe dans aucun
-      `.rs` ni aucun script, donc `deps.sauvegarde` est `undefined` et les deux
-      routes répondent « inactive ». Le plan 3 l'avait parké au motif que la
-      spec sauvegarde n'était pas validée — cette condition a expiré. Trois
-      points à trancher avant d'écrire : `sidecar/index.ts:83` fait
-      `join(BACKUP_DIR, "Raindrop-GUI")`, donc l'utilisateur choisit le
-      **parent** (désigner un `Raindrop-GUI/` existant donnerait
-      `Raindrop-GUI/Raindrop-GUI/`) ; `BACKUP_DIR` n'est lu **qu'au spawn**,
-      donc changer de dossier impose un redémarrage complet du sidecar (avec
-      tout ce que le trap Tauri exige : terminer, régénérer le jeton, effacer
-      le lockfile avant `attendre_port`, réattendre `mcp: "connected"`) ; et
-      la ligne s'ajoute aux **Réglages existants**, pas dans un nouvel écran.
+- [ ] **Sélecteur du dossier de sauvegarde + panneau + archivage** — la spec
+      est écrite et validée en brainstorming :
+      `docs/superpowers/specs/2026-09-18-selection-dossier-design.md` (les
+      trois points ci-dessous y sont tranchés). Rappel du problème : rien ne
+      peut déclencher une sauvegarde depuis l'application — `BACKUP_DIR`
+      n'existe dans aucun `.rs`, donc `deps.sauvegarde` est `undefined` et les
+      deux routes répondent « inactive ». Tranchés : l'utilisateur choisit le
+      **parent** (`sidecar/index.ts:83` ajoute `Raindrop-GUI/`) ; changer de
+      dossier **redémarre le sidecar** par le chemin éprouvé
+      d'`enregistrer_jeton` ; la ligne vit dans les **Réglages existants**.
+      S'y ajoutent : première sauvegarde **explicite** (manifeste vide ne
+      déclenche plus rien au boot — §4.4 amendé), panneau `SectionSauvegarde`
+      (compteur nommé, pas de barre — item « sémantique de progression »
+      tranché), inventaire `GET /api/backup/archives` + marqueur « Archivé »,
+      action d'archivage **sur la sélection** via la Revue (liens morts et
+      `BulkBar`, borné 500 en refus explicite, déjà-archivés écartés et
+      comptés).
 - [ ] **Hors ligne** (consultation + file d'opérations simples) : après le
       plan 2, sur le socle posé par le lot sauvegarde. Inclut : écritures
       refusées proprement hors ligne (aujourd'hui les échecs remontent en
