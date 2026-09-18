@@ -180,11 +180,16 @@ pour épargner une requête locale n'en vaut pas la peine.
   cocher (`selectedIds`, `toggleSelect`) existent dans l'état global mais ne
   servent que la liste principale. `CleanupView` passe déjà par la Revue
   (corbeille, collections vides) : rien à inventer, seulement à brancher.
-- **`BulkBar` gagne un paramètre** disant quelles actions proposer : liste
-  principale = Corbeille / Déplacer / Tagger / Archiver ; Liens morts =
-  Archiver seul. Sans ce paramètre, on dupliquerait la barre. Et il faut aussi
-  la **rendre** : `BulkBar` n'est posé aujourd'hui que dans `ListPane` et
-  `CollectionView` — `CleanupView` n'en affiche aucune (correction C4, §10).
+- **Chaque point d'entrée construit la Revue à sa façon** (amendé à
+  l'implémentation, Task 13 du plan). `BulkBar` gagne simplement le bouton
+  « Archiver la copie », qui embarque le `cache` des items — la liste le
+  connaît. La vue Liens morts, elle, suit le motif qu'elle a déjà : **action
+  d'entête → Revue**, comme la corbeille et les collections vides ; elle ne
+  monte pas de `BulkBar` et n'a pas à en monter une. Le **paramètre d'actions
+  envisagé ici est abandonné** : aucune vue ne réclame un sous-ensemble de la
+  barre, et l'ajouter aurait été du réglage sans appelant. La correction C4
+  (§10) reste vraie — `CleanupView` ne rend aucune `BulkBar` — mais sa
+  conséquence n'est plus « il faut l'y poser ».
 - **`cache.size`** : `mappers.ts:76` passe déjà l'objet `cache` entier au front ;
   seul son **type** (`{ status: string } | null`, ligne 27) ne déclare pas
   `size`. C'est une déclaration de type à étendre, pas un champ à ajouter.

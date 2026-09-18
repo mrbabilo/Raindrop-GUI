@@ -88,9 +88,33 @@ export function ErreurLigne({ message }: { message: string }) {
 
 // Lien mort : filet --broken, raison brute du scan (dns, http_404…), et la
 // piste de secours buku §12 — la Wayback Machine en simple <a> externe.
-export function DeadRow({ r, collectionRacine }: { r: LinkEnrichi; collectionRacine?: string }) {
+export function DeadRow({
+  r,
+  collectionRacine,
+  selected,
+  onToggle,
+}: {
+  r: LinkEnrichi;
+  collectionRacine?: string;
+  /** Sélection multiple — présente seulement quand la vue en propose une
+   *  (l'archivage des copies, spec sélection §4.2). La case porte
+   *  `tabIndex={-1}` : c'est la LIGNE qui est l'arrêt de tabulation, comme
+   *  partout dans les vues de traitement. */
+  selected?: boolean;
+  onToggle?: () => void;
+}) {
   return (
     <Ligne etat="dead">
+      {onToggle !== undefined && (
+        <input
+          type="checkbox"
+          tabIndex={-1}
+          className="shrink-0"
+          aria-label={r.title}
+          checked={selected ?? false}
+          onChange={onToggle}
+        />
+      )}
       <CarreCollection collectionId={r.collectionId} titre={collectionRacine} />
       <span className="min-w-[8rem] flex-1 truncate font-medium">{r.title}</span>
       <span className="url shrink-0 text-[11px] text-app-muted">{r.url}</span>

@@ -73,17 +73,57 @@ function ResultatsLiens({ type }: { type: "dead" | "redirect" }) {
   const [page, setPage] = useState(0);
   const q = useAnalysisResults("links", type, page);
   const arbre = useCollections().data ?? [];
+  const { selectedIds, toggleSelect, clearSelection, go } = useAppState();
   const titreRacine = (id: number) => racine(arbre, id)?.title;
   const items = q.data?.items ?? [];
+  // L'archive vaut le plus ici : la page est morte, la copie permanente est
+  // tout ce qui en reste (spec sélection §4.2). La vue suit son propre motif
+  // — « action d'entête → Revue » — comme la corbeille et les collections
+  // vides ; elle ne monte pas de BulkBar.
+  const archivable = type === "dead";
+  const selectionnes = items.filter((r) => selectedIds.has(r.raindropId));
+  const archiver = () => {
+    go({
+      kind: "review",
+      // Pas de `cache` : l'analyse ne le porte pas. La Revue le dit, et le
+      // sidecar comptera les échecs individuels.
+      items: selectionnes.map((r) => ({
+        id: r.raindropId,
+        url: r.url,
+        title: r.title,
+        collectionId: r.collectionId,
+      })),
+      action: { op: "archive" },
+      sourceLabel: t("cleanup.dead"),
+      returnView: { kind: "cleanupView", type: "dead" },
+    });
+    clearSelection(); // R9P-1 : le clear appartient à l'action
+  };
   const ligne = (r: (typeof items)[number]) =>
     type === "dead" ? (
-      <DeadRow key={r.raindropId} r={r} collectionRacine={titreRacine(r.collectionId)} />
+      <DeadRow
+        key={r.raindropId}
+        r={r}
+        collectionRacine={titreRacine(r.collectionId)}
+        selected={selectedIds.has(r.raindropId)}
+        onToggle={() => toggleSelect(r.raindropId)}
+      />
     ) : (
       <RedirectRow key={r.raindropId} r={r} collectionRacine={titreRacine(r.collectionId)} />
     );
   return (
     <>
-      <Entete label={LABELS[type]} count={q.data?.total} />
+      <Entete
+        label={LABELS[type]}
+        count={q.data?.total}
+        action={
+          archivable ? (
+            <button type="button" className="btn" disabled={selectionnes.length === 0} onClick={archiver}>
+              {t("cleanup.archiver", { n: selectionnes.length })}
+            </button>
+          ) : undefined
+        }
+      />
       <EtatListe
         chargement={!!q.isLoading}
         erreur={q.isError ? q.error?.message : null}

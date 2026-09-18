@@ -122,6 +122,57 @@ describe("CleanupView", () => {
     );
   });
 
+  // L'archive vaut le plus sur un lien mort : la page n'existe plus, la copie
+  // permanente est tout ce qui en reste (spec sélection §4.2).
+  it("liens morts : cocher des lignes arme l'archivage, et la Revue le porte", async () => {
+    const mort = (id: number, titre: string) => ({
+      raindropId: id,
+      url: `https://mort.example/${id}`,
+      status: "dead",
+      redirectKind: null,
+      finalUrl: null,
+      httpStatus: null,
+      redirectChain: null,
+      reason: "http_404",
+      checkedAt: "2026-09-16T00:00:00Z",
+      title: titre,
+      collectionId: 101,
+    });
+    resultsMock.mockReturnValue({
+      data: { items: [mort(2000, "Alpha"), mort(2001, "Beta")], total: 2, page: 0, perPage: 50 },
+    });
+    render(<CleanupView type="dead" />, { wrapper });
+
+    // Sans sélection, le bouton est là mais mort : rien à archiver.
+    const bouton = await screen.findByRole("button", { name: "Archiver la copie (0)" });
+    expect(bouton).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Alpha" }));
+    await userEvent.click(screen.getByRole("button", { name: "Archiver la copie (1)" }));
+
+    const vue = JSON.parse(screen.getByTestId("view").textContent ?? "{}") as {
+      kind: string;
+      action: { op: string };
+      items: { id: number; cache?: unknown }[];
+    };
+    expect(vue.kind).toBe("review");
+    expect(vue.action).toEqual({ op: "archive" });
+    expect(vue.items.map((i) => i.id)).toEqual([2000]);
+    // L'analyse ne porte PAS l'état des copies : la Revue le dira plutôt que
+    // de laisser croire qu'elle le sait.
+    expect(vue.items[0]).not.toHaveProperty("cache");
+  });
+
+  // Les redirections se corrigent, elles ne s'archivent pas : la page vit
+  // encore, c'est son URL qui a bougé.
+  it("redirections : aucune sélection, aucun archivage", async () => {
+    resultsMock.mockReturnValue({ data: redirectPage });
+    render(<CleanupView type="redirect" />, { wrapper });
+    await screen.findByText("Redirections");
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Archiver/ })).not.toBeInTheDocument();
+  });
+
   it("doublons : les trois catégories restent séparées et étiquetées", async () => {
     const item = (id: number, url: string) => ({ id, url, title: `Article ${id}`, collectionId: 101, created: "2025-01-01T12:00:00Z" });
     groupsMock.mockReturnValue({

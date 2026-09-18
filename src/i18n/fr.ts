@@ -64,6 +64,7 @@ export const fr = {
   "bulk.tagPlaceholder": "séparées par des virgules",
   "bulk.review": "Revue de l'action",
   "bulk.archive": "Archiver la copie",
+  "cleanup.archiver": "Archiver la copie ({n})",
   "composer.placeholder": "Coller une URL à sauvegarder (⌘E)",
   "composer.exists": "Déjà sauvegardé",
   "composer.save": "Sauvegarder",
