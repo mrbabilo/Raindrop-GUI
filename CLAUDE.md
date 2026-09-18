@@ -422,9 +422,9 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   CLAUDE.md (« tests compris »). `sidecar/api/routes/raindrops.test.ts` vivait
   à 430 lignes sans que rien ne le signale ; il est découpé (lecture /
   écriture). Corollaire mesuré : sous un tsconfig incluant les tests, **le
-  dépôt n'est pas type-clean** (une trentaine d'erreurs préexistantes, vitest
-  transpilant sans vérifier). Ne pas confondre avec un faux positif de config
-  — celles-là sont réelles, simplement jamais regardées.
+  dépôt n'est pas type-clean** : **27 erreurs dans 6 fichiers** (comptées le
+  2026-09-19), vitest transpilant sans vérifier. Ne pas confondre avec un faux
+  positif de config — celles-là sont réelles, simplement jamais regardées.
 
 ## Git
 

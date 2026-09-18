@@ -60,8 +60,8 @@ finale de branche).*
       « filtre multi-étiquettes » devait y ajouter des tests — « à la
       première retouche », comme prévu.
       **Découvert au passage, non traité** : sous un tsconfig incluant les
-      tests, le sidecar porte une trentaine d'erreurs de typage
-      préexistantes (`SidecarDeps` importé d'`app.js` qui ne l'exporte pas,
+      tests, le sidecar porte **27 erreurs de typage préexistantes dans
+      6 fichiers** (comptées le 2026-09-19) (`SidecarDeps` importé d'`app.js` qui ne l'exporte pas,
       `hono.request` rendant `Response | Promise<Response>`, fixtures
       incomplètes). Vitest transpile sans vérifier : rien ne les voit. Le
       nouveau fichier, lui, est type-clean.

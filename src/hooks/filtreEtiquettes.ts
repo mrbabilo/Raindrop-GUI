@@ -73,7 +73,16 @@ export function useFiltreEtiquettes() {
     actives,
     bascule,
     estActive: (nom: string) => actives.some((n) => n.toLowerCase() === nom.trim().toLowerCase()),
-    vider: () => patchList({ tags: [] }),
+    // MÊME garde que `bascule`, pour la même raison : `patchList` est muet
+    // hors vue liste. Le retrait n'est pas atteignable là aujourd'hui (la
+    // rangée ne s'affiche que s'il y a des étiquettes, et il n'y en a que sur
+    // une liste) — mais une commande câblée ailleurs demain hériterait d'un
+    // silence, alors que la ligne au-dessus explique justement pourquoi on ne
+    // s'en contente pas.
+    vider: () => {
+      if (view.kind === "list") patchList({ tags: [] });
+      else go({ kind: "list", collectionId: 0, label: t("nav.all") });
+    },
   };
 }
 

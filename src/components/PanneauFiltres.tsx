@@ -10,6 +10,12 @@ import { useAppState } from "../state/appState";
 
 // Les filtres du panneau — un seul endroit les nomme, et « Effacer » comme
 // « y a-t-il quelque chose à effacer » s'en déduisent.
+//
+// `tags` n'y est PAS, et c'est voulu : les étiquettes retenues ont leur propre
+// rangée, toujours visible, avec son propre retrait (EtiquettesRetenues). Les
+// ajouter ici aurait deux effets, tous deux faux — « Effacer les filtres »
+// retirerait des étiquettes qu'il ne montre pas, et un tableau VIDE étant
+// truthy, `tags: []` déplierait le panneau en permanence sur rien.
 const CHAMPS = ["domain", "createdStart", "createdEnd"] as const;
 
 export function actifs(view: ReturnType<typeof useAppState>["view"]): boolean {
