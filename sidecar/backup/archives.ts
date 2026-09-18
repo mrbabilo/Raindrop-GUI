@@ -3,7 +3,9 @@
 //! MESURÉ le 2026-09-16 (§5.4) : `GET /raindrop/{id}/cache` répond **303**
 //! (la doc annonce 307) vers une URL S3 signée et temporaire ; la signature ne
 //! couvre que GET (un HEAD renvoie 403, donc pas de sondage de taille) ; le
-//! contenu est du HTML GZIPPÉ servi en `text/html`.
+//! contenu est du HTML GZIPPÉ servi en `text/html` — mais avec
+//! `Content-Encoding: gzip`, que `fetch` déplie tout seul (mesuré le
+//! 2026-09-18) : ce qui arrive dans `arrayBuffer()` est EN CLAIR.
 //!
 //! La redirection se suit À LA MAIN (correction §1bis n°5) : suivie
 //! automatiquement, l'en-tête `Authorization` du premier appel serait réémis
@@ -11,6 +13,13 @@
 
 import { mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { gzip } from "node:zlib";
+import { promisify } from "node:util";
+
+const comprimer = promisify(gzip);
+
+/** La signature d'un flux gzip : `1f 8b`. */
+const estGzip = (b: Buffer): boolean => b.length >= 2 && b[0] === 0x1f && b[1] === 0x8b;
 
 /** Budget par défaut du dossier d'archives (correction §1bis n°2). */
 export const ARCHIVES_MAX_GO = 5;
@@ -46,10 +55,17 @@ export async function archiver(deps: {
       // Second appel SANS en-tête d'authentification : l'URL est déjà signée.
       const r2 = await f(cible, { signal: AbortSignal.timeout(delai) });
       if (!r2.ok) return { ok: false as const, raison: `copie inaccessible (http ${r2.status})` };
-      const octets = Buffer.from(await r2.arrayBuffer());
+      const recu = Buffer.from(await r2.arrayBuffer());
+      // MESURÉ le 2026-09-18 : S3 sert l'objet avec `Content-Encoding: gzip`,
+      // et `fetch` (undici) le DÉPLIE de façon transparente — `arrayBuffer()`
+      // rend donc du HTML EN CLAIR. Écrit « tel quel », il portait un nom
+      // `.html.gz` que `gunzip` refuse, et pesait 5,6 Mo là où l'objet stocké
+      // en fait 3,1. On recomprime : le nom redevient vrai et le budget §5.4
+      // retrouve l'ordre de grandeur sur lequel il a été calibré.
+      // Le test le manquait parce que le faux serveur n'annonçait pas
+      // l'encodage — undici laissait alors passer les octets gzippés.
+      const octets = estGzip(recu) ? recu : await comprimer(recu);
       await mkdir(deps.dossierArchives, { recursive: true });
-      // `.html.gz` : le contenu EST gzippé. Le nommer `.html` produirait des
-      // archives que rien n'ouvre.
       const chemin = join(deps.dossierArchives, `${deps.raindropId}.html.gz`);
       await writeFile(chemin, octets);
       return { ok: true as const, chemin, octets: octets.byteLength };

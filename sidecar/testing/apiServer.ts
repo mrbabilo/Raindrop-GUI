@@ -136,7 +136,11 @@ export async function startFauxApi(
         res.end("signature + auth");
         return;
       }
-      res.writeHead(200, { "Content-Type": "text/html" });
+      // FIDÈLE au vrai serveur (mesuré le 2026-09-18) : l'objet est stocké
+      // gzippé ET annoncé `Content-Encoding: gzip`. C'est cet en-tête qui
+      // fait déplier le corps par `fetch` côté client — l'omettre rendait le
+      // test d'`archives.ts` aveugle à une archive écrite en clair.
+      res.writeHead(200, { "Content-Type": "text/html", "Content-Encoding": "gzip" });
       res.end(gzipSync(Buffer.from("<html>archive</html>")));
       return;
     }

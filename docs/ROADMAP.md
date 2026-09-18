@@ -91,6 +91,33 @@ finale de branche).*
       prétendait attraper (Ruling R4), et la comparaison de compteurs du
       §5.3 est meilleure **après** la fusion qu'avant (Ruling R8b).
 
+### Première exécution réelle — 2026-09-18
+
+Le lot n'avait jamais vu autre chose que le faux MCP. Balayage complet lancé
+avec `BACKUP_DIR` sur un dossier jetable : **12 210 / 12 210 en 2 min 19**,
+`complet: true`, aucun 429, l'instantané fait 12 Mo et ses 12 210 lignes JSONL
+sont toutes parsables, pour 12 210 `_id` distincts et **zéro** item sans `_id`
+numérique. `collections.json` porte bien **214 collections — 13 racines et 201
+enfants**, donc l'appel `/collections/childrens` est fait. Corbeille vide côté
+compte (`count: 0`), `trash.jsonl` à 0 ligne : juste, et non un trou. Le
+déclenchement au démarrage (§4.4) part tout seul au premier lancement et se
+tait au second, manifeste à l'appui.
+
+**Un défaut trouvé par cette exécution, corrigé dans la foulée** : les archives
+`<id>.html.gz` contenaient du **HTML en clair**. `fetch` déplie
+`Content-Encoding: gzip` tout seul ; le faux serveur, lui, servait des octets
+gzippés **sans cet en-tête**, donc le test voyait la magie `1f 8b` et passait
+au vert sur un comportement que la production n'a jamais eu. Faux serveur rendu
+fidèle, recompression quand la signature manque, test sabordé pour le prouver.
+
+- [ ] **Recalibrer le budget d'archives (§5.4)** — la spec raisonne à
+      « 2,1 Mo pièce » pour 5 Go. Mesuré sur deux copies réelles prises au
+      hasard : **3,0 Mo et 16 Mo** une fois recompressées (24 Mo dépliés pour
+      la seconde). Le budget tient donc bien moins d'archives qu'annoncé, et
+      la règle d'éviction par ancienneté deviendra visible beaucoup plus tôt.
+      À trancher : relever le défaut, ou mesurer la distribution réelle des
+      `cache.size` sur l'instantané (ils y sont déjà, gratuits).
+
 ### Reste à faire sur le lot sauvegarde
 
 - [ ] **Reprise après coupure** — la spec la promet en §4.2, §5.1, §6 et §7 ;
@@ -144,6 +171,19 @@ finale de branche).*
       (`Piece.fidele`) pour la seconde ; la page de recouvrement de
       l'incrémental n'a aucun test ; pas de test sur les chemins d'erreur
       d'`archiver`.
+- [ ] **Sélecteur du dossier de sauvegarde** — **rien ne peut déclencher une
+      sauvegarde depuis l'application** : `BACKUP_DIR` n'existe dans aucun
+      `.rs` ni aucun script, donc `deps.sauvegarde` est `undefined` et les deux
+      routes répondent « inactive ». Le plan 3 l'avait parké au motif que la
+      spec sauvegarde n'était pas validée — cette condition a expiré. Trois
+      points à trancher avant d'écrire : `sidecar/index.ts:83` fait
+      `join(BACKUP_DIR, "Raindrop-GUI")`, donc l'utilisateur choisit le
+      **parent** (désigner un `Raindrop-GUI/` existant donnerait
+      `Raindrop-GUI/Raindrop-GUI/`) ; `BACKUP_DIR` n'est lu **qu'au spawn**,
+      donc changer de dossier impose un redémarrage complet du sidecar (avec
+      tout ce que le trap Tauri exige : terminer, régénérer le jeton, effacer
+      le lockfile avant `attendre_port`, réattendre `mcp: "connected"`) ; et
+      la ligne s'ajoute aux **Réglages existants**, pas dans un nouvel écran.
 - [ ] **Hors ligne** (consultation + file d'opérations simples) : après le
       plan 2, sur le socle posé par le lot sauvegarde. Inclut : écritures
       refusées proprement hors ligne (aujourd'hui les échecs remontent en

@@ -221,11 +221,17 @@ les décisions structurantes.
   à la première perd en silence l'essentiel de la hiérarchie.
 - **Copies permanentes** : `GET /raindrop/{id}/cache` répond **303** (la doc
   annonce 307) vers une URL S3 signée ; la signature ne couvre que `GET`, donc
-  un `HEAD` renvoie **403** — pas de sondage de taille. Le contenu est du HTML
-  **gzippé** servi en `text/html`, à écrire `<id>.html.gz` **tel quel**. Suivre
-  la redirection **à la main** (`redirect: "manual"`) : suivie automatiquement,
-  l'en-tête `Authorization` est réémis vers une URL déjà signée (mesuré), que
-  S3 rejette.
+  un `HEAD` renvoie **403** — pas de sondage de taille. Suivre la redirection
+  **à la main** (`redirect: "manual"`) : suivie automatiquement, l'en-tête
+  `Authorization` est réémis vers une URL déjà signée (mesuré), que S3 rejette.
+  **L'objet est stocké gzippé ET annoncé `Content-Encoding: gzip`** (mesuré le
+  2026-09-18 : `206`, `Content-Range: bytes 0-0/3143395`) — donc `fetch`
+  (undici) le **déplie tout seul** : « écrire tel quel » produit du HTML en
+  clair sous un nom `.html.gz` que `gunzip` refuse, à 5,6 Mo là où l'objet
+  stocké en fait 3,1. `archives.ts` recomprime quand la magie `1f 8b` manque.
+  **Ce piège a survécu à son test** parce que le faux serveur servait les
+  octets gzippés sans l'en-tête d'encodage : un faux infidèle sur un en-tête
+  rend le test aveugle au seul comportement qu'il prétend couvrir.
 - **`vi.spyOn` sur un export de `node:fs/promises` est impossible en ESM**
   (« Module namespace is not configurable ») — passer par `vi.mock` avec
   passthrough intégral, et vérifier la portée (`pool: "forks"` sans

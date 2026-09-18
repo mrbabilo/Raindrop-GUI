@@ -398,9 +398,20 @@ vers une URL S3 **signée et temporaire** (Wasabi, `X-Amz-*`). Vérifié le
   signée**, que S3 peut rejeter. Le second appel ne porte aucun en-tête
   d'authentification.
 
-Les fichiers sont donc écrits **`<raindropId>.html.gz`**, tels quels, sans
-décompression : nommer `.html` un contenu gzippé produirait des archives que
-rien n'ouvre.
+⚠️ **Correction du 2026-09-18, mesurée en réel.** Le « tels quels » ci-dessous
+était faux, et l'a été jusqu'au premier archivage sur données réelles. L'objet
+n'est pas seulement stocké gzippé : il est **annoncé `Content-Encoding: gzip`**
+(`206`, `Content-Range: bytes 0-0/3143395` sur un objet de 3,1 Mo). `fetch`
+(undici) déplie cet encodage de façon transparente, si bien qu'`arrayBuffer()`
+rend du **HTML en clair** — écrit « tel quel », le fichier portait un nom
+`.html.gz` que `gunzip` refuse, et pesait 5,6 Mo. `archives.ts` **recomprime**
+donc quand la signature `1f 8b` manque, et laisse passer le corps s'il est déjà
+gzippé. La mesure de `cache.size` faite au curl reste juste : `curl` ne déplie
+pas par défaut, `fetch` si.
+
+Les fichiers sont écrits **`<raindropId>.html.gz`**, et leur contenu est
+réellement gzippé : nommer `.html.gz` un contenu en clair produirait des
+archives que rien n'ouvre.
 
 Déclenché par l'utilisateur sur une collection, ou automatiquement sur les liens
 classés morts — là où l'archive vaut le plus.
