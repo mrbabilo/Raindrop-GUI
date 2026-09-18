@@ -10,6 +10,7 @@
 // (ex. construire une URL de redirection vers un faux S3).
 
 import { createServer, type Server } from "node:http";
+import { gzipSync } from "node:zlib";
 
 export interface FauxApi {
   port: number;
@@ -30,6 +31,7 @@ export interface FauxApi {
 
 export async function startFauxApi(items: FauxApi["items"] = []): Promise<FauxApi> {
   let reste429 = 0;
+  let portServi = 0;
   const appels: string[] = [];
   const authorizations: string[] = [];
   const etat = { items };
@@ -74,10 +76,35 @@ export async function startFauxApi(items: FauxApi["items"] = []): Promise<FauxAp
       });
     }
     if (url.pathname === "/rest/v1/user") return json(200, { user: { _id: 7 } });
+    if (/^\/rest\/v1\/raindrop\/\d+\/cache$/.test(url.pathname)) {
+      // 303, le code MESURÉ — la doc annonce 307 (spec §5.4).
+      res.writeHead(303, { Location: `http://127.0.0.1:${portServi}/s3/objet?X-Amz-Signature=abc` });
+      res.end();
+      return;
+    }
+    if (url.pathname === "/s3/objet") {
+      // La signature ne couvre que GET : un HEAD est refusé (403), mesuré.
+      if (req.method === "HEAD") {
+        res.writeHead(403);
+        res.end();
+        return;
+      }
+      // Un en-tête d'authentification sur une URL DÉJÀ signée est rejeté —
+      // c'est ce que la redirection suivie automatiquement provoquerait.
+      if (req.headers.authorization) {
+        res.writeHead(400);
+        res.end("signature + auth");
+        return;
+      }
+      res.writeHead(200, { "Content-Type": "text/html" });
+      res.end(gzipSync(Buffer.from("<html>archive</html>")));
+      return;
+    }
     json(404, { error: "inconnu" });
   });
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
   const port = (server.address() as { port: number }).port;
+  portServi = port;
   return {
     port,
     items: etat.items,
