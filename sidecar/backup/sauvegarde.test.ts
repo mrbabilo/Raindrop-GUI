@@ -15,7 +15,7 @@ const avec = (horodatage: string): Manifeste => ({
 });
 
 describe("quand faut-il un balayage complet", () => {
-  const s = makeSauvegarde({ lecture: {} as never, dossier: "/tmp/x", file: {} as never, token: "j" });
+  const s = makeSauvegarde({ lecture: {} as never, dossier: "/tmp/x" });
 
   it("jamais sauvegardé : complet", () => {
     expect(s.doitBalayerComplet(vide, new Date("2026-09-18T10:00:00Z"))).toBe(true);
@@ -76,8 +76,6 @@ const sauv = (
   makeSauvegarde({
     lecture: makeLecture({ token: "j", baseUrl: `http://127.0.0.1:${a.port}/rest/v1`, file: new Throttle(0) }),
     dossier,
-    file: new Throttle(0),
-    token: "j",
     ...extra,
   });
 
@@ -93,15 +91,20 @@ describe("ce que la sauvegarde collecte", () => {
   // qu'on retire sans s'en apercevoir et que personne ne réclame avant le jour
   // où elle manque.
   it("la corbeille (-99) est balayée, pas seulement la collection 0", async () => {
-    api = await startFauxApi(items(3));
+    // La corbeille du faux serveur est DISTINCTE de la bibliothèque : le
+    // fichier ne peut donc pas passer pour bon en recopiant la collection 0.
+    api = await startFauxApi(items(3), [
+      { _id: 9001, created: "2019-01-01T00:00:00.000Z", lastUpdate: "2026-01-01T00:00:00.000Z", title: "jeté" },
+    ]);
     const dossier = repertoireTemporaire("sauv-corbeille-");
     const r = await sauv(api, dossier).executer("complet");
 
     const listes = api.appels.filter((a) => a.startsWith("/rest/v1/raindrops/"));
     expect(listes.some((a) => a.startsWith("/rest/v1/raindrops/-99?"))).toBe(true);
     expect(listes.some((a) => a.startsWith("/rest/v1/raindrops/0?"))).toBe(true);
-    // Pas seulement l'appel : le fichier existe et porte les items.
-    expect(lignesDe(join(dossier, r.horodatage, "trash.jsonl"))).toHaveLength(3);
+    // Pas seulement l'appel : le fichier porte bien LA CORBEILLE.
+    expect(lignesDe(join(dossier, r.horodatage, "trash.jsonl")).map((o) => o._id)).toEqual([9001]);
+    expect(lignesDe(join(dossier, r.horodatage, "raindrops.jsonl")).map((o) => o._id)).toEqual([1000, 1001, 1002]);
     expect(r.empreintes["trash.jsonl"]).toBeDefined();
   });
 
@@ -164,7 +167,7 @@ describe("ce que la sauvegarde collecte", () => {
         return p;
       },
     };
-    const r = await makeSauvegarde({ lecture: lectureEspionne, dossier, file: new Throttle(0), token: "j" })
+    const r = await makeSauvegarde({ lecture: lectureEspionne, dossier })
       .executer("complet");
 
     expect(r.complet).toBe(false);

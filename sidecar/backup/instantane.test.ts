@@ -61,11 +61,13 @@ describe("instantané", () => {
     await e.ligne({ version: 1, data: "premier" });
     let attendu = await e.fermer();
 
-    // Vérification que c'est écrit
+    // Vérification que c'est écrit. (Deux `toMatch(/version/)` et `toMatch(/1/)`
+    // vivaient ici : vraies quoi qu'il arrive, elles ne pouvaient rien
+    // contredire. Ce qui distingue vraiment le premier passage du rejeu, c'est
+    // le CONTENU de la ligne.)
     expect(attendu.lignes).toBe(1);
     let brut = await readFile(f, "utf8");
-    expect(brut).toMatch(/version/);
-    expect(brut).toMatch(/1/);
+    expect(JSON.parse(brut.trimEnd())).toEqual({ version: 1, data: "premier" });
 
     // Rejeu : réouvre le MÊME chemin
     e = await ouvrirJsonl(f);

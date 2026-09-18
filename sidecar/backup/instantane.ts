@@ -2,8 +2,17 @@
 //!
 //! §6 : « une archive jamais relue est une archive qu'on CROIT bonne, et
 //! c'est le mode de défaillance qu'une sauvegarde existe pour exclure ».
-//! Le JSONL (§4.2) permet d'écrire en flux sans charger 11 Mo, de reprendre
-//! une sauvegarde interrompue, et de relire ligne à ligne.
+//! Le JSONL (§4.2) permet ici deux choses, et deux seulement : écrire en flux
+//! sans charger 11 Mo en mémoire, et relire ligne à ligne (la vérification,
+//! la fusion incrémentale).
+//!
+//! PAS la reprise d'une sauvegarde interrompue. `ouvrirJsonl` TRONQUE le
+//! fichier — c'est délibéré, et un test le verrouille. Le format la rendra
+//! possible le jour où quelqu'un l'écrira (relire les lignes déjà bonnes,
+//! rouvrir en ajout, repartir à la page correspondante) ; ce lot ne l'a pas
+//! fait, et une sauvegarde interrompue recommence de zéro. La capacité est
+//! DIFFÉRÉE, pas acquise : la vendre ici ferait exactement ce que la spec
+//! s'interdit — promettre ce que le code ne tient pas.
 
 import { createHash } from "node:crypto";
 import { createWriteStream } from "node:fs";

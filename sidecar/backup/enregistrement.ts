@@ -12,6 +12,7 @@ import { appliquerBudget, purgerOrphelins, ARCHIVES_MAX_GO } from "./archives.js
 import { ecrireDocument, NOMS, type Piece } from "./collecte.js";
 import {
   aConserver,
+  dernierValide,
   ecrireManifeste,
   type EntreeInstantane,
   type Manifeste,
@@ -58,6 +59,17 @@ export function makeEnregistreur(deps: {
     // la rotation efface : horloge qui recule, ou manifeste portant des
     // entrées plus récentes, et il tombe hors des « 7 derniers ».
     gardes.add(entree.horodatage);
+    // Et la DERNIÈRE SAUVEGARDE VALIDE, pour la même raison. `aConserver` ne
+    // reçoit que des chaînes : elle ne peut structurellement pas protéger un
+    // instantané pour sa validité. Or l'annulation est un bouton, et chaque
+    // annulation écrit une entrée `complet: false` : sept annulations dans la
+    // même semaine calendaire chassent le seul instantané valide hors des
+    // « 7 derniers », sans que la promotion hebdomadaire le rattrape (elle
+    // ignore la semaine courante). Son dossier serait effacé ET sa ligne
+    // retirée du manifeste — il ne resterait même pas la trace qu'une bonne
+    // sauvegarde a existé.
+    const valide = dernierValide({ version: 1, instantanes: toutes });
+    if (valide) gardes.add(valide.horodatage);
     // Le manifeste D'ABORD, les suppressions ensuite : une coupure entre les
     // deux laisse des dossiers orphelins (inoffensifs), jamais un manifeste
     // qui désigne des dossiers effacés.

@@ -85,8 +85,6 @@ const sauvegarde = dossierSauvegarde
       // Lecture REST directe, sous la MÊME file que le MCP, au rang « fond ».
       lecture: makeLecture({ token: cfg.MCP_RAINDROPIO_TOKEN, file: throttle }),
       dossier: dossierSauvegarde,
-      file: throttle,
-      token: cfg.MCP_RAINDROPIO_TOKEN,
       // Dette Task 6 soldée : un manifeste CORROMPU (≠ absent) laisse une
       // trace — sans quoi la Task 6 aurait construit un détecteur que rien
       // n'écoute.

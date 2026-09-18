@@ -137,12 +137,18 @@ async function passer(deps: Deps): Promise<Passage> {
     }
   } catch (e) {
     // Un 429 (`ErreurHttpRaindrop`) ou un timeout de 30 s sont ROUTINIERS sur
-    // 245 requêtes : sans ce filet, `fermer()` ne tournerait jamais, le flux
-    // resterait ouvert, et le JSONL partiel dormirait sur disque SANS
-    // marqueur — le seul chemin où la garde de Task 6 (`dernierValide()`) est
-    // aveugle, faute de `ResultatBalayage` à filtrer. On ferme quand même
-    // (best effort) puis on relance l'erreur D'ORIGINE : si `fermer()` jette
-    // à son tour, on ne la laisse jamais masquer la vraie cause.
+    // 245 requêtes : sans ce filet, `fermer()` ne tournerait jamais et le flux
+    // resterait ouvert. Ce que ce `catch` fait, et tout ce qu'il fait : fermer
+    // le flux (best effort) puis relancer l'erreur D'ORIGINE — si `fermer()`
+    // jette à son tour, on ne la laisse jamais masquer la vraie cause.
+    //
+    // Ce qu'il NE fait PAS : rendre la garde de Task 6 (`dernierValide()`)
+    // voyante sur ce chemin. L'erreur remonte, `finir()` n'est jamais appelé,
+    // et le JSONL partiel dort sur disque SANS marqueur — sans entrée au
+    // manifeste, donc sans rien qu'un lecteur du manifeste puisse filtrer.
+    // C'est un dossier orphelin, inoffensif pour la garde (elle ne voit que
+    // des entrées) mais bel et bien laissé là. Le ramassage de ces dossiers
+    // est une décision de conception encore ouverte.
     await ecrivain.fermer().catch(() => {});
     throw e;
   }

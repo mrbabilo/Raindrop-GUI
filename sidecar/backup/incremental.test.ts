@@ -38,7 +38,9 @@ describe("incrémental", () => {
     const r = await lireModifies({ lecture: lect(api), collectionId: 0, watermark: meme });
     const ids = r.modifies.map((m) => (m as { _id: number })._id).sort((a, b) => a - b);
     expect(ids).toEqual([10, 11, 12]);
-    // Le dédoublonnage par _id : la page de recouvrement les revoit.
+    // Le dédoublonnage par `_id`. (Il ne s'exerce PAS ici : une seule page de
+    // 4 items est lue, aucune page de recouvrement n'entre en jeu — voir
+    // l'en-tête du module, qui dit pourquoi ce bloc n'a pas de test.)
     expect(new Set(ids).size).toBe(ids.length);
   });
 

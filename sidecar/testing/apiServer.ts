@@ -17,6 +17,10 @@ export interface FauxApi {
   close(): Promise<void>;
   /** La bibliothèque servie, triable et paginable. */
   items: { _id: number; created: string; lastUpdate: string; title: string }[];
+  /** La CORBEILLE (`-99`), distincte de la bibliothèque. Sans cette
+   *  distinction, `/raindrops/-99` rendait les mêmes items que `/raindrops/0`
+   *  et aucun test ne pouvait contredire un contrat portant sur la corbeille. */
+  corbeille: FauxApi["items"];
   /** Combien de requêtes ont été reçues, par chemin. */
   appels: string[];
   /**
@@ -29,12 +33,15 @@ export interface FauxApi {
   repondre429(n: number): void;
 }
 
-export async function startFauxApi(items: FauxApi["items"] = []): Promise<FauxApi> {
+export async function startFauxApi(
+  items: FauxApi["items"] = [],
+  corbeille: FauxApi["items"] = [],
+): Promise<FauxApi> {
   let reste429 = 0;
   let portServi = 0;
   const appels: string[] = [];
   const authorizations: string[] = [];
-  const etat = { items };
+  const etat = { items, corbeille };
   const server: Server = createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://x");
     // Chemin ET query : un jeton égaré en paramètre d'URL (au lieu de
@@ -52,16 +59,20 @@ export async function startFauxApi(items: FauxApi["items"] = []): Promise<FauxAp
         reste429--;
         return json(429, { error: "rate" });
       }
+      // La collection est LUE, pas ignorée : `-99` est la corbeille, tout le
+      // reste est la bibliothèque.
+      const collection = url.pathname.slice("/rest/v1/raindrops/".length);
+      const source = collection === "-99" ? etat.corbeille : etat.items;
       const sort = url.searchParams.get("sort") ?? "created";
       const page = Number(url.searchParams.get("page") ?? 0);
       const perpage = Number(url.searchParams.get("perpage") ?? 50);
       const cle = sort.replace(/^-/, "") as "created" | "lastUpdate";
       const desc = sort.startsWith("-");
-      const tries = [...etat.items].sort((a, b) =>
+      const tries = [...source].sort((a, b) =>
         desc ? b[cle].localeCompare(a[cle]) : a[cle].localeCompare(b[cle]),
       );
       return json(200, {
-        count: etat.items.length,
+        count: source.length,
         items: tries.slice(page * perpage, page * perpage + perpage),
       });
     }
@@ -120,6 +131,7 @@ export async function startFauxApi(items: FauxApi["items"] = []): Promise<FauxAp
   return {
     port,
     items: etat.items,
+    corbeille: etat.corbeille,
     appels,
     authorizations,
     repondre429: (n) => {

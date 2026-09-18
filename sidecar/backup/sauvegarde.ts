@@ -52,17 +52,14 @@ export interface Sauvegarde {
   statut(): Promise<StatutSauvegarde>;
 }
 
-interface File {
-  run<T>(fn: () => Promise<T>, o?: { rang?: "interactif" | "fond" }): Promise<T>;
-}
-
+// `file` et `token` figuraient ici par anticipation de l'archivage à la
+// demande (§5.4) et n'étaient lus NULLE PART : l'orchestration ne fait que
+// purger et borner le dossier d'archives, elle n'appelle jamais `archiver()`.
+// `token` y gardait surtout une COPIE du jeton Raindrop dans une structure qui
+// n'en avait pas l'usage. Ils reviendront avec l'appelant qui en aura besoin.
 export interface DepsSauvegarde {
   lecture: Lecture;
   dossier: string;
-  /** Réservés à l'archivage à la demande (§5.4, `archiver`) : l'orchestration
-   *  ne fait que purger et borner le dossier d'archives. */
-  file: File;
-  token: string;
   avertir?: (message: string, champs?: Record<string, unknown>) => void;
   maintenant?: () => Date;
 }
