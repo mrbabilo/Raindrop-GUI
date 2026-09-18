@@ -10,10 +10,24 @@
 //! élément sauté n'ayant aucune date nouvelle. D'où la réconciliation par
 //! IDENTIFIANTS (pas par cardinalité) : `ids.size === countFinal` seul est
 //! aveugle à une suppression compensée par un décalage de lecture — voir
-//! `passer()` pour la démonstration arithmétique. On croise deux signaux déjà
-//! en main, à coût nul : la DÉCROISSANCE du `count` au fil des pages (un
-//! décalage arrière, donc un saut possible) et l'égalité `lignes ===
-//! ids.size` (aucun doublon lu, donc pas de décalage avant).
+//! `passer()` pour la démonstration arithmétique. TROIS signaux, déjà en
+//! main, à coût nul — mais deux qui portent et un qui veille :
+//!   1. La DÉCROISSANCE du `count` au fil des pages : le seul des trois qui
+//!      capte une suppression en amont, cas où `ids.size` et `countFinal`
+//!      restent ÉGAUX alors qu'un élément a été sauté (démonstration
+//!      arithmétique ci-dessous, dans `passer()`).
+//!   2. `ids.size === countFinal` : le contrôle général — il capte le
+//!      décalage AVANT (restauration depuis la corbeille, voir plus bas) et
+//!      toute mutation tardive.
+//!   3. `lignes === ids.size` : SUBSUMÉ par le 2 sous pagination par offset
+//!      (mesuré, pas supposé — `lignes` suit toujours la taille de la
+//!      collection au moment de la page finale, donc `lignes ≈ countFinal`
+//!      et un doublon qui fait chuter `ids.size` sous `lignes` le fait
+//!      chuter tout autant sous `countFinal` : le 3 ne se déclenche jamais
+//!      seul). Conservé comme fil-piège : le jour où la pagination passerait
+//!      d'un offset à un curseur, `lignes` cesserait de suivre `countFinal`
+//!      et cette clause redeviendrait discriminante — si elle se déclenche
+//!      seule, c'est que le modèle de pagination a changé sous nos pieds.
 //!
 //! Le décalage AVANT existe aussi, par une voie différente : une restauration
 //! depuis la corbeille réinsère un signet avec son `created` D'ORIGINE (pas
@@ -125,11 +139,17 @@ async function passer(deps: Deps): Promise<Passage> {
 /**
  * Balaye, réconcilie, et rejoue UNE fois si le passage n'est pas cohérent.
  *
- * Cohérent = le count n'a pas décru pendant le passage (aucun décalage
- * arrière, donc aucun saut), `ids.size === countFinal`, et `lignes ===
- * ids.size` (aucun doublon lu). Les trois, pas seulement le deuxième : une
- * suppression en amont laisse `ids.size` et `countFinal` ÉGAUX alors qu'un
- * élément a été sauté (voir l'en-tête du module).
+ * Cohérent = les trois clauses ci-dessous, mais seules DEUX portent
+ * effectivement (voir l'en-tête du module pour le détail et sa mesure) :
+ *   - `!decroissance` — capte la suppression en amont, le cas que la
+ *     cardinalité seule ne voit pas (`ids.size` et `countFinal` restent
+ *     ÉGAUX alors qu'un élément a été sauté) ;
+ *   - `ids.size === countFinal` — capte le reste (décalage avant, mutation
+ *     tardive) ;
+ *   - `lignes === ids.size` — n'ajoute rien sous pagination par offset
+ *     (subsumé par la clause précédente, mesuré) ; gardé en fil-piège pour
+ *     un changement de modèle de pagination, pas comme troisième signal
+ *     indépendant.
  *
  * Incohérent : quelque chose a bougé pendant la course. Un rejeu suffit dans
  * la quasi-totalité des cas — c'est le comportement que §1bis n°1 décrit,
