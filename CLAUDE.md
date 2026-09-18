@@ -245,6 +245,18 @@ les décisions structurantes.
   `*.test.ts` exige un `npx tsc --noEmit` **explicite** sur les fichiers
   touchés.
 
+### La règle sortie de ce lot, sur les tests
+
+> **Une assertion d'absence ne vaut que si l'on a montré que l'objet devait
+> être là.**
+
+Un test qui prouve qu'une archive a survécu doit d'abord prouver que son
+identifiant était **hors** du jeu collecté — sinon il célèbre la survie d'un
+objet que rien ne menaçait. Ce lot a produit une dizaine de tests creux, dont
+trois attrapés uniquement par **sabotage** : réintroduire le défaut, vérifier
+que le test échoue, revenir en arrière. Un test non sabordé n'est pas une
+couverture, c'est une intention.
+
 ## Traps sélection du dossier — lot 2026-09-18
 
 - **Sur `done`, le SSE sérialise le RÉSULTAT, pas l'événement**
@@ -278,18 +290,6 @@ les décisions structurantes.
   rendait fausse pour toute autre, et pour celle-là dès qu'elle change de
   taille. Ce qui nous appartient — 50 items par page, file à 550 ms — est une
   constante ; le reste se CALCULE sur `bookmarksCount` (`coutBalayage`).
-
-### La règle sortie de ce lot, sur les tests
-
-> **Une assertion d'absence ne vaut que si l'on a montré que l'objet devait
-> être là.**
-
-Un test qui prouve qu'une archive a survécu doit d'abord prouver que son
-identifiant était **hors** du jeu collecté — sinon il célèbre la survie d'un
-objet que rien ne menaçait. Ce lot a produit une dizaine de tests creux, dont
-trois attrapés uniquement par **sabotage** : réintroduire le défaut, vérifier
-que le test échoue, revenir en arrière. Un test non sabordé n'est pas une
-couverture, c'est une intention.
 
 ## Git
 
