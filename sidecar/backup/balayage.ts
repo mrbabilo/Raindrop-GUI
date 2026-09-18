@@ -94,6 +94,12 @@ interface Passage extends Omit<ResultatBalayage, "complet" | "raison"> {
  * restent égaux. Le `count`, lui, a bel et bien décru entre la page 0 (120)
  * et la page 1 (119) : c'est ce signal qui trahit le décalage, pas l'écart
  * final.
+ *
+ * (Dans le test réel, `created` colle `i` et `i+60` sur la même minute — le
+ * tri stable du faux serveur rend `[0,60,1,61,…]`, ce qui déplace l'item
+ * RÉELLEMENT sauté à l'index 25, pas l'« ancien 50 » de cette illustration
+ * idéalisée. Le mécanisme et la conclusion — l'égalité malgré la perte —
+ * sont inchangés, seule la collision de `created` déplace la victime.)
  */
 async function passer(deps: Deps): Promise<Passage> {
   const ecrivain = await ouvrirJsonl(deps.chemin);
@@ -106,32 +112,47 @@ async function passer(deps: Deps): Promise<Passage> {
   let countMax = 0;
   let decroissance = false;
   let annule = false;
-  for (;;) {
-    if (deps.annule?.()) {
-      annule = true;
-      break;
+  try {
+    for (;;) {
+      if (deps.annule?.()) {
+        annule = true;
+        break;
+      }
+      const p = await deps.lecture.page(deps.collectionId, {
+        sort: "created",
+        page,
+        perpage: PAR_PAGE,
+      });
+      total = p.count;
+      if (p.count < countMax) decroissance = true;
+      if (p.count > countMax) countMax = p.count;
+      for (const item of p.items) {
+        await ecrivain.ligne(item);
+        const id = (item as { _id?: number })._id;
+        if (typeof id === "number") ids.add(id);
+      }
+      deps.onProgress?.(ids.size, total);
+      if (p.items.length < PAR_PAGE) break;
+      page++;
     }
-    const p = await deps.lecture.page(deps.collectionId, {
-      sort: "created",
-      page,
-      perpage: PAR_PAGE,
-    });
-    total = p.count;
-    if (p.count < countMax) decroissance = true;
-    if (p.count > countMax) countMax = p.count;
-    for (const item of p.items) {
-      await ecrivain.ligne(item);
-      const id = (item as { _id?: number })._id;
-      if (typeof id === "number") ids.add(id);
-    }
-    deps.onProgress?.(ids.size, total);
-    if (p.items.length < PAR_PAGE) break;
-    page++;
+  } catch (e) {
+    // Un 429 (`ErreurHttpRaindrop`) ou un timeout de 30 s sont ROUTINIERS sur
+    // 245 requêtes : sans ce filet, `fermer()` ne tournerait jamais, le flux
+    // resterait ouvert, et le JSONL partiel dormirait sur disque SANS
+    // marqueur — le seul chemin où la garde de Task 6 (`dernierValide()`) est
+    // aveugle, faute de `ResultatBalayage` à filtrer. On ferme quand même
+    // (best effort) puis on relance l'erreur D'ORIGINE : si `fermer()` jette
+    // à son tour, on ne la laisse jamais masquer la vraie cause.
+    await ecrivain.fermer().catch(() => {});
+    throw e;
   }
   const { lignes, sha256 } = await ecrivain.fermer();
   // Le compte est relu À LA FIN : il ferme la fenêtre restée ouverte après la
-  // dernière page.
-  const countFinal = await deps.lecture.compteur(deps.collectionId);
+  // dernière page. Sauf après une annulation : le balayage est de toute
+  // façon marqué incomplet, une requête de plus n'a aucun sens et coûte une
+  // demi-seconde pour rien sur une file à 550 ms — on retient le dernier
+  // count observé.
+  const countFinal = annule ? total : await deps.lecture.compteur(deps.collectionId);
   if (countFinal < countMax) decroissance = true;
   return { ids, lignes, sha256, countFinal, decroissance, annule };
 }
@@ -173,13 +194,22 @@ export async function balayerComplet(deps: Deps): Promise<ResultatBalayage> {
     if (essai === 2) break;
   }
   const r = dernier!;
+  // Sans décroissance, lignes > ids.size ne peut venir que d'un item écrit
+  // sans identifiant numérique (`_id` absent ou non numérique — improbable
+  // côté API Raindrop, mais pas impossible) : ce n'est pas la bibliothèque
+  // qui a bougé, et l'accuser enverrait sur une fausse piste POUR TOUJOURS
+  // (l'anomalie de données ne se résout jamais d'un rejeu à l'autre).
+  const cause =
+    !r.decroissance && r.lignes > r.ids.size
+      ? "des lignes ont été écrites sans identifiant numérique (`_id` absent ou non numérique)"
+      : "la bibliothèque a changé pendant les deux passages";
   return depouiller(
     r,
     false,
     `réconciliation impossible : ${r.ids.size} identifiants collectés, ` +
       `${r.lignes} lignes écrites, ${r.countFinal} annoncés` +
       (r.decroissance ? ", et le compte a décru pendant le passage" : "") +
-      " — la bibliothèque a changé pendant les deux passages",
+      ` — ${cause}`,
   );
 }
 
