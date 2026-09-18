@@ -249,3 +249,44 @@ describe("ce qui ne doit jamais être effacé", () => {
     expect(s2.bascule).toBeUndefined(); // l'annulation prime sur l'escalade
   });
 });
+
+// Ce qui ne doit pas FUIR non plus. La rotation n'itère que sur les
+// horodatages du manifeste : un dossier qu'il ne cite pas lui est invisible.
+describe("ce que le manifeste ne cite pas", () => {
+  it("un dossier partiel d'un balayage mort est ramassé à la sauvegarde suivante", async () => {
+    api = await startFauxApi(items(3));
+    const dossier = repertoireTemporaire("reconcil-partiel-");
+    // Un balayage mort en route : des données écrites, pas de meta.json —
+    // il s'écrit en dernier. ~11 Mo en réel, hors de tout budget.
+    const mort = join(dossier, "2026-09-01T10-00-00");
+    mkdirSync(mort, { recursive: true });
+    writeFileSync(join(mort, "raindrops.jsonl"), '{"_id":1}\n', "utf8");
+
+    await sauv(api, dossier, { maintenant: heure("10") }).executer("complet");
+
+    expect(existsSync(mort)).toBe(false);
+  });
+
+  it("un instantané que le manifeste a oublié est ré-adopté, pas perdu", async () => {
+    api = await startFauxApi(items(3));
+    const dossier = repertoireTemporaire("reconcil-oubli-");
+    // Le cas du manifeste corrompu : `lireManifeste` rend un inventaire vide,
+    // et la sauvegarde suivante en réécrit un qui ne porte que sa propre
+    // entrée. Le dossier antérieur survivrait sans que rien ne l'atteigne.
+    const oublie = join(dossier, "2026-09-01T10-00-00");
+    mkdirSync(oublie, { recursive: true });
+    writeFileSync(join(oublie, "raindrops.jsonl"), '{"_id":1}\n', "utf8");
+    writeFileSync(
+      join(oublie, "meta.json"),
+      JSON.stringify({ horodatage: "2026-09-01T10-00-00", complet: true, count: 1, watermark: "w" }),
+      "utf8",
+    );
+
+    await sauv(api, dossier, { maintenant: heure("10") }).executer("complet");
+
+    // Il est de nouveau CONNU : la rotation peut désormais l'atteindre.
+    const m = JSON.parse(readFileSync(join(dossier, "manifest.json"), "utf8")) as Manifeste;
+    expect(m.instantanes.map((i) => i.horodatage)).toContain("2026-09-01T10-00-00");
+    expect(existsSync(oublie)).toBe(true);
+  });
+});

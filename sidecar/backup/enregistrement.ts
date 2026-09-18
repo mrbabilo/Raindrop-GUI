@@ -17,6 +17,7 @@ import {
   type EntreeInstantane,
   type Manifeste,
 } from "./manifeste.js";
+import { reconcilier } from "./reconciliation.js";
 import type { ResultatSauvegarde } from "./sauvegarde.js";
 
 /** Tout ce qu'un passage a produit, avant d'être jugé et inscrit. */
@@ -53,7 +54,16 @@ export function makeEnregistreur(deps: {
       await purgerOrphelins(archives, ids);
       await appliquerBudget(archives, ARCHIVES_MAX_GO * 2 ** 30);
     }
-    const toutes = [...m.instantanes, entree];
+    // Avant de décider quoi garder : confronter les dossiers PRÉSENTS au
+    // manifeste. Sans cela, un balayage mort en route laisse ~11 Mo que rien
+    // ne ramasse, et un manifeste corrompu (inventaire vide) fait perdre la
+    // trace de tous les dossiers antérieurs — qui survivent sur le disque
+    // sans que la rotation puisse plus jamais les atteindre.
+    // `entree` est joint à ce qu'on déclare connu : son dossier VIENT d'être
+    // écrit, meta.json compris, et il serait sinon ré-adopté comme orphelin —
+    // en double avec lui-même.
+    const adoptes = await reconcilier(deps.dossier, { version: 1, instantanes: [...m.instantanes, entree] }, avertir);
+    const toutes = [...m.instantanes, ...adoptes, entree];
     const gardes = new Set(aConserver(toutes.map((i) => i.horodatage), maintenant()));
     // L'instantané qu'on vient d'écrire et de vérifier n'est JAMAIS celui que
     // la rotation efface : horloge qui recule, ou manifeste portant des

@@ -167,17 +167,26 @@ fidèle, recompression quand la signature manque, test sabordé pour le prouver.
       testé ; à garder en tête : **ne pas lancer `npm test` et `cargo test`
       concurremment**, ou desserrer les délais de ces quatre tests si le besoin
       s'en fait sentir en CI.
-- [ ] **Les dossiers d'instantanés échoués fuient** — une exception en cours
-      de balayage laisse un dossier partiel que rien ne ramasse : la rotation
-      n'itère que sur les horodatages du manifeste. ~11 Mo par échec, hors de
-      tout budget (§5.4 ne borne que `archives/`). Piste : un balayage des
-      dossiers non cités, au démarrage.
-- [ ] **Un manifeste corrompu rend l'historique invisible** — `lireManifeste`
-      rend un inventaire vide (et l'**avertit** au journal depuis la ronde 2
-      de la Task 6, donc ce n'est pas silencieux), mais la sauvegarde suivante
-      réécrit un manifeste ne portant que sa propre entrée. Les dossiers
-      antérieurs survivent et deviennent non ramassables. Piste :
-      reconstruire depuis les `meta.json` présents.
+- [x] **Dossiers orphelins : fuite ET historique invisible — les deux réglés
+      par la même réconciliation** (2026-09-19, `sidecar/backup/reconciliation.ts`).
+      C'était un seul problème vu par deux bouts : la rotation n'itère que sur
+      les horodatages du manifeste, donc un dossier qu'il ne cite pas lui est
+      invisible — qu'il vienne d'un balayage mort en route (~11 Mo perdus,
+      hors de tout budget) ou d'un manifeste corrompu (inventaire vide, puis
+      réécrit sans les entrées antérieures).
+      **`meta.json` tranche entre les deux** : il s'écrit EN DERNIER, et son
+      rôle était déjà écrit dans `enregistrement.ts` — « le manifeste peut
+      être perdu, le dossier lu seul, l'instantané reste capable de dire s'il
+      ment ». Présent → l'instantané est **ré-adopté** ; absent ou illisible →
+      le dossier est **ramassé**, et on le dit (effacer des mégaoctets en
+      silence vaudrait la fuite).
+      L'entrée adoptée est **sans empreinte**, volontairement : on ne peut
+      rien garantir d'un dossier oublié, et recalculer les empreintes depuis
+      les fichiers ne prouverait rien (elles coïncideraient par construction).
+      `raisonDeBasculer` repart donc en balayage complet plutôt que de bâtir
+      dessus. Appelé à l'enregistrement, avant la rotation — pas au démarrage
+      comme la piste le suggérait : c'est là que le manifeste est réécrit et
+      que la rotation suit.
 - [x] **Un item sans `_id` numérique — perte silencieuse corrigée** (2026-09-19).
       Le défaut était **plus large que décrit ici** : `incremental.ts` avançait
       le watermark puis jetait l'item (donc jamais relu — perte définitive),
