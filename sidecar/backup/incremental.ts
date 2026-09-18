@@ -46,10 +46,10 @@ export async function lireModifies(deps: {
       const o = item as { _id?: number; lastUpdate?: string };
       const date = o.lastUpdate ?? "";
       if (date > nouveauWatermark) nouveauWatermark = date;
-      // Les dates sont comparées lexicographiquement sur des chaînes ISO-8601 UTC
-      // à format constant. Cela fonctionne pour l'ordre correct de ces timestamps
-      // car le format ISO-8601 place l'année, le mois et le jour en première position,
-      // garantissant une comparaison correcte.
+      // Dates comparées lexicographiquement (pas parseInt). Cela fonctionne
+      // **IFF** le format est ISO-8601 UTC constant : toute déviation silencieuse
+      // (offset autre que Z, précision différente) casserait la comparaison sans erreur.
+      // Raindrop rend toujours le format fixe — mais c'est une hypothèse.
       // `>=` et non `>` : l'élément PILE au watermark est réappliqué. Le
       // réécrire est sans effet ; le sauter perdrait ses voisins de même
       // seconde.

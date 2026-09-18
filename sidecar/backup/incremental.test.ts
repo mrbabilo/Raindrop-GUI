@@ -55,9 +55,20 @@ describe("incrémental", () => {
     expect(r.pages).toBe(1);
   });
 
-  it("un watermark vide rend la main sans tout rapatrier", async () => {
-    api = await startFauxApi([item(1, "2026-01-01T00:00:00.000Z")]);
+  it("un watermark vide s'arrête à maxPages au lieu de tout rapatrier", async () => {
+    // 150 éléments = 3 pages pleines : c'est le SEUL cas où `maxPages` est
+    // réellement ce qui arrête la boucle. Avec une bibliothèque d'un seul
+    // élément, la page courte cassait la boucle avant que le garde-fou
+    // n'entre en jeu — le test passait même en l'ignorant complètement.
+    api = await startFauxApi(
+      Array.from({ length: 150 }, (_, i) =>
+        item(i + 1, `2026-06-${String((i % 28) + 1).padStart(2, "0")}T00:00:00.000Z`),
+      ),
+    );
     const r = await lireModifies({ lecture: lect(api), collectionId: 0, watermark: "", maxPages: 2 });
-    expect(r.pages).toBeLessThanOrEqual(2);
+    expect(r.pages).toBe(2);
+    // Deux pages exactement, donc 100 éléments et non 150 : le garde-fou a
+    // tranché au lieu de laisser filer.
+    expect(r.modifies).toHaveLength(100);
   });
 });
