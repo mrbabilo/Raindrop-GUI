@@ -3,6 +3,7 @@ mod demarrage;
 mod etat_connexion;
 mod jeton;
 mod node;
+mod reglages;
 mod runtime;
 mod sidecar;
 mod signaux;
