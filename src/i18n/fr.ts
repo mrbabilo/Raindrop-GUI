@@ -162,6 +162,20 @@ export const fr = {
   "state.retry": "Réessayer",
   "theme.toDark": "Passer au thème sombre",
   "theme.toLight": "Passer au thème clair",
+
+  // ─── Sauvegarde locale (spec sélection) ──────────────────────────────────
+  // Les clés de progression sont celles qu'ÉMET le sidecar (stables, jamais
+  // du français) — même motif que les états du pont : le front traduit, une
+  // clé inconnue tombe sur le libellé neutre plutôt que de s'afficher brute.
+  "sauvegarde.progress.bookmarks": "signets",
+  "sauvegarde.progress.modifies": "éléments modifiés",
+  "sauvegarde.progress.corbeille": "corbeille",
+  "sauvegarde.progress.collections": "collections",
+  "sauvegarde.progress.surlignages": "surlignages",
+  "sauvegarde.progress.profil": "profil",
+  "sauvegarde.progress.neutre": "Sauvegarde en cours…",
+  "sauvegarde.duree.s": "environ {n} s",
+  "sauvegarde.duree.min": "environ {n} min",
 } as const;
 
 export type FrKey = keyof typeof fr;

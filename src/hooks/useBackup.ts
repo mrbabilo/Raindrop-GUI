@@ -1,0 +1,122 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { t, type FrKey } from "../i18n/fr";
+import { api } from "../lib/api";
+
+// Les formes rendues par /api/backup/status, /api/backup/archives et
+// /api/jobs — miroirs des interfaces du sidecar (spec sélection §3-§4).
+// Posées ici tant qu'un seul consommateur les exige, comme `DuplicateGroups`
+// dans useAnalysis : à migrer vers le DTO partagé au besoin.
+
+export interface StatutSauvegarde {
+  actif: boolean;
+  dossier?: string;
+  raison?: string;
+  dernier?: { horodatage: string; complet: boolean; count: number } | null;
+  instantanes?: number;
+}
+
+export interface InventaireArchives {
+  ids: number[];
+  octets: number;
+}
+
+export interface JobEnVol {
+  id: string;
+  type: string; // "backup" | "archive" | "scan-links" | …
+  status: string;
+  progress: { done: number; total: number; label: string | null };
+}
+
+/** Ce que rend un job d'archivage à sa fin (`ResultatArchivage` du sidecar). */
+export interface ResultatArchivage {
+  demandes: number;
+  faits: number;
+  echecs: { id: number; raison: string }[];
+  annule: boolean;
+}
+
+/** Ce que rend un job de sauvegarde. `bascule` porte la raison d'une escalade
+ *  en balayage complet jusqu'à l'interface — le « et le dit » du §6, qui
+ *  n'avait jusqu'ici aucun lecteur. */
+export interface ResultatSauvegarde {
+  horodatage: string;
+  complet: boolean;
+  count: number;
+  bascule?: string;
+}
+
+export const useBackupStatus = () =>
+  useQuery({
+    queryKey: ["backup", "status"],
+    queryFn: () => api.get<StatutSauvegarde>("/api/backup/status"),
+    refetchInterval: 15_000,
+  });
+
+/** L'inventaire en `Set` : le marqueur « Archivé » le teste par identifiant,
+ *  à chaque ligne de la liste — un tableau y serait quadratique. */
+export const useArchives = () =>
+  useQuery({
+    queryKey: ["backup", "archives"],
+    queryFn: async () => {
+      const inv = await api.get<InventaireArchives>("/api/backup/archives");
+      return { octets: inv.octets, set: new Set(inv.ids) };
+    },
+    staleTime: 60_000,
+  });
+
+export const useJobsEnVol = () =>
+  useQuery({
+    queryKey: ["jobs"],
+    queryFn: () => api.get<JobEnVol[]>("/api/jobs"),
+    refetchInterval: 5_000,
+  });
+
+/** Après un job d'archivage ET après chaque sauvegarde : `purgerOrphelins`
+ *  tourne à la fin d'un balayage complet et peut réduire l'inventaire en
+ *  silence (spec sélection §4.1). Distinguer le mode pour épargner une
+ *  requête locale n'en vaudrait pas la peine. */
+export const useInvalidateSauvegarde = () => {
+  const client = useQueryClient();
+  return () => {
+    void client.invalidateQueries({ queryKey: ["backup"] });
+  };
+};
+
+// ─── Formatage ───────────────────────────────────────────────────────────────
+
+export function formatterOctets(n: number): string {
+  if (n < 2 ** 10) return `${n} o`;
+  if (n < 2 ** 20) return `${Math.round(n / 2 ** 10)} Ko`;
+  if (n < 2 ** 30) return `${Math.round(n / 2 ** 20)} Mo`;
+  return `${(n / 2 ** 30).toFixed(1)} Go`;
+}
+
+/** Deux requêtes par copie, file à 550 ms (spec sélection §4.2) : annoncer la
+ *  durée est la seule façon honnête de proposer une action qui peut tenir des
+ *  dizaines de minutes. */
+export function dureeEstimee(n: number): string {
+  const secondes = Math.ceil(n * 1.1);
+  if (secondes < 120) return t("sauvegarde.duree.s", { n: secondes });
+  return t("sauvegarde.duree.min", { n: Math.ceil(secondes / 60) });
+}
+
+/** Les clés de progression émises par le sidecar, traduites — même motif que
+ *  `ETAT_MCP` dans Reglages : le `satisfies` garantit que chaque valeur est
+ *  une clé réelle du dictionnaire, et le contrôle `in` rattrape une clé que
+ *  le sidecar ajouterait sans prévenir (elle s'afficherait sinon brute, comme
+ *  un identifiant interne à l'écran). */
+export const LABELS_PROGRESSION = {
+  bookmarks: "sauvegarde.progress.bookmarks",
+  modifies: "sauvegarde.progress.modifies",
+  corbeille: "sauvegarde.progress.corbeille",
+  collections: "sauvegarde.progress.collections",
+  surlignages: "sauvegarde.progress.surlignages",
+  profil: "sauvegarde.progress.profil",
+} as const satisfies Record<string, FrKey>;
+
+export function libelleProgression(label: string | null): string | null {
+  if (label === null) return null;
+  return label in LABELS_PROGRESSION
+    ? t(LABELS_PROGRESSION[label as keyof typeof LABELS_PROGRESSION])
+    : null;
+}
