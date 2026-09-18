@@ -26,6 +26,10 @@ pub struct Reglages {
     pub token_raindrop: String,
     pub token_local: String,
     pub dossier_donnees: PathBuf,
+    /// Le dossier de sauvegarde choisi par l'utilisateur (spec sélection §2) :
+    /// transmis au sidecar en BACKUP_DIR. `None` = non configuré, le moteur
+    /// naît inactif — c'est l'état normal du premier lancement.
+    pub dossier_sauvegarde: Option<PathBuf>,
 }
 
 pub struct Sidecar {
@@ -62,17 +66,33 @@ pub fn lancer(r: &Reglages) -> std::io::Result<Sidecar> {
     let sortie = File::create(&journal)?;
     let erreurs = sortie.try_clone()?;
 
-    let enfant = Command::new(&r.node)
-        .arg(entree(&r.base))
-        .env("MCP_RAINDROPIO_TOKEN", &r.token_raindrop)
-        .env("LOCAL_API_TOKEN", &r.token_local)
-        .env("RAINDROP_MCP_ENTRY", entree_mcp(&r.base))
-        .env("APPDATA_DIR", &r.dossier_donnees)
+    let mut cmd = Command::new(&r.node);
+    cmd.arg(entree(&r.base));
+    for (cle, valeur) in env_args(r) {
+        cmd.env(cle, valeur);
+    }
+    let enfant = cmd
         .stdin(Stdio::null())
         .stdout(Stdio::from(sortie))
         .stderr(Stdio::from(erreurs))
         .spawn()?;
     Ok(Sidecar { enfant })
+}
+
+/// Les variables d'environnement du sidecar, en un seul endroit — pur, donc
+/// testable sans lancer de processus (BACKUP_DIR n'est passé QUE si un
+/// dossier de sauvegarde est configuré).
+fn env_args(r: &Reglages) -> Vec<(String, String)> {
+    let mut v = vec![
+        ("MCP_RAINDROPIO_TOKEN".into(), r.token_raindrop.clone()),
+        ("LOCAL_API_TOKEN".into(), r.token_local.clone()),
+        ("RAINDROP_MCP_ENTRY".into(), entree_mcp(&r.base).display().to_string()),
+        ("APPDATA_DIR".into(), r.dossier_donnees.display().to_string()),
+    ];
+    if let Some(d) = &r.dossier_sauvegarde {
+        v.push(("BACKUP_DIR".into(), d.display().to_string()));
+    }
+    v
 }
 
 /// Attend que le lockfile porte un port > 0 (spec §3.6 : `port: 0` = binding
@@ -153,5 +173,20 @@ mod tests {
             entree_mcp(&PathBuf::from("/base")),
             PathBuf::from("/base/node_modules/@kud/mcp-raindrop-io/dist/index.js")
         );
+    }
+
+    #[test]
+    fn backup_dir_n_est_passe_que_si_configure() {
+        let base = Reglages {
+            node: PathBuf::from("node"),
+            base: PathBuf::from("/b"),
+            token_raindrop: "r".into(),
+            token_local: "l".into(),
+            dossier_donnees: PathBuf::from("/d"),
+            dossier_sauvegarde: None,
+        };
+        assert!(!env_args(&base).iter().any(|(k, _)| k == "BACKUP_DIR"));
+        let avec = Reglages { dossier_sauvegarde: Some(PathBuf::from("/sauv")), ..base };
+        assert!(env_args(&avec).iter().any(|(k, v)| k == "BACKUP_DIR" && v == "/sauv"));
     }
 }

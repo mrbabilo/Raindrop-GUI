@@ -99,12 +99,21 @@ pub(crate) fn lancer_sidecar(etat: &Etat, chemin_node: PathBuf, token_raindrop: 
     // le port du sidecar qu'on vient de tuer et le rend comme s'il était neuf.
     let _ = std::fs::remove_file(&fichier);
 
+    // Le dossier de sauvegarde (spec sélection §2) : lu ICI, unique point de
+    // lecture, pour que toute relance (boot, jeton, dossier) porte le même
+    // réglage. Configuré mais introuvable → NON passé : le moteur naît
+    // inactif et le panneau dit pourquoi (etat_sauvegarde) — un
+    // mkdir-récursif sous un volume démonté écrirait au mauvais endroit.
+    let dossier_sauvegarde = crate::reglages::lire(&etat.dossier)
+        .filter(|c| std::path::Path::new(c).is_dir())
+        .map(std::path::PathBuf::from);
     let reglages = sidecar::Reglages {
         node: chemin_node,
         base: etat.base.clone(),
         token_raindrop: token_raindrop.to_string(),
         token_local: etat.token_local.clone(),
         dossier_donnees: etat.dossier.clone(),
+        dossier_sauvegarde,
     };
     let enfant = match sidecar::lancer(&reglages) {
         Ok(s) => s,
