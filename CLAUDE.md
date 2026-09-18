@@ -285,6 +285,16 @@ couverture, c'est une intention.
   Ils échouent quand `npm test` tourne **en même temps** qu'un `cargo test` —
   la suite passe de 20 s à 191 s et les délais de 15-20 s expirent. Seule,
   elle rend 663/0. **Ne pas lancer les deux suites concurremment.**
+- **`/user` ne porte AUCUN compte de signets** (vérifié en réel le
+  2026-09-18 : ni `bookmarks_count` ni équivalent dans la réponse). Le
+  `?? 0` qui tenait cette place fabriquait un zéro **silencieux**, affiché
+  tel quel par le premier lancement (« — 0 signets ») et par le panneau de
+  sauvegarde. Le compte se dérive d'une lecture d'un item de la collection 0,
+  dont la réponse porte le total ; `bookmarksCount` est **optionnel** et
+  ABSENT quand la dérivation échoue — un zéro inventé se lit comme un fait,
+  l'absence se rattrape à l'écran. Et, une fois de plus, **le faux serveur
+  était infidèle** : il rendait un `bookmarksCount` en camelCase que la route
+  ne lisait même pas.
 - **Chiffres en dur dans l'interface : jamais.** « 2 min 20, 245 requêtes »
   était la mesure faite sur UNE bibliothèque ; l'écrire dans un libellé la
   rendait fausse pour toute autre, et pour celle-là dès qu'elle change de

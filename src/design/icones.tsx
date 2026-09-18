@@ -27,6 +27,17 @@ const paths: Record<string, ReactNode> = {
       <circle cx="10.5" cy="10.5" r="1.7" />
     </>
   ),
+  // engrenage : six DENTS attachées à la jante, et un moyeu. Ce qui sépare
+  // un engrenage d'un soleil tient exactement là — le soleil a des rayons
+  // DÉTACHÉS qui pointent vers l'extérieur. L'icône précédente (cercle plus
+  // huit rayons droits) était un soleil, et se confondait avec la bascule de
+  // thème posée juste à côté dans l'en-tête.
+  engrenage: (
+    <>
+      <path d="M6.29 2.04L9.71 2.04L10.02 3.87L10.57 4.19L12.31 3.54L14.02 6.50L12.59 7.68L12.59 8.32L14.02 9.50L12.31 12.46L10.57 11.81L10.02 12.13L9.71 13.96L6.29 13.96L5.98 12.13L5.43 11.81L3.69 12.46L1.98 9.50L3.41 8.32L3.41 7.68L1.98 6.50L3.69 3.54L5.43 4.19L5.98 3.87Z" />
+      <circle cx="8" cy="8" r="2.1" />
+    </>
+  ),
   // chevron : l'ornement d'un bouton-état, jamais seul
   chevron: <path d="M4.5 6.5L8 10l3.5-3.5" />,
   // chevrons d'arbre : l'état d'un groupe plié ou déplié

@@ -294,12 +294,15 @@ export function buildFakeRaindropServer(opts?: {
   server.registerTool("get_user", { inputSchema: {} }, async () => {
     const g = guard("get_user");
     if (g) return g;
+    // FIDÈLE au vrai `/user` (vérifié en réel le 2026-09-18) : il ne porte
+    // AUCUN compte de signets. Le faux en rendait un — un champ que la route
+    // ne lisait même pas — et masquait ainsi que `bookmarks_count` n'existe
+    // nulle part. Le compte se dérive d'une lecture de la collection 0.
     return ok({
       id: 42,
       email: "moi@example.com",
       fullName: "Utilisateur Test",
       pro: true,
-      bookmarksCount: fx.raindrops.filter((r) => !r.removed).length,
     });
   });
 

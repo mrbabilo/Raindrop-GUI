@@ -4,6 +4,7 @@ import type { Amorce } from "./lib/amorce";
 import { useTheme } from "./lib/theme";
 import { useAppState } from "./state/appState";
 import { Sidebar } from "./components/Sidebar";
+import { Icone } from "./design/icones";
 import { TopBar } from "./components/TopBar";
 import { ListPane } from "./components/ListPane";
 import { CleanupDashboard } from "./components/CleanupDashboard";
@@ -38,20 +39,6 @@ function MoonIcon() {
         stroke="currentColor"
         strokeWidth="1.7"
         strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function EngrenageIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="8" r="2.3" stroke="currentColor" strokeWidth="1.7" />
-      <path
-        d="M8 1.6v1.5M8 12.9v1.5M14.4 8h-1.5M3.1 8H1.6M12.5 3.5l-1.1 1.1M4.6 11.4l-1.1 1.1M12.5 12.5l-1.1-1.1M4.6 4.6L3.5 3.5"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
       />
     </svg>
   );
@@ -119,7 +106,7 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
             aria-label={t("reglages.titre")}
             onClick={() => setReglagesOuvert(true)}
           >
-            <EngrenageIcon />
+            <Icone nom="engrenage" />
           </button>
           <button
             type="button"

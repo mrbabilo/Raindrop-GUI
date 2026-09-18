@@ -79,6 +79,20 @@ describe("PremierLancement", () => {
     );
   });
 
+  // Le compte de signets peut être INCONNU : `/user` n'en porte pas, le
+  // sidecar le dérive, et cette dérivation peut échouer. Annoncer « 0 signets »
+  // se lirait alors comme un fait sur une bibliothèque pleine.
+  it("compte inconnu : le profil s'annonce SANS chiffre, jamais « 0 signets »", async () => {
+    const { bookmarksCount: _absent, ...sansCompte } = compte;
+    getMock.mockResolvedValue(sansCompte);
+    const user = userEvent.setup();
+    render(<PremierLancement onPret={vi.fn()} />);
+    await user.type(screen.getByLabelText("Jeton d'API Raindrop"), "abc");
+    await user.click(screen.getByRole("button", { name: "Valider" }));
+    expect(await screen.findByText("Compte détecté : Alice (a@b.c)")).toBeInTheDocument();
+    expect(screen.queryByText(/0 signets/)).not.toBeInTheDocument();
+  });
+
   it("entrer dans la bibliothèque remonte l'écran « app »", async () => {
     const user = userEvent.setup();
     const onPret = vi.fn();

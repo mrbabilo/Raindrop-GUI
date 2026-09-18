@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import type { Hono } from "hono";
-import { createApp, type SidecarDeps } from "../app.js";
+import { createApp } from "../app.js";
+import type { SidecarDeps } from "../deps.js";
 import { connectFake } from "../../testing/fakeServer.js";
 import { McpConnection } from "../../mcp/connection.js";
 
@@ -28,16 +29,16 @@ const deps = (c: McpConnection, origins = makeOriginsFake()): SidecarDeps => ({
   restart: async () => undefined,
   jobs: { get: () => undefined, list: () => [] } as unknown as SidecarDeps["jobs"],
   cache: {} as SidecarDeps["cache"],
-  scanner: { startScan: () => "", isRunning: () => false },
+  scanner: {} as SidecarDeps["scanner"],
   origins,
-  direct: { updateRaindropUrl: async () => ({ ok: true as const, data: { id: 1 } }) },
+  direct: {} as SidecarDeps["direct"],
 });
 
 // Adaptation brief : l'API locale est derrière l'auth Bearer (Task 7, spec §3.7)
 // → chaque requête du test fournit le token local (même motif que raindrops.test.ts).
 const TOKEN = "test-token";
 const req = (hono: Hono, path: string, init?: RequestInit, token: string = TOKEN): Promise<Response> =>
-  hono.request(path, { ...init, headers: { Authorization: `Bearer ${token}` } });
+  Promise.resolve(hono.request(path, { ...init, headers: { Authorization: `Bearer ${token}` } }));
 
 beforeEach(async () => {
   const fake = await connectFake({ raindropCount: 9 });
@@ -78,6 +79,33 @@ describe("routes user", () => {
   it("GET /api/user renvoie le compte", async () => {
     const res = await req(app, "/api/user");
     expect(((await res.json()) as { email: string }).email).toBe("moi@example.com");
+  });
+
+  // Le vrai `/user` de Raindrop ne porte AUCUN compte de signets (vérifié en
+  // réel le 2026-09-18) : le `?? 0` qui tenait cette place fabriquait un zéro
+  // affiché tel quel (« — 0 signets ») au premier lancement et au panneau de
+  // sauvegarde. Le compte se DÉRIVE d'une lecture de la collection 0.
+  it("le compte de signets est dérivé, pas lu du profil", async () => {
+    const res = await req(app, "/api/user");
+    const corps = (await res.json()) as { bookmarksCount?: number };
+    // Le faux serveur porte un jeu de signets non vide : le compte dérivé
+    // doit le refléter. Sans cette borne, un zéro passerait pour un succès.
+    expect(corps.bookmarksCount).toBeGreaterThan(0);
+  });
+
+  it("dérivation impossible : le champ est ABSENT, jamais zéro", async () => {
+    // Un zéro inventé se lit comme un fait ; l'absence, elle, se rattrape à
+    // l'écran (« Compte détecté » sans chiffre).
+    const fake = await connectFake({ failTools: ["search_raindrops"] });
+    const sansCompte = McpConnection.fromClient(fake.client);
+    const appSeul = createApp(deps(sansCompte), { localToken: TOKEN });
+    const corps = (await (await req(appSeul, "/api/user")).json()) as {
+      email: string;
+      bookmarksCount?: number;
+    };
+    expect(corps.email).toBe("moi@example.com"); // le profil répond quand même
+    expect("bookmarksCount" in corps).toBe(false);
+    await sansCompte.close();
   });
 
   it("POST /api/parse-url préremplit un titre", async () => {

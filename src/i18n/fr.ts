@@ -135,6 +135,7 @@ export const fr = {
   "boot.validate": "Valider",
   "boot.checking": "Vérification…",
   "boot.account": "Compte détecté : {name} ({email}) — {count} signets",
+  "boot.accountSansCompte": "Compte détecté : {name} ({email})",
   "boot.enter": "Ouvrir la bibliothèque",
   // Réglages (spec §6) — remplacer le jeton, voir l'état de la connexion.
   "reglages.titre": "Réglages",

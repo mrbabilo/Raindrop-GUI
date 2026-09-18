@@ -9,13 +9,22 @@ export function userRoutes(deps: SidecarDeps): Hono {
   app.get("/api/user", async (c) => {
     const out = await deps.mcp("get_user", {});
     if (!out.ok) return apiError(c, out.code, out.message, out.tool);
-    const u = out.data as { id: number; email: string; full_name?: string; fullName?: string; pro?: boolean; bookmarks_count?: number };
+    const u = out.data as { id: number; email: string; full_name?: string; fullName?: string; pro?: boolean };
+    // Le compte de signets NE VIENT PAS de `/user` : cet endpoint n'en porte
+    // aucun (vérifié en réel le 2026-09-18 — le `?? 0` qui tenait cette place
+    // fabriquait un zéro silencieux, affiché tel quel par le premier
+    // lancement et par le panneau de sauvegarde). On le dérive d'une lecture
+    // d'UN item de la collection 0, dont la réponse porte le total.
+    // Un échec ici n'est pas une panne du profil : le champ reste absent, et
+    // les écrans savent se taire plutôt que d'inventer.
+    const total = await deps.mcp("search_raindrops", { collection_id: 0, per_page: 1 });
+    const compte = total.ok ? (total.data as { count?: number }).count : undefined;
     return c.json({
       id: u.id,
       email: u.email,
       fullName: u.fullName ?? u.full_name ?? u.email,
       pro: u.pro ?? false,
-      bookmarksCount: u.bookmarks_count ?? 0,
+      ...(typeof compte === "number" ? { bookmarksCount: compte } : {}),
     });
   });
 

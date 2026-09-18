@@ -20,7 +20,11 @@ describe("McpConnection", () => {
     // Connexion directe autour du client déjà connecté :
     const conn = McpConnection.fromClient(client);
     const out = await conn.call<{ fullName: string }>("get_user", {});
-    expect(out).toEqual({ ok: true, data: { id: 42, email: "moi@example.com", fullName: "Utilisateur Test", pro: true, bookmarksCount: expect.any(Number) } });
+    // PAS de `bookmarksCount` : le vrai `/user` de Raindrop n'en porte aucun
+    // (vérifié en réel le 2026-09-18), et le faux serveur est désormais
+    // fidèle sur ce point. Le compte se dérive ailleurs — d'une lecture de la
+    // collection 0, dans `routes/user.ts`.
+    expect(out).toEqual({ ok: true, data: { id: 42, email: "moi@example.com", fullName: "Utilisateur Test", pro: true } });
     await conn.close();
   });
 

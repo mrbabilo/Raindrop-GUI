@@ -57,11 +57,20 @@ export function PremierLancement({ onPret }: { onPret: (a: Amorce) => void }) {
       {etape.phase === "valide" ? (
         <>
           <p role="status" className="text-sm">
-            {t("boot.account", {
-              name: etape.compte.fullName,
-              email: etape.compte.email,
-              count: etape.compte.bookmarksCount,
-            })}
+            {/* Le compte de signets peut être INCONNU : `/user` ne le porte
+                pas, le sidecar le dérive, et cette dérivation peut échouer.
+                On annonce alors le compte détecté sans chiffre — plutôt que
+                « 0 signets », qui se lit comme un fait. */}
+            {etape.compte.bookmarksCount === undefined
+              ? t("boot.accountSansCompte", {
+                  name: etape.compte.fullName,
+                  email: etape.compte.email,
+                })
+              : t("boot.account", {
+                  name: etape.compte.fullName,
+                  email: etape.compte.email,
+                  count: etape.compte.bookmarksCount,
+                })}
           </p>
           <button type="button" className="btn self-start" onClick={() => onPret({ ecran: "app" })}>
             {t("boot.enter")}

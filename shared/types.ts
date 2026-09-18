@@ -59,7 +59,13 @@ export interface RaindropUser {
   email: string;
   fullName: string;
   pro: boolean;
-  bookmarksCount: number;
+  /** ABSENT quand on ne le connaît pas — et c'est fréquent : l'endpoint
+   *  `/user` de Raindrop ne porte AUCUN compte (vérifié en réel le
+   *  2026-09-18 : ni `bookmarks_count`, ni équivalent). Le sidecar le dérive
+   *  d'une lecture de la collection 0 ; si cette lecture échoue, le champ
+   *  n'est pas posé. Surtout pas `?? 0` : un zéro inventé s'affiche comme un
+   *  fait (« — 0 signets »), là où l'absence se rattrape à l'écran. */
+  bookmarksCount?: number;
 }
 
 export interface Paginated<T> {
