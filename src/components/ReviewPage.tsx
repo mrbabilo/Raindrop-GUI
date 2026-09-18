@@ -5,6 +5,8 @@ import { t } from "../i18n/fr";
 import { toCsv, downloadCsv } from "../lib/csv";
 import { useBulk, useEmptyTrash, useCleanupCollections, useInvalidate } from "../hooks/useMutations";
 import { useAppState, type View } from "../state/appState";
+import { useArchives, useInvalidateSauvegarde } from "../hooks/useBackup";
+import { AnnonceArchive, ArchiveJob, BORNE_ARCHIVE, porteeArchive } from "./RevueArchive";
 
 type ReviewView = Extract<View, { kind: "review" }>;
 
@@ -25,8 +27,13 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
   const emptyTrash = useEmptyTrash();
   const cleanup = useCleanupCollections();
   const invalidate = useInvalidate();
+  const invaliderSauvegarde = useInvalidateSauvegarde();
 
   const level2 = review.action.op === "empty-trash" || review.action.op === "delete-empty-collections";
+  // L'archivage n'écrit rien chez Raindrop : c'est un job local, borné, qui
+  // ne détruit rien. Il garde la confirmation de niveau 1, jamais la frappe
+  // SUPPRIMER — celle-ci est réservée aux deux écritures définitives.
+  const estArchive = review.action.op === "archive";
   const visible = review.items.filter((i) => i.title.toLowerCase().includes(filter.toLowerCase()));
   const remaining = review.items.filter((i) => !excluded.has(i.id));
   // §4.3 « Liste complète scrollable (virtualisée) » (revue finale : le mot
@@ -68,13 +75,32 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
   // Niveau 2 : vidage/cleanup sont GLOBAUX — la désélection ne retire pas
   // l'action (liste informative, compteur = remaining) et une liste vide
   // n'est pas un obstacle. Niveau 1 : rien à exécuter sans item restant.
-  const canRun = (level2 ? typed === "SUPPRIMER" : confirmed) && (level2 || remaining.length > 0);
+  // Ce que l'archivage fera vraiment : les déjà-archivés sont écartés ET
+  // comptés, ceux qui n'ont pas de copie aussi (spec sélection §4.2).
+  const archives = useArchives().data?.set;
+  const portee = porteeArchive(remaining, archives ?? new Set<number>());
+  const [archiveLancee, setArchiveLancee] = useState(false);
+
+  // Trois bras EXPLICITES plutôt qu'un ternaire imbriqué : c'est là qu'un
+  // décalage se cacherait, et la frappe SUPPRIMER du niveau 2 ne doit jamais
+  // s'affaiblir par l'ajout d'une branche.
+  const canRun = level2
+    ? typed === "SUPPRIMER"
+    : estArchive
+      ? confirmed && portee.ids.length > 0 && portee.ids.length <= BORNE_ARCHIVE
+      : confirmed && remaining.length > 0;
   // Revue finale : Exécuter se désactive PENDANT le vol — un double-clic ne
   // doit pas émettre deux bulk (empty-trash est la seule écriture définitive
   // de l'app, spec §3).
   const pending = bulk.isPending || emptyTrash.isPending || cleanup.isPending;
 
   const execute = async () => {
+    // L'archivage est un JOB (202 + SSE), pas une mutation : on bascule le
+    // pied de page sur son suivi, ArchiveJob poste et s'abonne.
+    if (review.action.op === "archive") {
+      setArchiveLancee(true);
+      return;
+    }
     const ids = remaining.map((i) => i.id);
     try {
       if (review.action.op === "trash")
@@ -106,7 +132,8 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
   };
 
   const actionLabel =
-    review.action.op === "trash" ? t("bulk.trash")
+    review.action.op === "archive" ? t("bulk.archive")
+    : review.action.op === "trash" ? t("bulk.trash")
     : review.action.op === "move" ? t("bulk.move")
     : review.action.op === "tag" ? t("bulk.tag")
     : review.action.op === "empty-trash" ? t("cleanup.empty-trash")
@@ -163,6 +190,22 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
           })}
         </div>
       </div>
+      {estArchive && !archiveLancee && <AnnonceArchive portee={portee} />}
+      {estArchive && archiveLancee ? (
+        <footer className="border-t border-app-border bg-app-panel py-3 text-sm">
+          <ArchiveJob
+            ids={portee.ids}
+            onErreur={setErreur}
+            onTermine={() => {
+              // L'inventaire a changé — et lui seul : l'archivage ne touche
+              // à aucun signet chez Raindrop.
+              invaliderSauvegarde();
+              clearSelection();
+              goBack();
+            }}
+          />
+        </footer>
+      ) : (
       <footer className="flex items-center gap-3 border-t border-app-border bg-app-panel px-4 py-3 text-sm">
         {level2 ? (
           // R15P-1 : le jeton `border-app-danger` du snippet n'existe pas —
@@ -188,7 +231,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
                 setErreur(null);
               }}
             />
-            {t("review.confirmL1", { n: remaining.length })}
+            {t("review.confirmL1", { n: estArchive ? portee.ids.length : remaining.length })}
           </label>
         )}
         {erreur && (
@@ -207,6 +250,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
           {t("review.execute")}
         </button>
       </footer>
+      )}
     </main>
   );
 }

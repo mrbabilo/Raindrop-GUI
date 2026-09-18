@@ -29,7 +29,16 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
   const build = (action: BulkAction) => {
     go({
       kind: "review",
-      items: selected.map((i) => ({ id: i.id, url: i.url, title: i.title, collectionId: i.collectionId })),
+      // `cache` embarqué : la Revue s'en sert pour compter ce qui a vraiment
+      // une copie permanente à archiver (spec sélection §4.2). La liste le
+      // connaît — il arrive gratuitement dans la réponse de liste.
+      items: selected.map((i) => ({
+        id: i.id,
+        url: i.url,
+        title: i.title,
+        collectionId: i.collectionId,
+        cache: i.cache,
+      })),
       action,
       sourceLabel: t("bulk.selection"),
       returnView: view,
@@ -51,6 +60,11 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
         {(collections.data ?? []).map((c) => <option key={c.id} value={String(c.id)}>{c.title}</option>)}
       </select>
       <button type="button" className="rounded border border-app-border px-2 py-1 disabled:opacity-40" disabled={!dest} onClick={() => dest && build({ op: "move", toCollectionId: Number(dest) })}>{t("bulk.move")}</button>
+      {/* L'archive est la seule action qui n'écrit RIEN chez Raindrop : elle
+          copie en local ce qui existe déjà côté serveur. */}
+      <button type="button" className="rounded border border-app-border px-2 py-1" onClick={() => build({ op: "archive" })}>
+        {t("bulk.archive")}
+      </button>
       <input aria-label={t("bulk.tagField")} className="input w-40" placeholder={t("bulk.tagPlaceholder")} value={tags} onChange={(e) => setTags(e.target.value)} />
       {/* Revue finale : le garde porte la liste PARSÉE, pas la chaîne brute —
           « , , » est truthy mais parse vide, et le bulk update qui en
