@@ -178,6 +178,41 @@ Developer ID.
   `scripts/dev-sidecar.sh` (token lu du trousseau macOS) — 2026-09-15.
 - Licence propriétaire, tous droits réservés (2026-09-16).
 
+#### Sauvegarde locale de la bibliothèque (2026-09-18)
+
+- **Réplication complète des métadonnées** dans un dossier choisi :
+  instantanés horodatés (JSONL brut, fidèle au format de l'API), corbeille,
+  arborescence complète des collections, surlignages et profil. Chaque
+  instantané est autonome — l'incrémental ne produit pas un delta, sinon la
+  rotation effacerait un maillon et rendrait illisibles tous les suivants.
+- **Balayage complet réconcilié par identifiants**, et non par cardinalité :
+  une suppression concurrente décale la pagination et fait sauter un élément,
+  ce qu'un simple compte ne voit pas. Éprouvé en réel sur 12 210 signets en
+  2 min 19.
+- **Rafraîchissement incrémental** à repère temporel, avec page de
+  recouvrement (l'ordre entre éléments de même seconde n'est pas garanti
+  stable d'une requête à l'autre).
+- **Manifeste atomique et rotation** : 7 derniers jours, puis une sauvegarde
+  par semaine. La dernière sauvegarde valide n'est jamais évincée.
+- **Archivage des copies permanentes Pro**, avec purge des orphelines et
+  budget borné.
+
+#### Le dossier de sauvegarde se choisit depuis l'application (2026-09-18)
+
+- **Dialogue natif** dans les Réglages ; le chemin est retenu côté shell, et
+  le webview ne nomme jamais un chemin d'écriture.
+- **Panneau Sauvegarde** : chemin, dernière sauvegarde, instantanés, archives,
+  progression en **compteur nommé** plutôt qu'en barre — le rejeu d'un
+  balayage ramène le numérateur à zéro, ce qu'une barre traduirait en recul
+  inexplicable.
+- **La première sauvegarde est explicite** : choisir un dossier ne déclenche
+  rien. L'automatisme des 24 h ne s'applique qu'ensuite.
+- **Archivage sur sélection** via la Revue de l'action, depuis la liste ou la
+  vue Liens morts. La Revue annonce avant d'agir combien de copies partent,
+  combien sont déjà archivées, pour quel volume et quelle durée.
+- **Marqueur « Archivé »** à trois états, distinguant l'archive locale de la
+  copie permanente qui vit chez Raindrop.
+
 ### Modifié
 
 - **Principe d'épure — « l'écran ne surcharge jamais »** (DESIGN.md §9,
@@ -211,7 +246,90 @@ Developer ID.
   erreur** pour toute autre forme : coller une URL donnait un écran vide
   que rien n'expliquait. Mesuré de bout en bout : 12 210 → 64.
 
+#### Interface — épure et corrections d'usage (2026-09-18 → 2026-09-19)
+
+- **Panneaux rétractables** : la barre latérale se replie et s'en souvient ;
+  le volet de détail ne s'affiche que sur un signet ouvert, et se referme par
+  une croix ou par Échap. Occupé en permanence par « Sélectionnez un
+  bookmark », il coûtait le tiers de la largeur utile pour ne rien dire.
+- **Le texte devient l'exception** : neuf commandes passent en icône
+  (pagination, éditer, enregistrer, annuler, renommer, effacer les filtres,
+  fermer, exporter, choisir un dossier). Gardent leurs mots les verbes qui
+  détruisent ou exécutent, et tout ce qui porte un compte — un nombre ne se
+  dessine pas. Chaque icône conserve exactement le nom accessible du texte
+  qu'elle remplace.
+- **Poignée de déplacement** sur chaque ligne : rien n'annonçait qu'elle se
+  tirait.
+- **Toutes les étiquettes sont cliquables**, y compris dans la fiche et dans
+  la vue Tags — une étiquette ressemble partout à la même chose, en rendre la
+  moitié inerte fait douter de l'autre.
+- **Lexique thématique** : de 63 à ~250 mots, **neuvième thématique
+  `éducation`**, et le pluriel cesse de compter (« livres » vaut « livre »,
+  « jeux vidéos » vaut « jeu vidéo »). Mesuré sur 317 étiquettes réelles :
+  **75 % des étiquettes affichées sortaient grises, contre 3 % ensuite.**
+
+### Corrigé (suite — 2026-09-18 → 2026-09-19)
+
+Tous trouvés **en usage réel ou sur données réelles**, aucun par la suite de
+tests. C'est en soi l'enseignement de ces deux journées.
+
+- **Les archives contenaient du HTML en clair** sous un nom `.html.gz` que
+  `gunzip` refusait. L'objet S3 est annoncé `Content-Encoding: gzip`, et
+  `fetch` le déplie de façon transparente : « écrire tel quel » écrivait
+  5,6 Mo de clair là où l'objet stocké en fait 3,1. Le test ne l'avait pas
+  vu parce que le faux serveur servait les octets gzippés **sans l'en-tête
+  d'encodage** — un faux infidèle sur un seul en-tête rend aveugle le test
+  qui prétend couvrir ce chemin.
+- **Le compte de signets était un zéro inventé.** L'endpoint `/user` de
+  Raindrop ne porte aucun compte, et un repli silencieux en fabriquait un :
+  le premier lancement annonçait « — 0 signets » sur une bibliothèque de
+  12 210. Le compte se dérive maintenant d'une lecture réelle, et reste
+  **absent** plutôt que nul s'il est indisponible.
+- **Un signet sans identifiant numérique était perdu en silence** — et
+  définitivement : le rafraîchissement incrémental faisait avancer son repère
+  temporel, donc l'élément n'aurait plus jamais été relu, puis le jetait faute
+  de clé. La fusion le jetait aussi. Les deux le conservent désormais.
+- **Les dossiers de sauvegarde orphelins fuyaient.** Un balayage interrompu
+  laissait ~11 Mo que rien ne ramassait, et un manifeste corrompu rendait tous
+  les dossiers antérieurs définitivement inatteignables. Une même
+  réconciliation règle les deux : `meta.json` tranche — présent, l'instantané
+  est ré-adopté ; absent, le dossier est ramassé, et c'est journalisé.
+- **La sentinelle du défilement infini redemandait la même page cinq fois.**
+  Mesuré dans la fenêtre Tauri. Son observateur est recréé à chaque rendu, or
+  charger une page en provoque un : elle se réarmait et rappelait. La file du
+  sidecar étant séquentielle, ces doublons affamaient le reste de l'écran —
+  une fiche restait en « Chargement… » pendant que la liste se rattrapait.
+- **Une fiche bloquée enfermait l'utilisateur** : le bouton de fermeture ne
+  vivait que dans le rendu principal, absent des états de chargement et
+  d'erreur.
+- **L'icône des Réglages était un soleil** — un cercle et huit rayons droits,
+  le même dessin que la bascule de thème posée juste à côté.
+- **« 1 instantanés conservés »** : le dictionnaire ne savait pas accorder en
+  nombre. Il le sait, avec la règle française — le singulier vaut pour 0 comme
+  pour 1.
+- **Aucun chiffre mesuré n'est plus écrit en dur dans l'interface** : une
+  durée relevée sur une bibliothèque cesse d'être vraie pour une autre, et pour
+  celle-là dès qu'elle change de taille.
+
+### Pré-versions publiées
+
+`v0.1.0-pre.1` (2026-09-17) à `v0.1.0-pre.5` (2026-09-19), macOS Apple
+Silicon, signature ad-hoc. `pre.2` et `pre.3` ont vu leurs binaires
+**remplacés** après publication, un défaut ayant été trouvé à l'usage dans
+l'heure — les notes de chaque version le disent.
+
 ### Problèmes connus
 
 - Écriture des surlignages, agent IA, moteur de règles et packaging
   restent hors périmètre de la Phase 1 (spécification §12).
+- **La reprise après coupure n'est pas implémentée** : un 429 ou un délai
+  dépassé en cours de balayage avorte le job entier. La spécification la
+  promet en plusieurs endroits ; l'écart est consigné.
+- **L'automatisme de sauvegarde des 24 h reste dormant** tant qu'aucune
+  sauvegarde n'a été lancée à la main — conséquence assumée du choix
+  « première sauvegarde explicite ».
+- **Une copie permanente volumineuse** (jusqu'à 160 Mo mesurés) est tenue
+  **entière en mémoire** pendant son archivage.
+- Le budget d'archives de 5 Go a été calibré sur « 2,1 Mo pièce » ; la mesure
+  réelle donne 3,18 Mo en moyenne et 160 Mo au maximum, soit ~1 600 archives
+  et non ~2 400.
