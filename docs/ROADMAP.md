@@ -157,7 +157,13 @@ fidèle, recompression quand la signature manque, test sabordé pour le prouver.
       « restart() répare un état crashed »). Les quatre échouent quand la suite
       tourne **en même temps** qu'un `cargo test` — la suite passe alors de 20 s
       à 191 s, et les délais de 15-20 s de `lifecycle` expirent. Seule, la suite
-      rend **663 tests / 2 ignorés / 0 échec**. Rien à corriger dans le code
+      rend **663 tests / 2 ignorés / 0 échec**.
+      **Affiné le soir même** : une seconde occurrence a fait tomber DEUX
+      AUTRES tests (`CleanupDashboard`, `CollectionView`), cette fois sous un
+      scan antivirus à 51 % de CPU — le montage d'environnement passe de 25 s
+      à 614 s. Ce n'est donc pas un jeu fixe de tests fragiles, mais
+      **n'importe quel test à délai** quand la machine sature : avant de
+      soupçonner le code, regarder `ps aux | sort -k3 -rn | head`. Rien à corriger dans le code
       testé ; à garder en tête : **ne pas lancer `npm test` et `cargo test`
       concurremment**, ou desserrer les délais de ces quatre tests si le besoin
       s'en fait sentir en CI.
