@@ -434,11 +434,22 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
 
 ## Points ouverts (non liés au plan 2)
 
-- [ ] **Lexique thématique à élargir** (`docs/DESIGN.md` §3) à partir des
-      étiquettes réelles : ce qu'il ne reconnaît pas s'affiche en gris.
-      **Échelle mesurée le 2026-09-16 sur l'app réelle : 96 étiquettes
-      grises sur 113 affichées — 85 %.** Les 50 premières par `count`
-      décroissant couvriraient l'essentiel.
+- [x] **Lexique thématique élargi** (2026-09-19). Mesure de départ, prise sur
+      les 317 étiquettes réelles (23 909 occurrences) : **92 % des étiquettes
+      distinctes grises, 75 % pondéré par l'usage** — plus sévère que
+      l'estimation de 85 % faite en septembre. Après : **24 % et 3 %.**
+      Deux leviers, et le second a pesé plus lourd que le premier : le lexique
+      passe de 63 à ~250 mots, et surtout **le pluriel cesse de compter**
+      (« livres » vaut « livre », « jeux vidéos » vaut « jeu vidéo » — chaque
+      mot du groupe est ramené au singulier). Beaucoup de grises n'étaient pas
+      des mots manquants : leurs singuliers étaient au lexique depuis le début.
+      **Neuvième thématique `éducation`** (teinte 90) : la bibliothèque est
+      celle d'un enseignant, et des dizaines d'étiquettes ne trouvaient leur
+      sens dans aucune des huit autres. DESIGN.md §3 amendé — le tableau ne
+      donne plus qu'un extrait, la liste faisant foi dans le module.
+      **Ce qui reste gris le reste à dessein** : marqueurs de tri (`à-trier`,
+      `à-lire`, `à-voir`) et noms propres (`babilosapiens`) n'ont pas de
+      thématique, et leur en inventer une cacherait ce qu'il faut voir.
 - [ ] **Signalétique d'état jamais jointe à la liste principale** :
       `RaindropRow.etat` / `MosaicTile.etat` sont du plomberie morte (aucun
       appelant) — les filets ne vivent que dans les vues de traitement.

@@ -50,10 +50,13 @@ describe("lexique — teinte()", () => {
     }
   });
 
-  it("les huit thématiques de §3 ont huit teintes distinctes", () => {
-    expect(THEMATIQUES).toHaveLength(8);
+  it("les thématiques de §3 ont chacune une teinte, toutes distinctes", () => {
+    // Neuf depuis l'ajout d'`éducation` (2026-09-19). Le compte est assené
+    // ici pour qu'une dixième ne s'ajoute pas sans qu'on ait revu l'écart
+    // des teintes sur le cercle — c'est lui qui se resserre à chaque fois.
+    expect(THEMATIQUES).toHaveLength(9);
     const teintes = THEMATIQUES.map((t) => teinte(t));
-    expect(new Set(teintes).size).toBe(8);
+    expect(new Set(teintes).size).toBe(9);
     expect(teinte("technique")).toBe(250);
     expect(teinte("création")).toBe(300);
     expect(teinte("argent")).toBe(150);
@@ -62,5 +65,63 @@ describe("lexique — teinte()", () => {
     expect(teinte("lieux")).toBe(195);
     expect(teinte("culture")).toBe(345);
     expect(teinte("méthode")).toBe(120);
+  });
+});
+
+// Le pluriel : de l'ORTHOGRAPHE, pas de la sémantique. Un pluriel signifie
+// exactement ce que signifie son singulier — le §3 n'y perd rien. Sans cette
+// règle, 92 % des étiquettes réelles d'une bibliothèque de 12 210 signets
+// sortaient grises, dont « livres », « images » et « achats » alors que leurs
+// singuliers étaient au lexique depuis le début.
+describe("lexique — le pluriel", () => {
+  it("retrouve le singulier d'un mot simple", () => {
+    expect(thematique("livres")).toBe(thematique("livre"));
+    expect(thematique("achats")).toBe("argent");
+    expect(thematique("outils")).toBe("méthode");
+  });
+
+  it("accorde TOUS les mots d'un groupe, pas seulement un", () => {
+    // « jeux vidéos » porte la marque deux fois : n'en retirer qu'une ne
+    // retrouve ni « jeu vidéos » ni « jeux vidéo ».
+    expect(thematique("jeux-vidéos")).toBe("culture");
+    expect(thematique("bons-plans")).toBe("argent");
+  });
+
+  it("épargne les mots courts dont le `s` appartient au radical", () => {
+    // « os » ne doit pas devenir « o ». Il est au lexique tel quel.
+    expect(thematique("os")).toBe("technique");
+  });
+
+  it("n'invente pas une thématique pour un mot inconnu", () => {
+    expect(thematique("xyzzys")).toBeNull();
+  });
+});
+
+// Neuvième thématique (2026-09-19) : une bibliothèque d'enseignant range des
+// dizaines d'étiquettes qu'aucune des huit autres ne décrivait sans la trahir.
+describe("lexique — éducation", () => {
+  it("range le vocabulaire scolaire", () => {
+    for (const mot of ["école-primaire", "collège", "lycée", "maths", "svt", "exercices", "annales"]) {
+      expect(thematique(mot), mot).toBe("éducation");
+    }
+  });
+
+  it("porte une teinte à elle, distincte de ses voisines", () => {
+    const h = teinte("éducation");
+    expect(h).not.toBeNull();
+    // Voisines sur le cercle : maison (62) et méthode (120).
+    expect(h).not.toBe(teinte("maison"));
+    expect(h).not.toBe(teinte("méthode"));
+  });
+});
+
+// Le gris n'est pas un échec : il DÉSIGNE. Des étiquettes personnelles ou de
+// tri courant n'ont pas de thématique, et leur en inventer une cacherait
+// justement ce qu'il faut voir.
+describe("lexique — ce qui reste gris à dessein", () => {
+  it("laisse gris les marqueurs de tri et les noms propres", () => {
+    for (const mot of ["à-trier", "à-lire", "à-voir", "babilosapiens"]) {
+      expect(thematique(mot), mot).toBeNull();
+    }
   });
 });

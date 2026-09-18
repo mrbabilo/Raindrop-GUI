@@ -65,17 +65,32 @@ lettre de plus dans la ligne du domaine, pas un badge.
 La teinte vient de ce qu'un mot **signifie**, jamais de son orthographe. Un
 lexique range chaque étiquette et chaque collection dans une thématique.
 
-| Thématique | Teinte (oklch H) | Mots-clés |
+| Thématique | Teinte (oklch H) | Ce qu'elle range (extrait) |
 |---|---|---|
-| technique | 250 | code, dev, informatique, python, rust, linux, mac, api, serveur, git, test |
-| création | 300 | design, webdesign, typographie, graphisme, couleur, art, photo, ui, ux |
-| argent | 150 | achat, finance, banque, budget, prix, vente, boutique, comparer |
-| maison | 62 | maison, cuisine, recette, bricolage, jardin, déco, matériel |
-| santé | 25 | santé, médecine, sport, urgent, important, sécurité |
-| lieux | 195 | voyage, carte, ville, pays, transport, hôtel, restaurant |
-| culture | 345 | lecture, livre, article, veille, musique, film, podcast, presse |
-| méthode | 120 | outil, service, application, productivité, référence, guide, archive |
+| santé | 25 | santé, médecine, sport, psychologie, handicap, sécurité |
+| maison | 62 | maison, cuisine, recette, bricolage, jardin, logement |
+| éducation | 90 | école, collège, lycée, cours, exercice, maths, svt, annales |
+| méthode | 120 | outil, service, application, productivité, référence, tuto |
+| argent | 150 | achat, finance, banque, budget, emploi, entreprise |
+| lieux | 195 | voyage, carte, ville, pays, transport, Pyrénées |
+| technique | 250 | code, dev, python, linux, wordpress, css, réseau, ia |
+| création | 300 | design, typographie, graphisme, image, illustration, 3d |
+| culture | 345 | lecture, livre, musique, film, jeu, conte, théâtre, média |
 | **hors lexique** | — | **gris (chroma 0)** |
+
+Le tableau donne un **extrait** : la liste fait foi dans
+`src/design/lexique.ts`, seul endroit où elle vit. L'y recopier en entier
+condamnerait ce document à mentir dès la première étiquette ajoutée.
+
+**`éducation` a été ajoutée le 2026-09-19**, en neuvième. Elle n'est pas un
+raffinement : sur une bibliothèque réelle de 12 210 signets, des dizaines
+d'étiquettes (école-primaire, collège, exercices, annales, svt, physique-chimie)
+ne trouvaient leur sens dans aucune des huit autres — les ranger ailleurs aurait
+trahi la règle même de ce paragraphe. Son 90 tombe entre `maison` (62) et
+`méthode` (120) : **28° de part et d'autre, contre 37 pour l'écart le plus
+serré auparavant.** C'est le prix d'une neuvième teinte sur un cercle déjà
+occupé ; une dixième demanderait de rouvrir la question du pas, pas seulement
+d'y glisser une valeur.
 
 **Clarté et chroma sont identiques pour toutes les thématiques** : aucune ne
 crie plus fort qu'une autre. Seule la teinte varie.
@@ -86,6 +101,15 @@ couleur tirée au hasard aurait caché la lacune.
 
 Le lexique est en français et destiné à grandir. Il vit dans un seul fichier et
 ne demande aucune configuration utilisateur.
+
+**Le pluriel ne compte pas.** « livres » vaut « livre », « jeux vidéos » vaut
+« jeu vidéo » — chaque mot du groupe est ramené au singulier avant la
+recherche. Ce n'est pas une entorse à la règle d'ouverture : un pluriel
+signifie exactement ce que signifie son singulier, et c'est de l'orthographe,
+comme les accents déjà retirés. Mesure avant/après sur la bibliothèque réelle :
+**75 % des étiquettes affichées sortaient grises, contre 3 % ensuite** — les
+deux tiers de cet écart venaient des pluriels et des groupes de mots, pas de
+mots manquants.
 
 ## 4. Collections : une couleur par famille
 
