@@ -76,10 +76,17 @@ Rejetées :
   panneau dit — il ne se tait pas et ne retombe pas sur « aucun dossier ».
 - **Changement ou retrait de dossier** : exactement le chemin
   d'`enregistrer_jeton` — écrire le réglage, puis `lancer_sidecar` (arrêt
-  propre de notre enfant, jeton local régénéré, lockfile effacé avant
-  `attendre_port`, attente port puis `mcp: "connected"`), et rendre
-  l'`EtatConnexion` au front, qui reprend port et jeton par `onEtat`.
-  **Aucune mécanique de cycle de vie nouvelle.**
+  propre de notre enfant, lockfile effacé avant `attendre_port`, attente port
+  puis `mcp: "connected"`), et rendre l'`EtatConnexion` au front, qui reprend
+  port et jeton par `onEtat`. **Aucune mécanique de cycle de vie nouvelle.**
+  ⚠️ Le jeton local n'est **pas régénéré** par la relance (correction C1 de la
+  relecture, §10) : `jeton::engendrer()` ne tourne qu'au lancement de l'app
+  (`lib.rs:74`), `lancer_sidecar` clone `etat.token_local`. Le `Pret` rendu
+  après un changement de dossier porte donc un jeton **identique** et un port
+  **nouveau** — c'est le port que `onEtat` doit re-câbler.
+- **Changer ou retirer le dossier ne touche à rien sur disque** : les
+  instantanés et archives de l'ancien dossier restent en l'état ; re-choisir
+  le même dossier les retrouve tels quels. Pas de migration, pas de copie.
 
 ## 3. Le panneau Sauvegarde
 
@@ -112,12 +119,15 @@ Rejetées :
   ce qu'il est réellement. Le sidecar gagne au passage les `job?.progress`
   manquants sur la corbeille et les auxiliaires, sans quoi il n'y a rien à
   nommer. Cette décision tranche l'item ROADMAP « sémantique de progression ».
-- **Une sauvegarde qu'on n'a pas lancée doit se voir.** §4.4 démarre une
-  sauvegarde au boot ; si l'utilisateur ouvre le panneau pendant, il ne voit
-  aujourd'hui rien (`/status` ne porte ni `enCours` ni `jobId`). La réponse de
-  `/status` gagne donc `enCours: boolean` et `jobId?: string` (source : le
-  `JobStore`, recherché par type `backup`) ; le panneau s'abonne au SSE du
-  `jobId` présent. Même mécanique que pour un job qu'il a lancé lui-même.
+- **Un job qu'on n'a pas lancé doit se voir.** §4.4 démarre une sauvegarde au
+  boot ; si l'utilisateur ouvre le panneau pendant, il ne voit aujourd'hui
+  rien — il n'existe aucune liste de jobs (seul `/api/jobs/:id` existe).
+  Nouvelle route **`GET /api/jobs`** : les jobs **en vol** — `JobStore.list()`
+  existe déjà (`store.ts`), zéro changement au store, `/status` ne bouge pas.
+  Règle de ré-attachement, partagée par le panneau et la Revue : au montage,
+  consulter la liste ; tout job en vol d'un type qui nous concerne → reprendre
+  l'abonnement SSE de son `jobId`. Une seule mécanique pour les deux types de
+  jobs (backup, archive).
 - **Annulation** : le job SSE sait déjà annuler ; le bouton devient « Annuler »
   pendant l'exécution. Une sauvegarde annulée est marquée incomplète et jamais
   comptée comme dernière valide — le panneau le dit.
@@ -165,10 +175,16 @@ pour épargner une requête locale n'en vaut pas la peine.
   (corbeille, collections vides) : rien à inventer, seulement à brancher.
 - **`BulkBar` gagne un paramètre** disant quelles actions proposer : liste
   principale = Corbeille / Déplacer / Tagger / Archiver ; Liens morts =
-  Archiver seul. Sans ce paramètre, on dupliquerait la barre.
+  Archiver seul. Sans ce paramètre, on dupliquerait la barre. Et il faut aussi
+  la **rendre** : `BulkBar` n'est posé aujourd'hui que dans `ListPane` et
+  `CollectionView` — `CleanupView` n'en affiche aucune (correction C4, §10).
 - **`cache.size`** : `mappers.ts:76` passe déjà l'objet `cache` entier au front ;
   seul son **type** (`{ status: string } | null`, ligne 27) ne déclare pas
   `size`. C'est une déclaration de type à étendre, pas un champ à ajouter.
+  Preuve réclamée par la relecture (C3, §10) : le MCP épinglé passe les
+  réponses en `JSON.stringify(data)` **verbatim** (`dist/index.js` ligne 33,
+  et **zéro** occurrence de « cache » dans tout le fichier) — il ne filtre
+  rien, la taille transite depuis le début.
 - **Ce que la Revue affiche avant d'exécuter** : combien de signets de la
   sélection ont réellement une copie permanente — **les autres étant simplement
   ignorés** (sur les liens morts ce sera fréquent ; une action qui « réussit »
@@ -181,6 +197,15 @@ pour épargner une requête locale n'en vaut pas la peine.
   s'ajoute sur une action qui existe, l'inverse est faux).
 - **La borne de 500** : la Revue refuse au-delà, en disant le nombre
   (« 612 sélectionnés, la borne est de 500 »).
+- **Pendant et après : l'archivage est un job, pas une mutation.** La Revue
+  exécute aujourd'hui corbeille/déplacer/tagger par `mutateAsync`
+  (`ReviewPage.tsx:80-95` : POST → résultat → invalidations) ;
+  `POST /api/backup/archive` répond **202 + jobId**, et le travail dure de
+  secondes à des dizaines de minutes. La branche `archive` de la Revue suit
+  donc le SSE du job : compteur « N / M copies », bouton Annuler. Si
+  l'utilisateur quitte la Revue, le job continue côté sidecar et reste
+  **visible** par la règle de ré-attachement (§3, `GET /api/jobs`) — la Revue
+  revisitée et le panneau reprennent l'abonnement au montage.
 
 ## 5. Côté sidecar — liste exhaustive
 
@@ -188,8 +213,8 @@ pour épargner une requête locale n'en vaut pas la peine.
    (première sauvegarde explicite). Le test est retourné, le commentaire §4.4
    réécrit, la spec sauvegarde §4.4 amendée dans le même lot.
 2. `archives.ts` : `inventorier()`.
-3. Routes : `GET /api/backup/archives` ; `/status` enrichi de `enCours` +
-   `jobId` (source : `JobStore`, recherche par type `backup`).
+3. Routes : `GET /api/backup/archives` ; **`GET /api/jobs`** (jobs en vol —
+   `JobStore.list()` existe déjà ; `/status` ne bouge pas).
 4. `job?.progress` sur la corbeille et les auxiliaires, aux labels nommés :
    « corbeille », « collections », « surlignages », « profil » (les pièces du
    balayage : principal, corbeille, puis les trois auxiliaires).
@@ -211,8 +236,10 @@ pour épargner une requête locale n'en vaut pas la peine.
 ## 7. Côté front — liste exhaustive
 
 1. `SectionSauvegarde.tsx` + test ; rendu dans les Réglages.
-2. Action `archive` dans la Revue (exécution, ignorés comptés, borne refusée,
-   volume et durée affichés) + tests.
+2. Action `archive` dans la Revue (lancement, progression SSE, annulation,
+   ignorés comptés, borne refusée, volume et durée affichés) + tests ; règle
+   de ré-attachement aux jobs en vol (`GET /api/jobs`) au montage du panneau
+   et de la Revue.
 3. `BulkBar` paramétrable ; sélection multiple de la vue Liens morts.
 4. Inventaire : hook + invalidation (fin de job archive ; fin de tout job de
    sauvegarde) ; marqueur « Archivé » sur la ligne et le détail.
@@ -225,7 +252,8 @@ pour épargner une requête locale n'en vaut pas la peine.
   le re-teste pas, on l'appelle.
 - **Sidecar** : `decision` (manifeste vide → false, manifeste peuplé → §4.4
   inchangé) ; `inventorier` (répertoire absent → ensemble vide, noms étrangers
-  ignorés, totaux justes) ; `/status` enrichi ; labels de progression.
+  ignorés, totaux justes) ; route `/api/jobs` (vide, un backup en vol, une
+  archive en vol, un job terminé absent) ; labels de progression.
 - **Front** : `SectionSauvegarde` (une branche par état : inactif, introuvable,
   en vol lancé par le boot, bascule annoncée, échec, annulation) ; Revue
   `archive` (exécution, ignorés, borne, volume) ; `BulkBar` paramétré ;
@@ -242,3 +270,39 @@ en flux (ROADMAP — `arrayBuffer()` fait passer une copie de 160 Mo entière en
 mémoire) ; hors ligne ; sous-collections de niveau 2+ ; re-archivage forcé ;
 l'appel d'archivage « automatique sur les liens morts » du §5.4 (la sélection
 le remplace comme point d'entrée, la spec §5.4 sera amendée dans le lot).
+
+## 10. Relecture critique (2026-09-18)
+
+Chaque affirmation porteuse de la spec a été revérifiée au code. Corrections
+**contraignantes**, appliquées ci-dessus :
+
+- **C1 (critique).** La spec disait « jeton local régénéré » à la relance.
+  **Faux** : `jeton::engendrer()` ne tourne qu'au lancement de l'app
+  (`lib.rs:74`) ; `lancer_sidecar` clone `etat.token_local`. Le piège
+  CLAUDE.md (« un survivant écoute avec l'ANCIEN token ») porte sur les
+  sessions précédentes (décision D2), pas sur la relance intra-session.
+  Conséquence : après un changement de dossier, le `Pret` porte un jeton
+  identique et un port nouveau.
+- **C2 (important).** Trou de design : l'archivage est un **job** (202 + SSE)
+  là où la Revue ne parle qu'en requête/réponse (`mutateAsync`,
+  `ReviewPage.tsx:80-95`), et un job lancé puis quitté n'était visible
+  **nulle part** — aucune liste de jobs n'existe. Corrigé par `GET /api/jobs`
+  (le `JobStore.list()` était déjà là, personne ne l'exposait) et la règle de
+  ré-attachement. L'enrichissement de `/status` envisagé d'abord est
+  abandonné : une seule mécanique pour les deux types.
+- **C3 (important).** « `cache.size` transite déjà » n'était vérifié que côté
+  mapper — la chaîne réelle passe par le MCP, qui aurait pu projeter.
+  Vérifié dans le dist épinglé : réponses réémises **verbatim** (ligne 33) et
+  **zéro** occurrence de « cache » dans tout le fichier. La taille transite ;
+  la déclaration de type reste seule à faire.
+- **C4 (mineur).** `BulkBar` n'est rendu que par `ListPane` et
+  `CollectionView` : le paramètre d'actions ne suffit pas, il faut aussi le
+  poser dans `CleanupView`.
+- **C5 (mineur).** Le sort des données au changement/retrait de dossier
+  n'était pas dit : rien n'est touché sur disque, re-choisir retrouve tout.
+- **C6 (figé).** Claims re-vérifiés sans correction : `enregistrer_jeton`
+  (écrit puis relance), `lancer_sidecar` (arrêt enfant, lockfile effacé avant
+  `attendre_port`, sonde MCP), `raisonDeBasculer` (3 escalades),
+  `ResultatSauvegarde.bascule`, `decision.ts:45` (manifeste vide → true),
+  `JobStore.list()`, `CleanupView` passe par la Revue (`:196`, `:247`),
+  `StatutSauvegarde` sans `enCours`, absence de `capabilities/`.
