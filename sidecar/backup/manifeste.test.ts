@@ -1,8 +1,20 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { join } from "node:path";
-import { readdir } from "node:fs/promises";
+import { readdir, rename, writeFile } from "node:fs/promises";
 import { repertoireTemporaire } from "../testing/tmp.js";
 import { lireManifeste, ecrireManifeste, aConserver, dernierValide } from "./manifeste.js";
+
+// `vi.spyOn` échoue sur les exports natifs de `node:fs/promises` (« Module
+// namespace is not configurable in ESM » — sondé en direct) : on ne peut pas
+// espionner ces bindings comme `instantane.ouvrirJsonl` (Task 4, un module
+// local). Repli documenté : `vi.mock` avec passthrough sur tout sauf
+// `rename`/`writeFile`, enveloppés en `vi.fn` pour observer leurs appels sans
+// changer leur comportement. Scope : ce fichier de test seul (isolation
+// vitest par fichier, `pool: "forks"`) — aucune fuite vers les autres suites.
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const reel = await importOriginal<typeof import("node:fs/promises")>();
+  return { ...reel, writeFile: vi.fn(reel.writeFile), rename: vi.fn(reel.rename) };
+});
 
 const dir = () => repertoireTemporaire("backup-manifeste-");
 
@@ -16,6 +28,31 @@ describe("manifeste", () => {
     await ecrireManifeste(d, { version: 1, instantanes: [] });
     const fichiers = await readdir(d);
     expect(fichiers).toEqual(["manifest.json"]);
+  });
+
+  // Le test ci-dessus ne discrimine PAS : un `writeFile` direct sur la cible
+  // laisse le même contenu de dossier une fois l'écriture terminée. Celui-ci
+  // verrouille le MÉCANISME plutôt que la coupure (irréalisable en test
+  // unitaire sans course instable) : (1) `rename` est bien appelé, depuis une
+  // source distincte de la cible ; (2) `manifest.json` — la cible — n'est
+  // JAMAIS l'argument d'un `writeFile` : c'est ce second point qui fait
+  // tomber le sabotage « écriture directe », puisque celui-ci écrit sur la
+  // cible sans jamais renommer.
+  it("l'écriture est atomique — un fichier temporaire est écrit puis renommé sur la cible", async () => {
+    vi.mocked(writeFile).mockClear();
+    vi.mocked(rename).mockClear();
+    const d = join(dir(), "atomique-mecanisme");
+    const cible = join(d, "manifest.json");
+
+    await ecrireManifeste(d, { version: 1, instantanes: [] });
+
+    expect(rename).toHaveBeenCalledTimes(1);
+    const [source, destination] = vi.mocked(rename).mock.calls[0]!;
+    expect(destination).toBe(cible);
+    expect(source).not.toBe(cible);
+
+    const ciblesEcrites = vi.mocked(writeFile).mock.calls.map(([chemin]) => chemin);
+    expect(ciblesEcrites).not.toContain(cible);
   });
 
   it("un instantané incomplet n'est jamais le dernier valide", () => {
