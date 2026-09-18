@@ -44,11 +44,17 @@ export function makeArchivage(deps: {
   file: File; // la file partagée — jamais une seconde file locale
   baseUrl?: string;
   fetchImpl?: typeof fetch;
+  /** Point d'injection réservé aux tests : par défaut `archiver()`
+   *  (`archives.ts`). Permet de faire LEVER un appel sans dépendre du
+   *  comportement interne d'`archives.ts` (voir le commentaire sur le
+   *  try/catch plus bas). */
+  archiverImpl?: typeof archiver;
 }): Archivage {
   // Exactement le chemin qu'emploie enregistrement.ts:40 — sinon la purge et
   // le budget (appelés au balayage complet) s'appliqueraient ailleurs que là
   // où cette fonction écrit.
   const dossierArchives = join(deps.dossier, "archives");
+  const archiverUn = deps.archiverImpl ?? archiver;
   let enVol = false;
 
   const archiverTous = async (ids: number[], job?: JobHandle): Promise<ResultatArchivage> => {
@@ -60,18 +66,28 @@ export function makeArchivage(deps: {
       if (job?.isCancelled()) {
         return { demandes: ids.length, faits, echecs, annule: true };
       }
-      // `archiver()` ne lève jamais — elle rend `{ok:false, raison}` — donc
-      // aucun try/catch ici : un lien mort dont la copie a disparu ne doit
-      // pas faire échouer les identifiants suivants.
-      const r = await archiver({
-        token: deps.token,
-        baseUrl: deps.baseUrl,
-        fetchImpl: deps.fetchImpl,
-        file: deps.file,
-        dossierArchives,
-        raindropId: id,
-      });
-      if (!r.ok) echecs.push({ id, raison: r.raison });
+      // `archiver()` (`archives.ts`) rend `{ok:false, raison}` plutôt que de
+      // lever — mais elle ne le PROMET nulle part, elle absorbe simplement
+      // tout aujourd'hui (réseau, `mkdir`, `writeFile`) dans son propre
+      // try/catch. La promesse tenue ICI — « un échec sur un signet
+      // n'interrompt jamais les suivants » — ne doit dépendre d'aucun détail
+      // d'implémentation d'un fichier voisin : une régression future dans
+      // `archives.ts` romprait sinon cette boucle en silence. D'où ce
+      // try/catch, redondant avec celui d'`archives.ts` tant qu'il tient,
+      // mais seul garant si jamais il cède.
+      try {
+        const r = await archiverUn({
+          token: deps.token,
+          baseUrl: deps.baseUrl,
+          fetchImpl: deps.fetchImpl,
+          file: deps.file,
+          dossierArchives,
+          raindropId: id,
+        });
+        if (!r.ok) echecs.push({ id, raison: r.raison });
+      } catch (e) {
+        echecs.push({ id, raison: e instanceof Error ? e.message : String(e) });
+      }
       faits++;
       job?.progress(faits, ids.length);
     }

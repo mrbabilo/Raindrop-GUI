@@ -6,6 +6,7 @@ import { repertoireTemporaire } from "../testing/tmp.js";
 import { startFauxApi, type FauxApi } from "../testing/apiServer.js";
 import { Throttle } from "../mcp/throttle.js";
 import { makeArchivage, type ResultatArchivage } from "./archivage.js";
+import { archiver as archiverReel } from "./archives.js";
 import type { JobHandle } from "../jobs/store.js";
 
 const dir = () => repertoireTemporaire("backup-archivage-");
@@ -45,6 +46,35 @@ describe("archivage — plusieurs identifiants", () => {
     expect(r.annule).toBe(false);
     expect(r.echecs).toEqual([{ id: 11, raison: expect.stringContaining("404") }]);
     // 10 et 12 sont bel et bien archivés malgré l'échec de 11 entre les deux.
+    await readFile(join(dossier, "archives", "10.html.gz"));
+    await readFile(join(dossier, "archives", "12.html.gz"));
+    await expect(readFile(join(dossier, "archives", "11.html.gz"))).rejects.toThrow();
+  });
+
+  // Ronde de correction 1 : `archiver()` ne PROMET nulle part qu'elle ne
+  // lève jamais — elle absorbe simplement tout aujourd'hui dans son propre
+  // try/catch (`archives.ts`). La promesse « un échec n'interrompt pas les
+  // suivants » ne doit pas dépendre de ce détail d'implémentation voisin :
+  // injection d'un `archiverImpl` qui LÈVE pour un identifiant précis,
+  // plutôt qu'une mutilation d'`archives.ts` qui prouverait autre chose.
+  it("un archiver() qui LÈVE (pas ok:false) n'interrompt pas les suivants non plus", async () => {
+    api = await startFauxApi([]);
+    const dossier = dir();
+    const archiverQuiLeve: typeof archiverReel = async (args) => {
+      if (args.raindropId === 11) throw new Error("panne injectée");
+      return archiverReel(args);
+    };
+    const a = makeArchivage({
+      token: "j",
+      baseUrl: `http://127.0.0.1:${api.port}/rest/v1`,
+      file: new Throttle(0),
+      dossier,
+      archiverImpl: archiverQuiLeve,
+    });
+    const r = await a.archiver([10, 11, 12]);
+    expect(r.faits).toBe(3);
+    expect(r.annule).toBe(false);
+    expect(r.echecs).toEqual([{ id: 11, raison: expect.stringContaining("panne injectée") }]);
     await readFile(join(dossier, "archives", "10.html.gz"));
     await readFile(join(dossier, "archives", "12.html.gz"));
     await expect(readFile(join(dossier, "archives", "11.html.gz"))).rejects.toThrow();
