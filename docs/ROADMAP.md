@@ -75,7 +75,67 @@ finale de branche).*
       (`454a5fc` → `cc78e45`, 8 défauts corrigés après relecture critique).
       Amende le §11 de la spec principale : la réplication locale n'est plus
       exclue, l'invariant devient « source de vérité **en écriture** ».
-- [ ] **En attente de relecture utilisateur** → ensuite `writing-plans`.
+- [x] **Relecture critique de la spec** (2026-09-18) : 8 corrections
+      contraignantes ajoutées en **§1bis**, qui priment sur le reste de la spec.
+- [x] **Plan écrit** : `docs/superpowers/plans/2026-09-18-sauvegarde.md`
+      (8 tasks).
+- [x] **Les 8 tasks livrées** (2026-09-18, `4557736` → ronde de clôture) :
+      file à deux rangs avec plancher, canal de lecture REST direct,
+      instantané JSONL relu après écriture, balayage complet avec
+      réconciliation par identifiants, rafraîchissement incrémental à
+      watermark, manifeste atomique avec rotation, archives (303 suivi à la
+      main, orphelins, budget), orchestration + route + job SSE.
+      Chaque task relue indépendamment ; suite passée de 509 à 578 tests.
+      **Deux corrections du plan lui-même** en cours d'exécution : la
+      réconciliation par cardinalité était aveugle au défaut qu'elle
+      prétendait attraper (Ruling R4), et la comparaison de compteurs du
+      §5.3 est meilleure **après** la fusion qu'avant (Ruling R8b).
+
+### Reste à faire sur le lot sauvegarde
+
+- [ ] **Reprise après coupure** — la spec la promet en §4.2, §5.1, §6 et §7 ;
+      le code ne la tient pas et ne la tente pas. `ouvrirJsonl` **tronque**
+      (verrouillé par un test) et `ErreurHttpRaindrop.status` — le code HTTP
+      structuré, ajouté précisément pour cela — n'est lu par personne. Un 429
+      ou un timeout à la page 40 sur 245 avorte le job entier. La spec a été
+      amendée pour dire que la reprise est **différée** ; l'implémenter
+      suppose une pause bornée sur le 429 et un retry réseau **sur les
+      lectures seulement, jamais les écritures** (trap CLAUDE.md).
+- [ ] **`archiver()` n'a aucun appelant** — le périmètre §2 du lot
+      (« archivage des copies permanentes à la demande ») n'est donc pas
+      tenu, et `purgerOrphelins`/`appliquerBudget` tournent contre un dossier
+      que rien ne remplit. Le déclenchement est côté interface (une
+      collection, ou les liens classés morts : §5.4), donc naturellement du
+      ressort du plan 2 — mais rien ne l'avait acté, c'était un trou de
+      périmètre, pas une décision. **Décision à confirmer par l'utilisateur :**
+      câbler une route maintenant, ou attendre le front.
+- [ ] **Les dossiers d'instantanés échoués fuient** — une exception en cours
+      de balayage laisse un dossier partiel que rien ne ramasse : la rotation
+      n'itère que sur les horodatages du manifeste. ~11 Mo par échec, hors de
+      tout budget (§5.4 ne borne que `archives/`). Piste : un balayage des
+      dossiers non cités, au démarrage.
+- [ ] **Un manifeste corrompu rend l'historique invisible** — `lireManifeste`
+      rend un inventaire vide (et l'**avertit** au journal depuis la ronde 2
+      de la Task 6, donc ce n'est pas silencieux), mais la sauvegarde suivante
+      réécrit un manifeste ne portant que sa propre entrée. Les dossiers
+      antérieurs survivent et deviennent non ramassables. Piste :
+      reconstruire depuis les `meta.json` présents.
+- [ ] **Un item sans `_id` numérique : trois politiques pour quatre modules.**
+      `balayage.ts` l'écrit et l'exclut du décompte (instantané incomplet pour
+      toujours) ; `collecte.ts` le **conserve** (conforme §3.4) ; et
+      `incremental.ts` **avance le watermark puis le jette** — seule perte à la
+      fois silencieuse et **définitive** du lot, d'autant que le watermark est
+      persisté. À unifier sur la politique §3.4.
+- [ ] **Sémantique de progression** — le numérateur recule à 0 au rejeu du
+      balayage, la barre gèle sur la corbeille et les auxiliaires (pas
+      d'`onProgress`), et l'incrémental pose `done === total` **avant** la
+      fusion. À trancher avec le front (plan 2).
+- [ ] **Petites dettes du lot** : factoriser `interface File` (déclarée trois
+      fois) et la constante `50` (encodée cinq fois) ; le mot `complet`
+      désigne deux choses (le mode et la fidélité), avec un troisième nom
+      (`Piece.fidele`) pour la seconde ; la page de recouvrement de
+      l'incrémental n'a aucun test ; pas de test sur les chemins d'erreur
+      d'`archiver`.
 - [ ] **Hors ligne** (consultation + file d'opérations simples) : après le
       plan 2, sur le socle posé par le lot sauvegarde. Inclut : écritures
       refusées proprement hors ligne (aujourd'hui les échecs remontent en

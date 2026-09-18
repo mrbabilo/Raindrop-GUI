@@ -55,6 +55,42 @@ qu'écrites, ne tenaient pas.
    règle que cette spec se donne elle-même. Le §7 disait « 307 » là où §5.4 et
    §10 ont mesuré **303** : corrigé.
 
+## 1ter. Écarts constatés à la livraison (2026-09-18)
+
+Le lot est livré. Ces deux points **ne sont pas tenus** par le code : ils sont
+écrits ici plutôt que tus, parce que le §1bis existe précisément pour interdire
+de promettre une fidélité qu'on ne tient pas — et qu'une spec qui décrit autre
+chose que le code livré est la forme la plus durable de cette faute.
+
+1. **La reprise après coupure n'est pas implémentée.** §4.2, §5.1, §6 et §7 la
+   décrivaient comme acquise. En réalité `ouvrirJsonl` **tronque** le fichier à
+   chaque ouverture (comportement voulu : un rejeu de balayage doit réécrire,
+   pas doubler — et c'est verrouillé par un test), et `ErreurHttpRaindrop`
+   porte bien un `status` structuré mais **personne ne le lit**. Un 429 ou un
+   timeout en cours de balayage avorte le job entier. L'implémenter suppose une
+   pause bornée sur le 429 et un retry réseau **sur les lectures seulement,
+   jamais les écritures**. Inscrit à `docs/ROADMAP.md`.
+
+2. **L'archivage des copies permanentes n'est pas déclenchable.** `archiver()`
+   est écrit, testé, et n'a **aucun appelant** : le §2 annonce « archivage des
+   copies permanentes à la demande » comme faisant partie de ce lot, ce qui
+   n'est donc pas le cas. Les deux règles de rétention (§5.4) tournent contre
+   un dossier que rien ne remplit. Le déclenchement étant côté interface (une
+   collection, ou les liens classés morts), il relève naturellement du plan 2 —
+   mais ce report n'avait été décidé nulle part. Inscrit à `docs/ROADMAP.md`.
+
+### Correction apportée au §5.3
+
+Le §5.3 prescrit de **comparer les compteurs d'abord**, et de ne lancer le
+balayage complet que si les comptes divergent. L'implémentation place cette
+comparaison **après** la fusion incrémentale, et c'est délibéré : comparer
+avant déclencherait un balayage complet au moindre **ajout**, alors qu'un ajout
+porte un `lastUpdate` récent et est déjà rattrapé par l'incrémental — le compte
+fusionné retombe juste. Comparer après isole ce qui échappe vraiment à
+l'incrémental : la **suppression** distante, c'est-à-dire le « point dur » que
+le §5.3 nomme lui-même. Une divergence détectée à ce moment **escalade** vers un
+balayage complet dans la même exécution.
+
 ## 2. Périmètre
 
 **Ce lot** : sauvegarde des métadonnées (brut fidèle + export lisible dérivé),
@@ -204,7 +240,8 @@ sauvegarde repart complète. Le cas est signalé, pas contourné.
 ```
 
 **JSONL** pour les raindrops : écriture en flux sans charger 11 Mo en mémoire,
-reprise d'une sauvegarde interrompue, lecture ligne à ligne.
+reprise d'une sauvegarde interrompue (⚠️ **différée** — voir §1ter),
+lecture ligne à ligne.
 
 ⚠️ **La pagination doit être stable pour que la reprise ait un sens.** Le
 balayage complet dure ≈ 2 min 20, largement de quoi qu'un élément soit modifié en
@@ -296,8 +333,8 @@ ne servirait à rien si l'app est fermée. Plus le déclenchement manuel.
 | `/user` | 1 | compte et préférences |
 
 ≈ 250 requêtes, ≈ 2 min 20 au throttle. Exécutée comme **job SSE annulable**
-via l'infrastructure existante (`sidecar/jobs/`), avec progression. Reprise
-possible grâce au JSONL.
+via l'infrastructure existante (`sidecar/jobs/`), avec progression. Le JSONL
+**rendrait** la reprise possible ; elle n'est pas implémentée (§1ter).
 
 ### 5.2 Rafraîchissement incrémental
 
@@ -436,8 +473,10 @@ sauvegarde est complète, et l'ancien dossier est laissé **intact**, jamais
 déplacé ni adopté. Adopter un arbre trouvé sur place supposerait qu'il vient de
 cette application et de ce compte — deux choses invérifiables.
 
-Le réseau qui tombe reprend à la page suivante. Le 429, désormais visible,
-déclenche une pause avant reprise au lieu d'être compté comme un échec.
+⚠️ **Non tenu — voir §1ter.** Le réseau qui tombe *devrait* reprendre à la
+page suivante, et le 429, désormais visible, *devrait* déclencher une pause
+avant reprise au lieu d'être compté comme un échec. Aujourd'hui, l'un comme
+l'autre avortent le job entier.
 
 ## 7. Tests
 
@@ -450,7 +489,8 @@ Raindrop, sur le modèle de `sidecar/testing/targetServer.ts` : bibliothèque
 paginée, **303** vers un faux S3 (le code mesuré, pas celui de la doc), 429,
 réponses tronquées.
 
-Couverture visée : pagination complète, reprise après coupure, watermark
+Couverture visée : pagination complète, ~~reprise après coupure~~ (§1ter),
+watermark
 incrémental, détection de suppression par écart de compteurs **et** balayage
 hebdomadaire garanti, rotation et rétention (y compris avec des semaines sans
 instantané), dossier devenu inaccessible, sauvegarde partielle jamais validée,

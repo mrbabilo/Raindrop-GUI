@@ -194,6 +194,63 @@ les décisions structurantes.
   l'état mémorisé rendrait la même panne à jamais ; « Saisir un autre
   jeton » sinon un jeton refusé enferme, il est déjà au trousseau).
 
+## Traps sauvegarde — lot 2026-09-18
+
+- **Le tri `created` ascendant ne protège que des CRÉATIONS.** Une création
+  porte `created = maintenant` et se range en fin : elle ne décale rien. Une
+  **suppression** en amont décale la suite vers l'arrière et **saute** un
+  élément — que l'incrémental par `-lastUpdate` ne rattrapera jamais, un
+  élément sauté n'ayant aucune date nouvelle.
+- **Réconcilier par CARDINALITÉ est aveugle à ce saut** (démontré, pas
+  supposé) : 120 items, perpage 50, suppression de l'index 0 après la page 0 →
+  la page 1 saute l'ancien indice 50, et l'on obtient **119 identifiants pour
+  119 annoncés**. Égalité, verdict « complet », élément perdu en silence. Seule
+  la **décroissance du `count`** au fil des pages le trahit — et le `count`
+  arrive dans *chaque* réponse de page, donc ce contrôle ne coûte rien.
+- **Sous pagination par OFFSET, `lignes` suit la taille de la collection**,
+  donc `lignes !== ids.size` implique `ids.size !== countFinal` : la troisième
+  clause de cohérence ne peut **jamais** se déclencher seule. Elle est gardée
+  comme **fil-piège** — si elle tire un jour, c'est que le modèle de pagination
+  a changé sous nos pieds.
+- **Une restauration depuis la corbeille décale vers l'AVANT** : elle réinsère
+  un signet avec son `created` **d'origine**, qui peut tomber n'importe où dans
+  l'ordre, et la page suivante **relit** un élément déjà lu. C'est un scénario
+  réel de cette application, qui restaure elle-même.
+- **`/collections` ne rend que les RACINES.** L'arborescence complète exige
+  aussi `/collections/childrens` (§5.1 compte bien deux requêtes) ; s'en tenir
+  à la première perd en silence l'essentiel de la hiérarchie.
+- **Copies permanentes** : `GET /raindrop/{id}/cache` répond **303** (la doc
+  annonce 307) vers une URL S3 signée ; la signature ne couvre que `GET`, donc
+  un `HEAD` renvoie **403** — pas de sondage de taille. Le contenu est du HTML
+  **gzippé** servi en `text/html`, à écrire `<id>.html.gz` **tel quel**. Suivre
+  la redirection **à la main** (`redirect: "manual"`) : suivie automatiquement,
+  l'en-tête `Authorization` est réémis vers une URL déjà signée (mesuré), que
+  S3 rejette.
+- **`vi.spyOn` sur un export de `node:fs/promises` est impossible en ESM**
+  (« Module namespace is not configurable ») — passer par `vi.mock` avec
+  passthrough intégral, et vérifier la portée (`pool: "forks"` sans
+  `isolate: false` = isolation par fichier).
+- **`repertoireTemporaire` rend une `string`, pas une fabrique.** Le patron du
+  dépôt est `const dir = () => repertoireTemporaire("prefixe-")`
+  (`sidecar/lockfile.test.ts`, `logger.test.ts`) — un répertoire neuf par
+  appel, qui isole les tests.
+- **`npm run typecheck` est AVEUGLE sur les tests et sur `sidecar/testing/`**
+  (exclus par `tsconfig.json`). Toute retouche à `apiServer.ts` ou à un
+  `*.test.ts` exige un `npx tsc --noEmit` **explicite** sur les fichiers
+  touchés.
+
+### La règle sortie de ce lot, sur les tests
+
+> **Une assertion d'absence ne vaut que si l'on a montré que l'objet devait
+> être là.**
+
+Un test qui prouve qu'une archive a survécu doit d'abord prouver que son
+identifiant était **hors** du jeu collecté — sinon il célèbre la survie d'un
+objet que rien ne menaçait. Ce lot a produit une dizaine de tests creux, dont
+trois attrapés uniquement par **sabotage** : réintroduire le défaut, vérifier
+que le test échoue, revenir en arrière. Un test non sabordé n'est pas une
+couverture, c'est une intention.
+
 ## Git
 
 Travailler sur `main`. **Pousser uniquement quand l'utilisateur le demande.**
