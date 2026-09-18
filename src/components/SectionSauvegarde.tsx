@@ -190,6 +190,9 @@ function avertissementPremiere(signets: number | undefined): string {
   if (signets === undefined) return t("sauvegarde.premiere.sansCompte");
   const { requetes, duree } = coutBalayage(signets);
   return t("sauvegarde.premiere", {
+    // `n` porte l'accord, `signets` porte l'affichage (séparé par milliers) :
+    // la chaîne compte DEUX nombres, seul celui-ci s'accorde.
+    n: signets,
     duree,
     requetes,
     signets: signets.toLocaleString("fr-FR"),

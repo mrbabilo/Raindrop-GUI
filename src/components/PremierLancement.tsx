@@ -69,7 +69,7 @@ export function PremierLancement({ onPret }: { onPret: (a: Amorce) => void }) {
               : t("boot.account", {
                   name: etape.compte.fullName,
                   email: etape.compte.email,
-                  count: etape.compte.bookmarksCount,
+                  n: etape.compte.bookmarksCount,
                 })}
           </p>
           <button type="button" className="btn self-start" onClick={() => onPret({ ecran: "app" })}>

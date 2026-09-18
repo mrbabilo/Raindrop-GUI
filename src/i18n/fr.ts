@@ -26,7 +26,7 @@ export const fr = {
   "view.showList": "Afficher en liste",
   "view.showMosaic": "Afficher en mosaïque",
   "list.select": "Sélectionner {title}",
-  "drag.count": "{n} signets",
+  "drag.count": "{n} signet|{n} signets",
   "list.loadingMore": "…",
   "filter.sort": "Tri",
   "filter.domain": "Domaine",
@@ -122,7 +122,7 @@ export const fr = {
   "review.archive.annonce": "{n} copie(s) à archiver · {deja} déjà archivée(s), ignorée(s) · {sans} sans copie permanente.",
   "review.archive.volume": "Environ {volume}, {duree}.",
   "review.archive.inconnu": "Cette vue ne connaît pas l'état des copies : les signets qui n'en ont pas seront comptés en échec.",
-  "review.archive.borne": "{n} sélectionnés : la borne est de {borne} par archivage.",
+  "review.archive.borne": "{n} sélectionné : la borne est de {borne} par archivage.|{n} sélectionnés : la borne est de {borne} par archivage.",
   "review.archive.lancement": "Lancement de l'archivage…",
   "review.archive.envol": "Archivage : {done} / {total} copies",
   "review.archive.termine": "Terminé : {reussis} archivée(s), {echoues} en échec.",
@@ -134,7 +134,7 @@ export const fr = {
   "boot.tokenLabel": "Jeton d'API Raindrop",
   "boot.validate": "Valider",
   "boot.checking": "Vérification…",
-  "boot.account": "Compte détecté : {name} ({email}) — {count} signets",
+  "boot.account": "Compte détecté : {name} ({email}) — {n} signet|Compte détecté : {name} ({email}) — {n} signets",
   "boot.accountSansCompte": "Compte détecté : {name} ({email})",
   "boot.enter": "Ouvrir la bibliothèque",
   // Réglages (spec §6) — remplacer le jeton, voir l'état de la connexion.
@@ -199,9 +199,9 @@ export const fr = {
   "sauvegarde.complet": "balayage complet",
   "sauvegarde.incremental": "incrémental",
   "sauvegarde.jamais": "Aucune sauvegarde encore.",
-  "sauvegarde.instantanes": "{n} instantanés conservés",
-  "sauvegarde.archives": "{n} copies archivées ({volume})",
-  "sauvegarde.premiere": "La première sauvegarde est un balayage complet : {duree} et {requetes} requêtes pour {signets} signets.",
+  "sauvegarde.instantanes": "{n} instantané conservé|{n} instantanés conservés",
+  "sauvegarde.archives": "{n} copie archivée ({volume})|{n} copies archivées ({volume})",
+  "sauvegarde.premiere": "La première sauvegarde est un balayage complet : {duree} et {requetes} requêtes pour {signets} signet.|La première sauvegarde est un balayage complet : {duree} et {requetes} requêtes pour {signets} signets.",
   // Repli quand la taille de la bibliothèque n'est pas encore connue : dire
   // ce que c'est, sans inventer un chiffre.
   "sauvegarde.premiere.sansCompte": "La première sauvegarde est un balayage complet : elle lit toute la bibliothèque.",
@@ -225,8 +225,26 @@ export type FrKey = keyof typeof fr;
  *  au lieu d'être refusée au typecheck. Les usages DYNAMIQUES (les seuls
  *  à ne pas pouvoir être vérifiés ici) construisent leur objet de clés en
  *  `as const` au lieu de caster (voir NatureChips). */
+/**
+ * Une valeur peut porter DEUX formes séparées par `|` — singulier puis
+ * pluriel — choisies sur la variable `n` :
+ *
+ *     "{n} instantané conservé|{n} instantanés conservés"
+ *
+ * Règle française, et c'est là qu'elle diffère de l'anglais : **le singulier
+ * vaut pour 0 comme pour 1** (« 0 instantané », « 1 instantané »), le pluriel
+ * à partir de 2. Sans ce mécanisme on écrivait « 1 instantanés conservés ».
+ *
+ * Une chaîne à DEUX comptes variables ne s'accorde pas ainsi : elle passe `n`
+ * pour celui qui porte l'accord, et garde la forme `(s)` pour l'autre.
+ */
 export function t(key: FrKey, vars?: Record<string, string | number>): string {
-  let s: string = fr[key];
+  const brut: string = fr[key];
+  const formes = brut.split("|");
+  // `n` absent sur une clé à deux formes : le singulier, qui est le repli le
+  // moins faux — jamais un « {n} » laissé à l'écran.
+  const nombre = typeof vars?.n === "number" ? vars.n : Number(vars?.n ?? 1);
+  let s = formes.length === 2 ? (Math.abs(nombre) >= 2 ? formes[1]! : formes[0]!) : brut;
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
   return s;
 }
