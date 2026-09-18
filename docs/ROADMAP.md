@@ -101,14 +101,22 @@ finale de branche).*
       amendée pour dire que la reprise est **différée** ; l'implémenter
       suppose une pause bornée sur le 429 et un retry réseau **sur les
       lectures seulement, jamais les écritures** (trap CLAUDE.md).
-- [ ] **`archiver()` n'a aucun appelant** — le périmètre §2 du lot
-      (« archivage des copies permanentes à la demande ») n'est donc pas
-      tenu, et `purgerOrphelins`/`appliquerBudget` tournent contre un dossier
-      que rien ne remplit. Le déclenchement est côté interface (une
-      collection, ou les liens classés morts : §5.4), donc naturellement du
-      ressort du plan 2 — mais rien ne l'avait acté, c'était un trou de
-      périmètre, pas une décision. **Décision à confirmer par l'utilisateur :**
-      câbler une route maintenant, ou attendre le front.
+- [x] **`archiver()` câblé** (2026-09-18, `0ceb810` → `e553038`) : le trou de
+      périmètre §2 est fermé. `sidecar/backup/archivage.ts` boucle sur les
+      identifiants — un échec n'interrompt jamais les suivants, y compris si
+      `archiver()` **lève** (garde propre, pour ne pas dépendre du `try/catch`
+      d'`archives.ts`) — avec annulation, progression et garde de réentrance.
+      Route `POST /api/backup/archive`, bornée à **500** identifiants (au-delà
+      c'est un balayage déguisé : ~1 000 requêtes, plus de 9 min). Reste au
+      plan 2 : **appeler** cette route depuis le front (sur une collection, ou
+      sur les liens classés morts — §5.4). Noter pour le front que `faits`
+      compte les **tentés**, succès et échecs confondus.
+- [ ] **Un test instable non identifié** : une exécution de `npm test` sur
+      quinze a échoué (1 test), sans jamais se reproduire ensuite — ni sur la
+      suite complète, ni en martelant les fichiers sensibles au temps
+      (`archives.test.ts` et son écart de mtime de 15 ms, `throttle.test.ts`,
+      `lifecycle.test.ts`). Le nom n'a pas été capturé. À reprendre si cela
+      resurgit, en lançant la suite avec la sortie redirigée vers un fichier.
 - [ ] **Les dossiers d'instantanés échoués fuient** — une exception en cours
       de balayage laisse un dossier partiel que rien ne ramasse : la rotation
       n'itère que sur les horodatages du manifeste. ~11 Mo par échec, hors de

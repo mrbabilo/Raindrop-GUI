@@ -71,13 +71,15 @@ chose que le code livré est la forme la plus durable de cette faute.
    pause bornée sur le 429 et un retry réseau **sur les lectures seulement,
    jamais les écritures**. Inscrit à `docs/ROADMAP.md`.
 
-2. **L'archivage des copies permanentes n'est pas déclenchable.** `archiver()`
-   est écrit, testé, et n'a **aucun appelant** : le §2 annonce « archivage des
-   copies permanentes à la demande » comme faisant partie de ce lot, ce qui
-   n'est donc pas le cas. Les deux règles de rétention (§5.4) tournent contre
-   un dossier que rien ne remplit. Le déclenchement étant côté interface (une
-   collection, ou les liens classés morts), il relève naturellement du plan 2 —
-   mais ce report n'avait été décidé nulle part. Inscrit à `docs/ROADMAP.md`.
+2. ~~**L'archivage des copies permanentes n'est pas déclenchable.**~~
+   **Corrigé le 2026-09-18.** `archiver()` n'avait aucun appelant : le §2
+   annonçait « archivage des copies permanentes à la demande » sans que rien
+   ne puisse le déclencher, et les deux règles de rétention (§5.4) tournaient
+   contre un dossier que rien ne remplissait. Le câblage est livré
+   (`sidecar/backup/archivage.ts`, route `POST /api/backup/archive`, bornée à
+   500 identifiants). Le §2 est désormais tenu **côté sidecar** ; il reste au
+   plan 2 à appeler cette route depuis l'interface — sur une collection, ou
+   sur les liens classés morts.
 
 ### Correction apportée au §5.3
 
