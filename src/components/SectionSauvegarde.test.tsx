@@ -3,7 +3,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SectionSauvegarde } from "./SectionSauvegarde";
 
-const { statutMock, archivesMock, invaliderMock, etatMock, choisirMock, retirerMock, volMock, annulerMock, sendMock } =
+const { statutMock, archivesMock, invaliderMock, etatMock, choisirMock, retirerMock, volMock, annulerMock, sendMock, userMock } =
   vi.hoisted(() => ({
     statutMock: vi.fn(),
     archivesMock: vi.fn(),
@@ -14,6 +14,7 @@ const { statutMock, archivesMock, invaliderMock, etatMock, choisirMock, retirerM
     volMock: vi.fn(),
     annulerMock: vi.fn(),
     sendMock: vi.fn(),
+    userMock: vi.fn(),
   }));
 
 vi.mock("../hooks/useBackup", async (importOriginal) => ({
@@ -25,6 +26,7 @@ vi.mock("../hooks/useBackup", async (importOriginal) => ({
   useInvalidateSauvegarde: () => invaliderMock,
 }));
 vi.mock("../lib/suiviSauvegarde", () => ({ suivreJob: volMock, annuler: annulerMock }));
+vi.mock("../hooks/useStaticData", () => ({ useUser: userMock }));
 vi.mock("../lib/api", () => ({ api: { send: sendMock, get: vi.fn() } }));
 vi.mock("../lib/amorce", () => ({
   etatSauvegarde: etatMock,
@@ -51,6 +53,7 @@ beforeEach(() => {
   retirerMock.mockReset().mockResolvedValue({ ecran: "app" });
   sendMock.mockReset().mockResolvedValue({ jobId: "j1" });
   annulerMock.mockReset().mockResolvedValue(undefined);
+  userMock.mockReset().mockReturnValue({ data: { bookmarksCount: 12210 } });
 });
 
 describe("le dossier", () => {
@@ -106,11 +109,26 @@ describe("le dossier", () => {
 });
 
 describe("l'état du moteur", async () => {
-  it("actif et vierge : l'avertissement de première sauvegarde précède le geste", async () => {
+  it("actif et vierge : l'avertissement est CALCULÉ sur la bibliothèque réelle", async () => {
     statutMock.mockReturnValue({ data: { actif: true, dossier: "/d", instantanes: 0, dernier: null } });
     await rendre();
     expect(screen.getByText("Aucune sauvegarde encore.")).toBeInTheDocument();
-    expect(screen.getByText(/2 min 20 et 245 requêtes/)).toBeInTheDocument();
+    // 12 210 signets → 245 pages + 4 auxiliaires.
+    expect(screen.getByText(/environ 3 min et 249 requêtes pour 12 210 signets/)).toBeInTheDocument();
+  });
+
+  it("une AUTRE bibliothèque donne un autre chiffre — rien n'est en dur", async () => {
+    statutMock.mockReturnValue({ data: { actif: true, dossier: "/d", instantanes: 0, dernier: null } });
+    userMock.mockReturnValue({ data: { bookmarksCount: 100 } });
+    await rendre();
+    expect(screen.getByText(/environ 4 s et 6 requêtes pour 100 signets/)).toBeInTheDocument();
+  });
+
+  it("compte inconnu : on dit ce que c'est, sans inventer de chiffre", async () => {
+    statutMock.mockReturnValue({ data: { actif: true, dossier: "/d", instantanes: 0, dernier: null } });
+    userMock.mockReturnValue({ data: undefined });
+    await rendre();
+    expect(screen.getByText("La première sauvegarde est un balayage complet : elle lit toute la bibliothèque.")).toBeInTheDocument();
   });
 
   it("montre la dernière sauvegarde, son mode, les instantanés et les archives", async () => {

@@ -188,7 +188,10 @@ export const fr = {
   "sauvegarde.jamais": "Aucune sauvegarde encore.",
   "sauvegarde.instantanes": "{n} instantanés conservés",
   "sauvegarde.archives": "{n} copies archivées ({volume})",
-  "sauvegarde.premiere": "La première sauvegarde est un balayage complet : environ 2 min 20 et 245 requêtes.",
+  "sauvegarde.premiere": "La première sauvegarde est un balayage complet : {duree} et {requetes} requêtes pour {signets} signets.",
+  // Repli quand la taille de la bibliothèque n'est pas encore connue : dire
+  // ce que c'est, sans inventer un chiffre.
+  "sauvegarde.premiere.sansCompte": "La première sauvegarde est un balayage complet : elle lit toute la bibliothèque.",
   "sauvegarde.choisir": "Choisir un dossier…",
   "sauvegarde.changer": "Changer de dossier…",
   "sauvegarde.retirer": "Retirer",

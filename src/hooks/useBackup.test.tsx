@@ -3,6 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import {
+  coutBalayage,
   dureeEstimee,
   formatterOctets,
   libelleProgression,
@@ -66,6 +67,17 @@ describe("formatage", () => {
   it("la durée suit les deux requêtes par copie, en minutes au-delà de deux", () => {
     expect(dureeEstimee(10)).toBe("environ 11 s");
     expect(dureeEstimee(1000)).toBe("environ 19 min");
+  });
+
+  // Aucun chiffre en dur : une durée mesurée sur une bibliothèque donnée
+  // cesse d'être vraie dès que la bibliothèque change de taille — et ne l'a
+  // jamais été pour une autre.
+  it("le coût d'un balayage se CALCULE sur la bibliothèque, il ne s'affirme pas", () => {
+    // Une page de 50 par requête, plus corbeille et auxiliaires.
+    expect(coutBalayage(12210)).toEqual({ requetes: 249, duree: "environ 3 min" });
+    expect(coutBalayage(100)).toEqual({ requetes: 6, duree: "environ 4 s" });
+    // Une bibliothèque vide coûte quand même ses auxiliaires.
+    expect(coutBalayage(0).requetes).toBe(4);
   });
 });
 

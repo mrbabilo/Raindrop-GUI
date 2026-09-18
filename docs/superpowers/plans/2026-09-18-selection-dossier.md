@@ -1196,7 +1196,10 @@ export function SectionSauvegarde({ onEtat }: { onEtat: (a: Amorce) => void }) {
   "sauvegarde.jamais": "Aucune sauvegarde encore.",
   "sauvegarde.instantanes": "{n} instantanés conservés",
   "sauvegarde.archives": "{n} copies archivées ({volume})",
-  "sauvegarde.premiere": "La première sauvegarde est un balayage complet (~2 min 20, ~245 requêtes).",
+  // ⚠️ CALCULÉ, jamais en dur (correction de l'utilisateur) : voir
+  // `coutBalayage` dans useBackup.ts, dérivé du bookmarksCount réel.
+  "sauvegarde.premiere": "La première sauvegarde est un balayage complet : {duree} et {requetes} requêtes pour {signets} signets.",
+  "sauvegarde.premiere.sansCompte": "La première sauvegarde est un balayage complet : elle lit toute la bibliothèque.",
   "sauvegarde.choisir": "Choisir un dossier…",
   "sauvegarde.changer": "Changer de dossier…",
   "sauvegarde.retirer": "Retirer",

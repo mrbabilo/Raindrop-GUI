@@ -8,7 +8,9 @@ import {
   type Amorce,
   type EtatSauvegarde,
 } from "../lib/amorce";
+import { useUser } from "../hooks/useStaticData";
 import {
+  coutBalayage,
   formatterHorodatage,
   formatterOctets,
   libelleProgression,
@@ -78,6 +80,7 @@ export function SectionSauvegarde({ onEtat }: { onEtat: (a: Amorce) => void }) {
     }
   };
 
+  const signets = useUser().data?.bookmarksCount;
   const dernier = statut.data?.dernier ?? null;
   const actif = statut.data?.actif === true;
   const jamais = actif && (statut.data?.instantanes ?? 0) === 0;
@@ -134,9 +137,13 @@ export function SectionSauvegarde({ onEtat }: { onEtat: (a: Amorce) => void }) {
               })}
             </span>
           )}
-          {/* Annoncé AVANT le geste : 2 min 20 et 245 requêtes ne se
-              découvrent pas après coup. */}
-          {jamais && vol === null && <span className="text-xs text-app-muted">{t("sauvegarde.premiere")}</span>}
+          {/* Annoncé AVANT le geste, et CALCULÉ sur la bibliothèque réelle :
+              une durée en dur ne vaudrait que pour la bibliothèque qui a
+              servi à la mesurer. Compte inconnu → on dit ce que c'est, sans
+              inventer de chiffre. */}
+          {jamais && vol === null && (
+            <span className="text-xs text-app-muted">{avertissementPremiere(signets)}</span>
+          )}
         </div>
       )}
 
@@ -176,6 +183,17 @@ export function SectionSauvegarde({ onEtat }: { onEtat: (a: Amorce) => void }) {
       )}
     </div>
   );
+}
+
+/** Ce que coûtera la première sauvegarde, sur CETTE bibliothèque. */
+function avertissementPremiere(signets: number | undefined): string {
+  if (signets === undefined) return t("sauvegarde.premiere.sansCompte");
+  const { requetes, duree } = coutBalayage(signets);
+  return t("sauvegarde.premiere", {
+    duree,
+    requetes,
+    signets: signets.toLocaleString("fr-FR"),
+  });
 }
 
 /**

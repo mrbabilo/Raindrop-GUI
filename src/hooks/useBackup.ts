@@ -91,13 +91,38 @@ export function formatterOctets(n: number): string {
   return `${(n / 2 ** 30).toFixed(1)} Go`;
 }
 
-/** Deux requêtes par copie, file à 550 ms (spec sélection §4.2) : annoncer la
- *  durée est la seule façon honnête de proposer une action qui peut tenir des
- *  dizaines de minutes. */
-export function dureeEstimee(n: number): string {
-  const secondes = Math.ceil(n * 1.1);
-  if (secondes < 120) return t("sauvegarde.duree.s", { n: secondes });
+/** La file espace les appels de 550 ms (CLAUDE.md : ≈ 109 req/min, sous le
+ *  plafond de 120). C'est une constante de NOTRE conception — la seule base
+ *  honnête pour annoncer une durée, puisqu'elle ne dépend d'aucune mesure
+ *  faite sur une bibliothèque particulière. */
+const SECONDES_PAR_REQUETE = 0.55;
+
+/** 50 items par page : la pagination de l'API (CLAUDE.md). */
+const ITEMS_PAR_PAGE = 50;
+
+function formatterDuree(secondes: number): string {
+  if (secondes < 120) return t("sauvegarde.duree.s", { n: Math.ceil(secondes) });
   return t("sauvegarde.duree.min", { n: Math.ceil(secondes / 60) });
+}
+
+/** Deux requêtes par copie (spec sélection §4.2) : annoncer la durée est la
+ *  seule façon honnête de proposer une action qui peut tenir des dizaines de
+ *  minutes. */
+export function dureeEstimee(n: number): string {
+  return formatterDuree(n * 2 * SECONDES_PAR_REQUETE);
+}
+
+/**
+ * Ce que coûte un balayage complet, CALCULÉ sur la bibliothèque réelle — une
+ * page de 50 par requête, plus la corbeille et les trois auxiliaires.
+ *
+ * Jamais de chiffres en dur : « 2 min 20 » n'était vrai que pour la
+ * bibliothèque sur laquelle la mesure avait été faite, et cessait de l'être
+ * dès qu'elle changeait de taille.
+ */
+export function coutBalayage(nombreDeSignets: number): { requetes: number; duree: string } {
+  const requetes = Math.ceil(nombreDeSignets / ITEMS_PAR_PAGE) + 4;
+  return { requetes, duree: formatterDuree(requetes * SECONDES_PAR_REQUETE) };
 }
 
 /** `2026-09-18T08-15-12` (UTC, le nom de dossier d'un instantané) → date

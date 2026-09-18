@@ -109,8 +109,13 @@ Rejetées :
   « et le dit » du §6. Demander à l'utilisateur de choisir entre « complet » et
   « incrémental » serait lui faire porter une décision que le code prend mieux
   que lui. Sans instantané (première sauvegarde), le panneau prévient avant le
-  geste : « la première sauvegarde est un balayage complet (~2 min 20,
-  ~245 requêtes) ».
+  geste. ⚠️ **L'avertissement est CALCULÉ, jamais écrit en dur** (correction
+  de l'utilisateur, à l'implémentation) : une durée mesurée sur une
+  bibliothèque donnée n'est vraie que pour elle, et cesse de l'être dès
+  qu'elle change de taille. Le coût se dérive du `bookmarksCount` réel
+  (`/api/user`) et des deux constantes de NOTRE conception — une page de 50
+  par requête, file espacée de 550 ms. Compte inconnu : on dit ce que le
+  balayage est, sans avancer de chiffre.
 - **Progression : un compteur nommé, pas une barre.** Faits mesurés : seuls deux
   segments émettent un label (`bookmarks`, `éléments modifiés`) ; la corbeille
   et les auxiliaires n'émettent rien, donc **une barre en pourcentage gèle** ;
