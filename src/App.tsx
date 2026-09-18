@@ -101,6 +101,44 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
       {/* Ce que l'on transporte pendant un déplacement — au-dessus de tout,
           inerte au pointeur (il ne doit jamais masquer sa propre cible). */}
       <FantomeDrag />
+
+      {/* L'en-tête de l'APPLICATION, hors de la grille et pleine largeur.
+        Il y était auparavant la cellule ligne 1 / colonne 1 — donc de la
+        largeur de la barre latérale : la replier réduisait l'en-tête avec
+        elle, le bouton de repli disparaissait (plus moyen de la rouvrir) et
+        les icônes se déplaçaient. Le titre, les réglages et le thème sont
+        à l'application, pas au panneau de gauche. */}
+      <header className="flex items-center gap-3 border-b border-app-border bg-app px-4 py-2">
+        <button
+          type="button"
+          className="btn btn-icone"
+          aria-label={repliee ? t("nav.deplier") : t("nav.replier")}
+          aria-pressed={repliee}
+          onClick={basculer}
+        >
+          <Icone nom="panneauLateral" />
+        </button>
+        <span className="font-medium">{t("app.title")}</span>
+        {/* L'indicateur MCP de l'en-tête (Task 2) est subsumé par <Banners /> :
+            un seul émetteur du message, la bannière porte en plus l'action. */}
+        <button
+          type="button"
+          className="btn btn-icone ml-auto"
+          aria-label={t("reglages.titre")}
+          onClick={() => setReglagesOuvert(true)}
+        >
+          <Icone nom="engrenage" />
+        </button>
+        <button
+          type="button"
+          className="btn"
+          aria-label={isDark ? t("theme.toLight") : t("theme.toDark")}
+          onClick={toggleTheme}
+        >
+          {isDark ? <SunIcon /> : <MoonIcon />}
+        </button>
+      </header>
+
       {/* Les colonnes latérales sont CONDITIONNELLES : repliée, la barre
           latérale rend sa largeur à la liste ; fermé, le détail aussi. Les
           classes sont écrites en toutes lettres — Tailwind ne voit pas les
@@ -117,41 +155,18 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
               : "grid-cols-[240px_minmax(0,1fr)_0px]")
         }
       >
-        <header className="flex items-center gap-3 border-b border-app-border bg-app px-4 py-2">
-          <button
-            type="button"
-            className="btn btn-icone"
-            aria-label={repliee ? t("nav.deplier") : t("nav.replier")}
-            aria-pressed={repliee}
-            onClick={basculer}
-          >
-            <Icone nom="panneauLateral" />
-          </button>
-          <span className="font-medium">{t("app.title")}</span>
-          {/* L'indicateur MCP de l'en-tête (Task 2) est subsumé par <Banners /> :
-              un seul émetteur du message, la bannière porte en plus l'action. */}
-          <button
-            type="button"
-            className="btn btn-icone ml-auto"
-            aria-label={t("reglages.titre")}
-            onClick={() => setReglagesOuvert(true)}
-          >
-            <Icone nom="engrenage" />
-          </button>
-          <button
-            type="button"
-            className="btn"
-            aria-label={isDark ? t("theme.toLight") : t("theme.toDark")}
-            onClick={toggleTheme}
-          >
-            {isDark ? <SunIcon /> : <MoonIcon />}
-          </button>
-        </header>
+        {/* Row 1 col 1 : la cellule que l'en-tête occupait — vide désormais,
+            elle ne sert qu'à laisser TopBar en colonne 2. */}
+        <div aria-hidden="true" className="border-b border-app-border bg-app" />
         {/* Row 1 col 2 : la barre recherche/filtres/tri de la vue courante
             (rend une cellule vide hors vue list). */}
         <TopBar />
         <div className="border-b border-app-border bg-app" aria-hidden="true" />
-        <Sidebar />
+        {/* Repliée, la barre latérale n'est pas RENDUE — et pas seulement
+            réduite à zéro. Une colonne de 0 px laisserait son contenu
+            atteignable au clavier tout en étant invisible : des arrêts de
+            tabulation dans un panneau qu'on ne voit pas. */}
+        {repliee ? <div aria-hidden="true" /> : <Sidebar />}
         {/* Task 12 : la vue cleanup prend la place de la liste — dashboard de
             nettoyage (compteurs, fraîcheur, scans SSE annulables). Task 13 :
             les vues de traitement cleanupView/* qu'il rend joignables.

@@ -128,15 +128,38 @@ describe("App", () => {
     await waitFor(() => expect(screen.queryByRole("complementary")).not.toBeInTheDocument());
   });
 
-  it("la barre latérale se replie et se déplie", async () => {
+  // Le défaut d'origine : l'en-tête qui porte ce bouton était la cellule
+  // ligne 1 / colonne 1 de la grille, donc de la largeur de la barre
+  // latérale. La replier réduisait l'en-tête avec elle — le bouton
+  // disparaissait, et il n'y avait plus aucun moyen de la rouvrir.
+  it("repliée, la barre latérale disparaît ET peut être rouverte", async () => {
     render(<App onEtat={vi.fn()} />, { wrapper });
+    expect(screen.getByRole("navigation")).toBeInTheDocument();
+
     const replier = screen.getByRole("button", { name: "Replier la barre latérale" });
     expect(replier).toHaveAttribute("aria-pressed", "false");
     await userEvent.click(replier);
-    // Le libellé dit vers quoi le bouton bascule — l'icône, elle, ne change
-    // pas (§9, « une icône par geste »).
+
+    // La navigation n'est pas seulement invisible : elle n'est plus rendue.
+    // Une colonne à zéro laisserait ses liens atteignables au clavier.
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+
+    // Et le geste inverse reste offert — c'est là que le défaut vivait.
     const deplier = screen.getByRole("button", { name: "Déplier la barre latérale" });
     expect(deplier).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(deplier);
+    expect(screen.getByRole("navigation")).toBeInTheDocument();
+  });
+
+  // Les réglages et le thème sont à l'APPLICATION, pas au panneau de gauche :
+  // replier celui-ci ne doit pas les emporter.
+  it("replier la barre latérale n'emporte ni les réglages ni le thème", async () => {
+    render(<App onEtat={vi.fn()} />, { wrapper });
+    const avant = screen.getByRole("button", { name: "Réglages" });
+    expect(avant).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Replier la barre latérale" }));
+    expect(screen.getByRole("button", { name: "Réglages" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /thème/ })).toBeInTheDocument();
   });
 
   // Task 10 : ⌘E amène le focus dans le composer, quel que soit le champ
