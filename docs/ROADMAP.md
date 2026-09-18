@@ -178,16 +178,26 @@ fidèle, recompression quand la signature manque, test sabordé pour le prouver.
       réécrit un manifeste ne portant que sa propre entrée. Les dossiers
       antérieurs survivent et deviennent non ramassables. Piste :
       reconstruire depuis les `meta.json` présents.
-- [ ] **Un item sans `_id` numérique : trois politiques pour quatre modules.**
-      `balayage.ts` l'écrit et l'exclut du décompte (instantané incomplet pour
-      toujours) ; `collecte.ts` le **conserve** (conforme §3.4) ; et
-      `incremental.ts` **avance le watermark puis le jette** — seule perte à la
-      fois silencieuse et **définitive** du lot, d'autant que le watermark est
-      persisté. À unifier sur la politique §3.4.
-- [ ] **Sémantique de progression** — le numérateur recule à 0 au rejeu du
-      balayage, la barre gèle sur la corbeille et les auxiliaires (pas
-      d'`onProgress`), et l'incrémental pose `done === total` **avant** la
-      fusion. À trancher avec le front (plan 2).
+- [x] **Un item sans `_id` numérique — perte silencieuse corrigée** (2026-09-19).
+      Le défaut était **plus large que décrit ici** : `incremental.ts` avançait
+      le watermark puis jetait l'item (donc jamais relu — perte définitive),
+      mais `fusionner` (`collecte.ts`) le jetait **aussi**, si bien que
+      corriger l'incrémental seul n'aurait rien changé. Les deux conservent
+      désormais l'objet (§3.4, « on ne jette jamais une donnée brute ») :
+      faute de clé il ne remplace rien, il s'ajoute — dédoublonné par son
+      CONTENU, puisque c'est sa seule identité disponible. Un contenu qui a
+      changé s'ajoute **en plus**, jamais à la place : sans identifiant, rien
+      ne prouve que les deux objets sont le même. `collecte.ts` gagne au
+      passage le fichier de test qui lui manquait. Trois sabordages.
+      Reste : `balayage.ts` écrit toujours ces lignes en les excluant du
+      décompte — l'instantané se marque alors incomplet **pour toujours**.
+      Bruyant, donc pas une perte ; à trancher séparément (soit les compter,
+      soit dire pourquoi l'instantané reste incomplet).
+- [x] **Sémantique de progression — tranchée** (2026-09-18, lot sélection du
+      dossier) : un **compteur nommé** plutôt qu'une barre. Corbeille et
+      auxiliaires émettent enfin un label, et un numérateur qui recule au rejeu
+      s'écrit « reprise du balayage » au lieu de se traduire en recul
+      inexplicable.
 - [ ] **Petites dettes du lot** : factoriser `interface File` (déclarée trois
       fois) et la constante `50` (encodée cinq fois) ; le mot `complet`
       désigne deux choses (le mode et la fidélité), avec un troisième nom

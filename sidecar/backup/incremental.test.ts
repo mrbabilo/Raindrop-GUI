@@ -74,3 +74,26 @@ describe("incrémental", () => {
     expect(r.modifies).toHaveLength(100);
   });
 });
+
+// §3.4 : « un champ qu'on n'a pas écrit est définitivement perdu » — a
+// fortiori un ITEM entier. Un objet sans `_id` numérique faisait pourtant
+// avancer le watermark (donc il ne serait jamais relu) tout en étant jeté :
+// la seule perte à la fois silencieuse et DÉFINITIVE du lot.
+describe("un item sans `_id` numérique", () => {
+  it("est conservé, et n'empêche pas le watermark d'avancer", async () => {
+    const sansId = { created: "2020-01-01T00:00:00.000Z", lastUpdate: "2026-04-01T00:00:00.000Z", title: "orphelin" };
+    api = await startFauxApi([
+      item(3, "2026-03-01T00:00:00.000Z"),
+      sansId as unknown as ReturnType<typeof item>,
+      item(1, "2026-01-01T00:00:00.000Z"),
+    ]);
+    const r = await lireModifies({ lecture: lect(api), collectionId: 0, watermark: "2026-02-01T00:00:00.000Z" });
+    // L'objet était bien dans la fenêtre lue — sans quoi cette assertion
+    // célébrerait la conservation de quelque chose que rien n'apportait.
+    expect(r.modifies).toContainEqual(expect.objectContaining({ title: "orphelin" }));
+    expect(r.modifies.map((m) => (m as { _id?: number })._id)).toContain(3);
+    // Le watermark avance jusqu'au plus récent, orphelin compris : c'est
+    // précisément ce qui rendait la perte définitive.
+    expect(r.nouveauWatermark).toBe("2026-04-01T00:00:00.000Z");
+  });
+});

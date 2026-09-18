@@ -162,10 +162,17 @@ export async function fusionner(deps: {
   modifies: unknown[];
 }): Promise<Piece> {
   const parId = new Map<number, unknown>();
+  // Sans `_id`, un objet ne peut RIEN remplacer — il n'a pas de clé à laquelle
+  // se rattacher. Il est ajouté en fin d'instantané plutôt que jeté (§3.4) ;
+  // sa seule identité disponible est son contenu, qui sert à ne pas l'écrire
+  // deux fois (l'élément PILE au watermark est réappliqué à chaque passe).
+  const sansId: unknown[] = [];
   for (const m of deps.modifies) {
     const id = (m as { _id?: number })._id;
     if (typeof id === "number") parId.set(id, m);
+    else sansId.push(m);
   }
+  const contenusSansId = new Set(sansId.map((m) => JSON.stringify(m)));
   const chemin = join(deps.dossier, deps.nom);
   const ecrivain = await ouvrirJsonl(chemin);
   const flux = createInterface({
@@ -176,6 +183,9 @@ export async function fusionner(deps: {
     if (ligne === "") continue;
     const objet = JSON.parse(ligne) as { _id?: number };
     const id = objet._id;
+    // Déjà dans l'instantané précédent, à l'identique : inutile de le
+    // rajouter en fin de fichier.
+    if (typeof id !== "number") contenusSansId.delete(JSON.stringify(objet));
     const remplacant = typeof id === "number" ? parId.get(id) : undefined;
     if (remplacant !== undefined && typeof id === "number") {
       await ecrivain.ligne(remplacant);
@@ -186,5 +196,12 @@ export async function fusionner(deps: {
   }
   // Ce qui reste n'était pas dans l'instantané précédent : des créations.
   for (const neuf of parId.values()) await ecrivain.ligne(neuf);
+  // Et les objets sans clé que la source ne portait pas déjà. Un contenu qui a
+  // CHANGÉ s'ajoute en plus, jamais à la place : sans identifiant, rien ne
+  // prouve que les deux objets sont le même — écraser serait une perte
+  // décidée sur une supposition.
+  for (const m of sansId) {
+    if (contenusSansId.has(JSON.stringify(m))) await ecrivain.ligne(m);
+  }
   return relire(chemin, deps.nom, await ecrivain.fermer());
 }

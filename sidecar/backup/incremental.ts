@@ -43,6 +43,8 @@ export async function lireModifies(deps: {
 }): Promise<ResultatIncremental> {
   const max = deps.maxPages ?? MAX_PAGES_DEFAUT;
   const parId = new Map<number, unknown>();
+  // Les objets sans clé : conservés, mais hors du dédoublonnage par `_id`.
+  const sansId: unknown[] = [];
   let nouveauWatermark = deps.watermark;
   let pages = 0;
   let recouvrementRestant = -1; // -1 = pas encore croisé
@@ -68,7 +70,14 @@ export async function lireModifies(deps: {
       // réécrire est sans effet ; le sauter perdrait ses voisins de même
       // seconde.
       if (deps.watermark === "" || date >= deps.watermark) {
+        // §3.4 : on ne jette jamais une donnée brute. Un objet sans `_id`
+        // numérique ne peut pas être dédoublonné par clé — il va donc à part,
+        // et `fusionner` l'écrira. Le jeter ici serait la seule perte à la
+        // fois SILENCIEUSE et DÉFINITIVE du lot : le watermark vient
+        // d'avancer pour lui (ci-dessus) et il est persisté, donc l'élément
+        // ne serait plus jamais relu.
         if (typeof o._id === "number") parId.set(o._id, item);
+        else sansId.push(item);
       } else {
         croiseSurCettePage = true;
       }
@@ -85,5 +94,5 @@ export async function lireModifies(deps: {
       if (recouvrementRestant === 0) break;
     }
   }
-  return { modifies: [...parId.values()], nouveauWatermark, pages };
+  return { modifies: [...parId.values(), ...sansId], nouveauWatermark, pages };
 }
