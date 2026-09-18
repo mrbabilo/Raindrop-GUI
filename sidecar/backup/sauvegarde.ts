@@ -11,15 +11,7 @@
 
 import { access, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { appliquerBudget, purgerOrphelins, ARCHIVES_MAX_GO } from "./archives.js";
-import {
-  balayerEtRelire,
-  collecterAuxiliaires,
-  ecrireDocument,
-  fusionner,
-  NOMS,
-  type Piece,
-} from "./collecte.js";
+import { balayerEtRelire, collecterAuxiliaires, fusionner, NOMS } from "./collecte.js";
 import {
   doitBalayerComplet,
   doitSauvegarderAuDemarrage,
@@ -27,14 +19,8 @@ import {
 } from "./decision.js";
 import { lireModifies } from "./incremental.js";
 import { horodatage, verifierJsonl } from "./instantane.js";
-import {
-  aConserver,
-  dernierValide,
-  ecrireManifeste,
-  lireManifeste,
-  type EntreeInstantane,
-  type Manifeste,
-} from "./manifeste.js";
+import { makeEnregistreur } from "./enregistrement.js";
+import { dernierValide, lireManifeste, type EntreeInstantane, type Manifeste } from "./manifeste.js";
 import type { Lecture } from "./lecture.js";
 import type { JobHandle } from "../jobs/store.js";
 
@@ -81,7 +67,7 @@ export interface DepsSauvegarde {
 export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
   const maintenant = deps.maintenant ?? (() => new Date());
   const avertir = deps.avertir ?? (() => undefined);
-  const archives = join(deps.dossier, "archives");
+  const finir = makeEnregistreur({ dossier: deps.dossier, maintenant, avertir });
 
   /** Un nom de dossier LIBRE : deux instantanés de la même seconde
    *  partageraient le même nom, et le second écraserait le premier — or §6
@@ -108,78 +94,6 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
   const releverWatermark = async (): Promise<string> => {
     const p = await deps.lecture.page(0, { sort: "-lastUpdate", page: 0, perpage: 1 });
     return (p.items[0] as { lastUpdate?: string } | undefined)?.lastUpdate ?? "";
-  };
-
-  /** Archives purgées, manifeste écrit, dossiers évincés — dans cet ordre. */
-  const enregistrer = async (m: Manifeste, entree: EntreeInstantane, ids?: Set<number>) => {
-    if (ids) {
-      await purgerOrphelins(archives, ids);
-      await appliquerBudget(archives, ARCHIVES_MAX_GO * 2 ** 30);
-    }
-    const toutes = [...m.instantanes, entree];
-    const gardes = new Set(aConserver(toutes.map((i) => i.horodatage), maintenant()));
-    // L'instantané qu'on vient d'écrire et de vérifier n'est JAMAIS celui que
-    // la rotation efface : horloge qui recule, ou manifeste portant des
-    // entrées plus récentes, et il tombe hors des « 7 derniers ».
-    gardes.add(entree.horodatage);
-    // Le manifeste D'ABORD, les suppressions ensuite : une coupure entre les
-    // deux laisse des dossiers orphelins (inoffensifs), jamais un manifeste
-    // qui désigne des dossiers effacés.
-    await ecrireManifeste(deps.dossier, {
-      version: 1,
-      instantanes: toutes.filter((i) => gardes.has(i.horodatage)),
-    });
-    for (const i of toutes) {
-      if (!gardes.has(i.horodatage)) await rm(join(deps.dossier, i.horodatage), { recursive: true, force: true });
-    }
-  };
-
-  const ecrireDocumentMeta = async (cible: string, meta: unknown): Promise<void> => {
-    const p = await ecrireDocument(cible, NOMS.meta, meta);
-    if (!p.fidele) avertir("meta.json ne se relit pas", { raison: p.raison });
-  };
-
-  /** Le point unique où `complet` se décide : la conjonction de ce que les
-   *  pièces ont rapporté. Jamais une constante. */
-  const finir = async (arg: {
-    m: Manifeste;
-    horodatage: string;
-    cible: string;
-    pieces: Piece[];
-    count: number;
-    watermark: string;
-    ids?: Set<number>;
-    bascule?: string;
-    ecart?: string;
-  }): Promise<ResultatSauvegarde> => {
-    const complet = arg.pieces.every((p) => p.fidele) && arg.ecart === undefined;
-    const raisons = [...arg.pieces.map((p) => p.raison), arg.ecart].filter((r): r is string => !!r);
-    const raison = raisons.length > 0 ? raisons.join(" ; ") : undefined;
-    // `meta.json` porte la complétude AU PLUS PRÈS des données (§6) : le
-    // manifeste peut être perdu, le dossier lu seul, l'instantané reste
-    // capable de dire s'il ment.
-    await ecrireDocumentMeta(arg.cible, {
-      horodatage: arg.horodatage,
-      complet,
-      count: arg.count,
-      watermark: arg.watermark,
-      ...(raison === undefined ? {} : { raison }),
-      ...(arg.bascule === undefined ? {} : { bascule: arg.bascule }),
-    });
-    const entree: EntreeInstantane = {
-      horodatage: arg.horodatage,
-      complet,
-      count: arg.count,
-      watermark: arg.watermark,
-      empreintes: Object.fromEntries(arg.pieces.map((p) => [p.nom, p.empreinte])),
-    };
-    await enregistrer(arg.m, entree, arg.ids);
-    if (raison) avertir("instantané incomplet", { horodatage: arg.horodatage, raison });
-    return {
-      ...entree,
-      ...(raison === undefined ? {} : { raison }),
-      ...(arg.bascule === undefined ? {} : { bascule: arg.bascule }),
-    };
   };
 
   const balayerTout = async (m: Manifeste, job?: JobHandle, bascule?: string): Promise<ResultatSauvegarde> => {
@@ -255,14 +169,25 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
     });
     const aux = await collecterAuxiliaires({ lecture: deps.lecture, dossier: cible });
     // §5.3 — l'angle mort du tri par modification : un élément supprimé
-    // ailleurs ne change aucune date, il ne remonterait jamais. Le compte
-    // distant le trahit pour UNE requête ; l'instantané se déclare alors
-    // incomplet plutôt que de prétendre refléter la bibliothèque.
+    // ailleurs ne change aucune date, il ne remonterait JAMAIS. Le compte
+    // distant le trahit pour UNE requête. Comparé ici, après la fusion, et non
+    // avant : avant, le moindre AJOUT ferait diverger le compte et coûterait
+    // 245 requêtes, alors que l'incrémental le rattrape déjà (il porte un
+    // `lastUpdate` récent). Après, seule la suppression distante subsiste.
     const distant = await deps.lecture.compteur(0);
-    const ecart =
-      distant === principal.count
-        ? undefined
-        : `le compte distant (${distant}) diverge du fusionné (${principal.count}) — un balayage complet est nécessaire`;
+    if (distant !== principal.count) {
+      const ecart = `le compte distant (${distant}) diverge du fusionné (${principal.count}) — balayage complet`;
+      // ESCALADE dans la même exécution. S'arrêter à « incomplet » laisserait
+      // le prochain incrémental repartir du MÊME watermark, rediverger et se
+      // déclarer incomplet à son tour : une seule suppression distante
+      // coûterait jusqu'à une semaine sans sauvegarde valide, le temps que la
+      // règle des sept jours tire. La fusion n'ayant été ni enregistrée au
+      // manifeste ni dotée de son `meta.json`, son dossier s'efface sans rien
+      // perdre — le laisser joncherait l'arbre de dossiers que rien ne cite.
+      await rm(cible, { recursive: true, force: true });
+      avertir("sauvegarde : bascule en balayage complet", { cause: ecart });
+      return balayerTout(m, job, ecart);
+    }
     return finir({
       m,
       horodatage: h,
@@ -270,7 +195,6 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
       pieces: [principal, corbeille, ...aux],
       count: principal.count,
       watermark: nouveauWatermark,
-      ...(ecart === undefined ? {} : { ecart }),
     });
   };
 

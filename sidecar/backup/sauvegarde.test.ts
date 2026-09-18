@@ -124,6 +124,23 @@ describe("ce que la sauvegarde collecte", () => {
     expect(api.appels).toContain("/rest/v1/user");
   });
 
+  // §5.1 compte DEUX requêtes pour « l'arborescence complète » : `/collections`
+  // ne rend que les racines. S'en contenter perdrait en silence l'essentiel de
+  // la hiérarchie — une sauvegarde qui omet la structure qu'elle prétend rendre.
+  it("l'arborescence complète : les collections IMBRIQUÉES sont dans l'instantané", async () => {
+    api = await startFauxApi(items(1));
+    const dossier = repertoireTemporaire("sauv-arborescence-");
+    const r = await sauv(api, dossier).executer("complet");
+
+    expect(api.appels).toContain("/rest/v1/collections");
+    expect(api.appels).toContain("/rest/v1/collections/childrens");
+    const arbre = JSON.parse(
+      readFileSync(join(dossier, r.horodatage, "collections.json"), "utf8"),
+    ) as { _id: number; parent?: { $id: number } }[];
+    expect(arbre.map((c) => c._id)).toEqual([1, 2]);
+    expect(arbre.find((c) => c._id === 2)?.parent).toEqual({ $id: 1 });
+  });
+
   // CONTRAT 3 — sans ce test, la garde `dernierValide()` (Task 6) n'a plus
   // rien à filtrer : elle continuerait de fonctionner parfaitement sur une
   // donnée qui ment. Le levier est la bibliothèque qui BOUGE (une suppression
@@ -187,19 +204,30 @@ describe("l'incrémental", () => {
     expect(s1.horodatage).not.toBe(s2.horodatage);
   });
 
-  // §5.3 — l'angle mort des compteurs : un élément supprimé ailleurs ne
-  // modifie aucune date, le tri par modification ne le verra jamais. Le
-  // compte distant, lui, le trahit — pour une requête.
-  it("ne se déclare pas complet quand le compte distant diverge du fusionné", async () => {
+  // §5.3 — l'angle mort du tri par modification : un élément supprimé ailleurs
+  // ne change aucune date, il ne remonterait JAMAIS. S'arrêter à « incomplet »
+  // ne réglerait rien : le prochain incrémental repartirait du MÊME watermark,
+  // rediverge, et une seule suppression distante coûterait jusqu'à une semaine
+  // sans sauvegarde valide, le temps que la règle des sept jours tire. D'où
+  // l'escalade DANS LA MÊME EXÉCUTION.
+  it("un élément supprimé ailleurs : le compte diverge, on escalade en balayage complet", async () => {
     api = await startFauxApi(items(3));
     const dossier = repertoireTemporaire("sauv-divergence-");
     await sauv(api, dossier, { maintenant: () => new Date("2026-09-18T10:00:00Z") }).executer("complet");
+    const avant = api.appels.length;
 
     api.items.splice(0, 1); // supprimé ailleurs : aucune date ne bouge
     const s2 = await sauv(api, dossier, { maintenant: () => new Date("2026-09-18T11:00:00Z") })
       .executer("incremental");
 
-    expect(s2.complet).toBe(false);
-    expect(s2.raison).toMatch(/compte/i);
+    // Le balayage complet a bien eu lieu, et il est DIT.
+    expect(api.appels.slice(avant).some((a) => a.startsWith("/rest/v1/raindrops/0?sort=created"))).toBe(true);
+    expect(s2.bascule).toMatch(/compte distant/i);
+    // Et l'exécution se termine sur un instantané COMPLET qui reflète la
+    // bibliothèque amputée — pas sur un instantané invalide de plus.
+    expect(s2.complet).toBe(true);
+    expect(s2.raison).toBeUndefined();
+    const fusion = lignesDe(join(dossier, s2.horodatage, "raindrops.jsonl"));
+    expect(fusion.map((o) => o._id)).toEqual([1001, 1002]);
   });
 });

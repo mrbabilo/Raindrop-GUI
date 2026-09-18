@@ -35,6 +35,11 @@ export interface Lecture {
   page(collectionId: number, opts: { sort: string; page: number; perpage?: number }): Promise<PageBrute>;
   compteur(collectionId: number): Promise<number>;
   collections(): Promise<unknown[]>;
+  /** Les collections IMBRIQUÉES (`/collections/childrens`). §5.1 compte deux
+   *  requêtes pour « l'arborescence complète » : `/collections` ne rend que
+   *  les racines, et s'en contenter perdrait en silence l'essentiel de la
+   *  hiérarchie d'une bibliothèque de 12 210 signets. */
+  collectionsEnfants(): Promise<unknown[]>;
   highlights(page: number): Promise<PageBrute>;
   user(): Promise<unknown>;
 }
@@ -85,6 +90,8 @@ export function makeLecture(opts: {
     // comparaison de compteurs se veut « une requête »).
     compteur: async (collectionId) => (await pageBrute(`/raindrops/${collectionId}?perpage=1&page=0`)).count,
     collections: async () => ((await lire("/collections")) as { items?: unknown[] }).items ?? [],
+    collectionsEnfants: async () =>
+      ((await lire("/collections/childrens")) as { items?: unknown[] }).items ?? [],
     highlights: (page) => pageBrute(`/highlights?page=${page}&perpage=50`),
     user: () => lire("/user"),
   };

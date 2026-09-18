@@ -95,7 +95,11 @@ export async function tousLesSurlignages(lecture: Lecture): Promise<unknown[]> {
 /** Les pièces qui ne dépendent pas de la collection balayée : arborescence,
  *  surlignages, compte. Trois requêtes, quel que soit le mode. */
 export async function collecterAuxiliaires(deps: { lecture: Lecture; dossier: string }): Promise<Piece[]> {
-  const collections = await deps.lecture.collections();
+  // « L'arborescence complète » (§5.1) = les racines PLUS les imbriquées, en
+  // un seul document : `/collections` seul ne rend que le premier niveau, et
+  // un instantané qui omet la hiérarchie en silence est exactement ce que ce
+  // lot corrige. Chaque collection porte son `parent`, l'arbre se reconstruit.
+  const collections = [...(await deps.lecture.collections()), ...(await deps.lecture.collectionsEnfants())];
   const surlignages = await tousLesSurlignages(deps.lecture);
   const utilisateur = await deps.lecture.user();
   return [

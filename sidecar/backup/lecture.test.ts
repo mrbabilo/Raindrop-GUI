@@ -100,6 +100,17 @@ describe("lecture", () => {
     expect(rangs).toEqual(["fond"]);
   });
 
+  // §5.1 : « l'arborescence complète » coûte DEUX requêtes. `/collections` ne
+  // rend que les racines — l'endpoint des imbriquées est distinct.
+  it("collectionsEnfants() interroge /collections/childrens et passe par la file au rang fond", async () => {
+    api = await startFauxApi(items(0));
+    const { lecture, rangs } = lectureAvecSpyFile(api);
+    const c = await lecture.collectionsEnfants();
+    expect(c).toEqual([{ _id: 2, title: "A/enfant", parent: { $id: 1 } }]);
+    expect(api.appels).toEqual(["/rest/v1/collections/childrens"]);
+    expect(rangs).toEqual(["fond"]);
+  });
+
   it("highlights() rend {count, items} et passe par la file au rang fond", async () => {
     api = await startFauxApi(items(0));
     const { lecture, rangs } = lectureAvecSpyFile(api);
