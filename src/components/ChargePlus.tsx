@@ -16,7 +16,20 @@ export function ChargePlus({ q }: { q: { hasNextPage?: boolean; isFetchingNextPa
       ref={(el) => {
         ioRef.current?.disconnect();
         if (!el) return;
-        const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && q.fetchNextPage()));
+        // `!q.isFetchingNextPage` : SANS cette garde, la sentinelle redemande
+        // la même page à chaque rendu. Mesuré dans la fenêtre Tauri —
+        // CINQ requêtes pour `page=1` sur un seul défilement. L'observeur est
+        // recréé à chaque rendu (voir ci-dessus), or `fetchNextPage` en
+        // provoque un : il se réarme aussitôt sur une sentinelle TOUJOURS
+        // dans le champ, et rappelle.
+        //
+        // Ce n'est pas qu'un gaspillage. La file du sidecar est SÉQUENTIELLE
+        // et espacée de 550 ms : ces requêtes redondantes prennent la place
+        // des autres, et le reste de l'écran attend derrière — une fiche qui
+        // reste en « Chargement… » pendant que la liste se rattrape.
+        const io = new IntersectionObserver((es) =>
+          es.forEach((e) => e.isIntersecting && !q.isFetchingNextPage && q.fetchNextPage()),
+        );
         io.observe(el);
         ioRef.current = io;
       }}

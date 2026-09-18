@@ -279,6 +279,44 @@ describe("DetailPane", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  // Le défaut rencontré en usage : une fiche qui reste en chargement — ou qui
+  // échoue — laissait l'utilisateur ENFERMÉ, le bouton de fermeture ne vivant
+  // que dans le rendu principal. Toute branche doit offrir une sortie.
+  it("une fiche qui ne charge pas offre quand même sa sortie", async () => {
+    // Une requête qui ne retombe jamais : exactement l'état décrit.
+    getApi.mockImplementation((path: string) =>
+      path.startsWith("/api/raindrops/") ? new Promise(() => undefined) : Promise.resolve({ items: [] }),
+    );
+    const onFermer = vi.fn();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AppStateProvider>
+          <Preselect id={1000} />
+          <DetailPane onFermer={onFermer} />
+        </AppStateProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("Chargement…")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Fermer le détail" }));
+    expect(onFermer).toHaveBeenCalled();
+  });
+
+  it("une fiche en ERREUR offre aussi sa sortie", async () => {
+    getApi.mockImplementation((path: string) =>
+      path.startsWith("/api/raindrops/") ? Promise.reject(new Error("http 502")) : Promise.resolve({ items: [] }),
+    );
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <AppStateProvider>
+          <Preselect id={1000} />
+          <DetailPane onFermer={vi.fn()} />
+        </AppStateProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText(/http 502/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fermer le détail" })).toBeInTheDocument();
+  });
+
   // Trois états, jamais confondus (spec sélection §4.1) : archivé EN LOCAL,
   // copiable mais pas encore archivé, ou rien.
   it("dit « Archivé » pour un signet de l'inventaire", async () => {

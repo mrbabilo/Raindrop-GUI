@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
@@ -83,12 +83,25 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
     return () => window.removeEventListener("keydown", surTouche);
   }, [onFermer, editing]);
 
-  if (selectedRaindropId == null)
-    return <aside className={coque + " text-app-muted"}>{t("detail.guest")}</aside>;
+  /** La coque du volet — et sa SORTIE. Le bouton de fermeture ne vivait que
+   *  dans le rendu principal : une fiche qui restait en chargement, ou qui
+   *  échouait, laissait l'utilisateur enfermé dans un panneau sans issue.
+   *  Toute branche passe désormais par ici. */
+  const enveloppe = (contenu: ReactNode) => (
+    <aside className={coque + " text-app-muted"}>
+      {onFermer && (
+        <button type="button" className="btn btn-icone mb-2 ml-auto block" aria-label={t("detail.fermer")} onClick={onFermer}>
+          <Icone nom="croix" />
+        </button>
+      )}
+      {contenu}
+    </aside>
+  );
+
+  if (selectedRaindropId == null) return enveloppe(t("detail.guest"));
   const r = detail.data;
-  if (detail.isError)
-    return <aside className={coque + " text-app-muted"}>{t("state.error", { message: detail.error.message })}</aside>;
-  if (!r) return <aside className={coque + " text-app-muted"}>{t("state.loading")}</aside>;
+  if (detail.isError) return enveloppe(t("state.error", { message: detail.error.message }));
+  if (!r) return enveloppe(t("state.loading"));
 
   const setChamp = (key: ChampEdition, value: string) => setDraft((d) => ({ ...d, [key]: value }));
   // Enregistrer ne PATCH que ce qui a changé, et ne referme l'édition qu'en

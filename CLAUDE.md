@@ -349,6 +349,29 @@ couverture, c'est une intention.
   `gh release upload --clobber`, **et le dire dans les notes** — remplacer des
   binaires en silence laisse une copie défectueuse circuler sous le même nom.
 
+- **La sentinelle du défilement infini se réarme à chaque rendu.** Son
+  observeur est recréé par le callback ref à chaque rendu — or
+  `fetchNextPage()` en provoque un, et la sentinelle est TOUJOURS dans le
+  champ : sans garde sur `isFetchingNextPage`, elle rappelle aussitôt.
+  **Mesuré dans la fenêtre Tauri : cinq requêtes pour la même page sur un
+  seul défilement.** Ce n'est pas qu'un gaspillage — la file du sidecar est
+  séquentielle et espacée de 550 ms, donc ces doublons prennent la place des
+  autres appels : une fiche reste en « Chargement… » pendant que la liste se
+  rattrape.
+- **`navigator.onLine` vaut `true` sous `tauri://localhost`** (mesuré le
+  2026-09-19 par une sonde dans la vraie fenêtre). L'hypothèse séduisante —
+  react-query met en pause ses requêtes quand il se croit hors ligne, ce qui
+  produirait exactement un « pending » éternel — est donc FAUSSE ici. Le
+  `networkMode: "always"` posé sur le QueryClient reste juste par principe
+  (notre API est locale, `navigator.onLine` parle d'Internet), mais il ne
+  corrige pas ce défaut-là : ne pas l'invoquer comme cause.
+- **Pour reproduire la VRAIE origine `tauri://localhost`** : retirer `devUrl`
+  ET `beforeDevCommand` du conf, puis `npx tauri dev --no-dev-server`. Sans
+  console accessible, instrumenter `dist/index.html` d'une sonde qui `fetch`
+  un petit serveur local — c'est le seul canal pour lire ce que voit le
+  webview. L'amorçage prend 9 à 16 s en build debug : une sonde posée à 6 s
+  ne trouve pas encore `<main>`.
+
 ### La règle sortie de ce lot, sur les bascules
 
 > **Pour un contrôle qui bascule, l'aller ne prouve rien sans le retour.**

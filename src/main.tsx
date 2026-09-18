@@ -13,7 +13,32 @@ import "./styles.css";
 // pas retentées à l'aveugle. staleTime 30 s : pas de refetch au simple
 // remontage d'un composant.
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: false, staleTime: 30_000 } },
+  defaultOptions: {
+    queries: {
+      retry: false,
+      staleTime: 30_000,
+      // `networkMode: "always"` — et ce n'est pas un contournement.
+      //
+      // Par défaut (« online »), react-query MET EN PAUSE toute requête quand
+      // `onlineManager` se croit hors ligne : la requête reste `pending`
+      // indéfiniment, sans partir et SANS ÉCHOUER. Rien ne s'affiche, rien ne
+      // s'explique — un « Chargement… » éternel et un défilement infini qui
+      // n'appelle plus rien.
+      //
+      // Or `onlineManager` se règle sur `navigator.onLine`, qui parle de
+      // l'accès à INTERNET. Notre API, elle, est LOCALE : le sidecar écoute
+      // sur 127.0.0.1, et sa joignabilité n'a rien à voir avec la connexion
+      // de la machine. Sous le schéma `tauri://localhost`, WebKit rend
+      // volontiers `navigator.onLine` faux — l'application se retrouvait
+      // alors gelée face à un serveur parfaitement vivant.
+      //
+      // L'état réseau qui compte pour nous est déjà mesuré ailleurs, et
+      // mieux : `useHealth` interroge le sidecar, et la bannière hors-ligne
+      // dit ce qu'il en est.
+      networkMode: "always",
+    },
+    mutations: { networkMode: "always" },
+  },
 });
 
 function Racine({ amorce }: { amorce: Amorce }) {
