@@ -279,12 +279,19 @@ couverture, c'est une intention.
   précédent interrompu (`bundle_dmg.sh` → « failed to run »). Le `.app`, lui,
   est déjà produit : ce n'est pas une régression du code. `hdiutil info`,
   puis `hdiutil detach /Volumes/dmg.XXXXXX -force`, et relancer.
-- **Quatre tests sont SENSIBLES À LA CHARGE**, pas instables :
-  `linkchecker.test.ts` (« 200 → ok », « 301 → redirect ») et
-  `lifecycle.test.ts` (« redémarre après un crash », « restart() répare »).
-  Ils échouent quand `npm test` tourne **en même temps** qu'un `cargo test` —
-  la suite passe de 20 s à 191 s et les délais de 15-20 s expirent. Seule,
-  elle rend 663/0. **Ne pas lancer les deux suites concurremment.**
+- **Des tests SENSIBLES À LA CHARGE, pas instables — et ce n'est pas un jeu
+  fixe.** Première occurrence : `linkchecker.test.ts` (« 200 → ok », « 301 →
+  redirect ») et `lifecycle.test.ts` (« redémarre après un crash »,
+  « restart() répare »), pendant qu'un `cargo test` tournait — la suite passe
+  de 20 s à 191 s et les délais de 15-20 s expirent. Deuxième occurrence,
+  **deux tests tout autres** (`CleanupDashboard`, `CollectionView`), cette
+  fois sous un **scan antivirus à 51 % de CPU** (`com.avira.scanser`, plus
+  CleanMyMac) : le montage d'environnement passe de 25 s à 614 s. Conclusion :
+  **n'importe quel test à délai** tombe quand la machine sature. Avant de
+  soupçonner le code, regarder `ps aux | sort -k3 -rn | head`. Seule et au
+  calme, la suite rend 674/0. Ne pas lancer `npm test` et `cargo test`
+  concurremment, et **ne pas contourner la garde** avec `--skip-tests` pour
+  publier : le script annonce lui-même « ce build n'est pas livrable ».
 - **`/user` ne porte AUCUN compte de signets** (vérifié en réel le
   2026-09-18 : ni `bookmarks_count` ni équivalent dans la réponse). Le
   `?? 0` qui tenait cette place fabriquait un zéro **silencieux**, affiché
@@ -300,6 +307,57 @@ couverture, c'est une intention.
   rendait fausse pour toute autre, et pour celle-là dès qu'elle change de
   taille. Ce qui nous appartient — 50 items par page, file à 550 ms — est une
   constante ; le reste se CALCULE sur `bookmarksCount` (`coutBalayage`).
+
+## Traps interface — lot 2026-09-18 (soir)
+
+- **Un en-tête pleine largeur ne se place PAS dans la grille.** L'en-tête de
+  l'app était la cellule ligne 1 / colonne 1 — donc de la largeur de la barre
+  latérale. Replier cette colonne à 0 repliait l'en-tête avec elle : le bouton
+  de repli disparaissait (plus aucun moyen de rouvrir) et les icônes de
+  réglages et de thème se déplaçaient. Ce qui appartient à l'APPLICATION vit
+  **hors** de la grille ; la cellule laissée vacante devient un `<div>` vide,
+  pour que `TopBar` reste en colonne 2.
+- **Un panneau replié se DÉMONTE, il ne se réduit pas à zéro.** Une colonne de
+  0 px laisse son contenu atteignable au clavier : des arrêts de tabulation
+  dans un panneau qu'on ne voit pas. `{repliee ? <div aria-hidden /> : <Sidebar />}`.
+- **`FantomeDrag` ne pose `user-select: none` qu'une fois le fantôme APPARU**,
+  donc après le seuil de 5 px : les cinq premiers pixels d'un glissement
+  démarraient une sélection de texte, ce qui faisait échouer le geste — y
+  compris le déplacement d'une sélection multiple, qui fonctionnait pourtant.
+  La ligne porte `select-none` ; le texte se copie depuis le détail.
+- **Une route absente du mock ne ressemble pas à un mock absent.** `App.test`
+  ne servait pas `/api/raindrops/:id` : `DetailPane` recevait la réponse de
+  *health*, jetait sur `r.highlights.length`, et l'arbre se démontait — le
+  panneau manquant passait pour un défaut du composant. J'ai perdu plusieurs
+  essais à corriger du code sain. **Sonder avant de corriger.**
+- **Un test de composant doit poser les MÊMES providers que `main.tsx`**
+  (`AppStateProvider` ET `DragProvider`). Sans le premier, `useAppState` rend
+  le contexte par défaut, dont `selectRaindrop` est un **no-op** : le clic ne
+  fait rien, et le test accuse le composant.
+- **Accord en nombre : la règle est FRANÇAISE.** `t()` choisit entre deux
+  formes séparées par `|` sur la variable `n` — **le singulier vaut pour 0
+  comme pour 1**, le pluriel à partir de 2. Sans ce mécanisme on écrivait
+  « 1 instantanés conservés ». Une chaîne à deux comptes variables ne
+  s'accorde pas ainsi : elle passe `n` pour celui qui porte l'accord et garde
+  la forme `(s)` pour l'autre. Aucune valeur ne doit porter plus d'un `|` —
+  un test du dictionnaire le refuse.
+- **`scripts/release.py` ne sait PAS faire de pre-release** : il lit la version
+  de `tauri.conf.json` (`0.1.0`), poserait donc le tag **`v0.1.0`**, appelle
+  `gh release create` **sans `--prerelease`**, et son prompt est interactif
+  (inutilisable depuis un agent). Les trois `v0.1.0-pre.N` ont été faites à la
+  main. Republier : `git tag -f`, `git push -f origin <tag>`,
+  `gh release upload --clobber`, **et le dire dans les notes** — remplacer des
+  binaires en silence laisse une copie défectueuse circuler sous le même nom.
+
+### La règle sortie de ce lot, sur les bascules
+
+> **Pour un contrôle qui bascule, l'aller ne prouve rien sans le retour.**
+
+Mon test du repli de la barre latérale vérifiait que le bouton basculait son
+`aria-pressed`. Il passait au vert sur un panneau **qu'on ne pouvait plus
+rouvrir**. Tester l'état, c'est tester la moitié du contrat ; un interrupteur
+se teste dans les deux sens, et l'on vérifie que la chose commandée a
+réellement disparu — pas seulement que le bouton a changé d'avis.
 
 ## Git
 
