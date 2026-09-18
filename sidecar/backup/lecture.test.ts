@@ -106,7 +106,10 @@ describe("lecture", () => {
     api = await startFauxApi(items(0));
     const { lecture, rangs } = lectureAvecSpyFile(api);
     const c = await lecture.collectionsEnfants();
-    expect(c).toEqual([{ _id: 2, title: "A/enfant", parent: { $id: 1 } }]);
+    expect(c).toEqual([
+      { _id: 1, title: "A" },
+      { _id: 2, title: "A/enfant", parent: { $id: 1 } },
+    ]);
     expect(api.appels).toEqual(["/rest/v1/collections/childrens"]);
     expect(rangs).toEqual(["fond"]);
   });

@@ -21,6 +21,10 @@ export function sauvegardeRoutes(deps: SidecarDeps): Hono {
     if (!body.success) return apiError(c, "INVALID_INPUT", "mode ∈ {complet, incremental}");
     const sauvegarde = deps.sauvegarde;
     if (!sauvegarde) return apiError(c, "INVALID_INPUT", INACTIVE);
+    // Comme `/api/analysis/scan` refuse un second scan concurrent : deux
+    // balayages en vol se marcheraient dessus (même horodatage, même fichier)
+    // et doubleraient la charge contre le plafond de 120 requêtes/min.
+    if (sauvegarde.enCours()) return apiError(c, "INVALID_INPUT", "une sauvegarde est déjà en cours");
     // Même infrastructure que les scans (`sidecar/jobs/`) : progression et
     // annulation par SSE sur /api/jobs/:id/events.
     const job = runJob(deps.jobs, "backup", 0, (j) => sauvegarde.executer(body.data.mode, j));

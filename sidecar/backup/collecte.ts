@@ -99,7 +99,19 @@ export async function collecterAuxiliaires(deps: { lecture: Lecture; dossier: st
   // un seul document : `/collections` seul ne rend que le premier niveau, et
   // un instantané qui omet la hiérarchie en silence est exactement ce que ce
   // lot corrige. Chaque collection porte son `parent`, l'arbre se reconstruit.
-  const collections = [...(await deps.lecture.collections()), ...(await deps.lecture.collectionsEnfants())];
+  const toutes = [...(await deps.lecture.collections()), ...(await deps.lecture.collectionsEnfants())];
+  // Dédoublonné par `_id` : rien ne garantit que les deux endpoints rendent
+  // des jeux disjoints, et un doublon ferait apparaître deux fois la même
+  // collection dans l'arbre reconstruit. Une collection sans identifiant
+  // numérique est gardée telle quelle — on ne jette jamais une donnée brute.
+  const vues = new Set<number>();
+  const collections = toutes.filter((c) => {
+    const id = (c as { _id?: number })._id;
+    if (typeof id !== "number") return true;
+    if (vues.has(id)) return false;
+    vues.add(id);
+    return true;
+  });
   const surlignages = await tousLesSurlignages(deps.lecture);
   const utilisateur = await deps.lecture.user();
   return [

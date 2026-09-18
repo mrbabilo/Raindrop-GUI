@@ -40,7 +40,15 @@ export function makeEnregistreur(deps: {
 
   /** Archives purgées, manifeste écrit, dossiers évincés — dans cet ordre. */
   const enregistrer = async (m: Manifeste, entree: EntreeInstantane, ids?: Set<number>) => {
-    if (ids) {
+    // `entree.complet` est la PRÉCONDITION de la purge, pas un détail : sur un
+    // balayage annulé, `balayerComplet` rend le `Set` de ce qu'il a vu JUSQUE-LÀ
+    // (page 40 sur 245 → ~2 000 identifiants sur 12 210). Purger là-dessus
+    // effacerait les archives de 10 000 signets bien vivants — et une archive
+    // est précisément ce qu'on ne peut plus recréer quand la page est morte,
+    // c'est-à-dire la raison même de l'archivage. `archives.ts` pose la
+    // précondition en toutes lettres : « l'ensemble des identifiants est
+    // justement connu ». Elle ne tient que si le balayage est allé au bout.
+    if (ids && entree.complet) {
       await purgerOrphelins(archives, ids);
       await appliquerBudget(archives, ARCHIVES_MAX_GO * 2 ** 30);
     }

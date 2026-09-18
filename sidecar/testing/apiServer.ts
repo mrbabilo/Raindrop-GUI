@@ -66,9 +66,17 @@ export async function startFauxApi(items: FauxApi["items"] = []): Promise<FauxAp
       });
     }
     if (url.pathname === "/rest/v1/collections") return json(200, { items: [{ _id: 1, title: "A" }] });
-    // Les collections IMBRIQUÉES, endpoint distinct (§5.1, 2 requêtes).
+    // Les collections IMBRIQUÉES, endpoint distinct (§5.1, 2 requêtes). La
+    // racine `_id: 1` est rendue ICI AUSSI, à dessein : rien ne garantit que
+    // les deux endpoints soient disjoints, et un faux serveur qui les sépare
+    // proprement rendrait indétectable un doublon dans l'arbre sauvegardé.
     if (url.pathname === "/rest/v1/collections/childrens") {
-      return json(200, { items: [{ _id: 2, title: "A/enfant", parent: { $id: 1 } }] });
+      return json(200, {
+        items: [
+          { _id: 1, title: "A" },
+          { _id: 2, title: "A/enfant", parent: { $id: 1 } },
+        ],
+      });
     }
     if (url.pathname === "/rest/v1/highlights") {
       return json(200, {

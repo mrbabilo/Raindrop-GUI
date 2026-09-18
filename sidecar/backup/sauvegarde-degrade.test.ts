@@ -6,6 +6,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { JobHandle } from "../jobs/store.js";
 import { startFauxApi, type FauxApi } from "../testing/apiServer.js";
 import { repertoireTemporaire } from "../testing/tmp.js";
 import { makeLecture } from "./lecture.js";
@@ -147,6 +148,86 @@ describe("états dégradés", () => {
     expect(existsSync(join(dossier, r.horodatage, "raindrops.jsonl"))).toBe(true);
     const m = JSON.parse(readFileSync(join(dossier, "manifest.json"), "utf8")) as Manifeste;
     expect(m.instantanes.map((i) => i.horodatage)).toContain(r.horodatage);
+  });
+
+  // Le balayage annulé rend le `Set` de ce qu'il a vu JUSQUE-LÀ. Purger les
+  // archives là-dessus effacerait celles de tous les signets pas encore lus —
+  // 10 000 sur 12 210 si l'on annule à la page 40 sur 245 — et une archive est
+  // ce qu'on ne peut PLUS recréer quand la page est morte. C'est l'absence de
+  // suppression qui porte le contrat.
+  it("un balayage annulé ne purge AUCUNE archive", async () => {
+    // `created` STRICTEMENT croissant avec l'identifiant : le tri ascendant du
+    // balayage rend donc les pages dans l'ordre des identifiants, et l'on sait
+    // lesquels la page 1 n'aura jamais vus. (Le jeu d'items partagé colle
+    // plusieurs items sur la même date — l'ordre y est stable mais pas celui
+    // des identifiants, et le test ne prouvait alors rien.)
+    api = await startFauxApi(
+      Array.from({ length: 60 }, (_, i) => ({
+        _id: 1000 + i,
+        created: new Date(Date.UTC(2020, 0, 1, 0, 0, i)).toISOString(),
+        lastUpdate: "2026-01-01T00:00:00.000Z",
+        title: `t${i}`,
+      })),
+    );
+    const dossier = repertoireTemporaire("degrade-purge-");
+    const archives = join(dossier, "archives");
+    mkdirSync(archives, { recursive: true });
+    // 1000 est dans la première page, 1059 dans la seconde — celle qui
+    // n'arrivera jamais. C'est lui la victime d'une purge prématurée.
+    for (const id of [1000, 1059]) writeFileSync(join(archives, `${id}.html.gz`), "x", "utf8");
+
+    let vues = 0;
+    const job = {
+      progress: () => {
+        vues++;
+      },
+      isCancelled: () => vues >= 1, // annulé dès la première page lue
+    } as unknown as JobHandle;
+    const r = await sauv(api, dossier, { maintenant: heure("10") }).executer("complet", job);
+
+    expect(r.complet).toBe(false); // un balayage annulé ne ment pas
+    // 1059 n'a bel et bien PAS été vu — sans quoi le test ne prouverait rien.
+    const vus = readFileSync(join(dossier, r.horodatage, "raindrops.jsonl"), "utf8");
+    expect(vus).not.toContain('"_id":1059');
+    // Et pourtant son archive est intacte : c'est l'ABSENCE de suppression qui
+    // porte le contrat.
+    expect(existsSync(join(archives, "1059.html.gz"))).toBe(true);
+    expect(existsSync(join(archives, "1000.html.gz"))).toBe(true);
+  });
+
+  // Une seule sauvegarde en vol : deux balayages concurrents partageraient
+  // l'horodatage (leurs deux `access()` rendent ENOENT) et entrelaceraient
+  // deux flux sur le même `raindrops.jsonl`.
+  it("une sauvegarde est déjà en cours : la seconde est refusée, pas entrelacée", async () => {
+    api = await startFauxApi(items(60));
+    const dossier = repertoireTemporaire("degrade-concurrence-");
+    const s = sauv(api, dossier, { maintenant: heure("10") });
+
+    const premiere = s.executer("complet");
+    expect(s.enCours()).toBe(true);
+    await expect(s.executer("complet")).rejects.toThrow(/déjà en cours/);
+
+    const r = await premiere;
+    expect(r.complet).toBe(true); // la première n'a pas été perturbée
+    expect(s.enCours()).toBe(false); // et le drapeau retombe
+    const m = JSON.parse(readFileSync(join(dossier, "manifest.json"), "utf8")) as Manifeste;
+    expect(m.instantanes).toHaveLength(1);
+  });
+
+  // L'annulation était honorée dans le mode complet et ignorée dans
+  // l'incrémental : l'interface disait « annulé » pendant qu'un instantané
+  // parfaitement valide apparaissait au manifeste.
+  it("un incrémental annulé ne se déclare pas complet", async () => {
+    api = await startFauxApi(items(3));
+    const dossier = repertoireTemporaire("degrade-annul-incr-");
+    await sauv(api, dossier, { maintenant: heure("10") }).executer("complet");
+    const job = { progress: () => {}, isCancelled: () => true } as unknown as JobHandle;
+
+    const s2 = await sauv(api, dossier, { maintenant: heure("11") }).executer("incremental", job);
+
+    expect(s2.complet).toBe(false);
+    expect(s2.raison).toMatch(/annul/i);
+    expect(s2.bascule).toBeUndefined(); // l'annulation prime sur l'escalade
   });
 
   // Dette de la Task 6 : `lireManifeste(dossier, avertir)` distingue un

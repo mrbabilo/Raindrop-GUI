@@ -44,6 +44,9 @@ export interface StatutSauvegarde {
 
 export interface Sauvegarde {
   executer(mode: "complet" | "incremental", job?: JobHandle): Promise<ResultatSauvegarde>;
+  /** Une sauvegarde est-elle en vol ? La route s'en sert pour refuser la
+   *  seconde, comme `scanner.isRunning` pour les scans. */
+  enCours(): boolean;
   doitBalayerComplet(m: Manifeste, maintenant: Date): boolean;
   doitSauvegarderAuDemarrage(m: Manifeste, maintenant: Date): boolean;
   statut(): Promise<StatutSauvegarde>;
@@ -124,7 +127,11 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
       pieces: [principal, corbeille, ...aux],
       count: principal.count,
       watermark,
-      ...(principal.ids ? { ids: principal.ids } : {}),
+      // L'UNION des deux jeux : un signet mis à la corbeille est restaurable,
+      // et ne garder que les identifiants de la collection 0 ferait purger son
+      // archive — alors que la corbeille est justement ce que ce lot tient à
+      // sauvegarder.
+      ids: new Set([...(principal.ids ?? []), ...(corbeille.ids ?? [])]),
       ...(bascule === undefined ? {} : { bascule }),
     });
   };
@@ -147,6 +154,7 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
 
   const rafraichir = async (m: Manifeste, job?: JobHandle): Promise<ResultatSauvegarde> => {
     const base = dernierValide(m)!;
+    const annule = () => job?.isCancelled() ?? false;
     const { modifies, nouveauWatermark } = await lireModifies({
       lecture: deps.lecture,
       collectionId: 0,
@@ -166,8 +174,19 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
       dossier: cible,
       nom: NOMS.corbeille,
       collectionId: -99,
+      annule,
     });
     const aux = await collecterAuxiliaires({ lecture: deps.lecture, dossier: cible });
+    const pieces = [principal, corbeille, ...aux];
+    if (annule()) {
+      // L'annulation prime sur l'escalade : relancer 245 requêtes après un
+      // « annuler » serait le contraire de ce qui vient d'être demandé. La
+      // corbeille, balayée sous la même annulation, a déjà rendu l'instantané
+      // incomplet — il ne sera jamais présenté comme valide (§6), et
+      // l'interface ne dira plus « annulé » au-dessus d'un instantané qui se
+      // prétend bon.
+      return finir({ m, horodatage: h, cible, pieces, count: principal.count, watermark: nouveauWatermark });
+    }
     // §5.3 — l'angle mort du tri par modification : un élément supprimé
     // ailleurs ne change aucune date, il ne remonterait JAMAIS. Le compte
     // distant le trahit pour UNE requête. Comparé ici, après la fusion, et non
@@ -188,19 +207,34 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
       avertir("sauvegarde : bascule en balayage complet", { cause: ecart });
       return balayerTout(m, job, ecart);
     }
-    return finir({
-      m,
-      horodatage: h,
-      cible,
-      pieces: [principal, corbeille, ...aux],
-      count: principal.count,
-      watermark: nouveauWatermark,
-    });
+    return finir({ m, horodatage: h, cible, pieces, count: principal.count, watermark: nouveauWatermark });
+  };
+
+  // Une seule sauvegarde en vol à la fois. Deux `executer("complet")`
+  // concurrents partageraient le même horodatage (leurs deux `access()`
+  // rendent ENOENT), entrelaceraient deux flux sur le MÊME `raindrops.jsonl`,
+  // puis écriraient chacun un manifeste depuis un `m` périmé — la seconde
+  // écriture perdant l'entrée de la première, dont le dossier resterait
+  // orphelin. Et 2 × 245 requêtes contre un plafond de 120/min. La garde vaut
+  // pour CETTE instance ; en production il n'y en a qu'une, dans `deps`.
+  let enVol: Promise<ResultatSauvegarde> | undefined;
+
+  const executerSeul = async (
+    mode: "complet" | "incremental",
+    job?: JobHandle,
+  ): Promise<ResultatSauvegarde> => {
+    const m = await lireManifeste(deps.dossier, avertir);
+    if (mode === "complet") return balayerTout(m, job);
+    const bascule = await raisonDeBasculer(m);
+    if (bascule === undefined) return rafraichir(m, job);
+    avertir("sauvegarde : bascule en balayage complet", { cause: bascule });
+    return balayerTout(m, job, bascule);
   };
 
   return {
     doitBalayerComplet,
     doitSauvegarderAuDemarrage,
+    enCours: () => enVol !== undefined,
     statut: async () => {
       const m = await lireManifeste(deps.dossier, avertir);
       return {
@@ -210,13 +244,16 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
         instantanes: m.instantanes.length,
       };
     },
-    executer: async (mode, job) => {
-      const m = await lireManifeste(deps.dossier, avertir);
-      if (mode === "complet") return balayerTout(m, job);
-      const bascule = await raisonDeBasculer(m);
-      if (bascule === undefined) return rafraichir(m, job);
-      avertir("sauvegarde : bascule en balayage complet", { cause: bascule });
-      return balayerTout(m, job, bascule);
+    executer: (mode, job) => {
+      if (enVol) return Promise.reject(new Error("une sauvegarde est déjà en cours"));
+      // `executerSeul` court jusqu'à son premier `await` AVANT que la ligne
+      // suivante ne s'exécute : rien ne peut s'intercaler entre le test et la
+      // pose du drapeau.
+      const p = executerSeul(mode, job);
+      enVol = p;
+      return p.finally(() => {
+        if (enVol === p) enVol = undefined;
+      });
     },
   };
 }

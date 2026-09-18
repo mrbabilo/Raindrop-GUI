@@ -61,6 +61,7 @@ describe("routes sauvegarde", () => {
     const jobs = new JobStore();
     const modes: string[] = [];
     const sauvegarde = {
+      enCours: () => false,
       executer: async (mode: string) => {
         modes.push(mode);
         return { horodatage: "h", complet: true, count: 1, watermark: "w", empreintes: {} };
@@ -76,8 +77,27 @@ describe("routes sauvegarde", () => {
     expect(jobs.get(jobId)?.status).toBe("done");
   });
 
+  // La route sœur des scans (`/api/analysis/scan`) refuse déjà un second scan
+  // concurrent. Deux balayages en vol partageraient horodatage et fichier, et
+  // doubleraient la charge contre le plafond de 120 requêtes/min.
+  it("une sauvegarde déjà en cours : POST /run refuse (400) sans en lancer une seconde", async () => {
+    let lancements = 0;
+    const sauvegarde = {
+      enCours: () => true,
+      executer: async () => {
+        lancements++;
+        return { horodatage: "h", complet: true, count: 1, watermark: "w", empreintes: {} };
+      },
+    } as unknown as Sauvegarde;
+    const app = createApp(deps(new JobStore(), sauvegarde), { localToken: TOKEN });
+    const res = await req(app, "/api/backup/run", { method: "POST", body: JSON.stringify({ mode: "complet" }) });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: { message: string } }).error.message).toMatch(/déjà en cours/);
+    expect(lancements).toBe(0); // rien n'a été lancé : l'assertion qui porte
+  });
+
   it("POST /api/backup/run refuse un mode inconnu", async () => {
-    const app = createApp(deps(new JobStore(), {} as Sauvegarde), { localToken: TOKEN });
+    const app = createApp(deps(new JobStore(), { enCours: () => false } as Sauvegarde), { localToken: TOKEN });
     const res = await req(app, "/api/backup/run", { method: "POST", body: JSON.stringify({ mode: "partiel" }) });
     expect(res.status).toBe(400);
   });
