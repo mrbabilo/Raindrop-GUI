@@ -24,7 +24,7 @@ export interface RawRaindrop {
   // mais traitée en défensif comme les autres champs optionnels du DTO.
   cover?: string;
   collection?: { $id: number };
-  cache?: { status: string } | null; // gratuit dans la réponse de liste (vérifié 2026-09-16)
+  cache?: { status: string; size?: number } | null; // gratuit dans la réponse de liste (vérifié 2026-09-16) ; `size` transitait déjà (MCP verbatim, C3)
   broken?: boolean; // idem
   // Gratuit dans l'item complet (GET /raindrop/{id}, sonde 1265539367,
   // R8cP-1) ; ABSENT des items de liste → [] (voir RawHighlight : _id est un

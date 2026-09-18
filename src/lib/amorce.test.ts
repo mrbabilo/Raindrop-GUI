@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { appliquer, amorcer, relancer, installerRuntime, progressionInstallation, remplacerJeton, deconnecter } from "./amorce";
+import {
+  appliquer,
+  amorcer,
+  relancer,
+  installerRuntime,
+  progressionInstallation,
+  remplacerJeton,
+  deconnecter,
+  etatSauvegarde,
+  choisirDossierSauvegarde,
+  retirerDossierSauvegarde,
+} from "./amorce";
 
 const { invokeMock, isTauriMock } = vi.hoisted(() => ({
   invokeMock: vi.fn(),
@@ -152,5 +163,50 @@ describe("progressionInstallation", () => {
   it("rend null quand rien n'est en cours", async () => {
     invokeMock.mockResolvedValue(null);
     expect(await progressionInstallation()).toBeNull();
+  });
+});
+
+describe("dossier de sauvegarde (spec sélection §2)", () => {
+  it("etat_sauvegarde rend le chemin et l'état « introuvable »", async () => {
+    invokeMock.mockResolvedValue({ dossier: "/Volumes/USB/Sauv", introuvable: true });
+    expect(await etatSauvegarde()).toEqual({ dossier: "/Volumes/USB/Sauv", introuvable: true });
+    expect(invokeMock).toHaveBeenCalledWith("etat_sauvegarde");
+  });
+
+  // Ni panne ni page blanche : le sélecteur relève du shell, et son absence
+  // est l'état normal du développement au navigateur.
+  it("hors Tauri, aucun dossier et aucune commande", async () => {
+    isTauriMock.mockReturnValue(false);
+    expect(await etatSauvegarde()).toEqual({ dossier: null, introuvable: false });
+    expect(invokeMock).not.toHaveBeenCalled();
+  });
+
+  it("une commande qui rejette vaut « aucun dossier », pas une panne", async () => {
+    invokeMock.mockRejectedValue(new Error("pont IPC coupé"));
+    expect(await etatSauvegarde()).toEqual({ dossier: null, introuvable: false });
+  });
+
+  // C1 : la relance NE régénère PAS le jeton local (il n'est engendré qu'au
+  // lancement de l'app) — c'est le PORT que le nouveau global re-câble.
+  it("choisir le dossier applique l'état rendu et re-câble le port", async () => {
+    window.RAINDROP_GUI = { port: 1111, token: "jeton-de-session" };
+    invokeMock.mockResolvedValue({ kind: "pret", port: 4321, token: "jeton-de-session" });
+    expect(await choisirDossierSauvegarde()).toEqual({ ecran: "app" });
+    expect(invokeMock).toHaveBeenCalledWith("choisir_dossier_sauvegarde");
+    expect(window.RAINDROP_GUI).toEqual({ port: 4321, token: "jeton-de-session" });
+  });
+
+  it("une relance en panne sort vers l'écran qui porte les issues", async () => {
+    invokeMock.mockResolvedValue({ kind: "panne", detail: "le sidecar n'a pas publié de port" });
+    expect(await choisirDossierSauvegarde()).toEqual({
+      ecran: "panne",
+      detail: "le sidecar n'a pas publié de port",
+    });
+  });
+
+  it("retirer le dossier invoque sa commande et applique l'état rendu", async () => {
+    invokeMock.mockResolvedValue({ kind: "pret", port: 5555, token: "t" });
+    expect(await retirerDossierSauvegarde()).toEqual({ ecran: "app" });
+    expect(invokeMock).toHaveBeenCalledWith("retirer_dossier_sauvegarde");
   });
 });

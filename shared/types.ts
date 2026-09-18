@@ -15,7 +15,11 @@ export interface RaindropItem {
   type: string; // link | article | image | video | document | audio
   cover: string | null;
   collectionId: number;
-  cache: { status: string } | null; // copie permanente Pro — gratuite dans le snapshot (2026-09-16)
+  // Copie permanente Pro — gratuite dans le snapshot (2026-09-16). `size` est
+  // la taille COMPRESSÉE stockée, en octets (spec sauvegarde §5.4) : elle
+  // transitait depuis le début (le MCP réémet ses réponses verbatim,
+  // relecture C3), seule sa déclaration manquait.
+  cache: { status: string; size?: number } | null;
   broken: boolean; // verdict serveur — gratuit dans le snapshot (2026-09-16)
   // Gratuits dans l'item complet (GET /raindrop/{id}) — vide dans les listes.
   // La route dédiée /api/highlights/:id est morte en réel (endpoint fantôme

@@ -45,11 +45,16 @@ export type View =
   // cette forme — l'action porte le sens).
   | {
       kind: "review";
-      items: { id: number; url: string; title: string; collectionId: number }[];
+      // `cache` PRÉSENT quand la vue d'origine le connaît (liste principale),
+      // ABSENT quand elle ne le porte pas (liens morts, qui viennent de
+      // l'analyse) : la Revue distingue « pas de copie » d'« information
+      // inconnue » — spec sélection §4.2.
+      items: { id: number; url: string; title: string; collectionId: number; cache?: { status: string; size?: number } | null }[];
       action:
         | { op: "trash" }
         | { op: "move"; toCollectionId: number }
         | { op: "tag"; tags: string[] }
+        | { op: "archive" } // copies permanentes → POST /api/backup/archive (spec sélection §4.2)
         | { op: "empty-trash" }
         | { op: "delete-empty-collections" };
       sourceLabel: string;

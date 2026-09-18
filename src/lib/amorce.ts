@@ -44,7 +44,9 @@ async function demander(
     | "relancer"
     | "installer_runtime"
     | "enregistrer_jeton"
-    | "deconnecter",
+    | "deconnecter"
+    | "choisir_dossier_sauvegarde"
+    | "retirer_dossier_sauvegarde",
   args?: Record<string, unknown>,
 ): Promise<Amorce> {
   // Hors webview (développement au navigateur), le proxy Vite et
@@ -113,3 +115,34 @@ export async function progressionInstallation(): Promise<string | null> {
     return null;
   }
 }
+
+/** L'état du dossier de sauvegarde CÔTÉ RUST : un chemin de disque, et s'il
+ *  a disparu depuis le dernier lancement — précisément ce que le webview ne
+ *  peut ni lire ni vérifier lui-même. Le MOTEUR, lui, répond par
+ *  /api/backup/status ; le panneau combine les deux (spec sélection §2). */
+export interface EtatSauvegarde {
+  dossier: string | null;
+  introuvable: boolean;
+}
+
+/** Hors webview (développement au navigateur), aucun dossier : le sélecteur
+ *  relève du shell. L'échec de commande vaut le même état — le panneau dira
+ *  « aucun dossier », qui n'est pas une panne. */
+export async function etatSauvegarde(): Promise<EtatSauvegarde> {
+  if (!isTauri()) return { dossier: null, introuvable: false };
+  try {
+    return await invoke<EtatSauvegarde>("etat_sauvegarde");
+  } catch {
+    return { dossier: null, introuvable: false };
+  }
+}
+
+/** Ouvre le dialogue natif (Rust), écrit reglages.json, relance le sidecar.
+ *  L'Amorce rendue re-câble le PORT via `appliquer` — le jeton local, lui,
+ *  ne change pas (relecture C1 : il n'est engendré qu'au lancement de l'app). */
+export const choisirDossierSauvegarde = (): Promise<Amorce> => demander("choisir_dossier_sauvegarde");
+
+/** Retire le réglage et relance : la sauvegarde redevient inactive. RIEN
+ *  n'est touché sur disque — re-choisir le même dossier retrouve instantanés
+ *  et archives tels quels (spec sélection §2). */
+export const retirerDossierSauvegarde = (): Promise<Amorce> => demander("retirer_dossier_sauvegarde");
