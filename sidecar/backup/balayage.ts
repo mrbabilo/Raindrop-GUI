@@ -15,6 +15,15 @@
 //! décalage arrière, donc un saut possible) et l'égalité `lignes ===
 //! ids.size` (aucun doublon lu, donc pas de décalage avant).
 //!
+//! Le décalage AVANT existe aussi, par une voie différente : une restauration
+//! depuis la corbeille réinsère un signet avec son `created` D'ORIGINE (pas
+//! « maintenant »), qui peut le ranger avant le curseur de lecture — le
+//! curseur (par offset, monotone) ne repasse jamais dessus, il reste
+//! définitivement lu, et un élément déjà vu est relu au passage suivant
+//! (`lignes > ids.size`). Le `count`, lui, ne fait QUE croître dans ce cas
+//! (une insertion), la décroissance reste donc silencieuse — c'est la
+//! réconciliation par identifiants/cardinalité qui capte le coup, pas elle.
+//!
 //! LIMITE ADMISE : une suppression ET une création dans le même intervalle
 //! inter-page laissent le count inchangé et `ids.size` inchangé — le saut
 //! reste invisible. Le refermer exigerait de comparer les ensembles

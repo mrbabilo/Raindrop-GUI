@@ -97,6 +97,51 @@ describe("balayage complet", () => {
     expect(r.raison).toMatch(/réconciliation/i);
   });
 
+  // Ronde de correction 1 : le décalage AVANT, pas seulement l'arrière. Une
+  // restauration depuis la corbeille réinsère un signet avec son `created`
+  // D'ORIGINE (pas « maintenant ») : il peut se ranger avant le curseur de
+  // lecture (par offset, monotone — il ne repasse jamais dessus), qui ne le
+  // lira donc jamais, et un élément déjà vu est relu au passage suivant. Le
+  // `count`, lui, ne fait QUE croître (une insertion) : la décroissance reste
+  // silencieuse tout du long — c'est la réconciliation par
+  // identifiants/cardinalité qui capte le coup, pas elle. Preuve que la
+  // décroissance seule NE SUFFIT PAS (complémentaire du test « suppression
+  // passagère », qui prouve l'inverse : la cardinalité seule ne suffit pas).
+  it("une restauration depuis la corbeille pendant le balayage est détectée (décalage avant)", async () => {
+    api = await startFauxApi(items(120));
+    const d = deps(api, "g.jsonl");
+    let pages = 0;
+    const lectureEspionne = {
+      ...d.lecture,
+      page: async (c: number, o: { sort: string; page: number; perpage?: number }) => {
+        const p = await d.lecture.page(c, o);
+        // Après la PREMIÈRE page du PREMIER passage seulement, comme pour la
+        // suppression passagère : la restauration réelle n'a aucune raison de
+        // se reproduire au rejeu.
+        if (pages++ === 0) {
+          api!.items.push({
+            _id: 9999,
+            created: "2019-01-01T00:00:00.000Z", // antérieur à tout : se range en tête, avant le curseur.
+            lastUpdate: "2026-01-01T00:00:00.000Z",
+            title: "restauré",
+          });
+        }
+        return p;
+      },
+    };
+    const r = await balayerComplet({ ...d, lecture: lectureEspionne });
+
+    expect(r.complet).toBe(true);
+    // Le rejeu a EU LIEU : sans lui, le signet restauré resterait absent de
+    // l'instantané sans qu'on le sache.
+    const pagesZero = api.appels.filter((a) => a.includes("sort=created&page=0"));
+    expect(pagesZero).toHaveLength(2);
+    const attendus = api.items.map((i) => i._id).sort((a, b) => a - b);
+    expect([...r.ids].sort((a, b) => a - b)).toEqual(attendus);
+    expect(r.ids.has(9999)).toBe(true);
+    expect(r.lignes).toBe(attendus.length);
+  });
+
   it("un balayage sans incident se déclare complet, et peut l'affirmer", async () => {
     api = await startFauxApi(items(75));
     const r = await balayerComplet(deps(api, "d.jsonl"));
