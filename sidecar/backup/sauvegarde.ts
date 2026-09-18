@@ -116,7 +116,17 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
       collectionId: -99,
       annule: () => job?.isCancelled() ?? false,
     });
+    // Chaque pièce émet une progression FINALE nommée (spec sélection §3) :
+    // un segment sans label ferait geler une barre de progression. Les clés
+    // sont stables — le front les traduit (LABELS_PROGRESSION).
+    job?.progress(corbeille.count, corbeille.count, "corbeille");
     const aux = await collecterAuxiliaires(commun);
+    // Ordre de `collecterAuxiliaires` : collections, surlignages, utilisateur.
+    const clesAux = ["collections", "surlignages", "profil"] as const;
+    for (const [i, cle] of clesAux.entries()) {
+      const piece = aux[i];
+      job?.progress(piece?.count ?? 0, piece?.count ?? 0, cle);
+    }
     return finir({
       m,
       horodatage: h,
@@ -157,7 +167,7 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
       collectionId: 0,
       watermark: base.watermark,
     });
-    job?.progress(modifies.length, modifies.length, "éléments modifiés");
+    job?.progress(modifies.length, modifies.length, "modifies");
     const h = await horodatageLibre(maintenant());
     const cible = join(deps.dossier, h);
     const principal = await fusionner({

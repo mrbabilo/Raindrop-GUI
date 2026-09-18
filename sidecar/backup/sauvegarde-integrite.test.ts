@@ -44,6 +44,26 @@ const sauv = (
   });
 
 const heure = (h: string) => () => new Date(`2026-09-18T${h}:00:00Z`);
+describe("progression nommée (spec sélection §3)", () => {
+  it("chaque pièce de la sauvegarde émet une progression à clé stable", async () => {
+    api = await startFauxApi(items(3));
+    const dossier = repertoireTemporaire("progression-");
+    const labels: (string | undefined)[] = [];
+    const job = {
+      progress: (_f: number, _t: number, label?: string) => {
+        labels.push(label);
+      },
+      isCancelled: () => false,
+    } as unknown as JobHandle;
+    await sauv(api, dossier, { maintenant: heure("10") }).executer("complet", job);
+    // Les clés sont stables, le front les traduit — une clé inconnue
+    // s'afficherait brute, comme un identifiant interne.
+    expect(labels).toEqual(
+      expect.arrayContaining(["bookmarks", "corbeille", "collections", "surlignages", "profil"]),
+    );
+  });
+});
+
 describe("ce qui ne doit jamais être effacé", () => {
   // L'autre moitié de §6 : « chaque cas laisse l'instantané précédent intact,
   // jamais d'écrasement avant écriture réussie ». L'horloge est FIGÉE : deux
