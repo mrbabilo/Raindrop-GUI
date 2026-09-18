@@ -5,7 +5,6 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { CleanupView } from "./CleanupView";
 import { AppStateProvider, useAppState } from "../state/appState";
-import { raindrop, collections } from "../test/fixtures";
 
 // Hooks et api mockés (pattern CleanupDashboard.test.tsx) : les mocks sont
 // hisés (vi.hoisted) et rechargés par test via mockReturnValue — les branches

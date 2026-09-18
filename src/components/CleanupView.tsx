@@ -1,11 +1,10 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useRef } from "react";
 import { t } from "../i18n/fr";
 import { EtatListe } from "./EtatListe";
 import { useRovingFocus } from "../hooks/useRovingFocus";
 import { ChargePlus } from "./ChargePlus";
-import type { View } from "../state/appState";
 import { useAppState } from "../state/appState";
-import { useAnalysisResults, useDuplicateGroups } from "../hooks/useAnalysis";
+import { useDuplicateGroups } from "../hooks/useAnalysis";
 import { useRaindrops } from "../hooks/useRaindrops";
 import { useCollections } from "../hooks/useStaticData";
 import { racine } from "../design/Signaux";
@@ -73,7 +72,6 @@ function Doublons() {
 function NonTaggues() {
   const { selectedRaindropId, selectRaindrop } = useAppState();
   const q = useRaindrops({ collectionId: 0, notag: true });
-  const arbre = useCollections().data ?? [];
   const items = q.data?.pages.flatMap((p) => p.items) ?? [];
   return (
     <>

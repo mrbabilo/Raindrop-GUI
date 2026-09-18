@@ -21,7 +21,16 @@ validée ; cette condition a expiré.
    puis automatique.** Un manifeste vide ne déclenche plus rien au démarrage ;
    l'utilisateur lance la première sauvegarde depuis le panneau. Ensuite le
    §4.4 s'applique normalement. Raison : choisir un dossier ne doit pas partir
-   en 2 min 19 et ~245 requêtes non demandées.
+   en un balayage complet non demandé.
+
+   ⚠️ **Conséquence, voulue mais à connaître** : tant que cette première
+   sauvegarde n'a pas été lancée à la main, **l'automatisme du §4.4 reste
+   dormant** — il se déclenche sur la dernière *tentative*, et rien d'autre
+   n'en produit une. Un utilisateur qui choisit un dossier puis ne rouvre
+   jamais les Réglages n'aura donc **jamais** de sauvegarde, et l'application
+   ne le lui rappelle pas. C'est le prix exact de la décision ci-dessus, pas
+   un défaut ; ajouter une relance (au choix du dossier, ou une invite après
+   N jours sans sauvegarde) serait une décision à prendre séparément.
 3. **Archivage : une seule action, sur la sélection.** Pas de « tout archiver » :
    les points d'entrée sont la vue Liens morts et la sélection de signets du
    `BulkBar`, tous deux bornés par ce que l'utilisateur coche. La borne de 500
