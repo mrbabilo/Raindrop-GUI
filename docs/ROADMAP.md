@@ -111,12 +111,23 @@ au vert sur un comportement que la production n'a jamais eu. Faux serveur rendu
 fidèle, recompression quand la signature manque, test sabordé pour le prouver.
 
 - [ ] **Recalibrer le budget d'archives (§5.4)** — la spec raisonne à
-      « 2,1 Mo pièce » pour 5 Go. Mesuré sur deux copies réelles prises au
-      hasard : **3,0 Mo et 16 Mo** une fois recompressées (24 Mo dépliés pour
-      la seconde). Le budget tient donc bien moins d'archives qu'annoncé, et
-      la règle d'éviction par ancienneté deviendra visible beaucoup plus tôt.
-      À trancher : relever le défaut, ou mesurer la distribution réelle des
-      `cache.size` sur l'instantané (ils y sont déjà, gratuits).
+      « 2,1 Mo pièce » pour 5 Go, et le §1 estimait 18,7 Go pour la
+      bibliothèque entière. **Distribution réelle mesurée le 2026-09-18** sur
+      les 8 875 copies permanentes de l'instantané (les `cache.size` y sont,
+      gratuits) : médiane **1,17 Mo**, moyenne **3,18 Mo**, p90 **7,52 Mo**,
+      p99 **31,46 Mo**, **max 160,67 Mo** — soit **27,6 Go** si tout était
+      archivé, et **~1 600 archives** seulement dans les 5 Go du budget (18 %
+      de la bibliothèque). Trois conséquences, aucune théorique :
+      (1) l'éviction par ancienneté est appelée **depuis le balayage complet**
+      (`enregistrement.ts:53-54`), donc elle se déclenchera **en silence**,
+      pendant une sauvegarde que l'utilisateur n'a pas demandée — la §5.4
+      l'assume (« une archive évincée se recrée à la demande »), mais pas à
+      cette fréquence-là ;
+      (2) `POST /api/backup/archive` accepte **500** identifiants, soit ~1,6 Go
+      en une passe à la moyenne — un tiers du budget d'un seul geste ;
+      (3) `archives.ts` lit le corps par `arrayBuffer()`, donc une copie de
+      160 Mo passe **entière en mémoire**, puis y est recomprimée. Un seuil
+      par fichier, ou une écriture en flux, est à trancher avec le budget.
 
 ### Reste à faire sur le lot sauvegarde
 
