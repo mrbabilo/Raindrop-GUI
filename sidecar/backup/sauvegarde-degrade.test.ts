@@ -4,7 +4,7 @@
 //! complet, LE DIRE, et laisser l'instantané précédent intact.
 
 import { describe, it, expect, afterEach } from "vitest";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { startFauxApi, type FauxApi } from "../testing/apiServer.js";
 import { repertoireTemporaire } from "../testing/tmp.js";
@@ -121,6 +121,32 @@ describe("états dégradés", () => {
     expect(s2.horodatage).not.toBe(s1.horodatage);
     expect(await sha256Fichier(join(dossier, s1.horodatage, "raindrops.jsonl"))).toBe(empreinteAvant);
     expect(readFileSync(join(dossier, s2.horodatage, "raindrops.jsonl"), "utf8")).toContain("neuf");
+  });
+
+  // La rotation (§5.5) garde « les 7 derniers plus le plus ancien de chacune
+  // des 4 semaines précédentes » et efface le reste. Si l'horloge a reculé —
+  // ou si le manifeste porte des entrées PLUS RÉCENTES que l'instantané qu'on
+  // vient d'écrire — celui-ci tombe hors des 7 derniers, et la rotation
+  // effacerait le dossier qu'elle vient de vérifier. L'inverse exact de la
+  // promesse de §6.
+  it("la rotation n'efface jamais l'instantané qu'elle vient d'écrire", async () => {
+    api = await startFauxApi(items(2));
+    const dossier = repertoireTemporaire("degrade-rotation-");
+    mkdirSync(dossier, { recursive: true });
+    const futurs = Array.from({ length: 8 }, (_, i) => ({
+      horodatage: `2026-09-${19 + i}T10-00-00`,
+      complet: true,
+      count: 1,
+      watermark: "w",
+      empreintes: {},
+    }));
+    writeFileSync(join(dossier, "manifest.json"), JSON.stringify({ version: 1, instantanes: futurs }), "utf8");
+
+    const r = await sauv(api, dossier, { maintenant: heure("10") }).executer("complet");
+
+    expect(existsSync(join(dossier, r.horodatage, "raindrops.jsonl"))).toBe(true);
+    const m = JSON.parse(readFileSync(join(dossier, "manifest.json"), "utf8")) as Manifeste;
+    expect(m.instantanes.map((i) => i.horodatage)).toContain(r.horodatage);
   });
 
   // Dette de la Task 6 : `lireManifeste(dossier, avertir)` distingue un

@@ -110,17 +110,18 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
     return (p.items[0] as { lastUpdate?: string } | undefined)?.lastUpdate ?? "";
   };
 
-  const enregistrer = async (
-    m: Manifeste,
-    entree: EntreeInstantane,
-    ids: Set<number> | undefined,
-  ): Promise<void> => {
+  /** Archives purgées, manifeste écrit, dossiers évincés — dans cet ordre. */
+  const enregistrer = async (m: Manifeste, entree: EntreeInstantane, ids?: Set<number>) => {
     if (ids) {
       await purgerOrphelins(archives, ids);
       await appliquerBudget(archives, ARCHIVES_MAX_GO * 2 ** 30);
     }
     const toutes = [...m.instantanes, entree];
     const gardes = new Set(aConserver(toutes.map((i) => i.horodatage), maintenant()));
+    // L'instantané qu'on vient d'écrire et de vérifier n'est JAMAIS celui que
+    // la rotation efface : horloge qui recule, ou manifeste portant des
+    // entrées plus récentes, et il tombe hors des « 7 derniers ».
+    gardes.add(entree.horodatage);
     // Le manifeste D'ABORD, les suppressions ensuite : une coupure entre les
     // deux laisse des dossiers orphelins (inoffensifs), jamais un manifeste
     // qui désigne des dossiers effacés.
