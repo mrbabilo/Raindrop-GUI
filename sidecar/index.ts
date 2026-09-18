@@ -15,6 +15,7 @@ import { makeRestClient } from "./direct/raindropRest.js";
 import { makeOriginStore } from "./trash/origins.js";
 import { makeLecture } from "./backup/lecture.js";
 import { makeSauvegarde } from "./backup/sauvegarde.js";
+import { makeArchivage } from "./backup/archivage.js";
 import { lireManifeste } from "./backup/manifeste.js";
 import { join } from "node:path";
 
@@ -92,6 +93,18 @@ const sauvegarde = dossierSauvegarde
     })
   : undefined;
 
+// Archivage à la demande (§2) : même dossier, même condition d'activation que
+// la sauvegarde. LA MÊME instance de `throttle` que le MCP et la lecture REST
+// — sinon les deux files s'ignorent et le plafond partagé de 120 req/min se
+// voit dépassé sans que rien ne le voie.
+const archivage = dossierSauvegarde
+  ? makeArchivage({
+      token: cfg.MCP_RAINDROPIO_TOKEN,
+      dossier: dossierSauvegarde,
+      file: throttle,
+    })
+  : undefined;
+
 const deps: SidecarDeps = {
   mcp: makeMcpCaller(lifecycle, throttle, { timeoutMs: cfg.MCP_TIMEOUT_MS }),
   state: () => lifecycle.state,
@@ -101,6 +114,7 @@ const deps: SidecarDeps = {
   scanner,
   origins,
   ...(sauvegarde ? { sauvegarde } : {}),
+  ...(archivage ? { archivage } : {}),
   // REST direct sous la MÊME file que le MCP (550 ms partagées) : les appels
   // unrestore par destination sont espacés par le throttle, pas par un sleep.
   direct: {

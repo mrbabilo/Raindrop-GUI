@@ -31,6 +31,14 @@ export interface FauxApi {
   authorizations: string[];
   /** Fait répondre 429 aux N prochaines requêtes de liste. */
   repondre429(n: number): void;
+  /**
+   * Fait échouer UN identifiant précis de `/raindrop/:id/cache` — 404 SANS
+   * `Location`, exactement la forme qu'`archives.ts` traite comme « pas de
+   * redirection » (`ok:false`). Inerte par défaut : tant que cette méthode
+   * n'est pas appelée, tout identifiant numérique reçoit son 303 normal —
+   * aucun des tests existants qui traversent cette route n'est affecté.
+   */
+  sansCache(id: number): void;
 }
 
 export async function startFauxApi(
@@ -41,6 +49,7 @@ export async function startFauxApi(
   let portServi = 0;
   const appels: string[] = [];
   const authorizations: string[] = [];
+  const sansCacheIds = new Set<number>();
   const etat = { items, corbeille };
   const server: Server = createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://x");
@@ -99,7 +108,15 @@ export async function startFauxApi(
       });
     }
     if (url.pathname === "/rest/v1/user") return json(200, { user: { _id: 7 } });
-    if (/^\/rest\/v1\/raindrop\/\d+\/cache$/.test(url.pathname)) {
+    const cacheId = /^\/rest\/v1\/raindrop\/(\d+)\/cache$/.exec(url.pathname);
+    if (cacheId) {
+      if (sansCacheIds.has(Number(cacheId[1]))) {
+        // Pas de `Location` : archives.ts le lit comme « pas de redirection »
+        // et rend `ok:false`, sans jamais lever.
+        res.writeHead(404);
+        res.end();
+        return;
+      }
       // 303, le code MESURÉ — la doc annonce 307 (spec §5.4).
       res.writeHead(303, { Location: `http://127.0.0.1:${portServi}/s3/objet?X-Amz-Signature=abc` });
       res.end();
@@ -136,6 +153,9 @@ export async function startFauxApi(
     authorizations,
     repondre429: (n) => {
       reste429 = n;
+    },
+    sansCache: (id) => {
+      sansCacheIds.add(id);
     },
     close: () => new Promise<void>((r) => server.close(() => r())),
   };

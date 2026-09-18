@@ -6,6 +6,7 @@ import type { AnalysisCache } from "../analysis/cache.js"; // Task 13
 import type { Scanner } from "../analysis/scanner.js"; // Task 14
 import type { OriginStore } from "../trash/origins.js"; // Task 0b
 import type { Sauvegarde } from "../backup/sauvegarde.js";
+import type { Archivage } from "../backup/archivage.js";
 
 export interface SidecarDeps {
   /** Appel tool MCP throttled (espacement 550 ms en prod). */
@@ -26,6 +27,10 @@ export interface SidecarDeps {
   /** Sauvegarde locale — ABSENTE tant que `BACKUP_DIR` n'est pas
    *  configuré : la sauvegarde est alors inactive, et la route le dit. */
   sauvegarde?: Sauvegarde;
+  /** Archivage à la demande des copies permanentes (§2) — ABSENTE dans la
+   *  même condition que `sauvegarde` : sans `BACKUP_DIR`, pas de dossier
+   *  `archives/` où écrire. */
+  archivage?: Archivage;
   /** Appels REST directs Raindrop — Task 8 (contournement : update_raindrop
    *  MCP v1.3.1 n'expose pas `url` ; unrestore — MCP n'expose pas la
    *  restauration, Task 0b). Throttled en prod comme les appels MCP. */

@@ -36,5 +36,25 @@ export function sauvegardeRoutes(deps: SidecarDeps): Hono {
     return c.json(await deps.sauvegarde.statut());
   });
 
+  // L'archivage à la demande des copies permanentes (§2). Même dossier, même
+  // condition d'activation que la sauvegarde (BACKUP_DIR) : les deux dépendent
+  // d'un `archives/` qui n'existe que sous un dossier de sauvegarde configuré.
+  app.post("/archive", async (c) => {
+    // Au-delà de 500, c'est un balayage déguisé : ~1 000 requêtes, plus de
+    // 9 minutes au rang fond — la route existe pour l'archivage CIBLÉ, pas
+    // pour redécouvrir library_audit par la bande.
+    const body = z
+      .object({ ids: z.array(z.number().int()).min(1).max(500) })
+      .safeParse(await c.req.json().catch(() => null));
+    if (!body.success) return apiError(c, "INVALID_INPUT", "ids : 1 à 500 identifiants");
+    const archivage = deps.archivage;
+    if (!archivage) return apiError(c, "INVALID_INPUT", INACTIVE);
+    // Symétrique de /run : un archivage déjà en vol se marcherait sur ses
+    // propres fichiers .html.gz.
+    if (archivage.enCours()) return apiError(c, "INVALID_INPUT", "un archivage est déjà en cours");
+    const job = runJob(deps.jobs, "archive", body.data.ids.length, (j) => archivage.archiver(body.data.ids, j));
+    return c.json({ jobId: job.id }, 202);
+  });
+
   return app;
 }

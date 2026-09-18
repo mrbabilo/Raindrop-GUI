@@ -3,10 +3,11 @@ import { createApp } from "../app.js";
 import type { SidecarDeps } from "../deps.js";
 import { JobStore } from "../../jobs/store.js";
 import type { Sauvegarde } from "../../backup/sauvegarde.js";
+import type { Archivage } from "../../backup/archivage.js";
 
 const TOKEN = "t";
 
-const deps = (jobs: JobStore, sauvegarde?: Sauvegarde): SidecarDeps => ({
+const deps = (jobs: JobStore, sauvegarde?: Sauvegarde, archivage?: Archivage): SidecarDeps => ({
   mcp: async () => ({ ok: true as const, data: {} }),
   state: () => "connected",
   restart: async () => undefined,
@@ -16,6 +17,7 @@ const deps = (jobs: JobStore, sauvegarde?: Sauvegarde): SidecarDeps => ({
   origins: {} as SidecarDeps["origins"],
   direct: {} as SidecarDeps["direct"],
   ...(sauvegarde ? { sauvegarde } : {}),
+  ...(archivage ? { archivage } : {}),
 });
 
 const req = async (
@@ -100,5 +102,68 @@ describe("routes sauvegarde", () => {
     const app = createApp(deps(new JobStore(), { enCours: () => false } as Sauvegarde), { localToken: TOKEN });
     const res = await req(app, "/api/backup/run", { method: "POST", body: JSON.stringify({ mode: "partiel" }) });
     expect(res.status).toBe(400);
+  });
+
+  // Test 5 du brief — la route /archive.
+  describe("POST /api/backup/archive", () => {
+    it("sans dossier configuré, refuse lisiblement (400 INACTIVE)", async () => {
+      const app = createApp(deps(new JobStore()), { localToken: TOKEN });
+      const res = await req(app, "/api/backup/archive", { method: "POST", body: JSON.stringify({ ids: [1] }) });
+      expect(res.status).toBe(400);
+      const corps = (await res.json()) as { error: { code: string; message: string } };
+      expect(corps.error.code).toBe("INVALID_INPUT");
+      expect(corps.error.message).toMatch(/BACKUP_DIR/);
+    });
+
+    it("un archivage déjà en cours refuse (400) sans en lancer un second", async () => {
+      let lancements = 0;
+      const archivage = {
+        enCours: () => true,
+        archiver: async () => {
+          lancements++;
+          return { demandes: 0, faits: 0, echecs: [], annule: false };
+        },
+      } as unknown as Archivage;
+      const app = createApp(deps(new JobStore(), undefined, archivage), { localToken: TOKEN });
+      const res = await req(app, "/api/backup/archive", { method: "POST", body: JSON.stringify({ ids: [1] }) });
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: { message: string } }).error.message).toMatch(/déjà en cours/);
+      expect(lancements).toBe(0); // rien n'a été lancé : l'assertion qui porte
+    });
+
+    it("un corps mal formé refuse (400) : vide, ou plus de 500 identifiants", async () => {
+      const archivage = { enCours: () => false } as unknown as Archivage;
+      const app = createApp(deps(new JobStore(), undefined, archivage), { localToken: TOKEN });
+      const vide = await req(app, "/api/backup/archive", { method: "POST", body: JSON.stringify({ ids: [] }) });
+      expect(vide.status).toBe(400);
+      const trop = await req(app, "/api/backup/archive", {
+        method: "POST",
+        body: JSON.stringify({ ids: Array.from({ length: 501 }, (_, i) => i) }),
+      });
+      expect(trop.status).toBe(400);
+    });
+
+    it("lance un job et rend son identifiant (202)", async () => {
+      const jobs = new JobStore();
+      const ids: number[][] = [];
+      const archivage = {
+        enCours: () => false,
+        archiver: async (demandes: number[]) => {
+          ids.push(demandes);
+          return { demandes: demandes.length, faits: demandes.length, echecs: [], annule: false };
+        },
+      } as unknown as Archivage;
+      const app = createApp(deps(jobs, undefined, archivage), { localToken: TOKEN });
+      const res = await req(app, "/api/backup/archive", {
+        method: "POST",
+        body: JSON.stringify({ ids: [10, 11, 12] }),
+      });
+      expect(res.status).toBe(202);
+      const { jobId } = (await res.json()) as { jobId: string };
+      expect(jobs.get(jobId)).toBeDefined();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(ids).toEqual([[10, 11, 12]]);
+      expect(jobs.get(jobId)?.status).toBe("done");
+    });
   });
 });
