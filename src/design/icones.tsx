@@ -38,6 +38,30 @@ const paths: Record<string, ReactNode> = {
       <circle cx="8" cy="8" r="2.1" />
     </>
   ),
+  // poignée de déplacement : six points en deux colonnes, la convention
+  // universelle du « ceci se tire ». Sans elle, rien n'annonçait qu'une ligne
+  // était déplaçable — on ne le découvrait qu'en tirant.
+  poignee: (
+    <>
+      <circle cx="6" cy="4" r="0.9" />
+      <circle cx="10" cy="4" r="0.9" />
+      <circle cx="6" cy="8" r="0.9" />
+      <circle cx="10" cy="8" r="0.9" />
+      <circle cx="6" cy="12" r="0.9" />
+      <circle cx="10" cy="12" r="0.9" />
+    </>
+  ),
+  // barre latérale : le panneau de gauche, replié ou déplié — un rectangle
+  // et son montant. L'icône ne change pas selon l'état ; c'est son libellé
+  // accessible qui dit vers quoi elle bascule (§9, « une icône par geste »).
+  panneauLateral: (
+    <>
+      <rect x="2" y="3" width="12" height="10" rx="1.5" />
+      <path d="M6.2 3v10" />
+    </>
+  ),
+  // croix : fermer, et rien d'autre
+  croix: <path d="M4 4l8 8M12 4l-8 8" />,
   // chevron : l'ornement d'un bouton-état, jamais seul
   chevron: <path d="M4.5 6.5L8 10l3.5-3.5" />,
   // chevrons d'arbre : l'état d'un groupe plié ou déplié

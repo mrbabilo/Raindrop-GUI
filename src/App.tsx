@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { t } from "./i18n/fr";
 import type { Amorce } from "./lib/amorce";
 import { useTheme } from "./lib/theme";
+import { useSidebarRepliee } from "./lib/panneaux";
 import { useAppState } from "./state/appState";
 import { Sidebar } from "./components/Sidebar";
 import { Icone } from "./design/icones";
@@ -46,7 +47,7 @@ function MoonIcon() {
 
 export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
   const { resolved, setMode } = useTheme();
-  const { view, go } = useAppState();
+  const { view, go, selectedRaindropId, selectRaindrop } = useAppState();
   // R15P-3 : le retour de la Revue revient à la vue d'origine qu'elle porte
   // (posée par BulkBar/CleanupView) ; sans origine notée, repli sur « Tous ».
   const goBack = () =>
@@ -65,6 +66,11 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
   const [cmdkOpen, setCmdkOpen] = useState(false);
   // ⌘, — le raccourci macOS des réglages, partout dans le système.
   const [reglagesOuvert, setReglagesOuvert] = useState(false);
+  const { repliee, basculer } = useSidebarRepliee();
+  // Le volet détail ne s'affiche QUE sur un signet ouvert : une colonne de
+  // 320 px occupée par « Sélectionnez un bookmark » coûte le tiers de la
+  // largeur utile pour ne rien dire.
+  const detailOuvert = selectedRaindropId !== null;
   useEffect(() => {
     function surRaccourci(e: KeyboardEvent) {
       if (e.metaKey && e.key === "e") {
@@ -95,8 +101,32 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
       {/* Ce que l'on transporte pendant un déplacement — au-dessus de tout,
           inerte au pointeur (il ne doit jamais masquer sa propre cible). */}
       <FantomeDrag />
-      <div className="grid min-h-0 flex-1 grid-cols-[240px_minmax(0,1fr)_320px] grid-rows-[auto_1fr]">
+      {/* Les colonnes latérales sont CONDITIONNELLES : repliée, la barre
+          latérale rend sa largeur à la liste ; fermé, le détail aussi. Les
+          classes sont écrites en toutes lettres — Tailwind ne voit pas les
+          noms construits à l'exécution. */}
+      <div
+        className={
+          "grid min-h-0 flex-1 grid-rows-[auto_1fr] " +
+          (repliee
+            ? detailOuvert
+              ? "grid-cols-[0px_minmax(0,1fr)_320px]"
+              : "grid-cols-[0px_minmax(0,1fr)_0px]"
+            : detailOuvert
+              ? "grid-cols-[240px_minmax(0,1fr)_320px]"
+              : "grid-cols-[240px_minmax(0,1fr)_0px]")
+        }
+      >
         <header className="flex items-center gap-3 border-b border-app-border bg-app px-4 py-2">
+          <button
+            type="button"
+            className="btn btn-icone"
+            aria-label={repliee ? t("nav.deplier") : t("nav.replier")}
+            aria-pressed={repliee}
+            onClick={basculer}
+          >
+            <Icone nom="panneauLateral" />
+          </button>
           <span className="font-medium">{t("app.title")}</span>
           {/* L'indicateur MCP de l'en-tête (Task 2) est subsumé par <Banners /> :
               un seul émetteur du message, la bannière porte en plus l'action. */}
@@ -143,9 +173,11 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
         ) : (
           <ListPane />
         )}
-        {/* Row 2 col 3 : détail permanent — aperçu, édition inline, actions,
-            surlignages (Task 8). */}
-        <DetailPane />
+        {/* Row 2 col 3 : le détail — aperçu, édition inline, actions,
+            surlignages (Task 8). Monté SEULEMENT sur un signet ouvert : sa
+            colonne est à zéro le reste du temps, et le composant démonté
+            n'émet aucune requête. */}
+        {detailOuvert && <DetailPane onFermer={() => selectRaindrop(null)} />}
         {/* Palette ⌘K (Task 11) : overlay fixed, hors flux de la grille. */}
         {cmdkOpen && <CommandPalette open onClose={() => setCmdkOpen(false)} />}
         {/* Réglages ⌘, (spec §6) : monté conditionnellement, comme la

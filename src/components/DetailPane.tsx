@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { t } from "../i18n/fr";
+import { Icone } from "../design/icones";
 import { api } from "../lib/api";
 import { useAppState } from "../state/appState";
 import { useCollections } from "../hooks/useStaticData";
@@ -41,7 +42,7 @@ function chaine(arbre: Collection[], id: number): Collection[] {
 const bouton = "rounded border border-app-border px-2 py-1 text-xs";
 const coque = "bg-app p-3 text-sm";
 
-export function DetailPane() {
+export function DetailPane({ onFermer }: { onFermer?: () => void }) {
   const { selectedRaindropId } = useAppState();
   const update = useUpdateRaindrop(selectedRaindropId ?? 0);
   const trash = useTrashRaindrop();
@@ -69,6 +70,18 @@ export function DetailPane() {
     update.reset();
     trash.reset();
   }, [selectedRaindropId]);
+
+  // Échap referme le volet — même idiome que la palette et les Réglages.
+  // Écouteur de fenêtre : le volet n'a pas de champ toujours focalisé.
+  useEffect(() => {
+    if (!onFermer) return;
+    const surTouche = (e: KeyboardEvent) => {
+      // Pas pendant une édition inline : Échap y annule la saisie.
+      if (e.key === "Escape" && !editing) onFermer();
+    };
+    window.addEventListener("keydown", surTouche);
+    return () => window.removeEventListener("keydown", surTouche);
+  }, [onFermer, editing]);
 
   if (selectedRaindropId == null)
     return <aside className={coque + " text-app-muted"}>{t("detail.guest")}</aside>;
@@ -112,6 +125,13 @@ export function DetailPane() {
 
   return (
     <aside className={coque + " flex h-full flex-col gap-3 overflow-y-auto"}>
+      {/* Le volet s'ouvre sur un clic : il doit pouvoir se refermer sans en
+          passer par un autre signet. Échap le referme aussi (voir l'effet). */}
+      {onFermer && (
+        <button type="button" className="btn btn-icone self-end" aria-label={t("detail.fermer")} onClick={onFermer}>
+          <Icone nom="croix" />
+        </button>
+      )}
       {/* §4 : fil d'Ariane — le carré porte la teinte de la racine, les titres
           suivent le chemin. Arbre pas encore chargé ou collection inconnue :
           pas de fil (jamais de repli inventé). */}

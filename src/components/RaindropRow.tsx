@@ -1,4 +1,5 @@
 import { t } from "../i18n/fr";
+import { Icone } from "../design/icones";
 import type { RaindropItem } from "../../shared/types";
 import { Glyphe } from "../design/glyphes";
 import { Etoile } from "../design/Etoile";
@@ -53,7 +54,12 @@ export function RaindropRow(props: {
       data-testid={`row-${r.id}`}
       {...(props.navigable === true ? { "data-nav": true, tabIndex: -1 } : {})}
       className={
-        "flex min-h-9 cursor-pointer items-center gap-2 overflow-hidden border-b border-app-border px-3 " +
+        // `select-none` : sans lui, les cinq premiers pixels d'un glissement
+        // démarrent une SÉLECTION DE TEXTE avant que le fantôme n'apparaisse
+        // — FantomeDrag ne pose `user-select: none` qu'une fois le seuil
+        // franchi, donc trop tard. Une ligne de liste ne se sélectionne pas :
+        // le texte se copie depuis le détail.
+        "flex min-h-9 cursor-pointer select-none items-center gap-2 overflow-hidden border-b border-app-border px-3 " +
         (props.isDetail ? "bg-app-panel " : "") +
         (etat ? "filet " + etat : "")
       }
@@ -65,6 +71,17 @@ export function RaindropRow(props: {
           faisaient cent vingt-six arrêts à elles seules. La case reste
           cliquable, et la barre d'espace la coche depuis la ligne active. */}
       <input type="checkbox" tabIndex={-1} aria-label={t("list.select", { title: r.title })} checked={props.selected} onClick={(e) => e.stopPropagation()} onChange={props.onToggle} />
+      {/* La poignée : rien n'annonçait qu'une ligne se tirait — on ne le
+          découvrait qu'en essayant. Elle ne CAPTE pas le geste (toute la
+          ligne reste tirable, comportement d'origine) ; elle le signale, et
+          porte le curseur qui va avec. */}
+      <span
+        aria-label={t("list.deplacer", { title: r.title })}
+        role="img"
+        className="shrink-0 cursor-grab text-app-muted opacity-40 active:cursor-grabbing"
+      >
+        <Icone nom="poignee" />
+      </span>
       <CarreCollection collectionId={r.collectionId} titre={props.collectionRacine} />
       <span className="min-w-[8rem] flex-1 truncate font-medium">{r.title}</span>
       {r.important && <span role="img" className="shrink-0 text-app-muted" aria-label={t("detail.favorite")}><Etoile /></span>}

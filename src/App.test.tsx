@@ -1,3 +1,4 @@
+import { afterAll, beforeAll } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
@@ -8,6 +9,7 @@ import type { ReactNode } from "react";
 import { raindrop, collections, tags } from "./test/fixtures";
 import App from "./App";
 import { AppStateProvider, useAppState } from "./state/appState";
+import { DragProvider } from "./state/drag";
 import type { View } from "./state/appState";
 
 // App consomme useHealth() et — depuis que ListPane est monté (Task 7) —
@@ -24,6 +26,10 @@ function mockApi(mcp: string) {
   getMock.mockReset().mockImplementation((path: string) => {
     if (path === "/api/raindrops")
       return Promise.resolve({ items: [raindrop()], count: 1, page: 0, perPage: 50 });
+    // Le détail d'un signet : sans lui, DetailPane recevait la réponse de
+    // health et jetait sur `r.highlights.length` — l'arbre se démontait, et
+    // l'absence du volet passait pour un défaut du composant.
+    if (path.startsWith("/api/raindrops/")) return Promise.resolve(raindrop());
     if (path === "/api/collections") return Promise.resolve({ items: collections });
     if (path === "/api/tags") return Promise.resolve({ items: tags });
     return Promise.resolve({ status: "ok", mcp });
@@ -33,7 +39,16 @@ function mockApi(mcp: string) {
 function wrapper({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      {children}
+      {/* Le provider d'état est indispensable : sans lui, `useAppState` rend
+          le contexte PAR DÉFAUT, dont `selectRaindrop` est un no-op — un
+          clic sur un signet n'ouvrirait jamais le détail, et le test le
+          prendrait pour un défaut du composant. `main.tsx` le pose de même. */}
+      <AppStateProvider>
+        {/* `DragProvider` aussi : la ligne tire ses handlers de
+            `useDragBookmark`, qui consomme ce contexte. main.tsx pose les
+            deux — un test qui n'en pose qu'un teste une autre application. */}
+        <DragProvider>{children}</DragProvider>
+      </AppStateProvider>
     </QueryClientProvider>
   );
 }
@@ -50,6 +65,17 @@ function matchMediaPrefersDark() {
   })) as never;
 }
 
+// jsdom ne fait aucun layout : offsetHeight vaut 0, et le virtualizer de la
+// liste en déduit une plage vide — aucune ligne montée. Même fenêtre simulée
+// que ListPane.test, pour que les tests qui OUVRENT un signet aient une ligne
+// à cliquer.
+beforeAll(() => {
+  Object.defineProperty(HTMLElement.prototype, "offsetHeight", { configurable: true, get: () => 600 });
+});
+afterAll(() => {
+  delete (HTMLElement.prototype as unknown as { offsetHeight?: unknown }).offsetHeight;
+});
+
 describe("App", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -63,11 +89,54 @@ describe("App", () => {
     expect(screen.getByText("Raindrop GUI")).toBeInTheDocument();
   });
 
-  it("affiche le shell trois panneaux (navigation, liste, détail)", () => {
-    render(<App onEtat={vi.fn()} />, { wrapper });
+  // Le troisième panneau ne s'affiche QUE sur un signet ouvert : 320 px
+  // occupés par « Sélectionnez un bookmark » coûtent le tiers de la largeur
+  // utile pour ne rien dire.
+  //
+  // Le contrat testé ICI est « le volet suit la sélection ». Que le CLIC sur
+  // une ligne pose cette sélection appartient à `useDragBookmark`, qui le
+  // teste chez lui — d'où le pilote, plutôt qu'un clic à travers un
+  // virtualiseur et un seuil de glissement.
+  it("affiche la navigation et la liste ; le détail attend qu'on ouvre un signet", async () => {
+    const Ouvre = () => {
+      const { selectRaindrop } = useAppState();
+      return (
+        <button type="button" onClick={() => selectRaindrop(1000)}>
+          ouvrir-signet
+        </button>
+      );
+    };
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <AppStateProvider>
+          <Ouvre />
+          <App onEtat={vi.fn()} />
+        </AppStateProvider>
+      </QueryClientProvider>,
+    );
     expect(screen.getByRole("navigation")).toBeInTheDocument();
     expect(screen.getByRole("main")).toBeInTheDocument();
-    expect(screen.getByRole("complementary")).toBeInTheDocument();
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+
+    // Et il s'ouvre — sans quoi l'assertion d'absence ci-dessus célébrerait
+    // un panneau qui ne sait pas apparaître.
+    await userEvent.click(screen.getByText("ouvrir-signet"));
+    expect(await screen.findByRole("complementary")).toBeInTheDocument();
+
+    // Puis se referme, sans passer par un autre signet.
+    await userEvent.click(screen.getByRole("button", { name: "Fermer le détail" }));
+    await waitFor(() => expect(screen.queryByRole("complementary")).not.toBeInTheDocument());
+  });
+
+  it("la barre latérale se replie et se déplie", async () => {
+    render(<App onEtat={vi.fn()} />, { wrapper });
+    const replier = screen.getByRole("button", { name: "Replier la barre latérale" });
+    expect(replier).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(replier);
+    // Le libellé dit vers quoi le bouton bascule — l'icône, elle, ne change
+    // pas (§9, « une icône par geste »).
+    const deplier = screen.getByRole("button", { name: "Déplier la barre latérale" });
+    expect(deplier).toHaveAttribute("aria-pressed", "true");
   });
 
   // Task 10 : ⌘E amène le focus dans le composer, quel que soit le champ

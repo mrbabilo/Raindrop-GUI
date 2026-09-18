@@ -91,7 +91,7 @@ type Action =
   | { type: "patch"; patch: ListPatch }
   | { type: "toggleSelect"; id: number }
   | { type: "clearSelection" }
-  | { type: "selectRaindrop"; id: number };
+  | { type: "selectRaindrop"; id: number | null };
 
 const initial: State = {
   view: { kind: "list", collectionId: 0, label: t("nav.all") },
@@ -122,7 +122,9 @@ const Ctx = createContext<{
   toggleSelect: (id: number) => void;
   clearSelection: () => void;
   selectedRaindropId: number | null;
-  selectRaindrop: (id: number) => void;
+  /** `null` FERME le volet détail — il ne s'affiche que sur un signet
+   *  ouvert, et doit donc pouvoir se refermer. */
+  selectRaindrop: (id: number | null) => void;
 }>({
   view: initial.view,
   go: () => undefined,

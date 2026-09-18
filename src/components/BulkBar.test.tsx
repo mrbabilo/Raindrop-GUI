@@ -92,20 +92,20 @@ describe("BulkBar", () => {
     expect(screen.queryByRole("button", { name: "Corbeille" })).not.toBeInTheDocument();
   });
 
-  it("déplacer demande la collection destination, sélection consommée (R9P-1)", async () => {
+  // « Déplacer » et son sélecteur de destination ont été RETIRÉS : le
+  // glisser-déposer vers une collection fait le même geste, à la souris, et
+  // ces deux contrôles prenaient la moitié d'une barre qui vit dans une
+  // colonne rétrécie par les panneaux latéraux — ses derniers boutons en
+  // sortaient et se faisaient rogner. Le déplacement par sélection multiple
+  // reste couvert par useDragBookmark.test (« tirer un signet coché emmène
+  // toute la sélection »).
+  it("ne propose plus de déplacement : c'est le geste de la souris", async () => {
     await renderBar([1000, 1001]);
-    const deplacer = screen.getByRole("button", { name: "Déplacer" });
-    expect(deplacer).toBeDisabled(); // pas de destination → pas d'action
-    await userEvent.selectOptions(screen.getByLabelText("Destination"), "102");
-    expect(deplacer).toBeEnabled();
-    await userEvent.click(deplacer);
-    const revue = JSON.parse(screen.getByTestId("view").textContent!);
-    expect(revue.items).toEqual([1000, 1001]);
-    // R15P-4 : la destination choisie part DANS l'action — la Revue l'exécute
-    // (l'ancien jetage R4P produisait un move sans destination).
-    expect(revue.action).toEqual({ op: "move", toCollectionId: 102 });
-    // R9P-1 : même contrat sur Déplacer.
-    expect(screen.getByTestId("sel").textContent).toBe("");
+    expect(screen.queryByRole("button", { name: "Déplacer" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Destination")).not.toBeInTheDocument();
+    // Les autres verbes, eux, restent : la barre n'a pas été vidée.
+    expect(screen.getByRole("button", { name: "Corbeille" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tagger" })).toBeInTheDocument();
   });
 
   it("tagger → vue review, sélection consommée (R9P-1)", async () => {
@@ -127,9 +127,6 @@ describe("BulkBar", () => {
   // répètent plus — ni à l'écran, ni pour un lecteur d'écran.
   it("le verbe n'est porté que par son bouton (§9)", async () => {
     await renderBar([1000]);
-    const muette = screen.getByRole("option", { name: /Choisir une collection/ });
-    expect(muette).toHaveValue("");
-    expect(screen.getAllByText("Déplacer")).toHaveLength(1);
     expect(screen.getAllByText("Tagger")).toHaveLength(1);
     const champ = screen.getByLabelText("Étiquettes à ajouter");
     expect(champ).toHaveAttribute("placeholder", "séparées par des virgules");
