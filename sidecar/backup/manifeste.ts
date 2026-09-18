@@ -23,14 +23,37 @@ export interface Manifeste {
   instantanes: EntreeInstantane[];
 }
 
-/** Un dossier vierge ou un manifeste illisible rend un inventaire vide : la
- *  prochaine sauvegarde repartira complète, et le dira (§4.1). */
-export async function lireManifeste(dossier: string): Promise<Manifeste> {
+/**
+ * Un dossier vierge rend un inventaire vide, SANS un mot : c'est le premier
+ * lancement, la prochaine sauvegarde repartira complète et le dira (§4.1).
+ *
+ * Un manifeste PRÉSENT mais illisible (JSON invalide, version inconnue,
+ * droits) est un cas différent : rendre un inventaire vide sans le dire
+ * ferait perdre la trace de tous les instantanés du disque, silencieusement
+ * — la sauvegarde suivante écrirait un manifeste neuf par-dessus, scellant
+ * la perte. `avertir` (optionnel, inerte par défaut) est le seul appelé
+ * dans ce second cas ; la Task 8 y branchera le vrai journal.
+ */
+export async function lireManifeste(
+  dossier: string,
+  avertir?: (message: string) => void,
+): Promise<Manifeste> {
+  const chemin = join(dossier, FICHIER);
+  let texte: string;
   try {
-    const m = JSON.parse(await readFile(join(dossier, FICHIER), "utf8")) as Manifeste;
+    texte = await readFile(chemin, "utf8");
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      avertir?.(`manifest.json illisible (${chemin}) : ${(e as Error).message}`);
+    }
+    return { version: 1, instantanes: [] };
+  }
+  try {
+    const m = JSON.parse(texte) as Manifeste;
     if (m.version === 1 && Array.isArray(m.instantanes)) return m;
-  } catch {
-    /* absent, tronqué, ou d'une version inconnue */
+    avertir?.(`manifest.json ignoré (${chemin}) : version ou structure inattendue`);
+  } catch (e) {
+    avertir?.(`manifest.json corrompu (${chemin}) : ${(e as Error).message}`);
   }
   return { version: 1, instantanes: [] };
 }
@@ -44,8 +67,16 @@ export async function ecrireManifeste(dossier: string, m: Manifeste): Promise<vo
   await rename(temporaire, cible);
 }
 
+/**
+ * La garde de tout le lot (spec §6) : ne doit dépendre d'AUCUNE convention
+ * tacite chez l'appelant sur l'ordre de `m.instantanes`. On trie une copie
+ * par horodatage — décroissant, le plus récent d'abord — avant de chercher,
+ * comme `aConserver` se méfie déjà de l'ordre reçu sur la même donnée.
+ */
 export function dernierValide(m: Manifeste): EntreeInstantane | undefined {
-  return [...m.instantanes].reverse().find((i) => i.complet);
+  return [...m.instantanes]
+    .sort((a, b) => (a.horodatage < b.horodatage ? 1 : a.horodatage > b.horodatage ? -1 : 0))
+    .find((i) => i.complet);
 }
 
 /** Lundi de la semaine d'un horodatage `2026-09-16T10-00-00`, en `YYYY-MM-DD`. */

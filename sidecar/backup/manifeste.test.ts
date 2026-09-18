@@ -19,8 +19,20 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 const dir = () => repertoireTemporaire("backup-manifeste-");
 
 describe("manifeste", () => {
-  it("un dossier vierge rend un manifeste vide, pas une erreur", async () => {
-    expect(await lireManifeste(join(dir(), "neuf"))).toEqual({ version: 1, instantanes: [] });
+  it("un dossier vierge rend un manifeste vide, pas une erreur — et ne signale rien", async () => {
+    const avertir = vi.fn();
+    expect(await lireManifeste(join(dir(), "neuf"), avertir)).toEqual({ version: 1, instantanes: [] });
+    // C'est cette assertion qui prouve la distinction : absent ≠ corrompu.
+    expect(avertir).not.toHaveBeenCalled();
+  });
+
+  it("un manifeste corrompu (JSON invalide) est signalé, et l'inventaire repart vide", async () => {
+    const d = dir();
+    await writeFile(join(d, "manifest.json"), "{ pas du json", "utf8");
+    const avertissements: string[] = [];
+    const m = await lireManifeste(d, (message) => avertissements.push(message));
+    expect(m).toEqual({ version: 1, instantanes: [] });
+    expect(avertissements).toHaveLength(1);
   });
 
   it("l'écriture est atomique — aucun fichier temporaire ne survit", async () => {
@@ -65,6 +77,33 @@ describe("manifeste", () => {
     };
     expect(dernierValide(m)?.horodatage).toBe("2026-09-01T10-00-00");
   });
+
+  // L'incomplet est positionné en DERNIER dans le tableau, mais c'est le plus
+  // ANCIEN chronologiquement : sans le tri défensif, reverse().find()
+  // retournerait "2026-09-01" (premier complet rencontré dans l'ordre du
+  // tableau inversé), pas "2026-09-05" (le plus récent réellement complet).
+  it("dernierValide trie par horodatage — l'ordre du tableau ne fait pas foi", () => {
+    const m = {
+      version: 1 as const,
+      instantanes: [
+        { horodatage: "2026-09-05T10-00-00", complet: true, count: 12, watermark: "w3", empreintes: {} },
+        { horodatage: "2026-09-01T10-00-00", complet: true, count: 10, watermark: "w1", empreintes: {} },
+        { horodatage: "2026-08-15T10-00-00", complet: false, count: 8, watermark: "w0", empreintes: {} },
+      ],
+    };
+    expect(dernierValide(m)?.horodatage).toBe("2026-09-05T10-00-00");
+  });
+
+  it("dernierValide rend undefined quand tous les instantanés sont incomplets", () => {
+    const m = {
+      version: 1 as const,
+      instantanes: [
+        { horodatage: "2026-09-01T10-00-00", complet: false, count: 10, watermark: "w1", empreintes: {} },
+        { horodatage: "2026-09-02T10-00-00", complet: false, count: 9, watermark: "w2", empreintes: {} },
+      ],
+    };
+    expect(dernierValide(m)).toBeUndefined();
+  });
 });
 
 describe("rotation", () => {
@@ -98,5 +137,16 @@ describe("rotation", () => {
     expect(gardes).toContain("2026-08-24T10-00-00");   // le plus ancien de A
     expect(gardes).not.toContain("2026-08-26T10-00-00"); // pas le second de A
     expect(gardes).toContain("2026-08-31T10-00-00");
+  });
+
+  // Tous les jeux précédents étaient déjà croissants : le `.sort()` défensif
+  // (ligne 68) n'était mis à l'épreuve par aucun. Entrée délibérément
+  // désordonnée (inversée) pour l'exercer réellement.
+  it("aConserver trie les horodatages non triés en entrée", () => {
+    const tries = Array.from({ length: 10 }, (_, i) => j(i + 10));
+    const desordre = [...tries].reverse();
+    const gardes = aConserver(desordre, new Date("2026-09-19T12:00:00Z"));
+    expect(gardes).toEqual(expect.arrayContaining(tries.slice(-7)));
+    expect(gardes).not.toContain(j(11));
   });
 });
