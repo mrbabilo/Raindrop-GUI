@@ -52,6 +52,38 @@ describe("instantané", () => {
     expect(v.raison).toMatch(/empreinte/);
   });
 
+  it("un rejeu réécrit le fichier, pas en append", async () => {
+    // Les Tasks 4/5 rejouent un balayage en réécrivant le MÊME chemin.
+    const f = join(dir(), "rejeu.jsonl");
+
+    // Premier balayage
+    let e = await ouvrirJsonl(f);
+    await e.ligne({ version: 1, data: "premier" });
+    let attendu = await e.fermer();
+
+    // Vérification que c'est écrit
+    expect(attendu.lignes).toBe(1);
+    let brut = await readFile(f, "utf8");
+    expect(brut).toMatch(/version/);
+    expect(brut).toMatch(/1/);
+
+    // Rejeu : réouvre le MÊME chemin
+    e = await ouvrirJsonl(f);
+    await e.ligne({ version: 2, data: "rejeu" });
+    const rejeu = await e.fermer();
+
+    // Vérification que l'ancien contenu a disparu
+    expect(rejeu.lignes).toBe(1);  // pas 2
+    brut = await readFile(f, "utf8");
+    expect(brut).not.toContain('"version":1');  // ancien contenu parti
+    expect(brut).toContain('"version":2');  // nouveau contenu présent
+
+    // verifierJsonl aussi doit voir juste 1 ligne
+    const v = await verifierJsonl(f, rejeu);
+    expect(v.ok).toBe(true);
+    expect(v.lignes).toBe(1);
+  });
+
   it("l'horodatage est utilisable comme nom de dossier", () => {
     expect(horodatage(new Date("2026-09-16T15:30:00Z"))).toBe("2026-09-16T15-30-00");
   });
