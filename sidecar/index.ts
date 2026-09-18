@@ -8,11 +8,14 @@ import { stdioFactory } from "./mcp/connection.js";
 import { Throttle } from "./mcp/throttle.js";
 import { makeMcpCaller, type SidecarDeps } from "./api/deps.js";
 import { createApp } from "./api/app.js";
-import { JobStore } from "./jobs/store.js";
+import { JobStore, runJob } from "./jobs/store.js";
 import { AnalysisCache } from "./analysis/cache.js";
 import { Scanner } from "./analysis/scanner.js";
 import { makeRestClient } from "./direct/raindropRest.js";
 import { makeOriginStore } from "./trash/origins.js";
+import { makeLecture } from "./backup/lecture.js";
+import { makeSauvegarde } from "./backup/sauvegarde.js";
+import { lireManifeste } from "./backup/manifeste.js";
 import { join } from "node:path";
 
 function fail(msg: string): never {
@@ -72,6 +75,25 @@ const origins = makeOriginStore({
   warn: (msg, fields) => logger.warn(msg, fields),
 });
 
+// Sauvegarde locale (§4.1) : sans BACKUP_DIR elle reste INACTIVE, et la route
+// le dit — le sélecteur de dossier relève du shell Tauri (§4.3). Le sous-dossier
+// `Raindrop-GUI` est celui de l'arborescence §4.2 : le dossier choisi par
+// l'utilisateur n'est jamais pollué à sa racine.
+const dossierSauvegarde = cfg.BACKUP_DIR ? join(cfg.BACKUP_DIR, "Raindrop-GUI") : undefined;
+const sauvegarde = dossierSauvegarde
+  ? makeSauvegarde({
+      // Lecture REST directe, sous la MÊME file que le MCP, au rang « fond ».
+      lecture: makeLecture({ token: cfg.MCP_RAINDROPIO_TOKEN, file: throttle }),
+      dossier: dossierSauvegarde,
+      file: throttle,
+      token: cfg.MCP_RAINDROPIO_TOKEN,
+      // Dette Task 6 soldée : un manifeste CORROMPU (≠ absent) laisse une
+      // trace — sans quoi la Task 6 aurait construit un détecteur que rien
+      // n'écoute.
+      avertir: (msg, champs) => logger.warn(msg, champs),
+    })
+  : undefined;
+
 const deps: SidecarDeps = {
   mcp: makeMcpCaller(lifecycle, throttle, { timeoutMs: cfg.MCP_TIMEOUT_MS }),
   state: () => lifecycle.state,
@@ -80,6 +102,7 @@ const deps: SidecarDeps = {
   cache,
   scanner,
   origins,
+  ...(sauvegarde ? { sauvegarde } : {}),
   // REST direct sous la MÊME file que le MCP (550 ms partagées) : les appels
   // unrestore par destination sont espacés par le throttle, pas par un sleep.
   direct: {
@@ -103,6 +126,21 @@ const server = serve(
     logger.info("sidecar prêt", { port: info.port, mcp: lifecycle.state });
   },
 );
+
+// Déclenchement au démarrage (§4.4) : si la dernière sauvegarde date de plus
+// de 24 h. Jamais bloquant — le bind HTTP ne l'attend pas, et un échec se
+// journalise au lieu de tuer le sidecar.
+if (sauvegarde && dossierSauvegarde) {
+  void (async () => {
+    const m = await lireManifeste(dossierSauvegarde, (msg) => logger.warn(msg));
+    if (!sauvegarde.doitSauvegarderAuDemarrage(m, new Date())) return;
+    const mode = sauvegarde.doitBalayerComplet(m, new Date()) ? "complet" : "incremental";
+    const job = runJob(jobs, "backup", 0, (j) => sauvegarde.executer(mode, j));
+    logger.info("sauvegarde au démarrage", { mode, jobId: job.id });
+  })().catch((e: unknown) => {
+    logger.error("sauvegarde au démarrage impossible", { err: e instanceof Error ? e.message : String(e) });
+  });
+}
 
 let stopping = false;
 const shutdown = async (signal: string) => {

@@ -5,6 +5,7 @@ import type { JobStore } from "../jobs/store.js"; // Task 10
 import type { AnalysisCache } from "../analysis/cache.js"; // Task 13
 import type { Scanner } from "../analysis/scanner.js"; // Task 14
 import type { OriginStore } from "../trash/origins.js"; // Task 0b
+import type { Sauvegarde } from "../backup/sauvegarde.js";
 
 export interface SidecarDeps {
   /** Appel tool MCP throttled (espacement 550 ms en prod). */
@@ -22,6 +23,9 @@ export interface SidecarDeps {
   scanner: Scanner;
   /** Mémoire des origines de corbeille (Task 0b, décision spec §4.2). */
   origins: OriginStore;
+  /** Sauvegarde locale — ABSENTE tant que `BACKUP_DIR` n'est pas
+   *  configuré : la sauvegarde est alors inactive, et la route le dit. */
+  sauvegarde?: Sauvegarde;
   /** Appels REST directs Raindrop — Task 8 (contournement : update_raindrop
    *  MCP v1.3.1 n'expose pas `url` ; unrestore — MCP n'expose pas la
    *  restauration, Task 0b). Throttled en prod comme les appels MCP. */

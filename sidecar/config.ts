@@ -7,6 +7,10 @@ const envSchema = z.object({
   MCP_RAINDROPIO_TOKEN: z.string().min(1, "token Raindrop requis"),
   LOCAL_API_TOKEN: z.string().min(1).default("dev-local-token"),
   APPDATA_DIR: z.string().optional(),
+  // Dossier de sauvegarde choisi par l'utilisateur (§4.1). Optionnel :
+  // sans lui la sauvegarde est inactive et le dit — le sélecteur graphique
+  // viendra du shell Tauri.
+  BACKUP_DIR: z.string().optional(),
   RAINDROP_MCP_ENTRY: z
     .string()
     .default(
