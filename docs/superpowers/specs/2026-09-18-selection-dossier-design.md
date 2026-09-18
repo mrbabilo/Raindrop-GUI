@@ -55,11 +55,13 @@ Rejetées :
 
 ## 2. Le dossier et sa persistance
 
-- **Le dialogue** : `tauri-plugin-dialog` — dépendance nouvelle, côté Rust et
-  côté npm, qui entraîne la création d'un `src-tauri/capabilities/default.json`
-  (le dépôt n'en a aucun : nos commandes maison n'en ont pas besoin, celles des
-  plugins si). On ouvre une surface de permissions qui n'existait pas, et c'est
-  à dire.
+- **Le dialogue** : `tauri-plugin-dialog` — dépendance nouvelle **côté Rust
+  uniquement** (amendé à l'implémentation, Task 7 du plan : le webview ne fait
+  qu'invoquer nos commandes, jamais le plugin, donc pas de paquet npm), qui
+  entraîne la création d'un `src-tauri/capabilities/default.json` (le dépôt
+  n'en avait aucun : nos commandes maison n'en ont pas besoin, celles des
+  plugins si). On ouvre une surface de permissions qui n'existait pas, et
+  c'est à dire.
 - **Ce que l'utilisateur désigne : le parent.** `sidecar/index.ts:83` fait
   `join(BACKUP_DIR, "Raindrop-GUI")` — l'utilisateur choisit le dossier **qui
   contiendra** `Raindrop-GUI/`, et le panneau affiche toujours le chemin

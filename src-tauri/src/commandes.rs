@@ -6,10 +6,11 @@
 //! ajoutés — découpé par frontière naturelle plutôt que tassé).
 
 use tauri::{AppHandle, Manager};
+use tauri_plugin_dialog::DialogExt;
 
 use crate::demarrage::{lancer_sidecar, sequence, GRACE};
 use crate::etat_connexion::{verdict_en_etat, Etat, EtatConnexion};
-use crate::{node, trousseau, verrou};
+use crate::{node, reglages, trousseau, verrou};
 
 /// `etat_connexion`, `relancer` et `enregistrer_jeton` sont `async` et
 /// déplacent leur corps bloquant dans `tauri::async_runtime::spawn_blocking`
@@ -173,6 +174,91 @@ pub async fn deconnecter(app: AppHandle) -> EtatConnexion {
     .unwrap_or_else(|e| EtatConnexion::Panne {
         detail: format!("déconnexion interrompue : {e}"),
     })
+}
+
+
+/// ─── Dossier de sauvegarde (spec sélection §2) ──────────────────────────────
+
+/// L'état du dossier CÔTÉ RUST : ce que le webview ne peut ni lire ni
+/// vérifier lui-même — un chemin de disque. Le moteur, lui, répond par
+/// /api/backup/status ; le panneau combine les deux.
+#[derive(serde::Serialize)]
+pub struct EtatSauvegarde {
+    pub dossier: Option<String>,
+    pub introuvable: bool,
+}
+
+#[tauri::command]
+pub async fn etat_sauvegarde(app: AppHandle) -> EtatSauvegarde {
+    tauri::async_runtime::spawn_blocking(move || {
+        let etat = app.state::<Etat>();
+        EtatSauvegarde {
+            dossier: reglages::lire(&etat.dossier),
+            introuvable: reglages::introuvable(&etat.dossier),
+        }
+    })
+    .await
+    .unwrap_or(EtatSauvegarde { dossier: None, introuvable: false })
+}
+
+/// Écrit le réglage PUIS relance par le chemin d'enregistrer_jeton (relecture
+/// C1 : jeton lu au trousseau, jeton local CONSERVÉ — c'est le port qui
+/// change). L'écriture AVANT la relance : un échec de relance laisse le
+/// réglage posé, l'écran de panne porte les issues, et « Réessayer » rejoue
+/// avec CE réglage.
+fn relancer_avec_dossier(etat: &Etat, chemin: Option<String>) -> Result<EtatConnexion, String> {
+    reglages::ecrire(&etat.dossier, chemin)?;
+    let token_raindrop = match trousseau::lire() {
+        Ok(Some(t)) => t,
+        Ok(None) => return Ok(EtatConnexion::JetonRequis),
+        Err(detail) => return Ok(EtatConnexion::Panne { detail }),
+    };
+    let chemin_node = match node::resoudre() {
+        node::Verdict::Trouve { chemin, .. } => chemin,
+        autre => return Ok(verdict_en_etat(autre)),
+    };
+    Ok(lancer_sidecar(etat, chemin_node, &token_raindrop))
+}
+
+/// Ouvre le dialogue natif, écrit le réglage au choix de l'utilisateur, puis
+/// relance. `blocking_pick_folder` est LA version du plugin pour un contexte
+/// bloquant (nous sommes dans spawn_blocking, jamais sur le thread
+/// principal) — macOS y bascule le panel tout seul. Annulé ou fermé → l'état
+/// courant, inchangé : annuler n'est pas un geste.
+#[tauri::command]
+pub async fn choisir_dossier_sauvegarde(app: AppHandle) -> EtatConnexion {
+    tauri::async_runtime::spawn_blocking(move || {
+        let etat = app.state::<Etat>();
+        let choisi = app
+            .dialog()
+            .file()
+            .blocking_pick_folder()
+            .and_then(|p| p.into_path().ok())
+            .map(|p| p.display().to_string());
+        match choisi {
+            None => etat.attendre(),
+            Some(c) => {
+                relancer_avec_dossier(&etat, Some(c))
+                    .unwrap_or_else(|detail| EtatConnexion::Panne { detail })
+            }
+        }
+    })
+    .await
+    .unwrap_or_else(|e| EtatConnexion::Panne { detail: format!("tâche choisir_dossier_sauvegarde interrompue : {e}") })
+}
+
+/// Retire le réglage et relance : la sauvegarde redevient inactive. RIEN
+/// n'est touché sur disque — les instantanés et archives restent, re-choisir
+/// le même dossier les retrouve tels quels (spec §2).
+#[tauri::command]
+pub async fn retirer_dossier_sauvegarde(app: AppHandle) -> EtatConnexion {
+    tauri::async_runtime::spawn_blocking(move || {
+        let etat = app.state::<Etat>();
+        relancer_avec_dossier(&etat, None)
+            .unwrap_or_else(|detail| EtatConnexion::Panne { detail })
+    })
+    .await
+    .unwrap_or_else(|e| EtatConnexion::Panne { detail: format!("tâche retirer_dossier_sauvegarde interrompue : {e}") })
 }
 
 #[tauri::command]

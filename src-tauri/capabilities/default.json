@@ -1,0 +1,6 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "identifier": "default",
+  "windows": ["main"],
+  "permissions": ["core:default", "dialog:default"]
+}

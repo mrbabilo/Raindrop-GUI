@@ -63,13 +63,17 @@ fn ressources_depuis_exe(exe: &Path) -> Option<PathBuf> {
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             commandes::deconnecter,
             commandes::etat_connexion,
             commandes::enregistrer_jeton,
             commandes::relancer,
             commandes::installer_runtime,
-            commandes::progression_installation
+            commandes::progression_installation,
+            commandes::etat_sauvegarde,
+            commandes::choisir_dossier_sauvegarde,
+            commandes::retirer_dossier_sauvegarde
         ])
         .setup(|app| {
             let token_local = match jeton::engendrer() {
