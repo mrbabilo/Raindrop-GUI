@@ -90,3 +90,72 @@ describe("rétention des archives", () => {
     expect(await readdir(dossier)).toEqual(["2.html.gz"]);
   });
 });
+
+// Les trois chemins d'échec d'`archiver`. Aucun n'était couvert : le lot
+// l'avait noté comme dette. Ils comptent, parce qu'`archivage.ts` promet
+// qu'un échec sur un signet n'interrompt jamais les suivants — promesse qui
+// suppose que chaque échec se transforme bien en `{ok:false, raison}` plutôt
+// qu'en exception.
+describe("archiver — ce qui échoue, et comment", () => {
+  // `BodyInit`/`HeadersInit` sont des types DOM : le sidecar ne charge que
+  // les `lib` de Node, et les nommer ici ne passe pas le typecheck explicite.
+  const reponse = (init: { status: number; headers?: Record<string, string>; corps?: string }) =>
+    new Response(init.corps ?? null, { status: init.status, headers: init.headers });
+
+  it("pas de `Location` sur /cache : refus nommé, jamais une exception", async () => {
+    const dossier = join(dir(), "sansLocation");
+    const fetchImpl = (async () => reponse({ status: 404 })) as unknown as typeof fetch;
+    const r = await archiver({
+      token: "j", fetchImpl, file: new Throttle(0), dossierArchives: dossier, raindropId: 1,
+    });
+    expect(r).toEqual({ ok: false, raison: "pas de redirection (http 404)" });
+  });
+
+  // La signature S3 est temporaire : une URL périmée rend 403, et ce n'est
+  // pas une panne de l'application.
+  it("copie inaccessible : le code HTTP de S3 est rapporté tel quel", async () => {
+    const dossier = join(dir(), "s3refuse");
+    const fetchImpl = (async (url: string | URL) =>
+      String(url).includes("/cache")
+        ? reponse({ status: 303, headers: { location: "http://s3.invalide/objet" } })
+        : reponse({ status: 403 })) as unknown as typeof fetch;
+    const r = await archiver({
+      token: "j", fetchImpl, file: new Throttle(0), dossierArchives: dossier, raindropId: 2,
+    });
+    expect(r).toEqual({ ok: false, raison: "copie inaccessible (http 403)" });
+  });
+
+  // Une coupure réseau LÈVE. `archivage.ts` boucle sur les identifiants : une
+  // exception qui s'échapperait d'ici interromprait tous les suivants.
+  it("une coupure réseau devient un refus, elle ne s'échappe pas", async () => {
+    const dossier = join(dir(), "coupure");
+    const fetchImpl = (async () => {
+      throw new Error("fetch failed");
+    }) as unknown as typeof fetch;
+    const r = await archiver({
+      token: "j", fetchImpl, file: new Throttle(0), dossierArchives: dossier, raindropId: 3,
+    });
+    expect(r).toEqual({ ok: false, raison: "fetch failed" });
+  });
+
+  // Le second appel porte l'URL SIGNÉE : y réémettre l'en-tête
+  // d'authentification la ferait rejeter par S3 (mesuré, §5.4).
+  it("le second appel ne porte AUCUN en-tête d'authentification", async () => {
+    const dossier = join(dir(), "signature");
+    const entetes: unknown[] = [];
+    const fetchImpl = (async (url: string | URL, init?: RequestInit) => {
+      entetes.push(init?.headers);
+      return String(url).includes("/cache")
+        ? reponse({ status: 303, headers: { location: "http://s3.invalide/objet" } })
+        : reponse({ status: 200, corps: "<html>archive</html>" });
+    }) as unknown as typeof fetch;
+    const r = await archiver({
+      token: "j", fetchImpl, file: new Throttle(0), dossierArchives: dossier, raindropId: 4,
+    });
+    expect(r.ok).toBe(true);
+    // Le premier l'a bien porté — sans quoi l'absence sur le second ne
+    // prouverait rien.
+    expect(JSON.stringify(entetes[0])).toContain("Bearer");
+    expect(entetes[1]).toBeUndefined();
+  });
+});

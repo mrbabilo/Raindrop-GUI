@@ -20,8 +20,10 @@
 //! parce qu'une correction contraignante ne se retire pas sur un raisonnement,
 //! et parce qu'un modèle de pagination différent (curseur plutôt qu'offset)
 //! pourrait la rendre nécessaire. Quiconque la trouverait « morte » et
-//! voudrait la supprimer : il n'y a PAS de test derrière, la relire ici
-//! d'abord.
+//! voudrait la supprimer : deux tests la tiennent désormais
+//! (`incremental.test.ts`, « la page de recouvrement »), dont un sabordé —
+//! ce qu'elle protège est l'ordre entre éléments de MÊME seconde, qui n'est
+//! pas garanti stable d'une requête à l'autre.
 
 import type { Lecture } from "./lecture.js";
 

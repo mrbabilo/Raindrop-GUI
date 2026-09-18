@@ -210,9 +210,14 @@ fidèle, recompression quand la signature manque, test sabordé pour le prouver.
 - [ ] **Petites dettes du lot** : factoriser `interface File` (déclarée trois
       fois) et la constante `50` (encodée cinq fois) ; le mot `complet`
       désigne deux choses (le mode et la fidélité), avec un troisième nom
-      (`Piece.fidele`) pour la seconde ; la page de recouvrement de
-      l'incrémental n'a aucun test ; pas de test sur les chemins d'erreur
-      d'`archiver`.
+      (`Piece.fidele`) pour la seconde.
+      **Les deux trous de COUVERTURE sont comblés** (2026-09-19) : la page de
+      recouvrement de l'incrémental a deux tests — le faux serveur HTTP trie
+      correctement et ne pouvait pas produire le cas, d'où une `Lecture`
+      fabriquée qui sert les pages voulues ; et les trois chemins d'échec
+      d'`archiver` en ont quatre, dont celui qui vérifie que le second appel
+      ne porte AUCUN en-tête d'authentification (l'URL S3 est déjà signée, et
+      la réémettre la fait rejeter — mesuré au §5.4). Trois sabordages.
 - [x] **Sélecteur du dossier de sauvegarde + panneau + archivage** — fait le
       2026-09-18, 15 tasks
       (`docs/superpowers/plans/2026-09-18-selection-dossier.md`, spec

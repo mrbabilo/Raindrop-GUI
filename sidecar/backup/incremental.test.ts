@@ -97,3 +97,55 @@ describe("un item sans `_id` numérique", () => {
     expect(r.nouveauWatermark).toBe("2026-04-01T00:00:00.000Z");
   });
 });
+
+// La page de RECOUVREMENT (correction §1bis n°4). Le module la signale
+// lui-même comme non testée : « il n'y a PAS de test derrière, la relire ici
+// d'abord ». Ce qu'elle protège : l'ordre entre éléments de MÊME seconde
+// n'est pas garanti stable d'une requête à l'autre, si bien qu'un élément au
+// watermark peut se présenter APRÈS le point de croisement. Le faux serveur
+// HTTP trie correctement et ne peut donc pas produire ce cas — d'où une
+// `Lecture` fabriquée, qui sert les pages telles qu'on les veut.
+describe("la page de recouvrement", () => {
+  const PAR_PAGE = 50;
+  /** Une `Lecture` qui sert les pages données, et compte ce qu'on lui demande. */
+  const lectureDe = (pages: unknown[][]) => {
+    const demandees: number[] = [];
+    const lecture = {
+      page: async (_c: number, o: { page: number }) => {
+        demandees.push(o.page);
+        return { count: 0, items: pages[o.page] ?? [] };
+      },
+    } as unknown as Parameters<typeof lireModifies>[0]["lecture"];
+    return { lecture, demandees };
+  };
+  const rempli = (n: number, date: string) =>
+    Array.from({ length: n }, (_, i) => ({ _id: 1000 + i, lastUpdate: date }));
+
+  it("lit une page de PLUS après le croisement, et y récupère un élément au watermark", async () => {
+    const w = "2026-05-05T12:00:00.000Z";
+    const vieux = "2026-01-01T00:00:00.000Z";
+    // Page 0 : pleine, et elle CROISE (elle contient du plus vieux que le
+    // watermark). Sans recouvrement, la lecture s'arrêterait là.
+    const page0 = [...rempli(PAR_PAGE - 1, w), { _id: 9001, lastUpdate: vieux }];
+    // Page 1 : l'ordre instable y a rejeté un élément de la seconde du
+    // watermark. C'est LUI que le recouvrement récupère.
+    const page1 = [{ _id: 7777, lastUpdate: w }, ...rempli(PAR_PAGE - 1, vieux)];
+    const { lecture, demandees } = lectureDe([page0, page1, []]);
+
+    const r = await lireModifies({ lecture, collectionId: 0, watermark: w });
+
+    expect(demandees).toEqual([0, 1]); // la page de recouvrement a bien été demandée
+    expect(r.modifies.map((m) => (m as { _id: number })._id)).toContain(7777);
+  });
+
+  it("sans croisement, aucune page de recouvrement n'est demandée", async () => {
+    const recent = "2026-06-01T00:00:00.000Z";
+    // Une page pleine, entièrement au-dessus du watermark : rien ne croise,
+    // et la page suivante est courte — la lecture s'arrête d'elle-même.
+    const { lecture, demandees } = lectureDe([rempli(PAR_PAGE, recent), [{ _id: 1, lastUpdate: recent }]]);
+    await lireModifies({ lecture, collectionId: 0, watermark: "2026-01-01T00:00:00.000Z" });
+    // Deux pages lues parce que la première était pleine, pas parce qu'un
+    // recouvrement l'a exigé — la seconde, courte, termine la boucle.
+    expect(demandees).toEqual([0, 1]);
+  });
+});
