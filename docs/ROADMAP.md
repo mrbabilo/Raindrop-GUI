@@ -188,23 +188,35 @@ fidèle, recompression quand la signature manque, test sabordé pour le prouver.
       (`Piece.fidele`) pour la seconde ; la page de recouvrement de
       l'incrémental n'a aucun test ; pas de test sur les chemins d'erreur
       d'`archiver`.
-- [ ] **Sélecteur du dossier de sauvegarde + panneau + archivage** — la spec
-      est écrite et validée en brainstorming :
-      `docs/superpowers/specs/2026-09-18-selection-dossier-design.md` (les
-      trois points ci-dessous y sont tranchés). Rappel du problème : rien ne
-      peut déclencher une sauvegarde depuis l'application — `BACKUP_DIR`
-      n'existe dans aucun `.rs`, donc `deps.sauvegarde` est `undefined` et les
-      deux routes répondent « inactive ». Tranchés : l'utilisateur choisit le
-      **parent** (`sidecar/index.ts:83` ajoute `Raindrop-GUI/`) ; changer de
-      dossier **redémarre le sidecar** par le chemin éprouvé
-      d'`enregistrer_jeton` ; la ligne vit dans les **Réglages existants**.
-      S'y ajoutent : première sauvegarde **explicite** (manifeste vide ne
-      déclenche plus rien au boot — §4.4 amendé), panneau `SectionSauvegarde`
-      (compteur nommé, pas de barre — item « sémantique de progression »
-      tranché), inventaire `GET /api/backup/archives` + marqueur « Archivé »,
-      action d'archivage **sur la sélection** via la Revue (liens morts et
-      `BulkBar`, borné 500 en refus explicite, déjà-archivés écartés et
-      comptés).
+- [x] **Sélecteur du dossier de sauvegarde + panneau + archivage** — fait le
+      2026-09-18, 15 tasks
+      (`docs/superpowers/plans/2026-09-18-selection-dossier.md`, spec
+      `2026-09-18-selection-dossier-design.md`). **Le lot sauvegarde est
+      joignable depuis l'application.** Livré : `reglages.json` + dialogue
+      natif (`tauri-plugin-dialog`, premier `capabilities/default.json` du
+      dépôt) et `BACKUP_DIR` passé au spawn ; panneau `SectionSauvegarde`
+      dans les Réglages (chemin final, dernière sauvegarde, instantanés,
+      archives, compteur nommé, annulation) ; inventaire
+      `GET /api/backup/archives` + marqueur « Archivé » à trois états ;
+      archivage sur sélection via la Revue, depuis la liste et depuis les
+      liens morts. **663 tests / 2 ignorés** (589 avant), typechecks et
+      `cargo test` verts.
+      **Trois items ROADMAP tranchés au passage** : la sémantique de
+      progression (compteur nommé plutôt qu'une barre qui gèle ou recule —
+      corbeille et auxiliaires émettent enfin un label), la première
+      sauvegarde explicite (§4.4 amendé), et le test instable identifié.
+      **Vérifié en réel** : dossier neuf → aucune sauvegarde au démarrage
+      (c'était tout l'objet du §0.2) ; job lancé, listé par `/api/jobs` avec
+      son compteur (« 350 / 12 210 signets »), annulé ; labels de progression
+      observés jusqu'à « profil ».
+      **Trois écarts assumés, amendés dans la spec** : pas de paquet npm pour
+      le dialogue (il vit côté Rust) ; le paramètre d'actions de `BulkBar` est
+      abandonné (la vue Liens morts suit son propre motif « action d'entête →
+      Revue ») ; et l'avertissement de première sauvegarde est **calculé** sur
+      la bibliothèque réelle, jamais écrit en dur — correction de
+      l'utilisateur en cours de lot.
+      **Reste au fil de l'eau** : le marqueur d'archive n'est pas posé sur la
+      mosaïque (`MosaicTile`), seulement sur la liste et le détail.
 - [ ] **Hors ligne** (consultation + file d'opérations simples) : après le
       plan 2, sur le socle posé par le lot sauvegarde. Inclut : écritures
       refusées proprement hors ligne (aujourd'hui les échecs remontent en
