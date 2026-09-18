@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { AppStateProvider, useAppState } from "../state/appState";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { TagsView } from "./TagsView";
-import { tags } from "../test/fixtures";
 
 // Le vrai useTagManage (useMutations) est exercé : c'est lui le contrat
 // (endpoint + corps + invalidations) — seul le transport (api.send) est mocké.
@@ -23,9 +23,18 @@ vi.mock("../hooks/useStaticData", async () => {
   };
 });
 
+// Espion de navigation : le nom d'une étiquette MÈNE à ce qu'elle range.
+const Vue = () => {
+  const { view } = useAppState();
+  return <span data-testid="vue">{JSON.stringify(view)}</span>;
+};
+
 const wrapper = ({ children }: { children: ReactNode }) => (
   <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-    {children}
+    <AppStateProvider>
+      <Vue />
+      {children}
+    </AppStateProvider>
   </QueryClientProvider>
 );
 
@@ -168,5 +177,22 @@ describe("TagsView", () => {
     sendMock.mockClear();
     await userEvent.keyboard("{Enter}");
     expect(sendMock).not.toHaveBeenCalled();
+  });
+});
+
+// Une étiquette ressemble partout à la même chose : en rendre une inerte
+// fait douter de toutes. C'était le seul endroit où le nom ne réagissait pas.
+describe("TagsView — le nom mène à ce qu'il range", () => {
+  it("cliquer une étiquette ouvre la liste filtrée sur elle", async () => {
+    render(<TagsView />, { wrapper });
+    const nom = (await screen.findAllByRole("button", { name: /#/ }))[0]!;
+    await userEvent.click(nom);
+    const vue = JSON.parse(screen.getByTestId("vue").textContent ?? "{}") as {
+      kind: string; collectionId: number; search: string;
+    };
+    expect(vue.kind).toBe("list");
+    // « Tous » : une étiquette ne se limite pas à la collection courante.
+    expect(vue.collectionId).toBe(0);
+    expect(vue.search).toMatch(/^#/);
   });
 });

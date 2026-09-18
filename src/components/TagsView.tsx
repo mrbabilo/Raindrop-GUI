@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { EtatListe } from "./EtatListe";
+import { useAppState } from "../state/appState";
 import { useTags } from "../hooks/useStaticData";
 import { useTagManage } from "../hooks/useMutations";
 import type { Tag } from "../../shared/types";
@@ -33,6 +34,7 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
   const [nom, setNom] = useState("");
   const [armee, setArmee] = useState(false);
   const ligneRef = useRef<HTMLLIElement>(null);
+  const { go } = useAppState();
   const fermerEdition = () => {
     setEdition(false);
     setNom("");
@@ -83,11 +85,18 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
         />
       ) : (
         <>
-          {/* Nom dans son propre span : le # décoratif reste hors du texte du
-              span (les requêtes RTL ne lisent que les nœuds texte directs). */}
-          <span className="flex-1 truncate">
+          {/* Le nom MÈNE à ce qu'il range : cliquer une étiquette ouvre la
+              liste filtrée sur elle. C'était le seul endroit de
+              l'application où une étiquette ne réagissait pas.
+              Le # décoratif reste hors du texte du span (les requêtes RTL ne
+              lisent que les nœuds texte directs). */}
+          <button
+            type="button"
+            className="flex-1 truncate text-left hover:underline"
+            onClick={() => go({ kind: "list", collectionId: 0, label: t("nav.all"), search: `#${tag.name}` })}
+          >
             #<span>{tag.name}</span>
-          </span>
+          </button>
           <span className="text-xs text-app-muted">{tag.count}</span>
           <button
             type="button"

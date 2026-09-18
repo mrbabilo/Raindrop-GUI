@@ -43,7 +43,19 @@ const bouton = "rounded border border-app-border px-2 py-1 text-xs";
 const coque = "bg-app p-3 text-sm";
 
 export function DetailPane({ onFermer }: { onFermer?: () => void }) {
-  const { selectedRaindropId } = useAppState();
+  const { selectedRaindropId, view, go, patchList } = useAppState();
+  /**
+   * Cliquer une étiquette montre ce qu'elle range.
+   *
+   * `patchList` est un NO-OP hors vue liste (`appState`, le reducer le garde
+   * explicitement) : la fiche pouvant être ouverte au-dessus du Nettoyage ou
+   * de la vue Tags, s'en contenter rendrait la pilule morte précisément là où
+   * rien ne l'annoncerait. On navigue alors vers « Tous », filtré.
+   */
+  const filtrerParEtiquette = (tag: string) => {
+    if (view.kind === "list") patchList({ search: `#${tag}` });
+    else go({ kind: "list", collectionId: 0, label: t("nav.all"), search: `#${tag}` });
+  };
   const update = useUpdateRaindrop(selectedRaindropId ?? 0);
   const trash = useTrashRaindrop();
   const [editing, setEditing] = useState(false);
@@ -176,11 +188,12 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
       </a>
       {champ("excerpt", 1)}
       {champ("note", 3)}
-      {/* §2 : pilules 21 px en détail — inertes, une étiquette de fiche n'est
-          pas une commande. */}
+      {/* §2 : pilules 21 px en détail, et CLIQUABLES comme celles de la liste
+          — une étiquette ressemble partout à la même chose, en rendre la
+          moitié inerte fait douter de l'autre. */}
       <div className="flex flex-wrap gap-1">
         {r.tags.map((tag) => (
-          <PiluleEtiquette key={tag} nom={tag} taille="detail" />
+          <PiluleEtiquette key={tag} nom={tag} taille="detail" onClick={() => filtrerParEtiquette(tag)} />
         ))}
       </div>
       <div className="flex flex-wrap gap-2">

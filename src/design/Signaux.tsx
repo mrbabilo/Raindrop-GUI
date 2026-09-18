@@ -133,8 +133,13 @@ export function CarreCollection({
 }
 
 // §2 : pilule 18 px en liste, 21 px en détail (`.tag-detail` s'ajoute à
-// `.tag`). `onClick` optionnel : cliquable dans la liste (pose le filtre),
-// inerte dans la fiche — une étiquette de fiche n'est pas une commande.
+// `.tag`). `onClick` pose le filtre sur l'étiquette.
+//
+// Décision RENVERSÉE (demande de l'utilisateur) : la fiche rendait ses
+// pilules inertes, au motif qu'« une étiquette de fiche n'est pas une
+// commande ». À l'usage c'est le contraire qui surprend — une étiquette
+// ressemble partout à la même chose, et n'en rendre cliquables que la
+// moitié fait douter de l'autre. Toutes le sont désormais.
 export function PiluleEtiquette({
   nom,
   taille = "liste",
@@ -147,13 +152,15 @@ export function PiluleEtiquette({
   const className = "tag" + (taille === "detail" ? " tag-detail" : "");
   const style = variablesTeinte(nom);
   if (!onClick) return <span className={className} style={style}>{nom}</span>;
-  // `tabIndex={-1}` : dans une liste, les étiquettes d'une ligne ne sont pas
-  // des arrêts de tabulation — la ligne l'est. Sans cela, trois étiquettes
-  // par ligne multiplient les arrêts par quatre.
+  // `tabIndex={-1}` dans une LISTE seulement : les étiquettes d'une ligne n'y
+  // sont pas des arrêts de tabulation — la ligne l'est, et sans cela trois
+  // étiquettes par ligne multiplieraient les arrêts par quatre. Dans une
+  // fiche il n'y a pas de ligne pour les porter : la pilule doit être
+  // atteignable au clavier, sinon on la rend cliquable à la souris seule.
   return (
     <button
       type="button"
-      tabIndex={-1}
+      {...(taille === "detail" ? {} : { tabIndex: -1 })}
       className={className}
       style={style}
       // La pilule vit dans une ligne cliquable : filtrer sur une étiquette ne

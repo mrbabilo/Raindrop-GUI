@@ -317,6 +317,66 @@ describe("DetailPane", () => {
     expect(screen.getByRole("button", { name: "Fermer le détail" })).toBeInTheDocument();
   });
 
+  // Une étiquette de fiche était INERTE à dessein (« une étiquette de fiche
+  // n'est pas une commande »). Décision renversée : à l'usage, c'est
+  // l'inertie qui surprend.
+  it("une étiquette de la fiche pose le filtre sur la liste", async () => {
+    const Vue = () => {
+      const { view } = useAppState();
+      return <span data-testid="vue">{JSON.stringify(view)}</span>;
+    };
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AppStateProvider>
+          <Vue />
+          <Preselect id={1000} />
+          <DetailPane />
+        </AppStateProvider>
+      </QueryClientProvider>,
+    );
+    // La fixture porte ses étiquettes — sans quoi ce test n'aurait rien à
+    // cliquer et le prouverait mal.
+    const pilule = await screen.findByRole("button", { name: raindrop().tags[0]! });
+    await userEvent.click(pilule);
+    const vue = JSON.parse(screen.getByTestId("vue").textContent ?? "{}") as { search?: string };
+    expect(vue.search).toBe(`#${raindrop().tags[0]!}`);
+  });
+
+  // `patchList` est un NO-OP hors vue liste : la fiche peut être ouverte
+  // au-dessus du Nettoyage, et s'en contenter rendrait la pilule morte
+  // précisément là où rien ne l'annoncerait.
+  it("hors vue liste, l'étiquette NAVIGUE au lieu de ne rien faire", async () => {
+    const Pilote = () => {
+      const { view, go } = useAppState();
+      return (
+        <>
+          <span data-testid="vue">{JSON.stringify(view)}</span>
+          <button type="button" onClick={() => go({ kind: "cleanup" })}>vers-nettoyage</button>
+        </>
+      );
+    };
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AppStateProvider>
+          <Pilote />
+          <Preselect id={1000} />
+          <DetailPane />
+        </AppStateProvider>
+      </QueryClientProvider>,
+    );
+    await userEvent.click(screen.getByText("vers-nettoyage"));
+    // La vue N'EST PLUS une liste — c'est là que le patch serait muet.
+    expect(JSON.parse(screen.getByTestId("vue").textContent ?? "{}").kind).toBe("cleanup");
+
+    await userEvent.click(await screen.findByRole("button", { name: raindrop().tags[0]! }));
+    const vue = JSON.parse(screen.getByTestId("vue").textContent ?? "{}") as {
+      kind: string; collectionId: number; search?: string;
+    };
+    expect(vue.kind).toBe("list");
+    expect(vue.collectionId).toBe(0);
+    expect(vue.search).toBe(`#${raindrop().tags[0]!}`);
+  });
+
   // Trois états, jamais confondus (spec sélection §4.1) : archivé EN LOCAL,
   // copiable mais pas encore archivé, ou rien.
   it("dit « Archivé » pour un signet de l'inventaire", async () => {
