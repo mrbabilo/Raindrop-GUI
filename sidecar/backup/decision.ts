@@ -36,11 +36,15 @@ export function doitBalayerComplet(m: Manifeste, maintenant: Date): boolean {
 }
 
 /**
- * Au démarrage (§4.4) : plus de 24 h depuis la dernière TENTATIVE, valide ou
- * non. Se fonder sur `dernierValide` ici relancerait une sauvegarde à chaque
- * lancement tant qu'une seule échouerait — jusqu'à marteler l'API.
+ * Au démarrage (§4.4, amendé — spec sélection §0.2) : plus de 24 h depuis la
+ * dernière TENTATIVE, valide ou non. Se fonder sur `dernierValide` ici
+ * relancerait une sauvegarde à chaque lancement tant qu'une seule échouerait
+ * — jusqu'à marteler l'API. Un manifeste VIDE ne déclenche plus rien : choisir
+ * un dossier ne doit pas partir en 2 min 19 et ~245 requêtes non demandées —
+ * la première sauvegarde est un geste explicite, ensuite le §4.4 s'applique.
  */
 export function doitSauvegarderAuDemarrage(m: Manifeste, maintenant: Date): boolean {
   const dernier = [...m.instantanes].sort((a, b) => a.horodatage.localeCompare(b.horodatage)).at(-1);
-  return dernier === undefined || depuis(dernier.horodatage, maintenant) > HEURES_DEMARRAGE * 36e5;
+  if (dernier === undefined) return false;
+  return depuis(dernier.horodatage, maintenant) > HEURES_DEMARRAGE * 36e5;
 }

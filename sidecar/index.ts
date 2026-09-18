@@ -139,8 +139,9 @@ const server = serve(
   },
 );
 
-// Déclenchement au démarrage (§4.4) : si la dernière sauvegarde date de plus
-// de 24 h. Jamais bloquant — le bind HTTP ne l'attend pas, et un échec se
+// Déclenchement au démarrage (§4.4, amendé — spec sélection §0.2) : si la
+// dernière TENTATIVE date de plus de 24 h. Manifeste vide → rien : la
+// première sauvegarde est explicite. Jamais bloquant — le bind HTTP ne l'attend pas, et un échec se
 // journalise au lieu de tuer le sidecar.
 if (sauvegarde && dossierSauvegarde) {
   void (async () => {

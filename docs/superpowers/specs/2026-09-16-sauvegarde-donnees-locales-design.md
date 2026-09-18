@@ -297,6 +297,11 @@ branche ensuite sans modifier le moteur.
 
 ### 4.4 Une seule file vers l'API, avec priorité
 
+> ⚠️ **Amendé le 2026-09-18 (spec sélection §0.2)** : un manifeste vide ne
+> déclenche plus rien au démarrage — la première sauvegarde est explicite,
+> lancée depuis le panneau. Le §4.4 ne s'applique qu'à partir de la première
+> tentative enregistrée.
+
 **Défaut relevé dans l'existant (2026-09-16)** : le throttle de 550 ms
 (`sidecar/mcp/throttle.ts`) n'encadre **que** les appels MCP. Le client REST
 direct appelle `fetch` sans passer par lui. Sans conséquence jusqu'ici — il ne

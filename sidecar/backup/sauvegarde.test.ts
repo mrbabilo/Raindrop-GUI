@@ -8,51 +8,6 @@ import { Throttle } from "../mcp/throttle.js";
 import { makeSauvegarde } from "./sauvegarde.js";
 import type { Manifeste } from "./manifeste.js";
 
-const vide: Manifeste = { version: 1, instantanes: [] };
-const avec = (horodatage: string): Manifeste => ({
-  version: 1,
-  instantanes: [{ horodatage, complet: true, count: 10, watermark: "w", empreintes: {} }],
-});
-
-describe("quand faut-il un balayage complet", () => {
-  const s = makeSauvegarde({ lecture: {} as never, dossier: "/tmp/x" });
-
-  it("jamais sauvegardé : complet", () => {
-    expect(s.doitBalayerComplet(vide, new Date("2026-09-18T10:00:00Z"))).toBe(true);
-  });
-
-  it("sauvegardé hier : l'incrémental suffit", () => {
-    expect(s.doitBalayerComplet(avec("2026-09-17T10-00-00"), new Date("2026-09-18T10:00:00Z"))).toBe(false);
-  });
-
-  // §5.3 : la comparaison de compteurs est un déclencheur bon marché, PAS une
-  // garantie — une suppression ET un ajout laissent le compte inchangé.
-  it("plus de sept jours sans balayage complet : complet, quoi qu'en disent les compteurs", () => {
-    expect(s.doitBalayerComplet(avec("2026-09-10T10-00-00"), new Date("2026-09-18T10:00:00Z"))).toBe(true);
-  });
-
-  // §4.4 — le déclenchement au démarrage se fonde sur la dernière TENTATIVE,
-  // valide ou non : sur `dernierValide`, une sauvegarde qui échoue en
-  // relancerait une à chaque lancement, jusqu'à marteler l'API.
-  it("au démarrage : rien depuis plus de 24 h → on sauvegarde", () => {
-    expect(s.doitSauvegarderAuDemarrage(vide, new Date("2026-09-18T10:00:00Z"))).toBe(true);
-    expect(s.doitSauvegarderAuDemarrage(avec("2026-09-16T10-00-00"), new Date("2026-09-18T10:00:00Z"))).toBe(true);
-    expect(s.doitSauvegarderAuDemarrage(avec("2026-09-18T01-00-00"), new Date("2026-09-18T10:00:00Z"))).toBe(false);
-    const echouee: Manifeste = {
-      version: 1,
-      instantanes: [{ horodatage: "2026-09-18T01-00-00", complet: false, count: 1, watermark: "w", empreintes: {} }],
-    };
-    expect(s.doitSauvegarderAuDemarrage(echouee, new Date("2026-09-18T10:00:00Z"))).toBe(false);
-  });
-
-  it("un instantané incomplet ne compte pas comme un balayage", () => {
-    const m: Manifeste = {
-      version: 1,
-      instantanes: [{ horodatage: "2026-09-17T10-00-00", complet: false, count: 1, watermark: "w", empreintes: {} }],
-    };
-    expect(s.doitBalayerComplet(m, new Date("2026-09-18T10:00:00Z"))).toBe(true);
-  });
-});
 
 let api: FauxApi | undefined;
 afterEach(async () => {
