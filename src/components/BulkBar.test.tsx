@@ -153,3 +153,30 @@ describe("BulkBar", () => {
     expect(screen.getByRole("button", { name: "Corbeille" })).toHaveClass("border-app-broken", "text-app-broken");
   });
 });
+
+// Le reste de la passe design (ROADMAP) : défaire une sélection — qui
+// n'avait AUCUN moyen d'être défaites autrement qu'un à un — et ne jamais
+// proposer d'actions sur un ensemble vide.
+describe("BulkBar — défaire, et ne rien proposer sur du vide", () => {
+  it("« Tout désélectionner » vide la sélection, et la barre disparaît", async () => {
+    await renderBar([1000, 1001]);
+    expect(screen.getByTestId("sel")).toHaveTextContent("1000,1001");
+    await userEvent.click(screen.getByRole("button", { name: "Tout désélectionner" }));
+    // L'aller ET le retour : la sélection est vide, ET la barre s'est
+    // démontée — un bouton qui change d'avis sans vider la chose commandée
+    // ne prouverait rien (règle des bascules).
+    expect(screen.getByTestId("sel")).toHaveTextContent("");
+    expect(screen.queryByRole("button", { name: "Corbeille" })).not.toBeInTheDocument();
+  });
+
+  it("une sélection hors de la page n'affiche AUCUNE barre", async () => {
+    // 999 n'existe pas dans `items` — mais il RESTE sélectionné (R9P-1 : une
+    // navigation ordinaire garde sa sélection). Avec l'ancienne garde, qui
+    // portait sur `selectedIds.size`, la barre s'affichait « 0 sélectionnés »
+    // en offrant corbeille, archivage et étiquetage sur un ensemble VIDE.
+    await renderBar([999]);
+    expect(screen.getByTestId("sel")).toHaveTextContent("999");
+    expect(screen.queryByRole("button", { name: "Corbeille" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Tout désélectionner" })).not.toBeInTheDocument();
+  });
+});

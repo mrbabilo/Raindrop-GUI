@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { t } from "../i18n/fr";
 import type { Collection, RaindropItem } from "../../shared/types";
 import { useRaindrops } from "../hooks/useRaindrops";
-import { CarreCollection, racine, teinteCollection, type EtatLien } from "../design/Signaux";
+import { CarreCollection, teinteCollection, type EtatLien } from "../design/Signaux";
+import { racine } from "../lib/arbre";
 import { RaindropRow } from "./RaindropRow";
 
 // Une section de la vue collection parente : l'intertitre d'une

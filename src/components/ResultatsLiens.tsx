@@ -12,7 +12,7 @@ import { EtatListe } from "./EtatListe";
 import { useAppState } from "../state/appState";
 import { useAnalysisResults } from "../hooks/useAnalysis";
 import { useCollections } from "../hooks/useStaticData";
-import { racine } from "../design/Signaux";
+import { racine } from "../lib/arbre";
 import { DeadRow, RedirectRow } from "./CleanupRows";
 import { Entete, LABELS } from "./EnteteCleanup";
 

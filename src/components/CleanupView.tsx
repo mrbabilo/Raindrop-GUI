@@ -7,7 +7,7 @@ import { useAppState } from "../state/appState";
 import { useAnalysisStatus, useDuplicateGroups, useStartScan } from "../hooks/useAnalysis";
 import { useRaindrops } from "../hooks/useRaindrops";
 import { useCollections } from "../hooks/useStaticData";
-import { racine } from "../design/Signaux";
+import { racine } from "../lib/arbre";
 import type { DuplicateGroup } from "../../shared/types";
 import {
   DuplicateGroupCard,

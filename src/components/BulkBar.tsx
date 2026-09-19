@@ -18,9 +18,13 @@ type BulkAction = Extract<View, { kind: "review" }>["action"];
 export function BulkBar({ items }: { items: RaindropItem[] }) {
   const { view, selectedIds, go, clearSelection } = useAppState();
   const [tags, setTags] = useState("");
-  if (selectedIds.size === 0) return null;
-
   const selected = items.filter((i) => selectedIds.has(i.id));
+  // La garde porte sur ce qui est RÉELLEMENT actionnable ici, pas sur la
+  // taille de la sélection. Garder une sélection en changeant de vue est
+  // voulu (R9P-1) — mais avec `selectedIds.size`, arriver dans une collection
+  // qui n'en contient aucun affichait une barre « 0 sélectionnés » offrant
+  // la corbeille, l'archivage et l'étiquetage sur un ensemble VIDE.
+  if (selected.length === 0) return null;
   // R9P-1 : la Revue CONSOMME la sélection — go PUIS clearSelection, dans cet
   // ordre (chirurgical : le clear appartient à l'action, pas au `go` général ;
   // une navigation ordinaire garde sa sélection).
@@ -77,6 +81,12 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
         }}
       >
         {t("bulk.tag")}
+      </button>
+      {/* Il n'existait AUCUN moyen de défaire une sélection : cinquante
+          signets cochés se décochaient un par un. La commande est en fin de
+          barre, après les actions — elle défait, elle n'engage rien. */}
+      <button type="button" className="ml-auto rounded border border-app-border px-2 py-1" onClick={clearSelection}>
+        {t("bulk.clear")}
       </button>
     </div>
   );

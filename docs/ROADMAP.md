@@ -414,11 +414,33 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       Valider, Ouvrir la bibliothèque, Déconnecter, Réessayer. Et ce qui
       porte un COMPTE (« Voir les N », « Archiver la copie (N) ») reste du
       texte : un nombre ne se dessine pas.
-- [ ] **Passe design** : « Tout désélectionner » testé ; étiquettes
-      évanouies par `shrink` (plancher min-w) ; `leading-tight` tuile ;
-      `.wash` vs `.coll-icon` à fusionner ; `filetEtat` demi-paire ;
-      `racine()` à déplacer ; moyenne d'icônes §8 ; sélection persistante
-      collections/tags ; media select retiré (7b) — rester cohérent.
+- [x] **Passe design** — soldée le 2026-09-19, point par point, car sur neuf
+      mentions **quatre étaient déjà réglées** et une est illisible :
+      **faits ce jour** — « Tout désélectionner » (il n'existait AUCUN moyen
+      de défaire une sélection autrement qu'un à un ; en fin de barre, après
+      les actions, car elle défait sans engager) ; la **garde de la barre**,
+      qui portait sur `selectedIds.size` et affichait « 0 sélectionnés » avec
+      corbeille et archivage sur un ensemble vide dès qu'une sélection
+      débordait la page (R9P-1 : la navigation la garde, voulu) — elle porte
+      désormais sur ce qui est réellement actionnable **ici** ; les
+      **étiquettes évanouies** (`shrink-0` sur la pilule : le conteneur est
+      `shrink` et borné au tiers — sans plancher, les pilules se comprimaient
+      toutes ensemble jusqu'au moignon illisible ; rognées, elles restent
+      lisibles) ; **`.wash` fusionné à `.coll-icon`** par sélecteur groupé
+      (la formule oklch était recopiée deux fois ; zéro appelant touché, et
+      la règle groupée placée AVANT `.coll-icon-nav` pour que l'écrasement de
+      fond de la navigation survive par ordre du source) ; **`racine()`
+      déplacée** vers `lib/arbre.ts` — de la marche d'arbre, pas du dessin —
+      avec ses deux tests transférés (ils cohabitent avec le code).
+      **Déjà réglés, vérifiés avant d'écrire** — `leading-tight` est en place
+      sur la tuile (correctif appliqué, la mention en gardait la trace) ;
+      `filetEtat` est une paire complète (quatre états, et la mosaïque
+      emploie le même helper) ; la **persistance de la sélection** est le
+      choix documenté R9P-1 ; le **media select** est bien parti (7b).
+      **Illisible** : « moyenne d'icônes §8 » — §8 (densités) ne parle pas
+      d'icônes, et aucune trace retrouvée dans le code ni les tests. Noté ici
+      plutôt que coché en silence, comme « désélection d'arbre RTL » avant
+      lui.
 - [x] **Lot a11y** — soldé le 2026-09-19. ⚠️ **Cinq des sept points étaient
       DÉJÀ faits** et cette case mentait depuis des jours : nom accessible de
       la recherche (`TopBar`), chaîne ARIA de la palette

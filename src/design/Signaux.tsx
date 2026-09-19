@@ -20,20 +20,9 @@ export function variablesTeinte(mot: string | null | undefined): CSSProperties {
   return { "--h": String(h ?? 0), "--sat": h === null ? "0" : "1" } as CSSProperties;
 }
 
-// §4 : « La collection racine porte la couleur de sa thématique ; ses
-// descendantes en héritent. » Remonter parentId jusqu'à la racine — pur,
-// donc testable sans React, et sans hook dans une ligne virtualisée.
-// Une boucle de parents (donnée corrompue) est bornée par la longueur de la
-// liste : on ne remonte jamais plus de `collections.length` fois.
-export function racine(collections: Collection[], id: number): Collection | undefined {
-  let courant = collections.find((c) => c.id === id);
-  for (let i = 0; courant?.parentId != null && i < collections.length; i++) {
-    const parent = collections.find((c) => c.id === courant!.parentId);
-    if (!parent) break;
-    courant = parent;
-  }
-  return courant;
-}
+// La marche d'arbre a quitté le dessin pour `lib/arbre.ts` (2026-09-19) :
+// pure et sans teinte, elle n'avait rien à faire ici.
+import { racine } from "../lib/arbre";
 
 /**
  * La teinte d'une collection : **une couleur par famille** (§4). C'est la
@@ -159,7 +148,14 @@ export function PiluleEtiquette({
   titre?: string;
   onClick?: () => void;
 }) {
-  const className = "tag" + (taille === "detail" ? " tag-detail" : "") + (active ? " tag-actif" : "");
+  // `shrink-0` : dans la ligne de liste, le conteneur d'étiquettes est
+  // `shrink` et borné au tiers de la largeur. Sans plancher, les pilules se
+  // comprimaient toutes ensemble jusqu'à l'illisible — trois moignons plutôt
+  // qu'une étiquette entière. Rognées, elles restent lisibles ; écrasées,
+  // elles ne disent plus rien. C'est ce que promet déjà le commentaire de
+  // `RaindropRow` : « au-delà, elles sont rognées ».
+  const className =
+    "tag shrink-0" + (taille === "detail" ? " tag-detail" : "") + (active ? " tag-actif" : "");
   const style = variablesTeinte(nom);
   if (!onClick) return <span className={className} style={style}>{nom}</span>;
   // `tabIndex={-1}` dans une LISTE seulement : les étiquettes d'une ligne n'y

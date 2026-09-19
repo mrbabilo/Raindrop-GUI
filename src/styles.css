@@ -117,6 +117,18 @@ body {
   color: oklch(var(--app-tag-ink-l) calc(var(--app-tag-ink-c) * var(--sat, 1)) var(--h));
 }
 
+/* Le LAVIS dérivé (§6) — fond et encre portés par les jetons de la teinte
+   courante --h, déclarés UNE fois pour ses deux consommateurs : la pastille
+   .coll-icon (liste, fiche, navigation) et .wash, le lavis posé sur une
+   surface plus grande qu'une icône — la vignette de mosaïque, qui « reprend
+   la signalétique de sa collection » (§4) sans en imposer la taille de 18 px.
+   La formule oklch ne se recopie plus, ni ici ni dans le TSX. */
+.coll-icon,
+.wash {
+  background: oklch(var(--app-wash-l) calc(var(--app-wash-c) * var(--sat, 1)) var(--h));
+  color: oklch(var(--app-icon-l) calc(var(--app-icon-c) * var(--sat, 1)) var(--h));
+}
+
 .coll-icon {
   display: inline-flex;
   align-items: center;
@@ -129,8 +141,6 @@ body {
      d'autre dans l'interface. */
   border-radius: 50%;
   flex-shrink: 0;
-  background: oklch(var(--app-wash-l) calc(var(--app-wash-c) * var(--sat, 1)) var(--h));
-  color: oklch(var(--app-icon-l) calc(var(--app-icon-c) * var(--sat, 1)) var(--h));
 }
 
 /* Variante de navigation : la barre a de la place là où la ligne de liste
@@ -144,15 +154,6 @@ body {
   width: 22px;
   height: 22px;
   background: var(--color-app-panel);
-}
-
-/* Lavis thématique sur une surface plus grande qu'une icône — la vignette de
-   la mosaïque, qui « reprend la signalétique de sa collection » (§4). Mêmes
-   jetons dérivés que .coll-icon (§6), sans en imposer la taille de 18 px :
-   la formule oklch ne se recopie pas dans le TSX. */
-.wash {
-  background: oklch(var(--app-wash-l) calc(var(--app-wash-c) * var(--sat, 1)) var(--h));
-  color: oklch(var(--app-icon-l) calc(var(--app-icon-c) * var(--sat, 1)) var(--h));
 }
 
 /* §4 : une entrée de collection porte le lavis de sa teinte sur TOUTE la

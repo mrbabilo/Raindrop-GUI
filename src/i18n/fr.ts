@@ -90,6 +90,7 @@ export const fr = {
   "cmdk.hintCollection": "Collection",
   "cmdk.hintTag": "Tag",
   "cmdk.hintView": "Vue",
+  "bulk.clear": "Tout désélectionner",
   "cleanup.title": "Nettoyage",
   "cleanup.dead": "Liens morts",
   "cleanup.redirects": "Redirections",

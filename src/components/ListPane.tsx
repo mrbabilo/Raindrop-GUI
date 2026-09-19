@@ -4,7 +4,7 @@ import { t } from "../i18n/fr";
 import type { View } from "../state/appState";
 import { useRaindrops } from "../hooks/useRaindrops";
 import { useCollections } from "../hooks/useStaticData";
-import { racine } from "../design/Signaux";
+import { racine } from "../lib/arbre";
 import { listQueryArgs } from "../hooks/listQuery";
 import { useFiltreEtiquettes } from "../hooks/filtreEtiquettes";
 import { useAppState } from "../state/appState";

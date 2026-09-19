@@ -236,6 +236,20 @@ Developer ID.
   La liste n'est pas un bilan de santé — le Nettoyage l'est, et lui dit
   honnêtement ce qui n'a jamais été mesuré.
 
+#### Passe design — la barre de sélection (2026-09-19)
+
+- **« Tout désélectionner » existe.** Une sélection ne pouvait pas se défaire
+  autrement qu'en décochant chaque signet un par un. La commande vit en fin
+  de barre, après les actions : elle défait, elle n'engage rien.
+- **La barre ne s'affiche plus sur un ensemble vide.** Garder une sélection en
+  changeant de vue est voulu ; mais arriver dans une collection qui n'en
+  contient aucun montrait une barre « 0 sélectionnés » offrant corbeille et
+  archivage sur du vide. La garde porte désormais sur ce qui est réellement
+  actionnable ici.
+- **Les étiquettes rognées restent lisibles.** Dans une ligne étroite, les
+  pilules se comprimaient toutes ensemble jusqu'au moignon ; elles sont
+  désormais rognées entières.
+
 #### Barres de progression et temps restant (2026-09-19)
 
 - **Les trois travaux longs — analyse, sauvegarde, archivage — montrent une
