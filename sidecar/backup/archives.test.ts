@@ -159,3 +159,104 @@ describe("archiver — ce qui échoue, et comment", () => {
     expect(entetes[1]).toBeUndefined();
   });
 });
+
+// L'écriture EN FLUX et sa contrepartie : le fichier temporaire.
+//
+// Tamponnée, une écriture interrompue ne laissait RIEN. En flux, elle
+// laisserait un `<id>.html.gz` tronqué — qu'`inventorier()` compterait comme
+// une archive, que l'interface marquerait « Archivé », et dont le budget
+// pèserait les octets. Une archive tronquée qui se présente comme bonne est
+// le mode de défaillance qu'une sauvegarde existe pour exclure.
+describe("archiver — l'écriture en flux ne laisse jamais de demi-archive", () => {
+  const fetchVers = (corps: () => ReadableStream<Uint8Array>) =>
+    (async (url: string | URL) =>
+      String(url).includes("/cache")
+        ? new Response(null, { status: 303, headers: { location: "http://s3.invalide/objet" } })
+        : new Response(corps(), { status: 200 })) as unknown as typeof fetch;
+
+  it("le nom DÉFINITIF n'apparaît qu'une fois l'écriture terminée", async () => {
+    // Le test « rien ne reste après l'échec » ne prouve RIEN ici : avec ou
+    // sans temporaire, le `catch` efface et le dossier finit vide. Ce que le
+    // temporaire garantit, c'est qu'à AUCUN INSTANT un fichier au nom
+    // définitif n'existe — sinon un plantage du processus (où aucun `catch`
+    // ne tourne) laisserait une archive tronquée qui se présente comme bonne.
+    // On regarde donc le dossier PENDANT l'écriture.
+    const dossier = join(dir(), "pendant");
+    const vuPendant: string[][] = [];
+    let i = 0;
+    const corps = () =>
+      new ReadableStream<Uint8Array>({
+        async pull(c) {
+          i++;
+          if (i <= 3) return c.enqueue(new TextEncoder().encode("<html>".repeat(200)));
+          vuPendant.push(await readdir(dossier).catch(() => []));
+          c.error(new Error("connexion perdue"));
+        },
+      });
+    const r = await archiver({
+      token: "j", fetchImpl: fetchVers(corps), file: new Throttle(0),
+      dossierArchives: dossier, raindropId: 11,
+    });
+    expect(r.ok).toBe(false);
+    // Pendant : un temporaire, et LUI SEUL.
+    expect(vuPendant[0]).toEqual(["11.html.gz.partiel"]);
+    // Après : ni l'archive, ni son temporaire.
+    expect(await readdir(dossier)).toEqual([]);
+  });
+
+  it("le temporaire d'un plantage ne serait JAMAIS pris pour une archive", async () => {
+    // Contrôle du nom : un `.partiel` oublié par un plantage du processus
+    // (aucun `catch` ne tourne alors) ne doit pas être adopté. On prouve
+    // d'abord que le dossier contient bien un vrai fichier — sinon ce test
+    // constate un inventaire vide qui l'aurait été de toute façon.
+    const dossier = join(dir(), "reliquat");
+    await mkdir(dossier, { recursive: true });
+    await writeFile(join(dossier, "7.html.gz"), Buffer.alloc(10));
+    await writeFile(join(dossier, "8.html.gz.partiel"), Buffer.alloc(9_000));
+    const inv = await inventorier(dossier);
+    expect(inv.ids).toEqual([7]);
+    expect(inv.octets).toBe(10);
+  });
+
+  it("une copie démesurée est coupée, nommée, et n'écrit rien", async () => {
+    // Le garde-fou ne protège plus la mémoire (le flux s'en charge) mais le
+    // disque : une réponse qui ne finit pas le remplirait.
+    const sansFin = () =>
+      new ReadableStream<Uint8Array>({
+        pull(c) {
+          c.enqueue(new Uint8Array(1024));
+        },
+      });
+    const dossier = join(dir(), "demesure");
+    const r = await archiver({
+      token: "j", fetchImpl: fetchVers(sansFin), file: new Throttle(0),
+      dossierArchives: dossier, raindropId: 12, maxOctets: 2 ** 20,
+    });
+    expect(r).toEqual({ ok: false, raison: "copie trop volumineuse (> 1 Mo)" });
+    expect(await readdir(dossier)).toEqual([]);
+  });
+
+  it("un premier morceau d'UN octet ne fausse pas la reniflée du gzip", async () => {
+    // `estGzip` a besoin de deux octets. Un serveur qui livre le premier
+    // morceau en un seul octet ferait conclure « pas du gzip » à tort, et le
+    // fichier serait comprimé DEUX fois — `gunzip` en rendrait du gzip.
+    const deja = gzipSync(Buffer.from("<html>déjà</html>"));
+    const goutteAGoutte = () => {
+      let i = 0;
+      return new ReadableStream<Uint8Array>({
+        pull(c) {
+          if (i >= deja.length) return c.close();
+          c.enqueue(new Uint8Array([deja[i]!]));
+          i++;
+        },
+      });
+    };
+    const dossier = join(dir(), "goutte");
+    const r = await archiver({
+      token: "j", fetchImpl: fetchVers(goutteAGoutte), file: new Throttle(0),
+      dossierArchives: dossier, raindropId: 13,
+    });
+    expect(r.ok).toBe(true);
+    expect(gunzipSync(await readFile(join(dossier, "13.html.gz"))).toString()).toBe("<html>déjà</html>");
+  });
+});

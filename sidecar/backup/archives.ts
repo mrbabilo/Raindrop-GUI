@@ -11,19 +11,37 @@
 //! automatiquement, l'en-tête `Authorization` du premier appel serait réémis
 //! vers une URL déjà signée, que S3 peut rejeter.
 
-import { mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import { mkdir, readdir, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { gzip } from "node:zlib";
-import { promisify } from "node:util";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import { createGzip } from "node:zlib";
 import type { File } from "../mcp/throttle.js";
-
-const comprimer = promisify(gzip);
 
 /** La signature d'un flux gzip : `1f 8b`. */
 const estGzip = (b: Buffer): boolean => b.length >= 2 && b[0] === 0x1f && b[1] === 0x8b;
 
-/** Budget par défaut du dossier d'archives (correction §1bis n°2). */
+/** Budget par défaut du dossier d'archives (correction §1bis n°2).
+ *
+ *  ⚠️ CALIBRAGE PÉRIMÉ, mesuré le 2026-09-18 : la spec raisonnait à « 2,1 Mo
+ *  pièce », la distribution réelle des 8 875 copies donne une médiane de
+ *  1,17 Mo mais une MOYENNE de 3,18 Mo (p90 7,52 ; p99 31,46 ; max 160,67).
+ *  Ces 5 Go ne tiennent donc pas ~2 400 archives mais **~1 600**, soit 18 %
+ *  d'une bibliothèque de 12 210 signets — dont l'archivage intégral pèserait
+ *  27,6 Go. Le nombre n'est pas changé ici : c'est un budget, pas une
+ *  prédiction, et l'utilisateur n'a rien demandé de plus. Ce qui change, c'est
+ *  que l'éviction qu'il provoque ne se fait plus en silence. */
 export const ARCHIVES_MAX_GO = 5;
+
+/**
+ * Le garde-fou par copie. Il ne protège plus la MÉMOIRE — l'écriture est en
+ * flux — mais le DISQUE : une réponse qui ne finit pas remplirait le dossier
+ * jusqu'à saturation. Placé très au-dessus du maximum observé (160,67 Mo) pour
+ * qu'il ne coupe jamais une copie réelle : il n'est pas là pour trier, il est
+ * là pour qu'une anomalie s'arrête.
+ */
+export const ARCHIVE_MAX_OCTETS = 256 * 2 ** 20;
 
 export async function archiver(deps: {
   token: string;
@@ -33,6 +51,8 @@ export async function archiver(deps: {
   dossierArchives: string;
   raindropId: number;
   timeoutMs?: number;
+  /** Garde-fou par copie ; défaut `ARCHIVE_MAX_OCTETS`. */
+  maxOctets?: number;
 }): Promise<{ ok: true; chemin: string; octets: number } | { ok: false; raison: string }> {
   const base = deps.baseUrl ?? "https://api.raindrop.io/rest/v1";
   const f = deps.fetchImpl ?? fetch;
@@ -52,24 +72,93 @@ export async function archiver(deps: {
       // Second appel SANS en-tête d'authentification : l'URL est déjà signée.
       const r2 = await f(cible, { signal: AbortSignal.timeout(delai) });
       if (!r2.ok) return { ok: false as const, raison: `copie inaccessible (http ${r2.status})` };
-      const recu = Buffer.from(await r2.arrayBuffer());
-      // MESURÉ le 2026-09-18 : S3 sert l'objet avec `Content-Encoding: gzip`,
-      // et `fetch` (undici) le DÉPLIE de façon transparente — `arrayBuffer()`
-      // rend donc du HTML EN CLAIR. Écrit « tel quel », il portait un nom
-      // `.html.gz` que `gunzip` refuse, et pesait 5,6 Mo là où l'objet stocké
-      // en fait 3,1. On recomprime : le nom redevient vrai et le budget §5.4
-      // retrouve l'ordre de grandeur sur lequel il a été calibré.
-      // Le test le manquait parce que le faux serveur n'annonçait pas
-      // l'encodage — undici laissait alors passer les octets gzippés.
-      const octets = estGzip(recu) ? recu : await comprimer(recu);
+      if (!r2.body) return { ok: false as const, raison: "copie sans corps" };
       await mkdir(deps.dossierArchives, { recursive: true });
       const chemin = join(deps.dossierArchives, `${deps.raindropId}.html.gz`);
-      await writeFile(chemin, octets);
-      return { ok: true as const, chemin, octets: octets.byteLength };
+      return await ecrireArchive(r2.body, chemin, deps.maxOctets ?? ARCHIVE_MAX_OCTETS);
     } catch (e) {
       return { ok: false as const, raison: e instanceof Error ? e.message : String(e) };
     }
   }, { rang: "fond" });
+}
+
+/**
+ * Écrit la copie EN FLUX, par un fichier temporaire, puis renomme.
+ *
+ * **Le flux.** `arrayBuffer()` tenait la copie ENTIÈRE en mémoire, puis la
+ * recomprimait : sur le maximum mesuré (160,67 Mo de HTML en clair) cela fait
+ * deux allocations de cet ordre dans un sidecar qui sert par ailleurs
+ * l'interface. Le pipeline ne retient qu'un morceau à la fois.
+ *
+ * **Le fichier temporaire.** C'est la contrepartie obligatoire du flux, pas un
+ * raffinement. Une écriture tamponnée ne laissait RIEN derrière elle quand la
+ * connexion tombait ; une écriture en flux laisse un `<id>.html.gz` TRONQUÉ,
+ * qu'`inventorier()` compterait comme une archive, que l'interface marquerait
+ * « Archivé », et dont `appliquerBudget` pèserait les octets. Une archive
+ * tronquée qui se présente comme bonne est exactement le mode de défaillance
+ * qu'une sauvegarde existe pour exclure (§6). Le nom `.partiel` ne satisfait
+ * pas `ID_DE` — un reliquat de plantage n'est donc jamais adopté.
+ *
+ * **La reniflée.** Elle porte sur le PREMIER morceau, accumulé jusqu'à avoir
+ * les deux octets de la signature. Elle existe parce que la production sert
+ * l'objet avec `Content-Encoding: gzip` — que `fetch` déplie tout seul, donc
+ * ce qui arrive est en clair et doit être recomprimé — mais rien ne garantit
+ * qu'undici gardera cet avis. Comprimer du gzip donnerait un fichier que
+ * `gunzip` rend… du gzip.
+ */
+async function ecrireArchive(
+  corps: ReadableStream<Uint8Array>,
+  chemin: string,
+  maxOctets: number,
+): Promise<{ ok: true; chemin: string; octets: number } | { ok: false; raison: string }> {
+  const lecteur = corps.getReader();
+  const temporaire = `${chemin}.partiel`;
+  // La tête : de quoi décider, soit deux octets — un serveur peut très bien
+  // livrer le premier morceau en une poignée d'octets.
+  const morceaux: Buffer[] = [];
+  let tete = 0;
+  let fini = false;
+  while (tete < 2 && !fini) {
+    const { done, value } = await lecteur.read();
+    if (done) fini = true;
+    else if (value) {
+      morceaux.push(Buffer.from(value));
+      tete += value.byteLength;
+    }
+  }
+  const dejaGzip = estGzip(Buffer.concat(morceaux));
+
+  let recus = morceaux.reduce((n, m) => n + m.byteLength, 0);
+  async function* source(): AsyncGenerator<Buffer> {
+    for (const m of morceaux) yield m;
+    while (!fini) {
+      const { done, value } = await lecteur.read();
+      if (done) break;
+      if (!value) continue;
+      recus += value.byteLength;
+      // Le garde-fou coupe le flux au lieu de remplir le disque. Lever ici
+      // interrompt `pipeline`, qui détruit le fichier temporaire ouvert ; le
+      // `catch` ci-dessous l'efface pour de bon.
+      if (recus > maxOctets) throw new Error(`copie trop volumineuse (> ${Math.round(maxOctets / 2 ** 20)} Mo)`);
+      yield Buffer.from(value);
+    }
+  }
+
+  try {
+    // Les deux formes écrites en toutes lettres : la surcharge variadique de
+    // `pipeline` ne se type pas depuis un tableau construit, et un
+    // `@ts-expect-error` masquerait aussi bien une vraie erreur.
+    if (dejaGzip) await pipeline(Readable.from(source()), createWriteStream(temporaire));
+    else await pipeline(Readable.from(source()), createGzip(), createWriteStream(temporaire));
+    // Le renommage est le SEUL moment où le nom définitif apparaît : avant
+    // lui, rien sur le disque ne ressemble à une archive.
+    await rename(temporaire, chemin);
+    const { size } = await stat(chemin);
+    return { ok: true as const, chemin, octets: size };
+  } catch (e) {
+    await rm(temporaire, { force: true });
+    return { ok: false as const, raison: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 /**
