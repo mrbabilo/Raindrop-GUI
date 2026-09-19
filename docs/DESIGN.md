@@ -228,6 +228,20 @@ restent différenciables sans percevoir le rouge et l'ambre.
 
 En liste la marque borde la ligne ; en mosaïque elle coiffe la vignette.
 
+**Une ligne ne porte qu'UNE marque, et « mort » l'emporte sur « doublon ».**
+Un signet peut être les deux — sur la bibliothèque réelle, 1 032 signets sont
+en doublon et rien n'interdit qu'ils soient morts. La priorité va au verdict du
+lien : un lien cassé ne se répare pas en rangeant. Conséquence à connaître, la
+marque n'est pas stable d'une analyse à l'autre — un signet marqué « doublon »
+avant l'analyse des liens peut passer à « mort » après, et c'est bien ce qu'on
+veut lui voir dire.
+
+⚠️ **L'absence de marque ne certifie rien.** Elle recouvre trois états : vérifié
+sain, jamais vérifié, et périmé au sens du TTL de 30 jours. La liste principale
+ne prétend donc pas être un bilan de santé : ce que l'on sait et ce qu'on ignore
+se lit au **Nettoyage**, dont les compteurs disent « jamais analysé » plutôt que
+zéro. Marquer la ligne est un signal de plus, jamais une garantie de propreté.
+
 ## 6. Jetons
 
 | Rôle | Clair | Sombre |

@@ -506,11 +506,22 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       **Ce qui reste gris le reste à dessein** : marqueurs de tri (`à-trier`,
       `à-lire`, `à-voir`) et noms propres (`babilosapiens`) n'ont pas de
       thématique, et leur en inventer une cacherait ce qu'il faut voir.
-- [ ] **Signalétique d'état jamais jointe à la liste principale** :
-      `RaindropRow.etat` / `MosaicTile.etat` sont du plomberie morte (aucun
-      appelant) — les filets ne vivent que dans les vues de traitement.
-      Se joindra aux Tasks 12-13 des données d'analyse côté front (ou au
-      polissage ci-dessus).
+- [x] **Signalétique d'état jointe à la liste principale** (2026-09-19) —
+      `RaindropRow.etat` et `MosaicTile.etat` étaient de la plomberie morte
+      depuis le plan 2 : les filets ne vivaient que dans les vues de
+      Nettoyage, donc un lien mort ne se voyait jamais là où l'on passe son
+      temps. Les DEUX moitiés sont câblées (liste et mosaïque), plus la vue
+      Collection et ses sections.
+      Source : `GET /api/analysis/etats`, qui ne transmet QUE les signets
+      diagnostiqués — la charge suit les problèmes, pas la taille de la
+      bibliothèque, et une réponse par page ne couvrirait pas les lignes que
+      le virtualiseur n'a pas montées. Jumeau du marqueur « Archivé »
+      (`useArchives`) : une `Map` par identifiant, `staleTime` de 60 s, et une
+      clé sous `["analysis", …]` que `useStartScan` invalide déjà.
+      **Deux décisions tablées dans DESIGN.md §5** : « mort » l'emporte sur
+      « doublon » (un lien cassé ne se répare pas en rangeant), et l'absence
+      de marque NE CERTIFIE RIEN — elle recouvre vérifié sain, jamais vérifié
+      et périmé. La liste n'est pas un bilan de santé ; le Nettoyage l'est.
 - [ ] **Divergence des deux étoiles** : résolue dans la fix wave (`Etoile`
       partagé) — reste à vérifier visuellement la grille 13 px héritée.
 

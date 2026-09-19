@@ -213,6 +213,20 @@ Developer ID.
 - **Marqueur « Archivé »** à trois états, distinguant l'archive locale de la
   copie permanente qui vit chez Raindrop.
 
+#### Les liens morts se voient enfin dans la liste (2026-09-19)
+
+- **Un lien mort, une redirection ou un doublon borde désormais sa ligne**
+  dans la liste principale, la mosaïque et la vue Collection. La marque
+  existait dans le code depuis des semaines, sans personne pour l'alimenter :
+  le diagnostic ne se voyait que dans les vues de Nettoyage, jamais là où
+  l'on passe son temps.
+- Une ligne ne porte qu'**une** marque, et « mort » l'emporte sur
+  « doublon » : un lien cassé ne se répare pas en rangeant.
+- **L'absence de marque ne certifie rien**, et c'est écrit dans la direction
+  visuelle : elle recouvre « vérifié sain », « jamais vérifié » et « périmé ».
+  La liste n'est pas un bilan de santé — le Nettoyage l'est, et lui dit
+  honnêtement ce qui n'a jamais été mesuré.
+
 #### Barres de progression et temps restant (2026-09-19)
 
 - **Les trois travaux longs — analyse, sauvegarde, archivage — montrent une

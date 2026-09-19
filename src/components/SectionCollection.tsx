@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { t } from "../i18n/fr";
 import type { Collection, RaindropItem } from "../../shared/types";
 import { useRaindrops } from "../hooks/useRaindrops";
-import { CarreCollection, racine, teinteCollection } from "../design/Signaux";
+import { CarreCollection, racine, teinteCollection, type EtatLien } from "../design/Signaux";
 import { RaindropRow } from "./RaindropRow";
 
 // Une section de la vue collection parente : l'intertitre d'une
@@ -17,7 +17,7 @@ import { RaindropRow } from "./RaindropRow";
 // vue finisse de se peindre. Le compte exact est dans l'intertitre, et
 // « Voir les N » mène à la collection entière.
 export function SectionCollection({
-  collection, arbre, poignee, selection, onToggle, onTag, onVoirTout, onCharges,
+  collection, arbre, poignee, selection, onToggle, onTag, etats, onVoirTout, onCharges,
 }: {
   collection: Collection;
   /** L'arbre entier : la teinte d'une collection peut venir de sa RACINE. */
@@ -27,6 +27,9 @@ export function SectionCollection({
   detailId: number | null;
   onToggle(id: number): void;
   onTag(name: string): void;
+  /** Les diagnostics par signet (DESIGN.md §5), transmis par la vue qui les
+   *  charge : une section n'a pas à refaire la requête pour chacune. */
+  etats?: Map<number, EtatLien>;
   onVoirTout(): void;
   /** Remonte les items chargés : la barre d'actions en masse les consomme.
    *  Porte l'id en argument plutôt que de le capturer : une closure par
@@ -78,6 +81,7 @@ export function SectionCollection({
           poignee={poignee(r)}
           onToggle={() => onToggle(r.id)}
           onTag={onTag}
+          etat={etats?.get(r.id) ?? null}
         />
       ))}
       {/* §9 « masqué si nul » : rien de plus à voir, pas de commande. */}

@@ -3,6 +3,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { jobEvents } from "../lib/sse";
 import { useCollections } from "./useStaticData";
+import type { EtatLien } from "../design/Signaux";
 import type {
   AnalysisStatusEntry,
   AnalysisType,
@@ -66,6 +67,32 @@ export const useDuplicateGroups = () =>
   useQuery({
     queryKey: ["analysis", "results", "duplicates"],
     queryFn: () => api.get<DuplicateGroups>("/api/analysis/results/duplicates"),
+  });
+
+/**
+ * Les diagnostics par signet, pour la signalétique de la liste principale.
+ *
+ * Une `Map` et non un tableau : chaque ligne de liste interroge par
+ * identifiant, et 12 210 lignes contre un tableau seraient quadratiques —
+ * même raison que le `Set` de `useArchives`, dont ce hook est le jumeau.
+ *
+ * La clé vit sous `["analysis", …]` : `useStartScan` invalide déjà tout ce
+ * préfixe à la fin d'un scan, donc les marques se rafraîchissent sans qu'on
+ * ait à y penser.
+ *
+ * ⚠️ L'ABSENCE de marque ne certifie rien (DESIGN.md §5) : elle recouvre trois
+ * états — vérifié sain, jamais vérifié, et périmé au sens du TTL. La fraîcheur
+ * se lit dans `useAnalysisStatus`, que le Nettoyage affiche honnêtement ; la
+ * liste, elle, ne prétend rien.
+ */
+export const useEtatsAnalyse = () =>
+  useQuery({
+    queryKey: ["analysis", "etats"],
+    queryFn: async () => {
+      const r = await api.get<{ etats: Record<string, EtatLien> }>("/api/analysis/etats");
+      return new Map(Object.entries(r.etats).map(([id, e]) => [Number(id), e]));
+    },
+    staleTime: 60_000,
   });
 
 export const useCancelJob = () =>

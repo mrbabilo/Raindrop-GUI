@@ -11,7 +11,13 @@ import { AppStateProvider, useAppState } from "../state/appState";
 
 // `etatListe` pilote la réponse par test : sans lui, on ne pourrait pas
 // éprouver l'ÉCHEC, qui s'affichait jusqu'ici comme « Rien ici ».
-const { etatListe } = vi.hoisted(() => ({ etatListe: { valeur: null as null | Record<string, unknown> } }));
+const { etatListe, etatsMock } = vi.hoisted(() => ({
+  etatListe: { valeur: null as null | Record<string, unknown> },
+  // Les diagnostics par signet. Défaut : AUCUN — l'état d'une bibliothèque
+  // qu'on n'a jamais analysée, et celui de tous les tests existants.
+  etatsMock: vi.fn(() => ({ data: undefined as undefined | Map<number, string> })),
+}));
+vi.mock("../hooks/useAnalysis", () => ({ useEtatsAnalyse: etatsMock }));
 vi.mock("../hooks/useRaindrops", () => ({
   useRaindrops: () =>
     etatListe.valeur ?? {
@@ -200,5 +206,39 @@ describe("ListPane", () => {
     renderList();
     expect(screen.getByText("Rien ici")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
+
+// DESIGN.md §5 : « en liste la marque borde la ligne ». `RaindropRow.etat` et
+// `MosaicTile.etat` existaient depuis le plan 2 SANS AUCUN APPELANT — les
+// filets ne vivaient que dans les vues de Nettoyage, donc un lien mort ne se
+// voyait jamais là où l'on passe son temps.
+describe("ListPane — la signalétique d'état borde la ligne", () => {
+  it("un lien mort porte son filet, un lien sain n'en porte AUCUN", () => {
+    etatsMock.mockReturnValue({ data: new Map([[1000, "dead"]]) });
+    renderList();
+    // La présence d'abord : sans elle, l'absence sur l'autre ligne ne
+    // prouverait rien — elle serait vraie même si rien n'était câblé.
+    expect(screen.getByTestId("row-1000").className).toContain("filet-broken");
+    // §5 : un lien sain ne porte aucune marque. C'est tout l'intérêt — le
+    // filet signale, il ne décore pas.
+    expect(screen.getByTestId("row-1001").className).not.toContain("filet");
+  });
+
+  it("chaque diagnostic a SA marque — la forme distingue autant que la couleur", () => {
+    etatsMock.mockReturnValue({
+      data: new Map<number, string>([[1000, "redirect"], [1001, "duplicate"]]),
+    });
+    renderList();
+    expect(screen.getByTestId("row-1000").className).toContain("filet-moved");
+    expect(screen.getByTestId("row-1001").className).toContain("filet-duplicate");
+  });
+
+  it("aucune analyse : aucune ligne n'est marquée", () => {
+    // `undefined` et non une Map vide : c'est ce que rend le hook tant que la
+    // requête n'a pas abouti, et le cas de toute bibliothèque neuve.
+    etatsMock.mockReturnValue({ data: undefined });
+    renderList();
+    expect(screen.getByTestId("row-1000").className).not.toContain("filet");
   });
 });

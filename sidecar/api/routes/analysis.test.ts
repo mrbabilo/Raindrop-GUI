@@ -8,7 +8,7 @@ import { McpConnection } from "../../mcp/connection.js";
 import { JobStore } from "../../jobs/store.js";
 import { AnalysisCache } from "../../analysis/cache.js";
 import { Scanner } from "../../analysis/scanner.js";
-import type { RaindropItem } from "../../../../shared/types.js";
+import type { LinkCheckResult, RaindropItem } from "../../../../shared/types.js";
 
 let conn: McpConnection;
 let app: Hono;
@@ -93,5 +93,53 @@ describe("routes analyse", () => {
     const body = (await res.json()) as { items: { title: string; url: string; status: string }[]; total: number };
     expect(body.items.length).toBe(10);
     expect(body.items[0]!.title).toBeTruthy();
+  });
+});
+
+// La signalétique d'état de la liste principale : un diagnostic PAR SIGNET,
+// et une précédence quand il y en a deux.
+describe("GET /etats — les diagnostics de la liste principale", () => {
+  const item = (id: number, url: string) =>
+    ({ id, url, title: `t${id}`, collectionId: 7 }) as unknown as RaindropItem;
+  const resultat = (url: string, status: string) =>
+    ({
+      raindropId: 1, url, status, httpStatus: status === "dead" ? 404 : 200,
+      redirectChain: null, finalUrl: null, redirectKind: null, reason: null,
+      checkedAt: new Date().toISOString(),
+    }) as unknown as LinkCheckResult;
+
+  it("ne transmet QUE les signets diagnostiqués", async () => {
+    cache.setItemsIndex([item(1, "https://sain.example"), item(2, "https://mort.example")]);
+    cache.setResult(resultat("https://sain.example", "ok"));
+    cache.setResult(resultat("https://mort.example", "dead"));
+    const body = (await (await req(app, "/api/analysis/etats")).json()) as { etats: Record<string, string> };
+    // Un lien sain ne porte aucune marque (DESIGN.md §5) : rien à dire, donc
+    // rien à transmettre. La charge suit les PROBLÈMES, pas la bibliothèque.
+    expect(body.etats).toEqual({ "2": "dead" });
+  });
+
+  it("trois signets sur une URL morte reçoivent TOUS leur marque", async () => {
+    cache.setItemsIndex([item(1, "https://m.example"), item(2, "https://m.example"), item(3, "https://m.example")]);
+    cache.setResult(resultat("https://m.example", "dead"));
+    const body = (await (await req(app, "/api/analysis/etats")).json()) as { etats: Record<string, string> };
+    expect(body.etats).toEqual({ "1": "dead", "2": "dead", "3": "dead" });
+  });
+
+  it("mort ET doublon : « mort » l'emporte", async () => {
+    // La précédence est le seul contrat qu'un test puisse perdre en silence :
+    // sans elle, la ligne porterait le double trait du doublon et le lien
+    // cassé disparaîtrait de l'écran.
+    cache.setItemsIndex([item(1, "https://m.example"), item(2, "https://m.example")]);
+    cache.setGroups({
+      exact: [{ key: "k", kind: "exact", items: [item(1, "https://m.example"), item(2, "https://m.example")] }],
+      normalized: [], fuzzy: [],
+    } as never);
+    // D'abord la présence du doublon seul — sinon l'assertion suivante ne
+    // prouverait pas que quelque chose a été écrasé.
+    const avant = (await (await req(app, "/api/analysis/etats")).json()) as { etats: Record<string, string> };
+    expect(avant.etats).toEqual({ "1": "duplicate", "2": "duplicate" });
+    cache.setResult(resultat("https://m.example", "dead"));
+    const apres = (await (await req(app, "/api/analysis/etats")).json()) as { etats: Record<string, string> };
+    expect(apres.etats).toEqual({ "1": "dead", "2": "dead" });
   });
 });

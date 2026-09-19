@@ -58,6 +58,37 @@ export function analysisRoutes(deps: SidecarDeps): Hono {
 
   app.get("/results/duplicates", (c) => c.json(deps.cache.getGroups()));
 
+  /**
+   * Les diagnostics PAR SIGNET, pour la liste principale.
+   *
+   * Seuls les signets qui portent un diagnostic sont transmis : un lien sain
+   * n'a aucune marque (DESIGN.md §5), donc rien à dire. La charge est ainsi
+   * proportionnelle aux PROBLÈMES, pas à la taille de la bibliothèque — une
+   * réponse par page, elle, ne couvrirait pas les lignes que le virtualiseur
+   * n'a pas encore montées.
+   *
+   * ORDRE VOULU : les doublons d'abord, le verdict de lien ENSUITE — il
+   * écrase. Un signet peut être les deux, et la ligne ne porte qu'un filet :
+   * « mort » l'emporte sur « doublon », parce qu'un lien cassé ne se répare
+   * pas en rangeant. La précédence est tablée dans DESIGN.md §5, où quelqu'un
+   * ira la chercher.
+   */
+  app.get("/etats", (c) => {
+    const etats: Record<number, string> = {};
+    const groupes = deps.cache.getGroups();
+    for (const genre of ["exact", "normalized", "fuzzy"] as const) {
+      for (const g of groupes[genre]) for (const it of g.items) etats[it.id] = "duplicate";
+    }
+    // `resultatsParSignet` et NON `allResults` : ce dernier rend une ligne par
+    // URL, et la liste ne marquerait qu'un seul de trois signets partageant
+    // une adresse morte. C'est le défaut corrigé le 2026-09-19 ; l'appeler
+    // ici le rouvrirait ailleurs.
+    for (const r of deps.cache.resultatsParSignet()) {
+      if (r.status !== "ok") etats[r.raindropId] = r.status;
+    }
+    return c.json({ etats });
+  });
+
   return app;
 }
 

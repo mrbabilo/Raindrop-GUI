@@ -3,6 +3,7 @@ import { t } from "../i18n/fr";
 import type { RaindropItem } from "../../shared/types";
 import { useAppState } from "../state/appState";
 import { useFiltreEtiquettes } from "../hooks/filtreEtiquettes";
+import { useEtatsAnalyse } from "../hooks/useAnalysis";
 import { useCollections } from "../hooks/useStaticData";
 import { useDragBookmark } from "../hooks/useDragBookmark";
 import { useRovingFocus } from "../hooks/useRovingFocus";
@@ -55,6 +56,9 @@ export function CollectionView() {
   // La vue Collection ne porte AUCUN filtre : `bascule` y navigue vers
   // « Tous » filtré sur l'étiquette (contrat de useFiltreEtiquettes).
   const filtrerTag = useFiltreEtiquettes().bascule;
+  // Même signalétique que la liste principale : la vue Collection monte les
+  // mêmes lignes, un lien mort doit s'y voir pareil.
+  const etats = useEtatsAnalyse().data;
   const poignee = (r: RaindropItem) => drag.poignee(r.id, () => selectRaindrop(r.id), r.title);
   const tous = [...itemsDirects, ...Object.values(parSection).flat()];
 
@@ -87,6 +91,7 @@ export function CollectionView() {
             poignee={poignee(r)}
             onToggle={() => toggleSelect(r.id)}
             onTag={filtrerTag}
+            etat={etats?.get(r.id) ?? null}
           />
         ))}
         {totalDirects > itemsDirects.length && (
@@ -104,6 +109,7 @@ export function CollectionView() {
             detailId={null}
             onToggle={toggleSelect}
             onTag={filtrerTag}
+            etats={etats}
             onVoirTout={() => ouvrirListe(ch.id, ch.title)}
             onCharges={recevoir}
           />

@@ -9,6 +9,7 @@ import { listQueryArgs } from "../hooks/listQuery";
 import { useFiltreEtiquettes } from "../hooks/filtreEtiquettes";
 import { useAppState } from "../state/appState";
 import { useArchives } from "../hooks/useBackup";
+import { useEtatsAnalyse } from "../hooks/useAnalysis";
 import { useDragBookmark } from "../hooks/useDragBookmark";
 import { useIndexClavier } from "../hooks/useIndexClavier";
 import { useRovingFocus } from "../hooks/useRovingFocus";
@@ -27,6 +28,11 @@ export function ListPane() {
   // dossier n'est configuré : la ligne ne porte alors aucun marqueur, ce qui
   // est exact — il n'y a rien d'archivé.
   const archives = useArchives().data?.set;
+  // La signalétique d'état (DESIGN.md §5) : `RaindropRow.etat` et
+  // `MosaicTile.etat` existaient depuis le plan 2 SANS AUCUN APPELANT — les
+  // filets ne vivaient que dans les vues de Nettoyage. Un lien mort ne se
+  // voyait donc jamais là où l'on passe son temps.
+  const etats = useEtatsAnalyse().data;
   // Hors vue list (Nettoyage, Tags…), la zone centrale retombe sur « Tous ».
   const q: ListView = view.kind === "list" ? view : { kind: "list", collectionId: 0, label: "" };
   // listQueryArgs (partagé avec NatureChips, R6bP-1) : la nature filtre
@@ -132,7 +138,7 @@ export function ListPane() {
           // §8 : la tuile fait 221 px de large — une largeur exacte, pas un
           // minmax élastique qui la ferait varier d'un écran à l'autre.
           <div className="grid grid-cols-[repeat(auto-fill,221px)] gap-3 p-3">
-            {items.map((r) => <MosaicTile key={r.id} r={r} collectionRacine={titreRacine(r.collectionId)} onOpen={() => selectRaindrop(r.id)} />)}
+            {items.map((r) => <MosaicTile key={r.id} r={r} collectionRacine={titreRacine(r.collectionId)} etat={etats?.get(r.id) ?? null} onOpen={() => selectRaindrop(r.id)} />)}
           </div>
         ) : (
           <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
@@ -158,6 +164,7 @@ export function ListPane() {
                   <RaindropRow r={r} selected={selectedIds.has(r.id)} isDetail={selectedRaindropId === r.id}
                     collectionRacine={titreRacine(r.collectionId)}
                     archive={archives?.has(r.id) === true}
+                    etat={etats?.get(r.id) ?? null}
                     poignee={drag.poignee(r.id, () => selectRaindrop(r.id), r.title)}
                     onToggle={() => toggleSelect(r.id)} onTag={filtreTags.bascule} tagActif={filtreTags.estActive} />
                 </div>
