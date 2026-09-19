@@ -218,6 +218,35 @@ describe("le vol", async () => {
     expect(screen.getByText(/aucune sauvegarde complète disponible/)).toBeInTheDocument();
   });
 
+  // Le ménage des archives tourne PENDANT un balayage de fond que
+  // l'utilisateur n'a pas demandé, et efface des copies permanentes qu'il
+  // croyait gardées. Le budget de 5 Go tient ~1 600 archives à la taille
+  // réelle : l'éviction n'est pas un cas limite.
+  it("les archives effacées pendant la sauvegarde sont DITES, accordées en nombre", async () => {
+    volMock.mockReturnValue({
+      ...enVol({ done: 9, total: 9, label: "bookmarks" }),
+      fin: {
+        kind: "done" as const,
+        resultat: { horodatage: "h", complet: true, count: 9, menage: { orphelines: 1, evincees: 3 } },
+      },
+    });
+    await rendre();
+    expect(screen.getByText("1 archive devenue inutile effacée")).toBeInTheDocument();
+    expect(screen.getByText("3 archives évincées faute de place")).toBeInTheDocument();
+  });
+
+  it("aucun ménage : RIEN n'est affiché — jamais « 0 archive effacée »", async () => {
+    // L'absence ne vaut qu'après la présence (test ci-dessus). Un zéro affiché
+    // inquiéterait pour rien, et se lirait comme un fait vérifié.
+    volMock.mockReturnValue({
+      ...enVol({ done: 9, total: 9, label: "bookmarks" }),
+      fin: { kind: "done" as const, resultat: { horodatage: "h", complet: true, count: 9 } },
+    });
+    await rendre();
+    expect(screen.getByText("Sauvegarde terminée.")).toBeInTheDocument();
+    expect(screen.queryByText(/archive/i)).toBeNull();
+  });
+
   it("une annulation le dit, et dit ce qu'elle coûte", async () => {
     volMock.mockReturnValue({ ...enVol({ done: 3, total: 9, label: null }), fin: { kind: "cancelled" as const } });
     await rendre();

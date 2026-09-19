@@ -20,6 +20,15 @@ import {
 import { reconcilier } from "./reconciliation.js";
 import type { ResultatSauvegarde } from "./sauvegarde.js";
 
+/** Ce que le ménage des archives a retiré, quand il a retiré quelque chose.
+ *  ABSENT (et non deux zéros) lorsqu'aucun ménage n'a eu lieu — un balayage
+ *  annulé n'en fait pas : deux zéros inventés se liraient comme un fait
+ *  vérifié, la leçon du `bookmarksCount` à zéro. */
+export interface Menage {
+  orphelines: number;
+  evincees: number;
+}
+
 /** Tout ce qu'un passage a produit, avant d'être jugé et inscrit. */
 export interface Bilan {
   m: Manifeste;
@@ -41,7 +50,7 @@ export function makeEnregistreur(deps: {
   const archives = join(deps.dossier, "archives");
 
   /** Archives purgées, manifeste écrit, dossiers évincés — dans cet ordre. */
-  const enregistrer = async (m: Manifeste, entree: EntreeInstantane, ids?: Set<number>) => {
+  const enregistrer = async (m: Manifeste, entree: EntreeInstantane, ids?: Set<number>): Promise<Menage | undefined> => {
     // `entree.complet` est la PRÉCONDITION de la purge, pas un détail : sur un
     // balayage annulé, `balayerComplet` rend le `Set` de ce qu'il a vu JUSQUE-LÀ
     // (page 40 sur 245 → ~2 000 identifiants sur 12 210). Purger là-dessus
@@ -50,9 +59,21 @@ export function makeEnregistreur(deps: {
     // c'est-à-dire la raison même de l'archivage. `archives.ts` pose la
     // précondition en toutes lettres : « l'ensemble des identifiants est
     // justement connu ». Elle ne tient que si le balayage est allé au bout.
+    let menage: Menage | undefined;
     if (ids && entree.complet) {
-      await purgerOrphelins(archives, ids);
-      await appliquerBudget(archives, ARCHIVES_MAX_GO * 2 ** 30);
+      const orphelines = await purgerOrphelins(archives, ids);
+      const evincees = await appliquerBudget(archives, ARCHIVES_MAX_GO * 2 ** 30);
+      // DIT, pas fait en silence. Le budget de 5 Go tient ~1 600 archives à
+      // la taille réelle (3,18 Mo en moyenne, et non les 2,1 Mo sur lesquels
+      // il a été calibré) : l'éviction n'est donc pas un cas limite, elle
+      // arrivera — au cours d'une sauvegarde de fond que l'utilisateur n'a
+      // pas demandée, et qui effacerait sans un mot des copies permanentes
+      // qu'il croyait gardées. §5.4 assume qu'« une archive évincée se recrée
+      // à la demande » ; encore faut-il savoir qu'elle a disparu.
+      if (orphelines > 0 || evincees > 0) {
+        avertir("ménage des archives", { orphelines, evincees });
+        menage = { orphelines, evincees };
+      }
     }
     // Avant de décider quoi garder : confronter les dossiers PRÉSENTS au
     // manifeste. Sans cela, un balayage mort en route laisse ~11 Mo que rien
@@ -90,6 +111,7 @@ export function makeEnregistreur(deps: {
     for (const i of toutes) {
       if (!gardes.has(i.horodatage)) await rm(join(deps.dossier, i.horodatage), { recursive: true, force: true });
     }
+    return menage;
   };
 
   const ecrireDocumentMeta = async (cible: string, meta: unknown): Promise<void> => {
@@ -121,12 +143,13 @@ export function makeEnregistreur(deps: {
       watermark: arg.watermark,
       empreintes: Object.fromEntries(arg.pieces.map((p) => [p.nom, p.empreinte])),
     };
-    await enregistrer(arg.m, entree, arg.ids);
+    const menage = await enregistrer(arg.m, entree, arg.ids);
     if (raison) avertir("instantané incomplet", { horodatage: arg.horodatage, raison });
     return {
       ...entree,
       ...(raison === undefined ? {} : { raison }),
       ...(arg.bascule === undefined ? {} : { bascule: arg.bascule }),
+      ...(menage === undefined ? {} : { menage }),
     };
   };
 

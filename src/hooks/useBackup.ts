@@ -33,6 +33,11 @@ export interface ResultatArchivage {
   faits: number;
   echecs: { id: number; raison: string }[];
   annule: boolean;
+  /** Jamais TENTÉS, parce que le budget d'archives était plein. Un compte à
+   *  part des échecs : ceux-là ont raté quelque chose, ceux-ci n'ont pas été
+   *  essayés — l'écran ne doit pas les confondre. */
+  nonTentes: number;
+  raisonArret?: string;
 }
 
 /** Ce que rend un job de sauvegarde. `bascule` porte la raison d'une escalade
@@ -43,6 +48,10 @@ export interface ResultatSauvegarde {
   complet: boolean;
   count: number;
   bascule?: string;
+  /** Ce que le ménage des archives a retiré pendant CE balayage. ABSENT
+   *  lorsqu'il n'a rien retiré — jamais deux zéros, qui se liraient comme un
+   *  fait vérifié. */
+  menage?: { orphelines: number; evincees: number };
 }
 
 export const useBackupStatus = () =>

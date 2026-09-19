@@ -119,24 +119,29 @@ gzippés **sans cet en-tête**, donc le test voyait la magie `1f 8b` et passait
 au vert sur un comportement que la production n'a jamais eu. Faux serveur rendu
 fidèle, recompression quand la signature manque, test sabordé pour le prouver.
 
-- [ ] **Recalibrer le budget d'archives (§5.4)** — la spec raisonne à
-      « 2,1 Mo pièce » pour 5 Go, et le §1 estimait 18,7 Go pour la
-      bibliothèque entière. **Distribution réelle mesurée le 2026-09-18** sur
-      les 8 875 copies permanentes de l'instantané (les `cache.size` y sont,
-      gratuits) : médiane **1,17 Mo**, moyenne **3,18 Mo**, p90 **7,52 Mo**,
-      p99 **31,46 Mo**, **max 160,67 Mo** — soit **27,6 Go** si tout était
-      archivé, et **~1 600 archives** seulement dans les 5 Go du budget (18 %
-      de la bibliothèque). Trois conséquences, aucune théorique :
-      (1) l'éviction par ancienneté est appelée **depuis le balayage complet**
-      (`enregistrement.ts:53-54`), donc elle se déclenchera **en silence**,
-      pendant une sauvegarde que l'utilisateur n'a pas demandée — la §5.4
-      l'assume (« une archive évincée se recrée à la demande »), mais pas à
-      cette fréquence-là ;
-      (2) `POST /api/backup/archive` accepte **500** identifiants, soit ~1,6 Go
-      en une passe à la moyenne — un tiers du budget d'un seul geste ;
-      (3) `archives.ts` lit le corps par `arrayBuffer()`, donc une copie de
-      160 Mo passe **entière en mémoire**, puis y est recomprimée. Un seuil
-      par fichier, ou une écriture en flux, est à trancher avec le budget.
+- [x] **Budget d'archives : les trois conséquences traitées** (2026-09-19) —
+      la spec raisonnait à « 2,1 Mo pièce » pour 5 Go ; la **distribution
+      réelle** mesurée le 2026-09-18 sur les 8 875 copies permanentes donne
+      médiane **1,17 Mo**, moyenne **3,18 Mo**, p90 **7,52**, p99 **31,46**,
+      **max 160,67** — soit **27,6 Go** pour tout archiver et **~1 600
+      archives** dans les 5 Go (18 % de la bibliothèque). Le budget n'a pas
+      bougé (c'est un budget, pas une prédiction) ; ce qui a changé :
+      (1) **l'éviction ne se fait plus en silence** — `purgerOrphelins` et
+      `appliquerBudget` rendent leurs comptes, `ResultatSauvegarde.menage` les
+      porte jusqu'à l'écran (hors du manifeste, comme `bascule`), et le champ
+      est **absent** quand rien n'a été retiré, jamais deux zéros ;
+      (2) **l'archivage s'arrête au budget** au lieu d'écrire 1,6 Go que
+      l'éviction rongerait aussitôt — les identifiants restants sont comptés
+      dans `nonTentes` avec un `raisonArret`, **hors des `echecs`** : ils n'ont
+      pas raté, ils n'ont pas été essayés ;
+      (3) **plus de copie entière en mémoire** — écriture en flux par fichier
+      `.partiel` puis renommage (commit précédent).
+      Nettoyage au passage : la marche du dossier d'archives, recopiée trois
+      fois, vit désormais dans `lireArchives()`.
+      **Piège vérifié** : réarchiver REMPLACE, donc le total courant retire
+      l'ancienne taille avant d'ajouter la neuve — sans quoi reprendre des
+      signets déjà archivés ferait croire le budget plein sur un total
+      imaginaire.
 
 ### Reste à faire sur le lot sauvegarde
 

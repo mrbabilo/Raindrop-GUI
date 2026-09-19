@@ -114,6 +114,27 @@ describe("ArchiveJob", () => {
     expect(onTermine).toHaveBeenCalledTimes(1);
   });
 
+  // Le budget arrête la boucle : ce qui reste n'a pas ÉCHOUÉ, il n'a pas été
+  // tenté. Les ranger ensemble ferait croire à une panne là où il n'y a
+  // qu'une place à faire.
+  it("les signets non tentés sont dits À PART des échecs", () => {
+    volMock.mockReturnValue({
+      jobId: "j1", type: "archive", done: 2, total: 5, label: null,
+      fin: {
+        kind: "done",
+        resultat: {
+          demandes: 5, faits: 2, echecs: [], annule: false,
+          nonTentes: 3, raisonArret: "budget d'archives atteint (5 Go)",
+        },
+      },
+    });
+    render(<ArchiveJob ids={[1]} onTermine={vi.fn()} onErreur={vi.fn()} />);
+    // Deux archivées, ZÉRO en échec : les trois restants ne gonflent pas
+    // le compte des échecs.
+    expect(screen.getByText("Terminé : 2 archivée(s), 0 en échec.")).toBeInTheDocument();
+    expect(screen.getByText(/3 signets non traités : budget d'archives atteint/)).toBeInTheDocument();
+  });
+
   it("une annulation le dit, et dit que l'écrit reste", () => {
     volMock.mockReturnValue({
       jobId: "j1", type: "archive", done: 1, total: 3, label: null, fin: { kind: "cancelled" },

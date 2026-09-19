@@ -19,7 +19,7 @@ import {
 } from "./decision.js";
 import { lireModifies } from "./incremental.js";
 import { horodatage, verifierJsonl } from "./instantane.js";
-import { makeEnregistreur } from "./enregistrement.js";
+import { makeEnregistreur, type Menage } from "./enregistrement.js";
 import { dernierValide, lireManifeste, type EntreeInstantane, type Manifeste } from "./manifeste.js";
 import type { Lecture } from "./lecture.js";
 import { avecReprise } from "./resilience.js";
@@ -33,6 +33,11 @@ export interface ResultatSauvegarde extends EntreeInstantane {
   bascule?: string;
   /** Pourquoi l'instantané n'est pas complet, le cas échéant. */
   raison?: string;
+  /** Ce que le ménage des archives a retiré — orphelines et évincées au
+   *  budget. Comme `bascule`, il vit HORS de l'entrée écrite au manifeste :
+   *  c'est un événement de CETTE exécution, pas une propriété de
+   *  l'instantané. ABSENT quand rien n'a été retiré. */
+  menage?: Menage;
 }
 
 export interface StatutSauvegarde {

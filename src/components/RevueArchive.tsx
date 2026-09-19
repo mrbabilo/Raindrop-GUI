@@ -152,6 +152,14 @@ export function ArchiveJob({
             {r.echecs.length > 3 ? " …" : ""}
           </span>
         )}
+        {/* Non TENTÉS, et non « échoués » : l'archivage s'est arrêté au
+            budget avant de les atteindre. Les ranger avec les échecs ferait
+            croire à une panne là où il n'y a qu'une place à faire. */}
+        {r.nonTentes > 0 && r.raisonArret !== undefined && (
+          <span className="block text-xs text-app-muted">
+            {t("review.archive.arret", { n: r.nonTentes, raison: r.raisonArret })}
+          </span>
+        )}
       </p>
     );
   }

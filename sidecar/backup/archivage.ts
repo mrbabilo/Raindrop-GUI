@@ -13,7 +13,7 @@
 //! `enMarche`, donc l'interne n'est jamais lancée — un blocage définitif.
 
 import { join } from "node:path";
-import { archiver, inventorier } from "./archives.js";
+import { archiver, inventorier, lireArchives, ARCHIVES_MAX_GO } from "./archives.js";
 import type { JobHandle } from "../jobs/store.js";
 import type { File } from "../mcp/throttle.js";
 
@@ -26,6 +26,13 @@ export interface ResultatArchivage {
   faits: number;
   echecs: { id: number; raison: string }[];
   annule: boolean;
+  /** Identifiants JAMAIS TENTÉS parce que le budget était plein. Un compte à
+   *  part, et non des `echecs` : ceux-là ont échoué à quelque chose, ceux-ci
+   *  n'ont pas été essayés — et `faits` garde son contrat documenté
+   *  (« tentés, succès et échecs confondus »), que le front lit. */
+  nonTentes: number;
+  /** Pourquoi la boucle s'est arrêtée avant la fin, le cas échéant. */
+  raisonArret?: string;
 }
 
 export interface Archivage {
@@ -48,6 +55,8 @@ export function makeArchivage(deps: {
    *  comportement interne d'`archives.ts` (voir le commentaire sur le
    *  try/catch plus bas). */
   archiverImpl?: typeof archiver;
+  /** Budget du dossier d'archives ; défaut `ARCHIVES_MAX_GO`. */
+  budgetOctets?: number;
 }): Archivage {
   // Exactement le chemin qu'emploie enregistrement.ts:40 — sinon la purge et
   // le budget (appelés au balayage complet) s'appliqueraient ailleurs que là
@@ -59,11 +68,34 @@ export function makeArchivage(deps: {
   const archiverTous = async (ids: number[], job?: JobHandle): Promise<ResultatArchivage> => {
     const echecs: { id: number; raison: string }[] = [];
     let faits = 0;
-    for (const id of ids) {
+    const budget = deps.budgetOctets ?? ARCHIVES_MAX_GO * 2 ** 30;
+    // Le dossier est lu UNE fois, pas par identifiant : à ~1 600 archives
+    // c'est autant d'appels `stat`, acceptable une fois par archivage et
+    // absurde 500 fois. Le total se tient ensuite à jour au fil des écritures.
+    //
+    // Pourquoi ce garde-fou : la route accepte 500 identifiants, soit ~1,6 Go
+    // à la moyenne mesurée (3,18 Mo) — un tiers du budget d'un seul geste. Les
+    // écrire tous ferait évincer par ancienneté ce qu'on vient d'écrire, ou
+    // pire ce que l'utilisateur tenait à garder, sans qu'il l'ait demandé. On
+    // s'arrête et on le DIT ; ce qui reste à faire se refait après un ménage.
+    const deja = await lireArchives(dossierArchives);
+    const tailleDe = new Map(deja.map((a) => [a.id, a.octets]));
+    let total = deja.reduce((n, a) => n + a.octets, 0);
+    for (const [rang, id] of ids.entries()) {
+      if (total >= budget) {
+        return {
+          demandes: ids.length,
+          faits,
+          echecs,
+          annule: false,
+          nonTentes: ids.length - rang,
+          raisonArret: `budget d'archives atteint (${ARCHIVES_MAX_GO} Go)`,
+        };
+      }
       // Testé AVANT chaque identifiant : le travail déjà fait reste acquis,
       // rien n'est jamais défait par une annulation.
       if (job?.isCancelled()) {
-        return { demandes: ids.length, faits, echecs, annule: true };
+        return { demandes: ids.length, faits, echecs, annule: true, nonTentes: ids.length - rang };
       }
       // `archiver()` (`archives.ts`) rend `{ok:false, raison}` plutôt que de
       // lever — mais elle ne le PROMET nulle part, elle absorbe simplement
@@ -84,13 +116,20 @@ export function makeArchivage(deps: {
           raindropId: id,
         });
         if (!r.ok) echecs.push({ id, raison: r.raison });
+        // Réarchiver REMPLACE : on retire l'ancienne taille avant d'ajouter la
+        // neuve, sinon le total gonflerait à chaque reprise d'un identifiant
+        // déjà archivé et l'arrêt tomberait sur un budget imaginaire.
+        else {
+          total += r.octets - (tailleDe.get(id) ?? 0);
+          tailleDe.set(id, r.octets);
+        }
       } catch (e) {
         echecs.push({ id, raison: e instanceof Error ? e.message : String(e) });
       }
       faits++;
       job?.progress(faits, ids.length);
     }
-    return { demandes: ids.length, faits, echecs, annule: false };
+    return { demandes: ids.length, faits, echecs, annule: false, nonTentes: 0 };
   };
 
   return {

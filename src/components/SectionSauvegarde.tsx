@@ -231,12 +231,26 @@ function VolSauvegarde({ vol }: { vol: SauvegardeEnVol }) {
   if (vol.fin?.kind === "done") {
     // La raison d'une escalade en balayage complet, portée jusqu'à l'écran :
     // le « et le dit » du §6, qui n'avait jusqu'ici aucun lecteur.
-    const bascule = (vol.fin.resultat as ResultatSauvegarde).bascule;
+    const r = vol.fin.resultat as ResultatSauvegarde;
+    const bascule = r.bascule;
+    // Le ménage des archives est ABSENT quand il n'a rien retiré : on ne
+    // montre donc jamais « 0 archive effacée », qui inquiéterait pour rien.
+    const menage = r.menage;
     return (
       <p className="mb-2 text-sm">
         {t("sauvegarde.termine")}
         {bascule !== undefined && (
           <span className="block text-xs text-app-muted">{t("sauvegarde.bascule", { raison: bascule })}</span>
+        )}
+        {menage !== undefined && menage.orphelines > 0 && (
+          <span className="block text-xs text-app-muted">
+            {t("sauvegarde.menageOrphelines", { n: menage.orphelines })}
+          </span>
+        )}
+        {menage !== undefined && menage.evincees > 0 && (
+          <span className="block text-xs text-app-muted">
+            {t("sauvegarde.menageEvincees", { n: menage.evincees })}
+          </span>
         )}
       </p>
     );

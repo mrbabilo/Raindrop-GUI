@@ -125,6 +125,15 @@ export const fr = {
   "tags.newName": "Nouveau nom",
   "tags.renameField": "Nouveau nom de {name}",
   "tags.confirm": "Confirmer",
+  // Le ménage des archives, porté jusqu'à l'écran : il tourne pendant une
+  // sauvegarde de fond que l'utilisateur n'a pas demandée, et efface des
+  // copies permanentes qu'il croyait gardées. §5.4 assume qu'une archive
+  // évincée se recrée à la demande — encore faut-il savoir qu'elle a disparu.
+  "sauvegarde.menageOrphelines": "{n} archive devenue inutile effacée|{n} archives devenues inutiles effacées",
+  "sauvegarde.menageEvincees": "{n} archive évincée faute de place|{n} archives évincées faute de place",
+  // L'archivage s'arrête au budget : ce qui reste n'a pas ÉCHOUÉ, il n'a pas
+  // été tenté — deux choses que l'écran ne doit pas confondre.
+  "review.archive.arret": "{n} signet non traité : {raison}|{n} signets non traités : {raison}",
   "tags.filterSelection": "Filtrer sur cette étiquette|Filtrer sur ces {n} étiquettes",
   "review.title": "Revue de l'action",
   "review.count": "{n} item(s) affecté(s)",

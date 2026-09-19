@@ -161,28 +161,50 @@ async function ecrireArchive(
   }
 }
 
+export interface Archive {
+  id: number;
+  nom: string;
+  octets: number;
+  mtime: number;
+}
+
 /**
- * Ce qui est archivé, lisible par l'interface (spec sélection §4.1) : un
- * readdir, les noms déjà parsés par ID_DE, les tailles au stat. Les noms non
- * conformes sont ignorés (ils ne sont pas des archives) ; le répertoire
- * absent est l'état normal d'un dossier neuf, pas une erreur.
+ * La marche du dossier, en UN endroit : readdir, noms filtrés par `ID_DE`,
+ * taille et date au stat. Elle était recopiée à l'identique par
+ * `inventorier`, `purgerOrphelins` et `appliquerBudget` — trois occasions de
+ * diverger sur ce qui compte comme une archive, alors que c'est précisément
+ * la question que le `.partiel` rend délicate.
+ *
+ * Répertoire absent : l'état normal d'un dossier neuf, pas une erreur.
+ * Trié par identifiant, pour que tout appelant reçoive un ordre déterminé.
  */
-export async function inventorier(dossierArchives: string): Promise<{ ids: number[]; octets: number }> {
+export async function lireArchives(dossierArchives: string): Promise<Archive[]> {
   let noms: string[];
   try {
     noms = await readdir(dossierArchives);
   } catch {
-    return { ids: [], octets: 0 };
+    return [];
   }
-  const fichiers: { id: number; octets: number }[] = [];
+  const out: Archive[] = [];
   for (const nom of noms) {
     const id = ID_DE(nom);
     if (id === undefined) continue;
     const s = await stat(join(dossierArchives, nom));
-    fichiers.push({ id, octets: s.size });
+    out.push({ id, nom, octets: s.size, mtime: s.mtimeMs });
   }
-  fichiers.sort((a, b) => a.id - b.id);
-  return { ids: fichiers.map((f) => f.id), octets: fichiers.reduce((n, f) => n + f.octets, 0) };
+  return out.sort((a, b) => a.id - b.id);
+}
+
+/**
+ * Ce qui est archivé, lisible par l'interface (spec sélection §4.1).
+ *
+ * La forme reste PLATE (`ids`, `octets`) : cette valeur part telle quelle en
+ * JSON vers le front (`GET /api/backup/archives`), et une `Map` s'y
+ * sérialiserait en `{}`.
+ */
+export async function inventorier(dossierArchives: string): Promise<{ ids: number[]; octets: number }> {
+  const archives = await lireArchives(dossierArchives);
+  return { ids: archives.map((a) => a.id), octets: archives.reduce((n, a) => n + a.octets, 0) };
 }
 
 const ID_DE = (nom: string): number | undefined => {
@@ -198,18 +220,10 @@ const ID_DE = (nom: string): number | undefined => {
  */
 export async function purgerOrphelins(dossierArchives: string, idsVivants: Set<number>): Promise<number> {
   let supprimes = 0;
-  let noms: string[];
-  try {
-    noms = await readdir(dossierArchives);
-  } catch {
-    return 0; // pas encore d'archives
-  }
-  for (const nom of noms) {
-    const id = ID_DE(nom);
-    if (id !== undefined && !idsVivants.has(id)) {
-      await rm(join(dossierArchives, nom), { force: true });
-      supprimes++;
-    }
+  for (const a of await lireArchives(dossierArchives)) {
+    if (idsVivants.has(a.id)) continue;
+    await rm(join(dossierArchives, a.nom), { force: true });
+    supprimes++;
   }
   return supprimes;
 }
@@ -222,18 +236,7 @@ export async function purgerOrphelins(dossierArchives: string, idsVivants: Set<n
  * sans borne.
  */
 export async function appliquerBudget(dossierArchives: string, maxOctets: number): Promise<number> {
-  let noms: string[];
-  try {
-    noms = await readdir(dossierArchives);
-  } catch {
-    return 0;
-  }
-  const fichiers = [];
-  for (const nom of noms) {
-    if (ID_DE(nom) === undefined) continue;
-    const s = await stat(join(dossierArchives, nom));
-    fichiers.push({ nom, octets: s.size, mtime: s.mtimeMs });
-  }
+  const fichiers = await lireArchives(dossierArchives);
   let total = fichiers.reduce((n, f) => n + f.octets, 0);
   fichiers.sort((a, b) => a.mtime - b.mtime); // le plus ancien d'abord
   let evinces = 0;

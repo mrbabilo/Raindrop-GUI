@@ -1,12 +1,12 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { join } from "node:path";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { gunzipSync } from "node:zlib";
 import { repertoireTemporaire } from "../testing/tmp.js";
 import { startFauxApi, type FauxApi } from "../testing/apiServer.js";
 import { Throttle } from "../mcp/throttle.js";
 import { makeArchivage, type ResultatArchivage } from "./archivage.js";
-import { archiver as archiverReel } from "./archives.js";
+import { archiver as archiverReel, type archiver } from "./archives.js";
 import type { JobHandle } from "../jobs/store.js";
 
 const dir = () => repertoireTemporaire("backup-archivage-");
@@ -24,7 +24,7 @@ describe("archivage — plusieurs identifiants", () => {
     api = await startFauxApi([]);
     const dossier = dir();
     const r = await svc(dossier).archiver([10, 11, 12]);
-    expect(r).toEqual<ResultatArchivage>({ demandes: 3, faits: 3, echecs: [], annule: false });
+    expect(r).toEqual<ResultatArchivage>({ demandes: 3, faits: 3, echecs: [], annule: false, nonTentes: 0 });
     for (const id of [10, 11, 12]) {
       const octets = await readFile(join(dossier, "archives", `${id}.html.gz`));
       expect(octets.subarray(0, 3)).toEqual(Buffer.from([0x1f, 0x8b, 0x08]));
@@ -140,5 +140,66 @@ describe("archivage — plusieurs identifiants", () => {
     });
     await a.archiver([10, 11]);
     expect(rangs).toEqual(["fond", "fond"]);
+  });
+});
+
+// Le budget, et pourquoi la boucle s'arrête.
+//
+// La route accepte 500 identifiants : à la moyenne mesurée (3,18 Mo), c'est
+// ~1,6 Go d'un seul geste, soit un tiers du budget. Les écrire tous ferait
+// évincer par ancienneté ce que l'utilisateur tenait à garder, sans qu'il
+// l'ait demandé.
+describe("archivage — le budget arrête la boucle, et le dit", () => {
+  it("budget plein d'avance : rien n'est tenté, et le motif est nommé", async () => {
+    const dossier = repertoireTemporaire("archivage-budget-");
+    const archives = join(dossier, "archives");
+    await mkdir(archives, { recursive: true });
+    await writeFile(join(archives, "1.html.gz"), Buffer.alloc(1_000));
+    let tentes = 0;
+    const a = makeArchivage({
+      token: "j", dossier, file: new Throttle(0), budgetOctets: 500,
+      archiverImpl: (async () => {
+        tentes++;
+        return { ok: true as const, chemin: "x", octets: 10 };
+      }) as unknown as typeof archiver,
+    });
+    const r = await a.archiver([7, 8, 9]);
+    expect(tentes).toBe(0);
+    expect(r.nonTentes).toBe(3);
+    expect(r.faits).toBe(0);
+    // Pas dans `echecs` : ils n'ont pas échoué, ils n'ont pas été essayés.
+    expect(r.echecs).toEqual([]);
+    expect(r.raisonArret ?? "").toMatch(/budget/);
+  });
+
+  it("le budget se remplit EN COURS : les premiers passent, les suivants non", async () => {
+    // L'essentiel : le total suit les écritures. Un budget évalué une seule
+    // fois au départ laisserait passer les 500.
+    const dossier = repertoireTemporaire("archivage-budget2-");
+    const a = makeArchivage({
+      token: "j", dossier, file: new Throttle(0), budgetOctets: 250,
+      archiverImpl: (async () => ({ ok: true as const, chemin: "x", octets: 100 })) as unknown as typeof archiver,
+    });
+    const r = await a.archiver([1, 2, 3, 4, 5]);
+    expect(r.faits).toBe(3); // 100, 200, 300 → le 4e trouve 300 ≥ 250
+    expect(r.nonTentes).toBe(2);
+  });
+
+  it("réarchiver un identifiant REMPLACE — le total ne gonfle pas", async () => {
+    // Sans la soustraction de l'ancienne taille, réarchiver les mêmes signets
+    // ferait croire le budget plein sur un total imaginaire, et l'archivage
+    // s'arrêterait sans raison.
+    const dossier = repertoireTemporaire("archivage-budget3-");
+    const archives = join(dossier, "archives");
+    await mkdir(archives, { recursive: true });
+    await writeFile(join(archives, "1.html.gz"), Buffer.alloc(100));
+    const a = makeArchivage({
+      token: "j", dossier, file: new Throttle(0), budgetOctets: 250,
+      archiverImpl: (async () => ({ ok: true as const, chemin: "x", octets: 100 })) as unknown as typeof archiver,
+    });
+    // Le MÊME identifiant six fois : le total doit rester à 100, jamais monter.
+    const r = await a.archiver([1, 1, 1, 1, 1, 1]);
+    expect(r.faits).toBe(6);
+    expect(r.nonTentes).toBe(0);
   });
 });

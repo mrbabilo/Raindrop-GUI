@@ -246,6 +246,27 @@ Developer ID.
   erreur** pour toute autre forme : coller une URL donnait un écran vide
   que rien n'expliquait. Mesuré de bout en bout : 12 210 → 64.
 
+#### Les archives : mémoire, budget et silence (2026-09-19)
+
+- **Une copie permanente volumineuse ne passe plus entière en mémoire.** Elle
+  était chargée d'un bloc puis recomprimée — deux allocations de 160 Mo pour la
+  plus grosse mesurée. L'écriture se fait en flux, et par un fichier temporaire
+  renommé à la fin : une connexion qui tombe ne laisse jamais une archive
+  tronquée qui se présenterait comme bonne.
+- **L'archivage s'arrête quand le budget est plein**, au lieu d'écrire jusqu'à
+  1,6 Go d'un seul geste que l'éviction rongerait aussitôt. Les signets
+  restants sont annoncés comme **non traités**, pas comme des échecs : ils
+  n'ont pas raté, ils n'ont pas été essayés.
+- **Le ménage des archives ne se fait plus en silence.** La purge des archives
+  devenues inutiles et l'éviction faute de place tournent pendant une
+  sauvegarde de fond que personne n'a demandée ; elles sont désormais comptées
+  et affichées à la fin du job. Rien n'est affiché quand rien n'a été retiré.
+
+Mesure à l'origine de ce lot : le budget de 5 Go avait été calibré sur « 2,1 Mo
+par copie ». Sur les 8 875 copies réelles, la moyenne est de **3,18 Mo** (max
+160,67) — le budget tient donc ~1 600 archives et non ~2 400, et l'éviction
+n'est pas un cas limite mais une certitude.
+
 #### La sauvegarde survit à un hoquet du réseau (2026-09-19)
 
 - **Un 429 ou un timeout au milieu d'un balayage n'avorte plus le job.** Sur
@@ -378,8 +399,7 @@ l'heure — les notes de chaque version le disent.
 - **L'automatisme de sauvegarde des 24 h reste dormant** tant qu'aucune
   sauvegarde n'a été lancée à la main — conséquence assumée du choix
   « première sauvegarde explicite ».
-- **Une copie permanente volumineuse** (jusqu'à 160 Mo mesurés) est tenue
-  **entière en mémoire** pendant son archivage.
-- Le budget d'archives de 5 Go a été calibré sur « 2,1 Mo pièce » ; la mesure
-  réelle donne 3,18 Mo en moyenne et 160 Mo au maximum, soit ~1 600 archives
-  et non ~2 400.
+- Le budget d'archives de 5 Go tient **~1 600 archives** et non ~2 400 : il
+  avait été calibré sur « 2,1 Mo pièce », la mesure réelle donne 3,18 Mo en
+  moyenne. Le nombre est inchangé — c'est un budget, pas une prédiction — mais
+  l'éviction qu'il provoque est désormais annoncée.
