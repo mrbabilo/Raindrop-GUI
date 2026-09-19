@@ -41,7 +41,13 @@ Ce que le code ne dit pas. À lire avant de toucher au nettoyage, aux vues ou
   triés).
 - **Doublon flou (fuzzy)** : même domaine + titre égal à casse, accents et
   ponctuation près. Présenté séparément, jamais fusionné avec les deux autres
-  catégories.
+  catégories. **Un titre d'interstitiel ne groupe jamais** (règle du
+  2026-09-19) : « Weiterleitungshinweis », « Redirect Notice », « Just a
+  moment »… sont des titres de redirection forcée, pas des titres de page —
+  mesuré ce jour, 163 des 551 signets flous réels étaient groupés par ce seul
+  mot à travers des pages sans rapport. La règle vit à la fois dans
+  `findDuplicates` (scans futurs) et dans le filtre de lecture de la route
+  (caches anciens, sans re-scan).
 - **Lien mort (dead)** : 4xx/5xx, DNS inexistant, timeout, connexion refusée.
 - **Redirection** : chaîne 3xx vers une URL finale 2xx. `redirectKind` :
   `permanent` (301/308) ou `temporary` (302/307). « Remplacer par l'URL

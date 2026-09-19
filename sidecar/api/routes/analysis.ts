@@ -3,6 +3,7 @@ import { z } from "zod";
 import { apiError } from "../../../shared/errors.js";
 import type { SidecarDeps } from "../deps.js";
 import type { LinkCheckResult } from "../../../shared/types.js";
+import { filtrerGeneriques } from "../../analysis/duplicates.js";
 
 const FILTER_ORDER: Record<string, number> = { dead: 0, indeterminate: 1, redirect: 2, ok: 3 };
 
@@ -56,7 +57,14 @@ export function analysisRoutes(deps: SidecarDeps): Hono {
     return c.json({ items, total: filtered.length, page: q.data.page, perPage: q.data.per_page });
   });
 
-  app.get("/results/duplicates", (c) => c.json(deps.cache.getGroups()));
+  app.get("/results/duplicates", (c) => {
+    const groupes = deps.cache.getGroups();
+    // Filtre à la lecture : les caches antérieurs à la correction du
+    // 2026-09-19 portent des groupes génériques (« Weiterleitungshinweis » —
+    // 163 signets réels en 16 groupes). Corriger l'algorithme ne suffit pas :
+    // sans ce filtre, il fallait un re-scan pour que l'écran soit propre.
+    return c.json({ ...groupes, fuzzy: filtrerGeneriques(groupes.fuzzy) });
+  });
 
   /**
    * Les diagnostics PAR SIGNET, pour la liste principale.

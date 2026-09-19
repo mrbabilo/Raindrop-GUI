@@ -219,3 +219,51 @@ describe("les vues de diagnostic distinguent « jamais analysé » de « rien à
     expect(resultsMock).toHaveBeenCalledWith("links", "indeterminate", 0);
   });
 });
+
+// Le lot « les vues de Nettoyage deviennent actionnables » (2026-09-19) :
+// tout sélectionner, et la corbeille depuis les liens morts — le même
+// contrat que la liste principale : Revue, op trash, origines portées.
+describe("liens morts — tout sélectionner et corbeille", () => {
+  const mort = (id: number, titre: string) => ({
+    raindropId: id,
+    url: `https://mort.example/${id}`,
+    status: "dead",
+    redirectKind: null,
+    finalUrl: null,
+    httpStatus: null,
+    redirectChain: null,
+    reason: "http_404",
+    checkedAt: "2026-09-16T00:00:00Z",
+    title: titre,
+    collectionId: 101,
+  });
+
+  it("« Tout sélectionner (page) » arme les DEUX boutons avec le compte juste", async () => {
+    resultsMock.mockReturnValue({
+      data: { items: [mort(2000, "Alpha"), mort(2001, "Beta")], total: 2, page: 0, perPage: 50 },
+    });
+    render(<CleanupView type="dead" />, { wrapper });
+    await userEvent.click(await screen.findByRole("button", { name: "Tout sélectionner (page)" }));
+    expect(screen.getByRole("button", { name: "Archiver la copie (2)" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Mettre à la corbeille (2)" })).toBeEnabled();
+  });
+
+  it("la corbeille part en Revue : op trash, origines portées, retour prévu", async () => {
+    resultsMock.mockReturnValue({
+      data: { items: [mort(2000, "Alpha"), mort(2001, "Beta")], total: 2, page: 0, perPage: 50 },
+    });
+    render(<CleanupView type="dead" />, { wrapper });
+    await userEvent.click(await screen.findByRole("button", { name: "Tout sélectionner (page)" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mettre à la corbeille (2)" }));
+    const vue = JSON.parse(screen.getByTestId("view").textContent ?? "{}") as {
+      action: { op: string };
+      items: { id: number; collectionId: number }[];
+      returnView: { kind: string; type: string };
+    };
+    // §4.2 : chaque item emporte son ORIGINE — sans elle, la restauration
+    // partirait « Tous » en silence.
+    expect(vue.action).toEqual({ op: "trash" });
+    expect(vue.items.map((i) => i.collectionId)).toEqual([101, 101]);
+    expect(vue.returnView).toEqual({ kind: "cleanupView", type: "dead" });
+  });
+});

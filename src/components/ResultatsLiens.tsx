@@ -57,6 +57,22 @@ export function ResultatsLiens({ type, jamaisAnalyse, analyser }: {
   // vides ; elle ne monte pas de BulkBar.
   const archivable = type === "dead";
   const selectionnes = items.filter((r) => selectedIds.has(r.raindropId));
+  // Tout sélectionner est borné à LA PAGE : la pagination existe ici (contraire
+  // de la liste principale), et sélectionner ce qu'on ne voit pas trahit le
+  // geste. La Revue reste de toute façon l'aperçu désélectionnable.
+  const toutSelectionner = () => {
+    for (const r of items) if (!selectedIds.has(r.raindropId)) toggleSelect(r.raindropId);
+  };
+  const corbeille = () => {
+    go({
+      kind: "review",
+      items: selectionnes.map((r) => ({ id: r.raindropId, url: r.url, title: r.title, collectionId: r.collectionId })),
+      action: { op: "trash" },
+      sourceLabel: t("cleanup.dead"),
+      returnView: { kind: "cleanupView", type: "dead" },
+    });
+    clearSelection();
+  };
   const archiver = () => {
     go({
       kind: "review",
@@ -97,9 +113,17 @@ export function ResultatsLiens({ type, jamaisAnalyse, analyser }: {
         count={jamaisAnalyse === true ? undefined : q.data?.total}
         action={
           archivable ? (
-            <button type="button" className="btn" disabled={selectionnes.length === 0} onClick={archiver}>
-              {t("cleanup.archiver", { n: selectionnes.length })}
-            </button>
+            <span className="flex items-center gap-2">
+              <button type="button" className="btn" disabled={items.length === 0} onClick={toutSelectionner}>
+                {t("cleanup.toutSelectionner")}
+              </button>
+              <button type="button" className="btn" disabled={selectionnes.length === 0} onClick={archiver}>
+                {t("cleanup.archiver", { n: selectionnes.length })}
+              </button>
+              <button type="button" className="btn" disabled={selectionnes.length === 0} onClick={corbeille}>
+                {t("cleanup.corbeille", { n: selectionnes.length })}
+              </button>
+            </span>
           ) : undefined
         }
       />

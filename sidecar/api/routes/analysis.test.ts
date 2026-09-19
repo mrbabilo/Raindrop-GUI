@@ -9,6 +9,7 @@ import { McpConnection } from "../../mcp/connection.js";
 import { JobStore } from "../../jobs/store.js";
 import { AnalysisCache } from "../../analysis/cache.js";
 import { Scanner } from "../../analysis/scanner.js";
+import { filtrerGeneriques } from "../../analysis/duplicates.js";
 import type { LinkCheckResult, RaindropItem } from "../../../shared/types.js";
 
 let conn: McpConnection;
@@ -151,5 +152,33 @@ describe("GET /etats — les diagnostics de la liste principale", () => {
     cache.setResult(resultat("https://m.example", "dead"));
     const apres = (await (await req(app, "/api/analysis/etats")).json()) as { etats: Record<string, string> };
     expect(apres.etats).toEqual({ "1": "dead", "2": "dead" });
+  });
+});
+
+// Le filtre à la LECTURE des groupes génériques : sans lui, les caches
+// antérieurs à la correction gardaient leur pollution jusqu'à un re-scan.
+// Le câblage ne peut pas se tester depuis la fonction pure — sabotage prouvé.
+describe("GET /results/duplicates — le filtre de lecture est CÂBLÉ", () => {
+  it("un groupe générique stocké dans le cache ne sort pas", async () => {
+    cache.setGroups({
+      exact: [],
+      normalized: [],
+      fuzzy: [
+        { key: "korben.info|weiterleitungshinweis", kind: "fuzzy", items: [
+          { id: 1, url: "https://korben.info/a", title: "Weiterleitungshinweis", collectionId: 1, created: "2020-01-01T00:00:00.000Z" },
+          { id: 2, url: "https://korben.info/b", title: "Weiterleitungshinweis", collectionId: 1, created: "2020-01-01T00:00:00.000Z" },
+        ] },
+        { key: "exemple.org|vrai titre", kind: "fuzzy", items: [
+          { id: 3, url: "https://exemple.org/a", title: "Vrai titre", collectionId: 1, created: "2020-01-01T00:00:00.000Z" },
+          { id: 4, url: "https://exemple.org/b", title: "Vrai titre", collectionId: 1, created: "2020-01-01T00:00:00.000Z" },
+        ] },
+      ],
+    });
+    const body = (await (await req(app, "/api/analysis/results/duplicates")).json()) as {
+      fuzzy: { key: string }[];
+    };
+    // La présence d'abord : le groupe sain DOIT sortir, sinon ce test
+    // célèbrerait une route qui ne rend plus rien.
+    expect(body.fuzzy.map((g) => g.key)).toEqual(["exemple.org|vrai titre"]);
   });
 });

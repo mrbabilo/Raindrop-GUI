@@ -2,7 +2,7 @@
 // Un item ne figure que dans la PREMIÈRE catégorie qui le capte.
 
 import type { DuplicateGroup, RaindropItem } from "../../shared/types.js";
-import { normalizeUrl, fuzzyKey } from "./normalize.js";
+import { normalizeUrl, fuzzyKey, estTitreGenerique } from "./normalize.js";
 
 type ItemLite = DuplicateGroup["items"][number];
 
@@ -30,6 +30,21 @@ export function findDuplicates(items: RaindropItem[]): {
   const normalized = groupsBy(rest, (i) => normalizeUrl(i.url), "normalized");
   const normIds = new Set(normalized.flatMap((g) => g.items.map((i) => i.id)));
   const rest2 = rest.filter((i) => !normIds.has(i.id));
-  const fuzzy = groupsBy(rest2, (i) => fuzzyKey(i.domain, i.title), "fuzzy");
+  // Un titre d'interstitiel (« Weiterleitungshinweis », « Just a moment »…)
+  // ne dit RIEN de la page : le retirer du regroupement flou, MESURÉ le
+  // 2026-09-19 — 163 des 551 signets flous réels étaient groupés par cet
+  // unique mot, à travers des pages sans rapport.
+  const lisibles = rest2.filter((i) => !estTitreGenerique(i.title));
+  const fuzzy = groupsBy(lisibles, (i) => fuzzyKey(i.domain, i.title), "fuzzy");
   return { exact, normalized, fuzzy };
+}
+
+/**
+ * Le filtre à la LECTURE, pour les groupes déjà stockés dans un cache antérieur
+ * à la correction : mêmes règles, appliquées aux groupes. Les groupes sont
+ * homogènes par construction (tous leurs items partagent la clé) — le titre du
+ * premier décide pour tous.
+ */
+export function filtrerGeneriques(groups: DuplicateGroup[]): DuplicateGroup[] {
+  return groups.filter((g) => !estTitreGenerique(g.items[0]?.title ?? ""));
 }

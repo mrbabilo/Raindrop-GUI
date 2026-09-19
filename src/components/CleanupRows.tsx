@@ -4,6 +4,7 @@ import { CarreCollection } from "../design/Signaux";
 // Le patron « ligne activable » a quitté ce fichier le 2026-09-19 : la vue
 // Tags en a eu besoin à son tour (LigneActivable.tsx).
 import { ActionLigne, ErreurLigne, Ligne } from "./LigneActivable";
+import { choisirGarde, copiesDe } from "../lib/doublons";
 import { useUpdateRaindrop, useUnrestore, useDeleteCollection } from "../hooks/useMutations";
 import { useCollections } from "../hooks/useStaticData";
 import type { Collection, DuplicateGroup, RaindropItem } from "../../shared/types";
@@ -98,16 +99,80 @@ export function RedirectRow({ r, collectionRacine }: { r: LinkEnrichi; collectio
 // vertical de l'état doublon (§5). Le carré de chaque item reste résolu par
 // SA collection (§4 — la couleur appartient à la racine de CHACUN). Le tri
 // se joue à vue : chasse fixe (§7).
-export function DuplicateGroupCard({ g, titreRacine }: { g: DuplicateGroup; titreRacine: (id: number) => string | undefined }) {
+export function DuplicateGroupCard({ g, titreRacine, surRevue }: {
+  g: DuplicateGroup;
+  titreRacine: (id: number) => string | undefined;
+  /** Construit la Revue de tri du groupe : les copies cochées, chacune
+   *  portant son gardé. La carte est à qui revient la GARDE — au moins un
+   *  exemplaire reste, quel que soit le geste. */
+  surRevue: (copies: { id: number; url: string; title: string; collectionId: number; dedupeGarde: { id: number; title: string } }[]) => void;
+}) {
+  // Sélection LOCALE à la carte, jamais le `selectedIds` global : la garde
+  // « un gardé par groupe » doit tenir même si l'on tente de tricher depuis
+  // deux groupes à la fois.
+  const [cochees, setCochees] = useState<Set<number>>(new Set());
+  const basculer = (id: number) =>
+    setCochees((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  // LA GARDE : le dernier exemplaire non coché se verrouille — un groupe ne
+  // perd jamais son dernier représentant.
+  const dernierRestant = g.items.length - cochees.size === 1;
+  const garderMeilleur = () => {
+    const garde = choisirGarde(g.items);
+    setCochees(new Set(copiesDe(g.items, garde.id).map((c) => c.id)));
+  };
+  const envoyer = () => {
+    const gardeId = g.items.find((i) => cochees.has(i.id) === false)!.id;
+    surRevue(
+      g.items
+        .filter((i) => cochees.has(i.id))
+        .map((i) => ({ id: i.id, url: i.url, title: i.title, collectionId: i.collectionId, dedupeGarde: { id: gardeId, title: g.items.find((x) => x.id === gardeId)!.title } })),
+    );
+    setCochees(new Set());
+  };
   return (
     <div className="rounded-[11px] bg-app-panel">
-      {g.items.map((item) => (
-        <Ligne key={item.id} etat="duplicate">
-          <CarreCollection collectionId={item.collectionId} titre={titreRacine(item.collectionId)} />
-          <span className="min-w-[8rem] flex-1 truncate font-medium">{item.title}</span>
-          <span className="url shrink-0 text-[11px] text-app-muted">{item.url}</span>
-        </Ligne>
-      ))}
+      {g.items.map((item) => {
+        // Le dernier restant se verrouille ; un item DÉJÀ coché reste
+        // décochable — la garde porte sur ce qui RESTERA, pas sur le geste.
+        const verrouille = dernierRestant && !cochees.has(item.id);
+        return (
+          <Ligne key={item.id} etat="duplicate">
+            <ActionLigne
+              el="input"
+              type="checkbox"
+              aria-label={t("cleanup.dupCoche", { title: item.title })}
+              checked={cochees.has(item.id)}
+              disabled={verrouille}
+              onChange={() => basculer(item.id)}
+            />
+            <CarreCollection collectionId={item.collectionId} titre={titreRacine(item.collectionId)} />
+            <span className="min-w-[8rem] flex-1 truncate font-medium">{item.title}</span>
+            <span className="url shrink-0 text-[11px] text-app-muted">{item.url}</span>
+          </Ligne>
+        );
+      })}
+      <div className="flex items-center gap-2 px-3 py-2 text-xs text-app-muted">
+        {/* La règle est dite en une ligne (§10) : qui reste, et pourquoi. */}
+        <span>{t("cleanup.dupRegle", { titre: choisirGarde(g.items).title })}</span>
+        <span className="ml-auto flex items-center gap-2">
+          <ActionLigne type="button" className="btn" onClick={garderMeilleur}>
+            {t("cleanup.dupMeilleur")}
+          </ActionLigne>
+          <ActionLigne
+            type="button"
+            className="btn"
+            disabled={cochees.size === 0}
+            onClick={envoyer}
+          >
+            {t("cleanup.dupCorbeille", { n: cochees.size })}
+          </ActionLigne>
+        </span>
+      </div>
     </div>
   );
 }

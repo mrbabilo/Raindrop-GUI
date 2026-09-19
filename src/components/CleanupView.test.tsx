@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -220,5 +220,102 @@ describe("CleanupView", () => {
     expect(remplacer.getAttribute("tabindex")).toBe("0");
     await user.click(screen.getByRole("heading", { name: /Redirections/i }));
     expect(remplacer.getAttribute("tabindex")).toBe("-1");
+  });
+});
+
+// Les doublons deviennent actionnables : garde anti-double-suppression,
+// sélection intelligente, tri global borné aux catégories certaines.
+describe("doublons — la garde, le gardé, et le tri", () => {
+  const groupe = (kind: "exact" | "normalized" | "fuzzy", items: { id: number; title: string; created: string }[]) => ({
+    key: kind + items.map((i) => i.id).join(","),
+    kind,
+    items: items.map((i) => ({ id: i.id, url: `https://a.example/${i.id}`, title: i.title, collectionId: 101, created: i.created })),
+  });
+  const deuxGroupes = {
+    exact: [groupe("exact", [
+      { id: 1, title: "Ancienne page", created: "2020-01-01T00:00:00Z" },
+      { id: 2, title: "Copie récente", created: "2024-06-01T00:00:00Z" },
+    ])],
+    normalized: [],
+    fuzzy: [groupe("fuzzy", [
+      { id: 5, title: "Flou A", created: "2020-01-01T00:00:00Z" },
+      { id: 6, title: "Flou B", created: "2024-06-01T00:00:00Z" },
+    ])],
+  };
+
+  it("LA GARDE : cocher une copie sur deux verrouille la dernière restante", async () => {
+    groupsMock.mockReturnValue({ data: deuxGroupes });
+    render(<CleanupView type="duplicates" />, { wrapper });
+    await screen.findByText("Ancienne page");
+    await userEvent.click(screen.getByRole("checkbox", { name: /Copie récente/ }));
+    // Il ne reste qu'un exemplaire non coché : sa case se verrouille — un
+    // groupe ne perd jamais son dernier représentant.
+    expect(screen.getByRole("checkbox", { name: /Ancienne page/ })).toBeDisabled();
+    // Un item DÉJÀ coché reste décochable : la garde porte sur ce qui
+    // restera, pas sur le geste.
+    await userEvent.click(screen.getByRole("checkbox", { name: /Copie récente/ }));
+    expect(screen.getByRole("checkbox", { name: /Ancienne page/ })).toBeEnabled();
+  });
+
+  it("« Garder le meilleur » coche la copie, pas l'originale", async () => {
+    groupsMock.mockReturnValue({ data: deuxGroupes });
+    render(<CleanupView type="duplicates" />, { wrapper });
+    await screen.findByText("Ancienne page");
+    // Deux cartes portent le même bouton (exact et flou) : on cible la carte
+    // du groupe exact par son conteneur.
+    const carte = screen.getByText("Ancienne page").closest("div.bg-app-panel") as HTMLElement;
+    await userEvent.click(within(carte).getByRole("button", { name: "Garder le meilleur" }));
+    expect(screen.getByRole("checkbox", { name: /Copie récente/ })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /Ancienne page/ })).not.toBeChecked();
+  });
+
+  it("la corbeille du groupe part en Revue dedupe, gardé porté par chaque copie", async () => {
+    groupsMock.mockReturnValue({ data: deuxGroupes });
+    render(<CleanupView type="duplicates" />, { wrapper });
+    await screen.findByText("Ancienne page");
+    const carte = screen.getByText("Ancienne page").closest("div.bg-app-panel") as HTMLElement;
+    await userEvent.click(within(carte).getByRole("button", { name: "Garder le meilleur" }));
+    await userEvent.click(within(carte).getByRole("button", { name: "Corbeille (1)" }));
+    const vue = JSON.parse(screen.getByTestId("view").textContent ?? "{}") as {
+      action: { op: string };
+      items: { id: number; dedupeGarde: { id: number; title: string } }[];
+    };
+    expect(vue.action).toEqual({ op: "dedupe" });
+    expect(vue.items[0]!.dedupeGarde).toEqual({ id: 1, title: "Ancienne page" });
+  });
+
+  it("le tri GLOBAL est borné aux catégories certaines — le flou reste manuel", async () => {
+    groupsMock.mockReturnValue({ data: deuxGroupes });
+    render(<CleanupView type="duplicates" />, { wrapper });
+    await screen.findByText("Ancienne page");
+    // 1 copie : la paire exacte seulement. Les 2 copies floues n'y sont pas.
+    await userEvent.click(screen.getByRole("button", { name: "Trier les doublons (1)" }));
+    const vue = JSON.parse(screen.getByTestId("view").textContent ?? "{}") as {
+      items: { id: number }[];
+    };
+    expect(vue.items.map((i) => i.id)).toEqual([2]);
+  });
+});
+
+// Les non-taggés deviennent étiquetables depuis la vue (Revue op tag).
+describe("non-taggés — étiqueter en masse", () => {
+  it("cases + étiquettes → Revue op tag", async () => {
+    raindropsMock.mockReturnValue({
+      data: { pages: [{ items: [
+        { id: 3000, url: "https://n.example/a", title: "Sans étiquette", domain: "n.example", collectionId: 5 },
+      ], count: 1, page: 0, perPage: 50 }] },
+    });
+    render(<CleanupView type="untagged" />, { wrapper });
+    await screen.findByText("Sans étiquette");
+    await userEvent.type(screen.getByLabelText("Étiquettes à ajouter"), "a-lire");
+    // La case sélectionne SANS ouvrir la fiche — la ligne, elle, ouvre.
+    await userEvent.click(screen.getByRole("checkbox", { name: "Sélectionner Sans étiquette" }));
+    await userEvent.click(screen.getByRole("button", { name: "Étiqueter (1)" }));
+    const vue = JSON.parse(screen.getByTestId("view").textContent ?? "{}") as {
+      action: { op: string; tags: string[] };
+      items: { id: number }[];
+    };
+    expect(vue.action).toEqual({ op: "tag", tags: ["a-lire"] });
+    expect(vue.items.map((i) => i.id)).toEqual([3000]);
   });
 });

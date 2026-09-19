@@ -4,6 +4,8 @@ import { apiError } from "../../../shared/errors.js";
 import type { SidecarDeps } from "../deps.js";
 import { toRaindropItem } from "../mappers.js";
 import { composerRecherche } from "../recherche.js";
+import { makeDedupe } from "../../trash/dedupe.js";
+import { runJob } from "../../jobs/store.js";
 import type { RawRaindrop } from "../mappers.js";
 
 const searchQuery = z.object({
@@ -72,6 +74,19 @@ const bulkBody = z
   .refine((b) => b.operation !== "update" || (b.tags != null || b.important != null), {
     message: "update exige tags ou important",
   });
+
+const dedupeBody = z.object({
+  paires: z
+    .array(
+      z.object({
+        garde: z.number().int(),
+        copies: z
+          .array(z.object({ id: z.number().int(), collectionId: z.number().int() }))
+          .min(1),
+      }),
+    )
+    .min(1),
+});
 
 const unrestoreBody = z.object({
   ids: z.array(z.number().int()).min(1),
@@ -226,6 +241,19 @@ export function raindropsRoutes(deps: SidecarDeps): Hono {
     const out = await deps.mcp("bulk_raindrops", args);
     if (!out.ok) return apiError(c, out.code, out.message, out.tool);
     return c.json(out.data);
+  });
+
+  // Suppression de doublons CONSOLIDÉE : les étiquettes des copies remontent
+  // dans le gardé avant la corbeille (demande utilisateur du 2026-09-19).
+  // Job SSE : N lectures + M écritures dans la file à 550 ms — le front suit
+  // la progression comme pour un archivage.
+  app.post("/dedupe", async (c) => {
+    const body = dedupeBody.safeParse(await c.req.json().catch(() => null));
+    if (!body.success) return apiError(c, "INVALID_INPUT", z.prettifyError(body.error));
+    const total = body.data.paires.reduce((n, p) => n + p.copies.length, 0);
+    const deduper = makeDedupe({ mcp: deps.mcp, origins: deps.origins });
+    const job = runJob(deps.jobs, "dedupe", total, (j) => deduper(body.data.paires, j));
+    return c.json({ jobId: job.id, total });
   });
 
   return app;

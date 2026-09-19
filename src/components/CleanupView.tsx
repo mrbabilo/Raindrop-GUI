@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { t } from "../i18n/fr";
 import { EtatListe } from "./EtatListe";
 import { useRovingFocus } from "../hooks/useRovingFocus";
@@ -8,6 +8,7 @@ import { useAnalysisStatus, useDuplicateGroups, useStartScan } from "../hooks/us
 import { useRaindrops } from "../hooks/useRaindrops";
 import { useCollections } from "../hooks/useStaticData";
 import { racine } from "../lib/arbre";
+import { pairesCertaines } from "../lib/doublons";
 import type { DuplicateGroup } from "../../shared/types";
 import {
   DuplicateGroupCard,
@@ -38,17 +39,43 @@ const retirablesDe = (gs: DuplicateGroup[]) => signetsDe(gs) - gs.length;
 
 function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean; analyser?: () => void }) {
   const q = useDuplicateGroups();
+  const { go } = useAppState();
+  const surRevue = (copies: { id: number; url: string; title: string; collectionId: number; dedupeGarde: { id: number; title: string } }[]) => {
+    go({
+      kind: "review",
+      items: copies,
+      action: { op: "dedupe" },
+      sourceLabel: LABELS.duplicates,
+      returnView: { kind: "cleanupView", type: "duplicates" },
+    });
+  };
   const arbre = useCollections().data ?? [];
   const titreRacine = (id: number) => racine(arbre, id)?.title;
   const data = q.data;
   const groupes = data ? KINDS.flatMap((k) => data[k]) : [];
+  // Le tri GLOBAL est borné aux catégories certaines (exact, normalisé) :
+  // même domaine + même titre flou n'est pas une certitude — la pollution au
+  // titre d'interstitiel (« Weiterleitungshinweis », 163 signets réels) vient
+  // de le démontrer. Le flou, lui, se trie groupe par groupe.
+  const paires = pairesCertaines(data ?? { exact: [], normalized: [], fuzzy: [] });
+  const triables = paires.flatMap((p) => p.copies.map((c) => ({ ...c, dedupeGarde: { id: p.garde.id, title: p.garde.title } })));
   return (
     <>
       {/* Le chip compte les GROUPES ; le détail par catégorie dit les signets
           concernés et les copies retirables. « 414 » seul se lisait
           « 414 signets en double » — la mesure réelle donne 414 groupes pour
           1 032 signets, dont 618 retirables. */}
-      <Entete label={LABELS.duplicates} count={jamaisAnalyse === true ? undefined : groupes.length} />
+      <Entete
+        label={LABELS.duplicates}
+        count={jamaisAnalyse === true ? undefined : groupes.length}
+        action={
+          triables.length > 0 ? (
+            <button type="button" className="btn" onClick={() => surRevue(triables)}>
+              {t("cleanup.trierDoublons", { n: triables.length })}
+            </button>
+          ) : undefined
+        }
+      />
       <EtatListe
         chargement={!!q.isLoading}
         erreur={q.isError ? q.error?.message : null}
@@ -70,7 +97,7 @@ function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean; analys
                 </span>
               </h2>
               {gs.map((g) => (
-                <DuplicateGroupCard key={g.key} g={g} titreRacine={titreRacine} />
+                <DuplicateGroupCard key={g.key} g={g} titreRacine={titreRacine} surRevue={surRevue} />
               ))}
             </section>
           );
@@ -84,12 +111,50 @@ function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean; analys
 // cases (BulkBar n'est pas monté ici — pas de sélection sans issue) ; le clic
 // ouvre la fiche, où l'étiquette se corrige.
 function NonTaggues() {
-  const { selectedRaindropId, selectRaindrop } = useAppState();
+  const { selectedRaindropId, selectRaindrop, selectedIds, toggleSelect, go } = useAppState();
+  const [etiquettes, setEtiquettes] = useState("");
   const q = useRaindrops({ collectionId: 0, notag: true });
   const items = q.data?.pages.flatMap((p) => p.items) ?? [];
+  const selectionnes = items.filter((r) => selectedIds.has(r.id));
+  const etiqueter = () => {
+    // Le garde porte la liste PARSÉE (même règle que le BulkBar) : « , , »
+    // est truthy mais parse vide — le bulk update qui en résulterait effacerait
+    // toutes les étiquettes des items sélectionnés.
+    const tags = etiquettes.split(",").map((s) => s.trim()).filter(Boolean);
+    if (tags.length === 0 || selectionnes.length === 0) return;
+    go({
+      kind: "review",
+      items: selectionnes.map((i) => ({ id: i.id, url: i.url, title: i.title, collectionId: i.collectionId })),
+      action: { op: "tag", tags },
+      sourceLabel: LABELS.untagged,
+      returnView: { kind: "cleanupView", type: "untagged" },
+    });
+  };
   return (
     <>
-      <Entete label={LABELS.untagged} count={q.data?.pages[0]?.count} />
+      <Entete
+        label={LABELS.untagged}
+        count={q.data?.pages[0]?.count}
+        action={
+          <span className="flex items-center gap-2">
+            <input
+              aria-label={t("bulk.tagField")}
+              className="input w-40"
+              placeholder={t("bulk.tagPlaceholder")}
+              value={etiquettes}
+              onChange={(e) => setEtiquettes(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn"
+              disabled={selectionnes.length === 0 || etiquettes.split(",").map((s) => s.trim()).filter(Boolean).length === 0}
+              onClick={etiqueter}
+            >
+              {t("cleanup.etiqueter", { n: selectionnes.length })}
+            </button>
+          </span>
+        }
+      />
       <EtatListe
         chargement={!!q.isLoading}
         erreur={q.isError ? q.error?.message : null}
@@ -103,6 +168,16 @@ function NonTaggues() {
             className={"flex min-h-9 cursor-pointer items-center gap-2 overflow-hidden border-b border-app-border px-3 " + (selectedRaindropId === r.id ? "bg-app-sel" : "hover:bg-app-hover")}
             onClick={() => selectRaindrop(r.id)}
           >
+            {/* C'est la LIGNE qui ouvre la fiche ; la case, elle, sélectionne
+                pour l'étiquetage en masse — stopPropagation, sinon cocher
+                ouvrirait la fiche au passage. */}
+            <input
+              type="checkbox"
+              aria-label={t("list.select", { title: r.title })}
+              checked={selectedIds.has(r.id)}
+              onClick={(e) => e.stopPropagation()}
+              onChange={() => toggleSelect(r.id)}
+            />
             <span className="min-w-[8rem] flex-1 truncate font-medium">{r.title}</span>
             <span className="url shrink-0 text-[11px] text-app-muted">{r.domain}</span>
           </div>

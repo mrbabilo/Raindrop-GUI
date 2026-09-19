@@ -140,6 +140,24 @@ export const fr = {
   "cleanup.next": "Suivante",
   "cleanup.page": "Page {n}/{total}",
   "cleanup.delete-collection": "Supprimer la collection",
+  // Les actions du Nettoyage (lot 2026-09-19, « les vues deviennent
+  // actionnables »).
+  "cleanup.toutSelectionner": "Tout sélectionner (page)",
+  "cleanup.corbeille": "Mettre à la corbeille ({n})",
+  "cleanup.dupCoche": "Mettre « {title} » à la corbeille",
+  // La règle du gardé, dite en une ligne : qui reste, et pourquoi (§10).
+  "cleanup.dupRegle": "Gardée : {titre} (la plus ancienne)",
+  "cleanup.dupMeilleur": "Garder le meilleur",
+  "cleanup.dupCorbeille": "Corbeille ({n})",
+  "cleanup.trierDoublons": "Trier les doublons ({n})",
+  "cleanup.etiqueter": "Étiqueter ({n})",
+  "review.dedupe": "Trier les doublons",
+  // Ce qui va arriver, dit en toutes lettres — et ce qui N'arrive pas : les
+  // surlignages restent dans les copies (Phase 1 lecture seule, corbeille
+  // réversible).
+  "review.dedupeNote": "Les étiquettes de chaque copie remontent dans le gardé (le plus ancien), puis les copies partent à la corbeille — réversible. Les surlignages restent dans la corbeille.",
+  "review.dedupeGarde": "→ gardé : {titre}",
+  "review.dedupeEnCours": "Consolidation et mise à la corbeille…",
   "tags.rename": "Renommer",
   "tags.merge": "Fusionner",
   "tags.delete": "Supprimer",

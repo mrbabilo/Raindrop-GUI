@@ -187,6 +187,31 @@ fidèle, recompression quand la signature manque, test sabordé pour le prouver.
       sur le relevé du watermark, **avant** le balayage — donc hors du filet de
       `balayage.ts`. L'annulation est désormais relue aux DEUX niveaux, et qui
       clique « annuler » ne lit jamais « http 429 ».
+- [x] **Les vues de Nettoyage deviennent actionnables** (2026-09-19) —
+      tout sélectionner (par page) et **corbeille depuis les liens morts**
+      (Revue, `op trash`, origines portées, réversible) ; **cases sur les
+      doublons** avec la garde structurelle anti-double-suppression (le
+      dernier exemplaire non coché se verrouille — un groupe garde toujours
+      un représentant), **sélection intelligente** (« Garder le meilleur » :
+      la plus ancienne `created`, https en départage, ordre du groupe à
+      tout égal), consolidation des **étiquettes des copies dans le gardé**
+      avant la corbeille (nouvelle opération sidecar `POST /raindrops/dedupe`
+      en job : lectures avant écritures, une copie en échec n'arrête jamais
+      les autres, `nonFusionnees` rapporté) — **les surlignages restent dans
+      les copies** (Phase 1 lecture seule, corbeille réversible) ; **« Trier
+      les doublons » global**, borné aux catégories certaines (exact,
+      normalisé) — le flou reste manuel ; **étiqueter les non-taggés** depuis
+      la vue (Revue, `op tag`).
+      **Défaut corrigé au passage** : le titre d'interstitiel groupait le
+      flou (163 des 551 signets réels, 16 groupes) — exclus dans
+      `findDuplicates` ET filtrés à la lecture (caches anciens sans re-scan).
+      La règle est dans DOMAINE.md.
+- [ ] **Revérifier les indéterminés** — re-scan ciblé des URLs de la vue
+      (contourne le TTL) ; différé volontairement du lot précédent : nouveau
+      chemin scanner + job + fusion cache.
+- [ ] **Redirections en masse** — remplacement de l'URL finale par lot via
+      une op de Revue (`replace-url`, boucle REST directe en job) ;
+      différé volontairement : écritures multiples d'un coup.
 - [ ] **Reprise après REDÉMARRAGE du processus** — différée, et pour une
       raison plutôt que par oubli (spec §1ter n°1b). `ouvrirJsonl` tronque
       toujours. Reprendre à la page N suppose une pagination inchangée depuis :

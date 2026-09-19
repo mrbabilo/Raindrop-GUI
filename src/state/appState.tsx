@@ -59,12 +59,17 @@ export type View =
       // ABSENT quand elle ne le porte pas (liens morts, qui viennent de
       // l'analyse) : la Revue distingue « pas de copie » d'« information
       // inconnue » — spec sélection §4.2.
-      items: { id: number; url: string; title: string; collectionId: number; cache?: { status: string; size?: number } | null }[];
+      items: { id: number; url: string; title: string; collectionId: number; cache?: { status: string; size?: number } | null;
+        /** Doublons : le gardé DU GROUPE de cette copie — ses étiquettes
+         *  remontent chez lui avant la corbeille (demande utilisateur du
+         *  2026-09-19). Présent seulement pour `op: "dedupe"`. */
+        dedupeGarde?: { id: number; title: string }; }[];
       action:
         | { op: "trash" }
         | { op: "move"; toCollectionId: number }
         | { op: "tag"; tags: string[] }
         | { op: "archive" } // copies permanentes → POST /api/backup/archive (spec sélection §4.2)
+        | { op: "dedupe" } // doublons : étiquettes des copies → gardé, puis corbeille
         | { op: "empty-trash" }
         | { op: "delete-empty-collections" };
       sourceLabel: string;

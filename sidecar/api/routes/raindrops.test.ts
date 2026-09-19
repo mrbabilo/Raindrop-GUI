@@ -6,6 +6,7 @@ import { createApp } from "../app.js";
 import type { SidecarDeps } from "../deps.js";
 import { connectFake } from "../../testing/fakeServer.js";
 import { McpConnection } from "../../mcp/connection.js";
+import { JobStore } from "../../jobs/store.js";
 import { makeOriginStore } from "../../trash/origins.js";
 import type { Paginated, RaindropItem } from "../../../shared/types.js";
 
@@ -359,6 +360,54 @@ describe("routes raindrops", () => {
     const res = await req(app, "/api/raindrops/unrestore", {
       method: "POST",
       body: JSON.stringify({ ids: [] }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+// La route dedupe : câblage du job, validation du corps.
+describe("POST /dedupe", () => {
+  it("corps valide → un job COURT et déduplique, pas seulement existe", async () => {
+    // Le stub `jobs` de baseDeps ne sait pas créer : un vrai store, ici.
+    const jobs = new JobStore();
+    const vus: string[] = [];
+    const app2 = createApp(
+      {
+        ...baseDeps,
+        jobs,
+        mcp: async (tool: string, args: Record<string, unknown>) => {
+          vus.push(tool);
+          return conn.call(tool, args);
+        },
+      },
+      { localToken: TOKEN },
+    );
+    const res = await req(app2, "/api/raindrops/dedupe", {
+      method: "POST",
+      body: JSON.stringify({ paires: [{ garde: 1, copies: [{ id: 2, collectionId: 7 }] }] }),
+    });
+    expect(res.status).toBe(200);
+    const { jobId } = (await res.json()) as { jobId: string };
+    // Le job doit EXÉCUTER la consolidation, pas seulement exister : un
+    // runJob au corps vide créerait le même jobId pour un travail mort.
+    await new Promise<void>((resolve) => {
+      const id = setInterval(() => {
+        const s = jobs.get(jobId);
+        if (s && s.status !== "running") {
+          clearInterval(id);
+          resolve();
+        }
+      }, 5);
+    });
+    expect(jobs.get(jobId)?.status).toBe("done");
+    expect(vus).toContain("get_raindrop");
+    expect(vus).toContain("bulk_raindrops");
+  });
+
+  it("corps invalide → 400 INVALID_INPUT (copie sans collection)", async () => {
+    const res = await req(app, "/api/raindrops/dedupe", {
+      method: "POST",
+      body: JSON.stringify({ paires: [{ garde: 1, copies: [{ id: 2 }] }] }),
     });
     expect(res.status).toBe(400);
   });

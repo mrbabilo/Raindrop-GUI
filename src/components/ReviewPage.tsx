@@ -8,6 +8,9 @@ import { useBulk, useEmptyTrash, useCleanupCollections, useInvalidate } from "..
 import { useAppState, type View } from "../state/appState";
 import { useArchives, useInvalidateSauvegarde } from "../hooks/useBackup";
 import { AnnonceArchive, ArchiveJob, BORNE_ARCHIVE, porteeArchive } from "./RevueArchive";
+import { BarreProgression } from "./BarreProgression";
+import { api } from "../lib/api";
+import { jobEvents } from "../lib/sse";
 
 type ReviewView = Extract<View, { kind: "review" }>;
 
@@ -93,13 +96,65 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
   // Revue finale : Exécuter se désactive PENDANT le vol — un double-clic ne
   // doit pas émettre deux bulk (empty-trash est la seule écriture définitive
   // de l'app, spec §3).
-  const pending = bulk.isPending || emptyTrash.isPending || cleanup.isPending;
+  // Le suivi du job dedupe : N lectures + M écritures dans la file à 550 ms —
+  // le tri global des doublons se compte en minutes, la barre le dit.
+  const [dedupeProgress, setDedupeProgress] = useState<{ done: number; total: number } | null>(null);
+  const pending = bulk.isPending || emptyTrash.isPending || cleanup.isPending || dedupeProgress !== null;
 
   const execute = async () => {
     // L'archivage est un JOB (202 + SSE), pas une mutation : on bascule le
     // pied de page sur son suivi, ArchiveJob poste et s'abonne.
     if (review.action.op === "archive") {
       setArchiveLancee(true);
+      return;
+    }
+    if (review.action.op === "dedupe") {
+      // Les paires se reconstruisent des items RESTANTS : une copie
+      // désélectionnée sort de sa paire ; un gardé n'est jamais un item.
+      const parGarde = new Map<number, { id: number; collectionId: number }[]>();
+      for (const i of remaining) {
+        if (!i.dedupeGarde) continue;
+        const arr = parGarde.get(i.dedupeGarde.id) ?? [];
+        arr.push({ id: i.id, collectionId: i.collectionId });
+        parGarde.set(i.dedupeGarde.id, arr);
+      }
+      try {
+        const { jobId, total } = await api.send<{ jobId: string; total: number }>(
+          "POST",
+          "/api/raindrops/dedupe",
+          { paires: [...parGarde.entries()].map(([garde, copies]) => ({ garde, copies })) },
+        );
+        setDedupeProgress({ done: 0, total });
+        await new Promise<void>((resolve, reject) => {
+          // Même garde que useStartScan : l'event `error` rejette AVANT le
+          // onDone, sinon l'échec se résoudrait comme une fin normale.
+          let settled = false;
+          void jobEvents(jobId, {
+            onEvent: (e: { kind: string; message?: unknown; progress?: { done?: number } }) => {
+              if (e.kind === "error") {
+                settled = true;
+                reject(new Error(typeof e.message === "string" && e.message ? e.message : "event error sans message"));
+                return;
+              }
+              if (e.kind !== "progress") return;
+              const p = e.progress;
+              if (p && typeof p.done === "number") setDedupeProgress({ done: p.done, total });
+            },
+            onDone: () => {
+              if (!settled) resolve();
+            },
+          }, new AbortController().signal).catch((err: unknown) => {
+            if (!settled) reject(err);
+          });
+        });
+      } catch (e) {
+        setErreur(e instanceof Error ? e.message : String(e));
+        setDedupeProgress(null);
+        return;
+      }
+      invalidate("raindrops", "collections", "tags");
+      clearSelection();
+      goBack();
       return;
     }
     const ids = remaining.map((i) => i.id);
@@ -137,6 +192,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
     : review.action.op === "trash" ? t("bulk.trash")
     : review.action.op === "move" ? t("bulk.move")
     : review.action.op === "tag" ? t("bulk.tag")
+    : review.action.op === "dedupe" ? t("review.dedupe")
     : review.action.op === "empty-trash" ? t("cleanup.empty-trash")
     : t("cleanup.delete-empty");
   const titre = level2 ? actionLabel : `${actionLabel} — ${review.sourceLabel}`;
@@ -146,6 +202,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
       <header className="flex flex-col gap-1 px-4 pb-3 pt-5">
         <h1 className="titre-fiche">{titre}</h1>
         <p className="text-xs text-app-muted">{t("review.count", { n: totalAnnonce })}</p>
+        {review.action.op === "dedupe" && <p className="text-xs text-app-muted">{t("review.dedupeNote")}</p>}
       </header>
       <div className="flex items-center gap-2 px-4 py-2">
         <input
@@ -184,7 +241,14 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
                   checked={!excluded.has(i.id)}
                   onChange={() => basculer(i.id)}
                 />
-                <span className="min-w-0 flex-1 truncate">{i.title}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  {i.title}
+                  {i.dedupeGarde && (
+                    <span className="ml-2 text-[11px] text-app-muted">
+                      {t("review.dedupeGarde", { titre: i.dedupeGarde.title })}
+                    </span>
+                  )}
+                </span>
                 <span className="url shrink-0 text-[11px] text-app-muted">{i.url}</span>
               </label>
             );
@@ -207,7 +271,13 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
           />
         </footer>
       ) : (
-      <footer className="flex items-center gap-3 border-t border-app-border bg-app-panel px-4 py-3 text-sm">
+      <footer className="flex flex-col gap-2 border-t border-app-border bg-app-panel px-4 py-3 text-sm">
+        {dedupeProgress !== null && (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-app-muted">{t("review.dedupeEnCours")}</span>
+            <BarreProgression done={dedupeProgress.done} total={dedupeProgress.total} cle="dedupe" />
+          </div>
+        )}
         {level2 ? (
           // R15P-1 : le jeton `border-app-danger` du snippet n'existe pas —
           // §6 : le rouge est un diagnostic (app-broken), la garde du niveau 2

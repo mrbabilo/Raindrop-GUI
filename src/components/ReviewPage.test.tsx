@@ -11,6 +11,13 @@ import type { View } from "../state/appState";
 // même piège TDZ que BulkBar.test).
 const sendMock = vi.hoisted(() => vi.fn(async () => ({})));
 vi.mock("../lib/api", () => ({ api: { send: sendMock, get: vi.fn() } }));
+// Le SSE suit le job dedupe : réglé immédiatement (progression puis fin),
+// l'assertion porte sur l'appel POST et sur le retour.
+const sseMock = vi.hoisted(() => vi.fn((_jobId: string, h: { onDone: () => void }) => {
+  h.onDone();
+  return Promise.resolve();
+}));
+vi.mock("../lib/sse", () => ({ jobEvents: sseMock }));
 
 type ReviewView = Extract<View, { kind: "review" }>;
 
@@ -304,5 +311,61 @@ describe("ReviewPage — rulings", () => {
     lignes[0]!.focus();
     await userEvent.keyboard(" ");
     expect(compteur()).not.toBe(avant);
+  });
+});
+
+// Le tri des doublons : consolidation des étiquettes dans le gardé, puis
+// corbeille — en JOB, pas en mutation.
+describe("ReviewPage — le tri des doublons (op dedupe)", () => {
+  const revueDedupe: View = {
+    kind: "review",
+    items: [
+      { id: 2, url: "https://a.example/copie", title: "Copie récente", collectionId: 7, dedupeGarde: { id: 1, title: "Ancienne page" } },
+    ],
+    action: { op: "dedupe" },
+    sourceLabel: "Doublons",
+    returnView: { kind: "cleanupView", type: "duplicates" },
+  };
+
+  it("la ligne dit son gardé, et la note dit ce qui arrive aux étiquettes et surlignages", () => {
+    renderReview(revueDedupe);
+    expect(screen.getByText(/→ gardé : Ancienne page/)).toBeInTheDocument();
+    expect(screen.getByText(/Les étiquettes de chaque copie remontent/)).toBeInTheDocument();
+    expect(screen.getByText(/Les surlignages restent dans la corbeille/)).toBeInTheDocument();
+  });
+
+  it("exécuter POSTE les paires au job, et revient à la vue d'origine", async () => {
+    sendMock.mockResolvedValue({ jobId: "j-dedupe", total: 1 });
+    renderReview(revueDedupe);
+    // Les items démarrent INCLUS : on ne décoche pas l'unique copie. La case
+    // de confirmation, elle, arme l'exécution (niveau 1).
+    await userEvent.click(screen.getByRole("checkbox", { name: /Je confirme l'action sur 1/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Exécuter" }));
+    await vi.waitFor(() =>
+      expect(sendMock).toHaveBeenCalledWith("POST", "/api/raindrops/dedupe", {
+        paires: [{ garde: 1, copies: [{ id: 2, collectionId: 7 }] }],
+      }),
+    );
+    await vi.waitFor(() => expect(goBack).toHaveBeenCalled());
+  });
+
+  it("une copie désélectionnée SORT de sa paire — le gardé n'est jamais un item", async () => {
+    sendMock.mockResolvedValue({ jobId: "j-dedupe", total: 1 });
+    const deux: View = {
+      ...revueDedupe,
+      items: [
+        revueDedupe.items[0]!,
+        { id: 3, url: "https://a.example/copie2", title: "Autre copie", collectionId: 7, dedupeGarde: { id: 1, title: "Ancienne page" } },
+      ],
+    };
+    renderReview(deux);
+    await userEvent.click(screen.getByRole("checkbox", { name: "Autre copie" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /Je confirme l'action sur 1/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Exécuter" }));
+    await vi.waitFor(() =>
+      expect(sendMock).toHaveBeenCalledWith("POST", "/api/raindrops/dedupe", {
+        paires: [{ garde: 1, copies: [{ id: 2, collectionId: 7 }] }],
+      }),
+    );
   });
 });

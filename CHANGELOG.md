@@ -307,6 +307,26 @@ signet près, y compris croisé avec le filtre de domaine.
   consommateurs qui ne font que parler de sauvegardes importent sans la
   fabrique. 328 → 280.
 
+#### Les vues de Nettoyage deviennent actionnables (2026-09-19)
+
+- **Tout sélectionner (page)** et **mettre à la corbeille** depuis les liens
+  morts — le même chemin que la liste principale : Revue, réversible,
+  restaurable à l'origine.
+- **Les doublons se trient.** Cases sur chaque copie, « Garder le meilleur »
+  (la plus ancienne — l'original ; https en départage), corbeille du groupe,
+  et **« Trier les doublons » global** d'un coup vers une seule Revue. Garde
+  structurelle : **le dernier exemplaire d'un groupe ne peut pas être coché**
+  — un groupe garde toujours un représentant.
+- **Rien de ce qui distingue une copie ne meurt avec elle** : ses étiquettes
+  remontent dans le gardé avant la corbeille (consolidation en job,
+  progression visible). Les surlignages restent dans les copies — la
+  corbeille est réversible, et le Phase 1 les tient en lecture seule.
+- **Étiqueter les non-taggés** depuis leur vue, en masse, via la Revue.
+- **Un tiers du flou était du bruit** : 163 des 551 signets flous étaient
+  groupés par le seul titre d'interstitiel « Weiterleitungshinweis », à
+  travers des pages sans rapport. Ces titres ne groupent plus — correction
+  effective immédiatement, sans re-scan.
+
 #### Le typecheck couvre désormais les tests (2026-09-19)
 
 - `tsconfig.json` sert aussi de config de build, il excluait donc tests et
