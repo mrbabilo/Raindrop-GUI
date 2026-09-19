@@ -223,10 +223,17 @@ body {
 }
 
 /* Le mouvement est une préférence, pas un dû : qui demande moins d'animation
-   garde tous les états, sans transition. */
+   garde tous les états, sans transition. BLINDÉ le 2026-09-19 : le bloc
+   initial ne couvrait que .nav-ligne — la barre de progression (largeur
+   animée) et les survols bougeaient encore. L'interface étant volontairement
+   pauvre en mouvement (DESIGN.md : pas d'ombre, pas d'effet), l'arrêt global
+   ne coûte rien et ne rate rien. */
 @media (prefers-reduced-motion: reduce) {
-  .nav-ligne {
-    transition: none;
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
   }
 }
 

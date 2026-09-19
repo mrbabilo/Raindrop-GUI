@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { t } from "../i18n/fr";
+import { Icone } from "../design/icones";
 import { useAppState, type View } from "../state/appState";
 import type { RaindropItem } from "../../shared/types";
 
@@ -61,7 +62,10 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
       <span className="font-medium">{t("bulk.selected", { n: selected.length })}</span>
       {/* §6 : le seul rouge légitime est --color-app-broken, couleur d'un
           diagnostic — le snippet du brief portait un jeton fantôme (R9P-2). */}
-      <button type="button" className="rounded border border-app-broken px-2 py-1 text-app-broken" onClick={() => build({ op: "trash" })}>{t("bulk.trash")}</button>
+      <button type="button" className="rounded border border-app-broken px-2 py-1 text-app-broken" onClick={() => build({ op: "trash" })}>
+        <Icone nom="corbeille" className="inline align-[-2px] mr-1" />
+        {t("bulk.trash")}
+      </button>
       {/* L'archive est la seule action qui n'écrit RIEN chez Raindrop : elle
           copie en local ce qui existe déjà côté serveur. */}
       <button type="button" className="rounded border border-app-border px-2 py-1" onClick={() => build({ op: "archive" })}>

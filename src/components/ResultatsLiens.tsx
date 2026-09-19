@@ -121,6 +121,7 @@ export function ResultatsLiens({ type, jamaisAnalyse, analyser }: {
                 {t("cleanup.archiver", { n: selectionnes.length })}
               </button>
               <button type="button" className="btn" disabled={selectionnes.length === 0} onClick={corbeille}>
+                <Icone nom="corbeille" className="inline align-[-2px] mr-1" />
                 {t("cleanup.corbeille", { n: selectionnes.length })}
               </button>
             </span>

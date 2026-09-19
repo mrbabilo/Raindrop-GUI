@@ -350,8 +350,11 @@ fidèle, recompression quand la signature manque, test sabordé pour le prouver.
       plan 2, sur le socle posé par le lot sauvegarde. Inclut : écritures
       refusées proprement hors ligne (aujourd'hui les échecs remontent en
       `fetch failed` brut — jeton `broken` mal employé pour l'interruption
-      MCP, voir polissage) ; écoute `change` de matchMedia pour le thème
-      `system` à chaud.
+      MCP, voir polissage).
+      ~~Écoute `change` de matchMedia pour le thème `system` à chaud~~ —
+      **livré le 2026-09-20** avec le lot shell (`theme.ts`,
+      `ecouterSysteme`), sorti d'ici : l'écoute n'a jamais rien eu d'hors
+      ligne.
 
 ## Polissage du plan 2 (issu du triage de la revue finale, 2026-09-17)
 

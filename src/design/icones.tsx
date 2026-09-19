@@ -82,6 +82,10 @@ const paths: Record<string, ReactNode> = {
   chevronGauche: <path d="M9.5 4.5L6 8l3.5 3.5" />,
   // croix : fermer, et rien d'autre
   croix: <path d="M4 4l8 8M12 4l-8 8" />,
+  corbeille: (
+    <path d="M2.5 4.5h11M6.5 2.5h3M4.2 4.5l.6 8a1 1 0 0 0 1 .9h4.4a1 1 0 0 0 1-.9l.6-8M6.7 7.2v3.6M9.3 7.2v3.6" />
+  ),
+  restaurer: <path d="M3.2 4.2v3.4h3.4M3.5 7.3a4.9 4.9 0 1 1-.9 3.2" />,
   // chevron : l'ornement d'un bouton-état, jamais seul
   chevron: <path d="M4.5 6.5L8 10l3.5-3.5" />,
   // chevrons d'arbre : l'état d'un groupe plié ou déplié

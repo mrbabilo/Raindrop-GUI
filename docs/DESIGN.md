@@ -309,6 +309,29 @@ elle n'imite pas un relief, elle détache la bande du fond et de ses voisines,
 là où douze teintes voisines et un simple filet d'air ne suffisaient pas à
 séparer douze familles. Aucun autre élément n'en prend.
 
+## 8bis. L'en-tête plein-fond
+
+Depuis le 2026-09-20, la fenêtre macOS porte `titleBarStyle: "Overlay"` et
+`hiddenTitle` : les **trois pastilles se posent sur NOTRE en-tête**, qui
+reste le nôtre — même surface, même filet, aucun chrome simulé. Deux
+conséquences que ce document tient :
+
+- **La réserve des pastilles est un MUR, pas un remplissage** : ~76 px de
+  vide à gauche du premier contrôle, lui-même poignée de déplacement
+  (`data-tauri-drag-region`). Les vides de l'en-tête traînent la fenêtre ;
+  les contrôles restent des contrôles — l'attribut ne porte que l'élément
+  qui le porte.
+- **Le premier rendu naît dans la surface `app` claire** (`backgroundColor`
+  de la fenêtre), pas dans le blanc WebKit. En sombre, l'éclair initial
+  demeure — le dynamique exigerait de lire l'apparence macOS au création
+  de la fenêtre, gardé pour quand il dérange.
+
+**Le mouvement est une préférence** : `prefers-reduced-motion: reduce`
+coupe TOUTES les transitions et animations de l'interface (règle globale
+de styles.css). L'interface étant volontairement pauvre en mouvement,
+l'arrêt global ne coûte rien — et ne rate rien, là où un bloc par classe
+en ratait.
+
 ## 9. Règles
 
 - **L'écran ne surcharge jamais.** Seuls les icônes et éléments strictement

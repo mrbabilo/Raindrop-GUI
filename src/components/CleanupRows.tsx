@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { t } from "../i18n/fr";
+import { Icone } from "../design/icones";
 import { CarreCollection } from "../design/Signaux";
 // Le patron « ligne activable » a quitté ce fichier le 2026-09-19 : la vue
 // Tags en a eu besoin à son tour (LigneActivable.tsx).
@@ -202,6 +203,7 @@ export function TrashRow({ r }: { r: RaindropItem }) {
       <span className="min-w-[8rem] flex-1 truncate font-medium">{r.title}</span>
       <span className="url shrink-0 text-[11px] text-app-muted">{r.url}</span>
       <ActionLigne disabled={unrestore.isPending} onClick={restaurer}>
+        <Icone nom="restaurer" className="inline align-[-2px] mr-1" />
         {t("cleanup.restore")}
       </ActionLigne>
       {origineInconnue && (

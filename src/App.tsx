@@ -108,7 +108,15 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
         elle, le bouton de repli disparaissait (plus moyen de la rouvrir) et
         les icônes se déplaçaient. Le titre, les réglages et le thème sont
         à l'application, pas au panneau de gauche. */}
-      <header className="flex items-center gap-3 border-b border-app-border bg-app px-4 py-2">
+      <header
+        data-tauri-drag-region
+        className="flex items-center gap-3 border-b border-app-border bg-app pr-4 pl-[76px] py-2"
+      >
+        {/* La réserve des pastilles macOS est un MUR à gauche du premier
+            contrôle — vide et lui-même poignée de déplacement. Sur les vides
+            de l'en-tête, c'est la fenêtre qu'on traîne ; les contrôles, eux,
+            restent des contrôles (l'attribut ne porte que sur l'élément). */}
+        <span data-tauri-drag-region className="h-5 w-0" aria-hidden="true" />
         <button
           type="button"
           className="btn btn-icone"
