@@ -137,10 +137,21 @@ async function passer(deps: Deps): Promise<Passage> {
     }
   } catch (e) {
     // Un 429 (`ErreurHttpRaindrop`) ou un timeout de 30 s sont ROUTINIERS sur
-    // 245 requêtes : sans ce filet, `fermer()` ne tournerait jamais et le flux
-    // resterait ouvert. Ce que ce `catch` fait, et tout ce qu'il fait : fermer
-    // le flux (best effort) puis relancer l'erreur D'ORIGINE — si `fermer()`
-    // jette à son tour, on ne la laisse jamais masquer la vraie cause.
+    // 245 requêtes. Ils ne remontent plus ici en temps ordinaire : le job
+    // enveloppe sa lecture d'une reprise (`resilience.ts`) qui pause et
+    // rejoue. Ce qui parvient jusqu'à ce `catch` est donc soit une erreur
+    // NON reprenable (jeton révoqué, collection disparue), soit un transitoire
+    // qui a survécu à toutes les tentatives — soit une annulation.
+    //
+    // ANNULÉ : la reprise cesse d'attendre dès que `annule()` passe à vrai, et
+    // relance l'erreur en cours. La lire comme une panne afficherait un
+    // message d'erreur à qui vient de cliquer « annuler ». On la relit donc à
+    // la lumière de l'annulation, et le balayage se termine comme les autres
+    // annulations : incomplet, nommé, sans alarme.
+    //
+    // Sinon, ce que ce `catch` fait, et tout ce qu'il fait : fermer le flux
+    // (best effort) puis relancer l'erreur D'ORIGINE — si `fermer()` jette à
+    // son tour, on ne la laisse jamais masquer la vraie cause.
     //
     // Ce qu'il NE fait PAS : rendre la garde de Task 6 (`dernierValide()`)
     // voyante sur ce chemin. L'erreur remonte, `finir()` n'est jamais appelé,
@@ -149,6 +160,10 @@ async function passer(deps: Deps): Promise<Passage> {
     // C'est un dossier orphelin, inoffensif pour la garde (elle ne voit que
     // des entrées) mais bel et bien laissé là. Le ramassage de ces dossiers
     // est une décision de conception encore ouverte.
+    if (deps.annule?.()) {
+      const { lignes, sha256 } = await ecrivain.fermer();
+      return { ids, lignes, sha256, countFinal: total, decroissance, annule: true };
+    }
     await ecrivain.fermer().catch(() => {});
     throw e;
   }

@@ -426,6 +426,36 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   2026-09-19), vitest transpilant sans vérifier. Ne pas confondre avec un faux
   positif de config — celles-là sont réelles, simplement jamais regardées.
 
+## Traps reprise en vol — lot 2026-09-19
+
+- **Une pause de reprise DANS le créneau de file gèle l'interface.** La file
+  est séquentielle : attendre 4 s sans rendre le créneau bloque le rang
+  « interactif » derrière soi, tout ce que les deux rangs existent pour
+  empêcher. Le retry s'enroule donc **autour** de `file.run`, une tentative =
+  un créneau. Testable sans mesurer un temps : une file espionne qui
+  journalise entrée/sortie doit rendre `entrée, sortie, pause, entrée, sortie`.
+- **Un décorateur par job, pas une option de `makeLecture`.** L'instance de
+  lecture naît au démarrage du sidecar, bien avant tout job ; or la reprise
+  doit être interruptible par l'annulation de CE job. Poser le crochet à la
+  construction imposerait un état mutable partagé entre jobs.
+- **Une pause indivisible est une latence d'annulation.** 16 s d'attente
+  d'un bloc, c'est 16 s sans réponse après un clic sur « annuler ». Dormir par
+  tranches de 250 ms, en relisant `annule()` entre chacune.
+- **Ne jamais retenter un 401/403/404.** Trois rejeux espacés transforment une
+  erreur claire — jeton révoqué, collection disparue — en panne lente et
+  inexplicable. Se retentent : 429, 5xx, et tout ce qui n'est pas un statut
+  HTTP (coupure, `AbortError` du timeout, corps tronqué).
+- **L'annulation peut arriver AILLEURS que dans la boucle qu'on a protégée.**
+  Trouvé en écrivant le test, pas en relisant le code : le 429 tombait sur
+  `releverWatermark`, qui PRÉCÈDE le balayage — hors du `catch` de `passer()`.
+  Une erreur postérieure à une annulation doit se relire comme une annulation
+  **à chaque niveau** où elle peut naître, sinon celui qui annule lit
+  « http 429 ».
+- **`npm test 2>&1 | tail -4 && git commit` COMMITTE SUR UN ÉCHEC** : le code
+  de sortie d'un pipeline est celui de `tail`, pas de `npm test`. Pour toute
+  exécution qui décide d'un commit : `npm test > log 2>&1; rc=$?`, puis tester
+  `$rc`.
+
 ## Git
 
 Travailler sur `main`. **Pousser uniquement quand l'utilisateur le demande.**

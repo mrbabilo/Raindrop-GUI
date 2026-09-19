@@ -246,6 +246,27 @@ Developer ID.
   erreur** pour toute autre forme : coller une URL donnait un écran vide
   que rien n'expliquait. Mesuré de bout en bout : 12 210 → 64.
 
+#### La sauvegarde survit à un hoquet du réseau (2026-09-19)
+
+- **Un 429 ou un timeout au milieu d'un balayage n'avorte plus le job.** Sur
+  245 requêtes l'un comme l'autre sont routiniers ; jusqu'ici ils faisaient
+  perdre tout le travail déjà fait, soit 2 min 20 à refaire pour un hoquet
+  d'une seconde. La lecture du job est désormais enveloppée d'une reprise :
+  429 → pause de 4, 8 puis 16 s ; 5xx et pannes réseau → 1, 2 puis 4 s.
+- **Un jeton révoqué, lui, échoue tout de suite.** 401, 403 et 404 ne se
+  retentent pas : les rejouer ferait d'une erreur claire une panne lente et
+  inexplicable.
+- **L'interface ne se fige pas pendant la pause** : l'attente a lieu hors du
+  créneau de la file, le rang interactif passe devant comme d'habitude.
+- **Annuler reste immédiat, et honnête.** La pause se dort par tranches, donc
+  un « annuler » est vu en moins d'un quart de seconde ; et une erreur qui
+  survient alors qu'on vient d'annuler se nomme « annulée », jamais
+  « http 429 » — aux deux endroits où elle peut naître.
+
+Lectures seulement, par construction : le module décore le canal de lecture,
+qui n'expose que des GET. Rejouer une écriture dont on ignore si elle a abouti
+la ferait potentiellement deux fois.
+
 #### Filtre par plusieurs étiquettes (2026-09-19)
 
 - **Une étiquette cliquée entre dans le filtre ; recliquée, elle en sort.**
@@ -348,9 +369,12 @@ l'heure — les notes de chaque version le disent.
 
 - Écriture des surlignages, agent IA, moteur de règles et packaging
   restent hors périmètre de la Phase 1 (spécification §12).
-- **La reprise après coupure n'est pas implémentée** : un 429 ou un délai
-  dépassé en cours de balayage avorte le job entier. La spécification la
-  promet en plusieurs endroits ; l'écart est consigné.
+- **Une sauvegarde interrompue par l'arrêt de l'application recommence de
+  zéro.** La coupure *réseau*, elle, est rattrapée depuis le 2026-09-19 (voir
+  plus haut) ; c'est la reprise à travers un redémarrage du processus qui reste
+  différée — un arbitrage, pas un oubli : reprendre à la page N suppose que la
+  pagination n'ait pas bougé, or l'écart entre deux lancements n'est pas borné,
+  et le gain se chiffre à 2 min 20 de travail de fond.
 - **L'automatisme de sauvegarde des 24 h reste dormant** tant qu'aucune
   sauvegarde n'a été lancée à la main — conséquence assumée du choix
   « première sauvegarde explicite ».

@@ -22,6 +22,7 @@ import { horodatage, verifierJsonl } from "./instantane.js";
 import { makeEnregistreur } from "./enregistrement.js";
 import { dernierValide, lireManifeste, type EntreeInstantane, type Manifeste } from "./manifeste.js";
 import type { Lecture } from "./lecture.js";
+import { avecReprise } from "./resilience.js";
 import type { JobHandle } from "../jobs/store.js";
 
 export interface ResultatSauvegarde extends EntreeInstantane {
@@ -67,12 +68,33 @@ export interface DepsSauvegarde {
   dossier: string;
   avertir?: (message: string, champs?: Record<string, unknown>) => void;
   maintenant?: () => Date;
+  /** Couture de test, comme `maintenant` : les pauses de reprise se comptent
+   *  en secondes, et une suite de tests n'a pas à les dormir. */
+  dormir?: (ms: number) => Promise<void>;
 }
 
 export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
   const maintenant = deps.maintenant ?? (() => new Date());
   const avertir = deps.avertir ?? (() => undefined);
   const finir = makeEnregistreur({ dossier: deps.dossier, maintenant, avertir });
+
+  /**
+   * La lecture du job : la même, enveloppée d'une reprise en vol (429 →
+   * pause, panne réseau → retry). Construite PAR EXÉCUTION et non une fois
+   * pour toutes, parce que la reprise doit pouvoir être interrompue par
+   * l'annulation de CE job — `deps.lecture`, lui, est partagé et vit depuis
+   * le démarrage du sidecar.
+   *
+   * Sur 245 requêtes, un 429 ou un timeout sont routiniers : sans cela,
+   * l'un comme l'autre avortaient le job entier et remettaient 2 min 20 à
+   * refaire (§1ter).
+   */
+  const lectureDe = (job?: JobHandle): Lecture =>
+    avecReprise(deps.lecture, {
+      annule: () => job?.isCancelled() ?? false,
+      avertir,
+      ...(deps.dormir ? { dormir: deps.dormir } : {}),
+    });
 
   /** Un nom de dossier LIBRE : deux instantanés de la même seconde
    *  partageraient le même nom, et le second écraserait le premier — or §6
@@ -96,16 +118,17 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
    *  porterait une date inférieure au watermark : l'incrémental suivant ne le
    *  relirait jamais — perte silencieuse et définitive. Relevé avant, il est
    *  relu une fois de trop, ce qui est sans effet. */
-  const releverWatermark = async (): Promise<string> => {
-    const p = await deps.lecture.page(0, { sort: "-lastUpdate", page: 0, perpage: 1 });
+  const releverWatermark = async (lecture: Lecture): Promise<string> => {
+    const p = await lecture.page(0, { sort: "-lastUpdate", page: 0, perpage: 1 });
     return (p.items[0] as { lastUpdate?: string } | undefined)?.lastUpdate ?? "";
   };
 
   const balayerTout = async (m: Manifeste, job?: JobHandle, bascule?: string): Promise<ResultatSauvegarde> => {
+    const lecture = lectureDe(job);
     const h = await horodatageLibre(maintenant());
     const cible = join(deps.dossier, h);
-    const watermark = await releverWatermark();
-    const commun = { lecture: deps.lecture, dossier: cible };
+    const watermark = await releverWatermark(lecture);
+    const commun = { lecture, dossier: cible };
     const principal = await balayerEtRelire({
       ...commun,
       nom: NOMS.raindrops,
@@ -166,9 +189,10 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
 
   const rafraichir = async (m: Manifeste, job?: JobHandle): Promise<ResultatSauvegarde> => {
     const base = dernierValide(m)!;
+    const lecture = lectureDe(job);
     const annule = () => job?.isCancelled() ?? false;
     const { modifies, nouveauWatermark } = await lireModifies({
-      lecture: deps.lecture,
+      lecture,
       collectionId: 0,
       watermark: base.watermark,
     });
@@ -182,13 +206,13 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
       modifies,
     });
     const corbeille = await balayerEtRelire({
-      lecture: deps.lecture,
+      lecture,
       dossier: cible,
       nom: NOMS.corbeille,
       collectionId: -99,
       annule,
     });
-    const aux = await collecterAuxiliaires({ lecture: deps.lecture, dossier: cible });
+    const aux = await collecterAuxiliaires({ lecture, dossier: cible });
     const pieces = [principal, corbeille, ...aux];
     if (annule()) {
       // L'annulation prime sur l'escalade : relancer 245 requêtes après un
@@ -205,7 +229,7 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
     // avant : avant, le moindre AJOUT ferait diverger le compte et coûterait
     // 245 requêtes, alors que l'incrémental le rattrape déjà (il porte un
     // `lastUpdate` récent). Après, seule la suppression distante subsiste.
-    const distant = await deps.lecture.compteur(0);
+    const distant = await lecture.compteur(0);
     if (distant !== principal.count) {
       const ecart = `le compte distant (${distant}) diverge du fusionné (${principal.count}) — balayage complet`;
       // ESCALADE dans la même exécution. S'arrêter à « incomplet » laisserait
@@ -243,6 +267,34 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
     return balayerTout(m, job, bascule);
   };
 
+  /**
+   * Une erreur arrivée APRÈS une annulation se nomme « annulée ».
+   *
+   * `balayage.ts` fait déjà ce travail pour ce qui casse PENDANT le balayage :
+   * là, un instantané partiel existe, et il se termine proprement en incomplet.
+   * Mais tout n'est pas dans le balayage — le relevé du watermark le précède,
+   * les pièces auxiliaires le suivent — et une reprise interrompue par
+   * l'annulation y relance l'erreur en cours (un 429, un timeout). Sans cette
+   * relecture, celui qui vient de cliquer « annuler » lirait « http 429 ».
+   *
+   * On ne FABRIQUE pas d'instantané pour autant : à ce stade il peut n'y avoir
+   * aucun dossier, et en inventer un serait exactement le péché que §6
+   * proscrit. Le job échoue — mais il dit pourquoi, et c'est vrai.
+   */
+  const executerNomme = async (
+    mode: "balayage" | "incremental",
+    job?: JobHandle,
+  ): Promise<ResultatSauvegarde> => {
+    try {
+      return await executerSeul(mode, job);
+    } catch (e) {
+      if (!job?.isCancelled()) throw e;
+      const cause = e instanceof Error ? e.message : String(e);
+      avertir("sauvegarde annulée pendant une reprise", { cause });
+      throw new Error("sauvegarde annulée");
+    }
+  };
+
   return {
     doitBalayerComplet,
     doitSauvegarderAuDemarrage,
@@ -261,7 +313,7 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
       // `executerSeul` court jusqu'à son premier `await` AVANT que la ligne
       // suivante ne s'exécute : rien ne peut s'intercaler entre le test et la
       // pose du drapeau.
-      const p = executerSeul(mode, job);
+      const p = executerNomme(mode, job);
       enVol = p;
       return p.finally(() => {
         if (enVol === p) enVol = undefined;

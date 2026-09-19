@@ -140,14 +140,40 @@ fidèle, recompression quand la signature manque, test sabordé pour le prouver.
 
 ### Reste à faire sur le lot sauvegarde
 
-- [ ] **Reprise après coupure** — la spec la promet en §4.2, §5.1, §6 et §7 ;
-      le code ne la tient pas et ne la tente pas. `ouvrirJsonl` **tronque**
-      (verrouillé par un test) et `ErreurHttpRaindrop.status` — le code HTTP
-      structuré, ajouté précisément pour cela — n'est lu par personne. Un 429
-      ou un timeout à la page 40 sur 245 avorte le job entier. La spec a été
-      amendée pour dire que la reprise est **différée** ; l'implémenter
-      suppose une pause bornée sur le 429 et un retry réseau **sur les
-      lectures seulement, jamais les écritures** (trap CLAUDE.md).
+- [x] **Reprise EN VOL** (2026-09-19, `sidecar/backup/resilience.ts`) — un 429
+      ou un timeout à la page 40 sur 245 n'avorte plus le job.
+      `ErreurHttpRaindrop.status`, ajouté pour cela et lu par personne, décide
+      enfin : 429 → pause 4/8/16 s ; 5xx et pannes réseau → retry 1/2/4 s ;
+      **401/403/404 → aucune reprise** (les rejouer ferait d'une erreur claire
+      une panne lente). **Lectures seulement**, par construction : le module
+      décore une `Lecture`, dont le canal n'expose que des GET.
+      Trois choix qui ne sautent pas aux yeux : la pause vit **hors du créneau
+      de file** (attendre dedans figerait le rang interactif, donc l'interface,
+      à chaque hoquet) ; c'est un **décorateur appliqué par job** et non une
+      option de `makeLecture` (construit au démarrage, il ne peut pas connaître
+      l'annulation d'un job qui n'existe pas encore) ; et la pause se dort par
+      **tranches de 250 ms**, sans quoi annuler pendant une attente de 16 s
+      laisserait l'interface muette aussi longtemps.
+      **Trouvé en écrivant le test**, pas en relisant le code : le 429 tombait
+      sur le relevé du watermark, **avant** le balayage — donc hors du filet de
+      `balayage.ts`. L'annulation est désormais relue aux DEUX niveaux, et qui
+      clique « annuler » ne lit jamais « http 429 ».
+- [ ] **Reprise après REDÉMARRAGE du processus** — différée, et pour une
+      raison plutôt que par oubli (spec §1ter n°1b). `ouvrirJsonl` tronque
+      toujours. Reprendre à la page N suppose une pagination inchangée depuis :
+      dans une même exécution la fenêtre est de 2 min 20 et les trois signaux
+      de réconciliation la couvrent, mais à travers un redémarrage l'écart est
+      **non borné**, ce qui rend la « LIMITE ADMISE » (suppression + création
+      dans le même intervalle → saut invisible) d'autant plus probable. La
+      rendre saine demanderait de la conditionner à un écart court ET à un
+      `count` inchangé — pour économiser 2 min 20 de travail de fond. Si
+      quelqu'un la reprend : le point de reprise sûr est
+      `floor(lignes / PAR_PAGE)`, et il faut **tronquer** la page partielle
+      avant d'ajouter, jamais se contenter d'ouvrir en ajout — sinon ses items
+      sont écrits deux fois, `ids` (un Set) masque le doublon, `lignes` le
+      compte, et le balayage se plaint « des lignes ont été écrites sans
+      identifiant numérique ». Un bug de reprise se dénoncerait comme une
+      anomalie de données.
 - [x] **`archiver()` câblé** (2026-09-18, `0ceb810` → `e553038`) : le trou de
       périmètre §2 est fermé. `sidecar/backup/archivage.ts` boucle sur les
       identifiants — un échec n'interrompt jamais les suivants, y compris si

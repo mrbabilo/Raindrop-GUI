@@ -62,14 +62,37 @@ Le lot est livré. Ces deux points **ne sont pas tenus** par le code : ils sont
 de promettre une fidélité qu'on ne tient pas — et qu'une spec qui décrit autre
 chose que le code livré est la forme la plus durable de cette faute.
 
-1. **La reprise après coupure n'est pas implémentée.** §4.2, §5.1, §6 et §7 la
-   décrivaient comme acquise. En réalité `ouvrirJsonl` **tronque** le fichier à
-   chaque ouverture (comportement voulu : un rejeu de balayage doit réécrire,
-   pas doubler — et c'est verrouillé par un test), et `ErreurHttpRaindrop`
-   porte bien un `status` structuré mais **personne ne le lit**. Un 429 ou un
-   timeout en cours de balayage avorte le job entier. L'implémenter suppose une
-   pause bornée sur le 429 et un retry réseau **sur les lectures seulement,
-   jamais les écritures**. Inscrit à `docs/ROADMAP.md`.
+1. **La reprise après coupure — la moitié qui compte est livrée le
+   2026-09-19 ; l'autre reste différée, et pour une raison.**
+
+   Il y a DEUX capacités sous ce nom, et les confondre a coûté au §7 une
+   promesse fausse :
+
+   **(a) La reprise EN VOL — livrée.** Un 429 ou un timeout au milieu des
+   245 requêtes n'avorte plus le job : la lecture du job est enveloppée d'une
+   reprise (`sidecar/backup/resilience.ts`) qui pause et rejoue.
+   `ErreurHttpRaindrop.status`, ajouté pour cela et jusqu'ici lu par personne,
+   est enfin ce qui décide : 429 → pause de 4/8/16 s ; 5xx et pannes réseau →
+   retry de 1/2/4 s ; **401, 403, 404 → aucune reprise**, ils ne guérissent pas
+   en attendant et les rejouer transformerait une erreur claire en panne lente.
+   **Lectures seulement** : le module décore une `Lecture`, dont le canal REST
+   n'expose que des GET — la règle ne peut pas y être enfreinte par distraction.
+   La pause vit **hors du créneau de file**, sans quoi le rang interactif
+   attendrait derrière elle et l'interface se figerait à chaque hoquet.
+
+   **(b) La reprise APRÈS REDÉMARRAGE du processus — toujours différée.**
+   `ouvrirJsonl` **tronque** encore (comportement voulu pour le rejeu de
+   balayage, verrouillé par un test). Ce n'est plus seulement « pas écrit » :
+   c'est **douteux**. Reprendre à la page N suppose que la pagination n'ait pas
+   bougé depuis ; dans une même exécution, la fenêtre est de 2 min 20 et les
+   trois signaux de réconciliation (§4.2) la couvrent. À travers un
+   redémarrage, l'écart est **non borné** — heures, jours — et la « LIMITE
+   ADMISE » (une suppression ET une création dans le même intervalle laissent
+   le saut invisible) devient d'autant plus probable que l'écart s'allonge. La
+   rendre saine exigerait de la conditionner à un écart court ET à un `count`
+   inchangé, pour économiser… 2 min 20 d'un travail de fond. Le rapport ne le
+   justifie pas aujourd'hui. Inscrit à `docs/ROADMAP.md`, avec ce raisonnement
+   plutôt qu'un « à faire ».
 
 2. ~~**L'archivage des copies permanentes n'est pas déclenchable.**~~
    **Corrigé le 2026-09-18.** `archiver()` n'avait aucun appelant : le §2
@@ -491,10 +514,14 @@ sauvegarde est complète, et l'ancien dossier est laissé **intact**, jamais
 déplacé ni adopté. Adopter un arbre trouvé sur place supposerait qu'il vient de
 cette application et de ce compte — deux choses invérifiables.
 
-⚠️ **Non tenu — voir §1ter.** Le réseau qui tombe *devrait* reprendre à la
-page suivante, et le 429, désormais visible, *devrait* déclencher une pause
-avant reprise au lieu d'être compté comme un échec. Aujourd'hui, l'un comme
-l'autre avortent le job entier.
+✅ **Tenu depuis le 2026-09-19 pour la coupure EN VOL** (§1ter n°1a) : le 429
+déclenche une pause bornée, la panne réseau un retry, et le job poursuit là où
+il en était. Une erreur qui survient alors que l'utilisateur vient d'annuler se
+nomme « annulée » et non « http 429 » — aux deux endroits où elle peut naître,
+pendant le balayage comme avant lui.
+⚠️ **Toujours non tenu pour la coupure du PROCESSUS** : une sauvegarde
+interrompue par un arrêt de l'application recommence de zéro. Ce n'est pas un
+oubli mais un arbitrage, argumenté en §1ter n°1b.
 
 ## 7. Tests
 
