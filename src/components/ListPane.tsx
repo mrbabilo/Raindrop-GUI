@@ -135,9 +135,10 @@ export function ListPane() {
         className="min-h-0 flex-1 overflow-y-auto"
       >
         {q.viewMode === "mosaic" ? (
-          // §8 : la tuile fait 221 px de large — une largeur exacte, pas un
-          // minmax élastique qui la ferait varier d'un écran à l'autre.
-          <div className="grid grid-cols-[repeat(auto-fill,221px)] gap-3 p-3">
+          // minmax et non 221px fixe : le reliquat de largeur du panneau
+          // restait vide sur la droite — jusqu'à 220 px perdus. 221 px est le
+          // PLANCHER de la colonne ; les tuiles s'étirent pour remplir.
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(221px,1fr))] gap-3 p-3">
             {items.map((r) => <MosaicTile key={r.id} r={r} collectionRacine={titreRacine(r.collectionId)} etat={etats?.get(r.id) ?? null} onOpen={() => selectRaindrop(r.id)} />)}
           </div>
         ) : (

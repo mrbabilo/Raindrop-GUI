@@ -68,3 +68,18 @@ describe("MosaicTile", () => {
     expect(domaine.previousElementSibling?.tagName.toLowerCase()).toBe("svg");
   });
 });
+
+// Le retour d'usage du 2026-09-20 : les tuiles ne remplissaient pas le
+// panneau — colonnes fixes de 221 px, reliquat vide sur la droite. La tuile
+// s'étire désormais (221 px = plancher de colonne, vignette au ratio).
+describe("MosaicTile — la tuile remplit sa colonne", () => {
+  it("largeur fluide, jamais fixe — et la vignette garde le ratio du §8", () => {
+    const { container } = render(<MosaicTile r={raindrop()} collectionRacine="Dev" onOpen={() => undefined} />);
+    const tuile = container.firstElementChild as HTMLElement;
+    expect(tuile.className).toContain("w-full");
+    expect(tuile.className).not.toContain("w-[221px]");
+    // Le ratio remplace la hauteur fixe : la vignette grandit AVEC la tuile.
+    expect(tuile.querySelector(".wash")?.className).toContain("aspect-[221/118]");
+    expect(tuile.querySelector(".wash")?.className).not.toContain("h-[118px]");
+  });
+});

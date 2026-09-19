@@ -297,7 +297,7 @@ Corps de texte : `line-height: 1.5–1.6`, `text-wrap: pretty`, largeur limitée
 | ligne de liste | 36 px | titre + étiquettes + domaine ; ~22 visibles |
 | nœud d'arbre | 26–28 px | retrait 14 px par niveau, filet de 2 px |
 | entrée de navigation | 28 px | |
-| tuile de mosaïque | 221 px de large | vignette 118 px, titre sur 2 lignes |
+| tuile de mosaïque | 221 px de large **minimum** | vignette au ratio 221:118, titre sur 2 lignes. Les colonnes s'étirent (`minmax`) pour remplir le panneau — le reliquat de largeur ne reste plus vide sur la droite (renversé le 2026-09-20 à la demande de l'utilisateur ; la décision d'une largeur exacte était délibérée, son commentaire l'attestait) |
 | action engageante | 38 px | Revue uniquement |
 
 Rayons : pastille ronde (collection), 7 px (ligne, champ), 9–11 px (panneau,
