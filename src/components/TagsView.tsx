@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { useRovingFocus } from "../hooks/useRovingFocus";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { EtatListe } from "./EtatListe";
 import { useAppState } from "../state/appState";
 import { vueEtiquette } from "../hooks/filtreEtiquettes";
+import { ActionLigne, ErreurLigne, Ligne } from "./LigneActivable";
 import { useTags } from "../hooks/useStaticData";
 import { useTagManage } from "../hooks/useMutations";
 import type { Tag } from "../../shared/types";
@@ -16,15 +18,6 @@ import type { Tag } from "../../shared/types";
 // suppression en masse est l'affaire de la Revue (T15) ; ici unitaire, avec
 // confirm inline — deux gestes réels avant tout envoi (§10 : le bouton nomme
 // ce qui va se produire).
-
-// Erreur d'action inline (pattern T8/T12) : ce qui s'est passé, jamais silencieux.
-function Erreur({ message }: { message: string }) {
-  return (
-    <p role="alert" className="text-xs text-app-broken">
-      {t("state.error", { message })}
-    </p>
-  );
-}
 
 // Une ligne : case (sélection de fusion), #nom (compte), Renommer (input
 // inline : Entrée envoie, Échap/blur abandonne), Supprimer qui devient
@@ -69,10 +62,23 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
     return () => document.removeEventListener("pointerdown", dehors);
   }, [armee]);
   return (
-    <li ref={ligneRef} className="flex min-h-7 items-center gap-2 rounded px-2 py-0.5 hover:bg-app-hover">
-      <input type="checkbox" aria-label={tag.name} checked={coche} onChange={() => bascule(tag.name)} />
+    <Ligne
+      etat={null}
+      balise="li"
+      role="listitem"
+      className="flex min-h-7 items-center gap-2 rounded px-2 py-0.5 hover:bg-app-hover "
+    >
+      <span ref={ligneRef} className="contents">
+      <ActionLigne
+        el="input"
+        type="checkbox"
+        aria-label={tag.name}
+        checked={coche}
+        onChange={() => bascule(tag.name)}
+      />
       {edition ? (
-        <input
+        <ActionLigne
+          el="input"
           autoFocus
           aria-label={t("tags.renameField", { name: tag.name })}
           className="input w-44"
@@ -91,15 +97,15 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
               l'application où une étiquette ne réagissait pas.
               Le # décoratif reste hors du texte du span (les requêtes RTL ne
               lisent que les nœuds texte directs). */}
-          <button
+          <ActionLigne
             type="button"
             className="flex-1 truncate text-left hover:underline"
             onClick={() => go(vueEtiquette([tag.name]))}
           >
             #<span>{tag.name}</span>
-          </button>
+          </ActionLigne>
           <span className="text-xs text-app-muted">{tag.count}</span>
-          <button
+          <ActionLigne
             type="button"
             className="btn btn-icone shrink-0"
             aria-label={t("tags.rename")}
@@ -109,9 +115,9 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
             }}
           >
             <Icone nom="crayon" />
-          </button>
+          </ActionLigne>
           {armee ? (
-            <button
+            <ActionLigne
               type="button"
               className="btn shrink-0"
               disabled={manage.isPending}
@@ -120,16 +126,17 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
               onClick={() => manage.mutate({ operation: "delete", tags: [tag.name] }, { onSuccess: () => setArmee(false) })}
             >
               {t("tags.confirm")}
-            </button>
+            </ActionLigne>
           ) : (
-            <button type="button" className="btn shrink-0" onClick={() => setArmee(true)}>
+            <ActionLigne type="button" className="btn shrink-0" onClick={() => setArmee(true)}>
               {t("tags.delete")}
-            </button>
+            </ActionLigne>
           )}
         </>
       )}
-      {manage.isError && <Erreur message={String(manage.error?.message ?? "")} />}
-    </li>
+      {manage.isError && <ErreurLigne message={String(manage.error?.message ?? "")} />}
+      </span>
+    </Ligne>
   );
 }
 
@@ -163,7 +170,7 @@ function ZoneFusion({ coches, vider }: { coches: string[]; vider: () => void }) 
           {t("tags.merge")}
         </button>
       </div>
-      {manage.isError && <Erreur message={String(manage.error?.message ?? "")} />}
+      {manage.isError && <ErreurLigne message={String(manage.error?.message ?? "")} />}
     </div>
   );
 }
@@ -171,6 +178,18 @@ function ZoneFusion({ coches, vider }: { coches: string[]; vider: () => void }) 
 export function TagsView() {
   const q = useTags();
   const { go } = useAppState();
+  /**
+   * UN arrêt de tabulation pour toute la vue, et les flèches y circulent.
+   *
+   * Sans cela : 317 étiquettes réelles à quatre contrôles chacune, soit plus
+   * de mille deux cents arrêts pour traverser l'écran au clavier. C'est le
+   * même grief que la barre latérale et la liste principale, et la même
+   * réponse — la vue Tags avait simplement été oubliée.
+   */
+  const zone = useRef<HTMLUListElement>(null);
+  const roving = useRovingFocus(zone, {
+    surEchap: () => (document.activeElement as HTMLElement | null)?.blur(),
+  });
   const [coches, setCoches] = useState<string[]>([]);
   const bascule = (name: string) =>
     setCoches((c) => (c.includes(name) ? c.filter((n) => n !== name) : [...c, name]));
@@ -192,7 +211,11 @@ export function TagsView() {
           reessayer={() => void q.refetch()}
         />
       ) : (
-        <ul className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-4 pb-2">
+        <ul
+          ref={zone}
+          onKeyDown={roving.surTouche}
+          className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-4 pb-2"
+        >
           {liste.map((tg) => (
             <LigneTag key={tg.name} tag={tg} coche={coches.includes(tg.name)} bascule={bascule} />
           ))}

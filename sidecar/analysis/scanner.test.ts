@@ -230,12 +230,20 @@ describe("Scanner — reprise après une analyse interrompue", () => {
     expect(av.verifies).toBeLessThan(av.total);
   });
 
-  it("un TTL expiré remet tout à vérifier — l'avancement le dit", async () => {
+  it("un résultat PÉRIMÉ ne compte plus comme vérifié", async () => {
     const compteur = { n: 0 };
     await scanInterrompu(3, compteur);
-    expect(cache.avancementLiens(30).verifies).toBeGreaterThanOrEqual(3);
-    // TTL de 0 jour : plus rien n'est frais. Sans cette lecture, l'écran
-    // annoncerait une reprise sur des résultats que le scan va refaire.
-    expect(cache.avancementLiens(0).verifies).toBe(0);
+    const frais = cache.avancementLiens(30).verifies;
+    expect(frais).toBeGreaterThanOrEqual(3);
+
+    // On VIEILLIT un résultat de 60 jours plutôt que de mettre le TTL à zéro :
+    // avec un TTL nul la coupure vaut `Date.now()`, et un résultat écrit dans
+    // la même milliseconde tombe pile dessus — le test dépendait alors de
+    // l'horloge, ce qu'il a fini par démontrer en échouant.
+    const vieux = cache.allResults()[0]!;
+    cache.setResult({ ...vieux, checkedAt: new Date(Date.now() - 60 * 864e5).toISOString() });
+    // Un de moins : c'est ce que le scan ira revérifier, et ce que l'écran
+    // doit cesser d'annoncer comme acquis.
+    expect(cache.avancementLiens(30).verifies).toBe(frais - 1);
   });
 });

@@ -225,3 +225,39 @@ describe("TagsView — le nom mène à ce qu'il range", () => {
     expect(vue.tags).toHaveLength(1);
   });
 });
+
+// Lot a11y : la vue Tags était la dernière zone sans navigation par zone.
+// 317 étiquettes réelles à quatre contrôles chacune, soit plus de mille deux
+// cents arrêts de tabulation pour traverser l'écran.
+describe("TagsView — la vue ne prend qu'UN arrêt de tabulation", () => {
+  const tabulables = () =>
+    [...document.querySelectorAll<HTMLElement>("li [tabindex], li button, li input")].filter(
+      (el) => el.tabIndex === 0,
+    );
+
+  it("une seule ligne est tabulable, et ses contrôles ne le sont pas", async () => {
+    render(<TagsView />, { wrapper });
+    await screen.findAllByRole("listitem");
+    const lignes = [...document.querySelectorAll<HTMLElement>("li")];
+    // La présence d'abord : il y a bien plusieurs lignes, donc plusieurs
+    // occasions d'accumuler des arrêts.
+    expect(lignes.length).toBeGreaterThan(1);
+    expect(lignes.filter((l) => l.tabIndex === 0)).toHaveLength(1);
+    // Et AUCUN contrôle interne n'est tabulable tant qu'on n'est pas entré :
+    // c'est là que se trouvaient les mille deux cents arrêts.
+    expect(tabulables()).toHaveLength(0);
+  });
+
+  it("Enter entre dans la ligne et en ouvre les contrôles ; Échap les referme", async () => {
+    render(<TagsView />, { wrapper });
+    await screen.findAllByRole("listitem");
+    const ligne = document.querySelector<HTMLElement>("li")!;
+    ligne.focus();
+    await userEvent.keyboard("{Enter}");
+    // Entrée : les contrôles de CETTE ligne deviennent atteignables.
+    expect(tabulables().length).toBeGreaterThan(0);
+    // Le retour — un contrôle qui s'ouvre doit pouvoir se refermer.
+    await userEvent.keyboard("{Escape}");
+    expect(tabulables()).toHaveLength(0);
+  });
+});

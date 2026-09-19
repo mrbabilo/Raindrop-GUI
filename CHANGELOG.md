@@ -213,6 +213,15 @@ Developer ID.
 - **Marqueur « Archivé »** à trois états, distinguant l'archive locale de la
   copie permanente qui vit chez Raindrop.
 
+#### La vue Tags se traverse au clavier (2026-09-19)
+
+- **Elle demandait plus de mille deux cents arrêts de tabulation.** 317
+  étiquettes à quatre contrôles chacune, et aucune navigation par zone : la
+  traverser au clavier était impraticable. Elle ne prend plus qu'**un** arrêt,
+  les flèches y circulent, Entrée ouvre les contrôles d'une ligne et Échap les
+  referme — le comportement déjà en place dans la barre latérale, la liste et
+  les vues de Nettoyage.
+
 #### Les liens morts se voient enfin dans la liste (2026-09-19)
 
 - **Un lien mort, une redirection ou un doublon borde désormais sa ligne**

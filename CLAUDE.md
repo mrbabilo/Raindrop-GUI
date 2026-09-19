@@ -502,6 +502,35 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   une progression repartant de zéro sur un total mystérieusement réduit.
   `avancementLiens()` le lit dans le cache, sans une requête.
 
+## Traps signalétique et clavier — lot 2026-09-19
+
+- **Une case « à faire » de la ROADMAP peut mentir depuis des jours, même
+  écrite par soi.** Sur les sept points du lot a11y, **cinq étaient déjà
+  faits** — vérifiés un par un avant d'écrire quoi que ce soit. La consigne
+  existante (« vérifier `git log` avant de croire une case à faire ») vaut
+  aussi pour ses propres notes ; ce qui restait n'était même pas en tête de
+  liste.
+- **`Record<string, unknown>` sur les props d'un composant rend `any` chaque
+  paramètre de gestionnaire** — un `onChange(e)` sans type, dans un fichier
+  que le typecheck couvre pourtant. Typer sur la balise
+  (`ComponentPropsWithoutRef<T>`) rend le contrôle au compilateur.
+- **Une comparaison `>=` contre `Date.now()` fait un test dépendant de
+  l'horloge.** `avancementLiens(0)` compare à l'instant même : un résultat
+  écrit dans la même milliseconde tombe pile sur la coupure et passe pour
+  frais. Le test a fini par le démontrer en échouant. Ne PAS corriger la
+  comparaison — `staleUrls` emploie la même, et les faire diverger ferait
+  compter « frais » ici ce que le scan irait refaire là. C'est le TEST qui
+  doit vieillir sa donnée plutôt que raboter le seuil.
+- **La route `/etats` doit appeler `resultatsParSignet()`, jamais
+  `allResults()`** : ce dernier rend une ligne par URL, et la liste ne
+  marquerait qu'un seul de trois signets partageant une adresse morte — le
+  défaut corrigé le matin même, rouvert ailleurs le soir.
+- **L'absence d'une marque n'est pas une information neutre.** Dès que
+  certaines lignes portent un filet, les autres se lisent comme vérifiées :
+  l'inférence naît de la PRÉSENCE des marques, pas d'un texte. Or « pas de
+  marque » recouvre vérifié sain, jamais vérifié, et périmé au sens du TTL.
+  La limite est tablée dans DESIGN.md §5 plutôt que laissée tacite.
+
 ## Git
 
 Travailler sur `main`. **Pousser uniquement quand l'utilisateur le demande.**

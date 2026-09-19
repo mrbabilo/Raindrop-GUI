@@ -1,9 +1,12 @@
-import { createContext, useContext, useRef, useState, type ReactNode } from "react";
+import { useState } from "react";
 import { t } from "../i18n/fr";
-import { CarreCollection, filetEtat, type EtatLien } from "../design/Signaux";
+import { CarreCollection } from "../design/Signaux";
+// Le patron « ligne activable » a quitté ce fichier le 2026-09-19 : la vue
+// Tags en a eu besoin à son tour (LigneActivable.tsx).
+import { ActionLigne, ErreurLigne, Ligne } from "./LigneActivable";
 import { useUpdateRaindrop, useUnrestore, useDeleteCollection } from "../hooks/useMutations";
 import { useCollections } from "../hooks/useStaticData";
-import type { Collection, DuplicateGroup, LinkCheckResult, RaindropItem } from "../../shared/types";
+import type { Collection, DuplicateGroup, RaindropItem } from "../../shared/types";
 import type { LinksResultsPage } from "../hooks/useAnalysis";
 
 // Lignes des vues de traitement (Task 13) — découpées de CleanupView aux
@@ -18,74 +21,6 @@ export type LinkEnrichi = LinksResultsPage["items"][number];
 // (§5 — la forme distingue autant que la couleur). Mêmes classes que
 // RaindropRow pour que les six vues respirent comme la liste principale.
 //
-// Clavier (lot a11y) : la LIGNE est l'arrêt de tabulation de la vue
-// (useRovingFocus de CleanupView), jamais ses contrôles. Enter ou F2
-// « entre » dans la ligne — les contrôles deviennent tabulables et le
-// premier reçoit le focus ; quitter la ligne (Échap, clic ailleurs,
-// flèches) les referme. Le maillage ARIA grid est réduit volontairement à
-// row : le contrat visé est le comportement clavier, pas une grille
-// complète.
-const ContexteLigne = createContext(false);
-
-export function Ligne({ etat, children }: { etat: EtatLien | null; children: ReactNode }) {
-  const [active, setActive] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const filet = filetEtat(etat);
-  return (
-    <div
-      ref={ref}
-      role="row"
-      data-nav
-      tabIndex={-1} // le roving de la vue décide (0 pour la première, -1 pour les autres)
-      onBlur={(e) => {
-        // Le focus quitte la ligne → désarmer. Le passage ligne → contrôle
-        // interne est un focus DANS la ligne : rien ne bouge.
-        if (!ref.current?.contains(e.relatedTarget as Node | null)) setActive(false);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === "F2") {
-          e.preventDefault();
-          setActive(true);
-          // Le focus programmatique ignore le tabIndex=-1 momentané : React
-          // propage l'état après coup, et le contrôle reste focusé.
-          ref.current?.querySelector<HTMLElement>("button, a, select, input")?.focus();
-          return;
-        }
-        // Échap quand la ligne est activée : la REFERMER et rendre le focus
-        // À LA LIGNE. Sans ce stop, le roving de la vue blurrait vers body —
-        // le focus se perdait au lieu de remonter d'un niveau.
-        if (e.key === "Escape" && active) {
-          e.preventDefault();
-          e.stopPropagation();
-          setActive(false);
-          ref.current?.focus();
-        }
-      }}
-      className={"flex min-h-9 items-center gap-2 overflow-hidden border-b border-app-border px-3 " + (filet ? "filet " + filet : "")}
-    >
-      <ContexteLigne.Provider value={active}>{children}</ContexteLigne.Provider>
-    </div>
-  );
-}
-
-/** Un contrôle interne d'une ligne : hors de Tab tant que la ligne n'est pas
- *  activée (Enter/F2), tabulable ensuite. Le clic reste toujours possible. */
-export function ActionLigne({ el = "button", ...props }: { el?: "button" | "a" | "select" } & Record<string, unknown>) {
-  const active = useContext(ContexteLigne);
-  const Tag = el as "button";
-  return <Tag tabIndex={active ? 0 : -1} {...(props as object)} />;
-}
-
-// Erreur d'action inline (pattern T8/R12P-1) : ce qui s'est passé, jamais
-// silencieux — brouillon et ligne restent en place.
-export function ErreurLigne({ message }: { message: string }) {
-  return (
-    <p role="alert" className="text-xs text-app-broken">
-      {t("state.error", { message })}
-    </p>
-  );
-}
-
 // Lien mort : filet --broken, raison brute du scan (dns, http_404…), et la
 // piste de secours buku §12 — la Wayback Machine en simple <a> externe.
 export function DeadRow({

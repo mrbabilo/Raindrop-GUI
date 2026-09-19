@@ -419,12 +419,28 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
       `.wash` vs `.coll-icon` à fusionner ; `filetEtat` demi-paire ;
       `racine()` à déplacer ; moyenne d'icônes §8 ; sélection persistante
       collections/tags ; media select retiré (7b) — rester cohérent.
-- [ ] **Lot a11y** : la **navigation clavier** ci-dessus (par zone) ;
-      aria-label recherche ; chaîne ARIA palette
-      (`aria-controls`/`aria-activedescendant`, ownership listbox→option) ;
-      input de renommage de tag sans nom accessible ; désarmement au clic
-      extérieur du confirm inline ; double `role="alert"` imbriqué
-      (Banners) ; désélection d'arbre RTL.
+- [x] **Lot a11y** — soldé le 2026-09-19. ⚠️ **Cinq des sept points étaient
+      DÉJÀ faits** et cette case mentait depuis des jours : nom accessible de
+      la recherche (`TopBar`), chaîne ARIA de la palette
+      (`combobox`/`aria-controls`/`aria-activedescendant`, `listbox`→`option`),
+      nom accessible du champ de renommage d'étiquette, désarmement du confirm
+      inline au clic extérieur (`pointerdown`, le `blur` seul ne suffisait pas),
+      et le `role="alert"` imbriqué de `Banners` (la bannière le porte, pas son
+      contenu). Vérifié un par un avant d'écrire quoi que ce soit — la consigne
+      de CLAUDE.md, « vérifier `git log` avant de croire une case à faire »,
+      vaut aussi pour les cases qu'on a soi-même écrites.
+      **Ce qui restait vraiment** : la **vue Tags n'avait aucune navigation par
+      zone**. 317 étiquettes réelles à quatre contrôles chacune, soit plus de
+      **mille deux cents arrêts de tabulation** pour traverser l'écran — le
+      grief même auquel la barre latérale et la liste avaient déjà répondu, et
+      la seule zone oubliée. Le patron « ligne activable » (Enter/F2 entre,
+      Échap referme) a quitté `CleanupRows` pour `LigneActivable.tsx`, une
+      seconde famille de vues l'employant désormais ; il y gagne au passage un
+      typage par balise, là où un `Record<string, unknown>` rendait `any`
+      chaque paramètre de gestionnaire.
+      **Non retrouvé** : « désélection d'arbre RTL », mentionné sans contexte
+      au plan 2 (`730a7a7`) et introuvable dans le code comme dans les tests.
+      Noté ici plutôt que coché en silence.
 - [x] **États d'erreur de chargement** — fait le 2026-09-17
       (`components/EtatListe.tsx`, partagé par ListPane, TagsView et les six
       vues de CleanupView) : l'échec prime sur le vide, puisque c'est lui
