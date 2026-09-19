@@ -236,6 +236,13 @@ les décisions structurantes.
   (« Module namespace is not configurable ») — passer par `vi.mock` avec
   passthrough intégral, et vérifier la portée (`pool: "forks"` sans
   `isolate: false` = isolation par fichier).
+- **`cache.size` est la taille STOCKÉE, pas décompressée** (mesuré le
+  2026-09-19 : rapport 1,00 avec le `Content-Range` de S3 ; décompression
+  réelle d'une copie **1,5×** ; une copie de 4 Ko stockée en clair, sans
+  `Content-Encoding`). La distribution mesurée le 2026-09-18 (moyenne
+  3,18 Mo, max 160,67) est donc des octets stockés — le budget d'archives,
+  qui gère le disque, reste calibré juste ; toute lecture qui décompresse
+  doit compter un multiple.
 - **`repertoireTemporaire` rend une `string`, pas une fabrique.** Le patron du
   dépôt est `const dir = () => repertoireTemporaire("prefixe-")`
   (`sidecar/lockfile.test.ts`, `logger.test.ts`) — un répertoire neuf par
