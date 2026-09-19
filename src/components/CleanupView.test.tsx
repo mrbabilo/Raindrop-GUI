@@ -319,3 +319,70 @@ describe("non-taggés — étiqueter en masse", () => {
     expect(vue.items.map((i) => i.id)).toEqual([3000]);
   });
 });
+
+// Le retour d'usage du 2026-09-20 : l'écran des doublons doit dire vrai
+// après une suppression, la sélection de PLUSIEURS groupes part en une
+// Revue, et chaque vue de traitement a son retour.
+describe("doublons — la corbeille globale de la sélection, et le retour", () => {
+  const groupe = (kind: "exact" | "normalized" | "fuzzy", items: { id: number; title: string; created: string }[]) => ({
+    key: kind + items.map((i) => i.id).join(","),
+    kind,
+    items: items.map((i) => ({ id: i.id, url: `https://a.example/${i.id}`, title: i.title, collectionId: 101, created: i.created })),
+  });
+  const deux = {
+    exact: [groupe("exact", [
+      { id: 1, title: "Ancienne page", created: "2020-01-01T00:00:00Z" },
+      { id: 2, title: "Copie récente", created: "2024-06-01T00:00:00Z" },
+    ])],
+    normalized: [],
+    fuzzy: [groupe("fuzzy", [
+      { id: 5, title: "Flou A", created: "2020-01-01T00:00:00Z" },
+      { id: 6, title: "Flou B", created: "2024-06-01T00:00:00Z" },
+    ])],
+  };
+
+  it("des copies de DEUX groupes partent en UNE Revue, chacune vers son gardé", async () => {
+    groupsMock.mockReturnValue({ data: deux });
+    render(<CleanupView type="duplicates" />, { wrapper });
+    await screen.findByText("Ancienne page");
+    // Une copie du groupe exact, une du flou : la sélection traverse les
+    // groupes, la garde désigne le gardé de CHACUN.
+    await userEvent.click(screen.getByRole("checkbox", { name: /Copie récente/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /Flou B/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Corbeille de la sélection (2)" }));
+    const vue = JSON.parse(screen.getByTestId("view").textContent ?? "{}") as {
+      action: { op: string };
+      items: { id: number; dedupeGarde: { id: number; title: string } }[];
+    };
+    expect(vue.action).toEqual({ op: "dedupe" });
+    expect(vue.items).toHaveLength(2);
+    expect(vue.items.map((i) => i.dedupeGarde.id)).toEqual([1, 5]);
+  });
+
+  it("la vue a son retour vers le tableau de bord", async () => {
+    groupsMock.mockReturnValue({ data: deux });
+    render(<CleanupView type="duplicates" />, { wrapper });
+    await screen.findByText("Ancienne page");
+    await userEvent.click(screen.getByRole("button", { name: "Retour" }));
+    const vue = JSON.parse(screen.getByTestId("view").textContent ?? "{}");
+    expect(vue).toEqual({ kind: "cleanup" });
+  });
+
+  it("les non-taggés ont leur corbeille — même contrat Revue que la liste", async () => {
+    raindropsMock.mockReturnValue({
+      data: { pages: [{ items: [
+        { id: 3000, url: "https://n.example/a", title: "Sans étiquette", domain: "n.example", collectionId: 5 },
+      ], count: 1, page: 0, perPage: 50 }] },
+    });
+    render(<CleanupView type="untagged" />, { wrapper });
+    await screen.findByText("Sans étiquette");
+    await userEvent.click(screen.getByRole("checkbox", { name: "Sélectionner Sans étiquette" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mettre à la corbeille (1)" }));
+    const vue = JSON.parse(screen.getByTestId("view").textContent ?? "{}") as {
+      action: { op: string };
+      items: { id: number; collectionId: number }[];
+    };
+    expect(vue.action).toEqual({ op: "trash" });
+    expect(vue.items[0]).toMatchObject({ id: 3000, collectionId: 5 });
+  });
+});

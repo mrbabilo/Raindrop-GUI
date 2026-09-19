@@ -307,6 +307,17 @@ signet près, y compris croisé avec le filtre de domaine.
   consommateurs qui ne font que parler de sauvegardes importent sans la
   fabrique. 328 → 280.
 
+#### Le retour d'usage sur les vues de Nettoyage (2026-09-20)
+
+- **L'écran des doublons dit vrai après une suppression** : les copies
+  corbeillées sortent des groupes immédiatement, et un groupe réduit à un
+  exemplaire cesse d'être présenté comme un doublon — sans re-scan.
+- **« Corbeille de la sélection (n) »** : des copies cochées dans
+  *plusieurs* groupes partent en une seule Revue, chacune vers le gardé de
+  son groupe. Les non-taggés ont aussi leur corbeille, à côté d'Étiqueter.
+- **Un bouton Retour** sur chaque vue de traitement et dans la Revue —
+  verrouillé pendant qu'un travail court.
+
 #### L'en-tête plein-fond et le shell poli (2026-09-20)
 
 - **Les pastilles macOS se posent sur notre en-tête** (`titleBarStyle:

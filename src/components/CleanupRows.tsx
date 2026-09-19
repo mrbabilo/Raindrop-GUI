@@ -100,31 +100,23 @@ export function RedirectRow({ r, collectionRacine }: { r: LinkEnrichi; collectio
 // vertical de l'état doublon (§5). Le carré de chaque item reste résolu par
 // SA collection (§4 — la couleur appartient à la racine de CHACUN). Le tri
 // se joue à vue : chasse fixe (§7).
-export function DuplicateGroupCard({ g, titreRacine, surRevue }: {
+export function DuplicateGroupCard({ g, titreRacine, cochees, basculer, definir, surRevue }: {
   g: DuplicateGroup;
   titreRacine: (id: number) => string | undefined;
-  /** Construit la Revue de tri du groupe : les copies cochées, chacune
-   *  portant son gardé. La carte est à qui revient la GARDE — au moins un
-   *  exemplaire reste, quel que soit le geste. */
+  /** Les cochés de CE groupe. L'état vit dans la VUE, pas dans la carte :
+   *  « mettre TOUS les sélectionnés à la corbeille » doit pouvoir rassembler
+   *  plusieurs groupes en une seule Revue. */
+  cochees: Set<number>;
+  basculer(id: number): void;
+  definir(ids: number[]): void;
   surRevue: (copies: { id: number; url: string; title: string; collectionId: number; dedupeGarde: { id: number; title: string } }[]) => void;
 }) {
-  // Sélection LOCALE à la carte, jamais le `selectedIds` global : la garde
-  // « un gardé par groupe » doit tenir même si l'on tente de tricher depuis
-  // deux groupes à la fois.
-  const [cochees, setCochees] = useState<Set<number>>(new Set());
-  const basculer = (id: number) =>
-    setCochees((s) => {
-      const n = new Set(s);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
   // LA GARDE : le dernier exemplaire non coché se verrouille — un groupe ne
   // perd jamais son dernier représentant.
   const dernierRestant = g.items.length - cochees.size === 1;
   const garderMeilleur = () => {
     const garde = choisirGarde(g.items);
-    setCochees(new Set(copiesDe(g.items, garde.id).map((c) => c.id)));
+    definir(copiesDe(g.items, garde.id).map((c) => c.id));
   };
   const envoyer = () => {
     const gardeId = g.items.find((i) => cochees.has(i.id) === false)!.id;
@@ -133,7 +125,7 @@ export function DuplicateGroupCard({ g, titreRacine, surRevue }: {
         .filter((i) => cochees.has(i.id))
         .map((i) => ({ id: i.id, url: i.url, title: i.title, collectionId: i.collectionId, dedupeGarde: { id: gardeId, title: g.items.find((x) => x.id === gardeId)!.title } })),
     );
-    setCochees(new Set());
+    definir([]);
   };
   return (
     <div className="rounded-[11px] bg-app-panel">

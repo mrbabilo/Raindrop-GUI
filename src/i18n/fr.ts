@@ -151,6 +151,9 @@ export const fr = {
   "cleanup.dupCorbeille": "Corbeille ({n})",
   "cleanup.trierDoublons": "Trier les doublons ({n})",
   "cleanup.etiqueter": "Étiqueter ({n})",
+  "cleanup.retour": "Retour",
+  "cleanup.selectionCorbeille": "Corbeille de la sélection ({n})",
+  "cleanup.selectionCorbeilleGarde": "Chaque groupe garde son exemplaire le plus ancien non coché",
   "review.dedupe": "Trier les doublons",
   // Ce qui va arriver, dit en toutes lettres — et ce qui N'arrive pas : les
   // surlignages restent dans les copies (Phase 1 lecture seule, corbeille

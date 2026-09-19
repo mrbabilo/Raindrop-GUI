@@ -7,6 +7,7 @@ import { toCsv, downloadCsv } from "../lib/csv";
 import { useBulk, useEmptyTrash, useCleanupCollections, useInvalidate } from "../hooks/useMutations";
 import { useAppState, type View } from "../state/appState";
 import { useArchives, useInvalidateSauvegarde } from "../hooks/useBackup";
+import { useElaguerDoublons } from "../hooks/useAnalysis";
 import { AnnonceArchive, ArchiveJob, BORNE_ARCHIVE, porteeArchive } from "./RevueArchive";
 import { BarreProgression } from "./BarreProgression";
 import { api } from "../lib/api";
@@ -31,6 +32,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
   const emptyTrash = useEmptyTrash();
   const cleanup = useCleanupCollections();
   const invalidate = useInvalidate();
+  const elaguerDoublons = useElaguerDoublons();
   const invaliderSauvegarde = useInvalidateSauvegarde();
 
   const level2 = review.action.op === "empty-trash" || review.action.op === "delete-empty-collections";
@@ -152,6 +154,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
         setDedupeProgress(null);
         return;
       }
+      elaguerDoublons(remaining.filter((i) => i.dedupeGarde).map((i) => i.id));
       invalidate("raindrops", "collections", "tags");
       clearSelection();
       goBack();
@@ -159,7 +162,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
     }
     const ids = remaining.map((i) => i.id);
     try {
-      if (review.action.op === "trash")
+      if (review.action.op === "trash") {
         // §4.2 (revue finale) : chaque item emporte son ORIGINE de
         // restauration (collectionId de la vue) — sans elle, le sidecar
         // mémoriserait « Tous » et la restauration partirait en silence au
@@ -170,7 +173,10 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
           ids,
           origins: remaining.map((i) => ({ id: i.id, from: i.collectionId })),
         });
-      else if (review.action.op === "move")
+        // Les groupes de doublons ne se recalculent qu'au scan : on les taille
+        // ici, sinon l'écran affiche les corbeillés jusqu'au re-scan.
+        elaguerDoublons(ids);
+      } else if (review.action.op === "move")
         await bulk.mutateAsync({ operation: "move", collection_id: 0, ids, to_collection_id: review.action.toCollectionId });
       else if (review.action.op === "tag")
         await bulk.mutateAsync({ operation: "update", collection_id: 0, ids, tags: review.action.tags });
@@ -216,6 +222,17 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
         </button>
         <button type="button" className="btn" onClick={() => setExcluded(new Set(review.items.map((i) => i.id)))}>
           {t("review.deselect")}
+        </button>
+        <button
+          type="button"
+          className="btn"
+          disabled={dedupeProgress !== null}
+          onClick={() => {
+            clearSelection();
+            goBack();
+          }}
+        >
+          {t("cleanup.retour")}
         </button>
       </div>
       <div ref={parentRef} onKeyDown={clavier.surTouche} className="min-h-0 flex-1 overflow-y-auto">

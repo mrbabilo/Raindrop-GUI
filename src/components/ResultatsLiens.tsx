@@ -110,6 +110,7 @@ export function ResultatsLiens({ type, jamaisAnalyse, analyser }: {
     <>
       <Entete
         label={LABELS[type]}
+        retour={{ label: t("cleanup.retour"), onClick: () => go({ kind: "cleanup" }) }}
         count={jamaisAnalyse === true ? undefined : q.data?.total}
         action={
           archivable ? (

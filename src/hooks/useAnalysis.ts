@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 import { jobEvents } from "../lib/sse";
 import { useCollections } from "./useStaticData";
 import type { EtatLien } from "../design/Signaux";
+import { elaguerGroupes } from "../lib/doublons";
 import type {
   AnalysisStatusEntry,
   AnalysisType,
@@ -67,6 +68,10 @@ export const useDuplicateGroups = () =>
   useQuery({
     queryKey: ["analysis", "results", "duplicates"],
     queryFn: () => api.get<DuplicateGroups>("/api/analysis/results/duplicates"),
+    // Les groupes sont un PRODUIT DU SCAN : refetcher le cache serveur
+    // inchangé ne rapporte rien — et réécrirait l'élagage qu'un tri vient
+    // d'appliquer côté client. Seul un scan invalide la clé (useStartScan).
+    staleTime: Infinity,
   });
 
 /**
@@ -94,6 +99,24 @@ export const useEtatsAnalyse = () =>
     },
     staleTime: 60_000,
   });
+
+/**
+ * L'écran des doublons dit vrai APRÈS une suppression : les copies corbeillées
+ * sortent des groupes en cache, et un groupe réduit à un exemplaire cesse
+ * d'être un doublon. Le cache d'analyse ne se recalcule qu'au scan — sans cet
+ * élagage, l'écran affichait les morts jusqu'au re-scan suivant.
+ */
+export const useElaguerDoublons = () => {
+  const qc = useQueryClient();
+  return (supprimes: readonly number[]) => {
+    if (supprimes.length === 0) return;
+    for (const cle of [["analysis", "results", "duplicates"], ["analysis", "counts", "duplicates"]]) {
+      qc.setQueryData<DuplicateGroups | undefined>(cle, (vieille) =>
+        vieille ? elaguerGroupes(vieille, supprimes) : vieille,
+      );
+    }
+  };
+};
 
 export const useCancelJob = () =>
   useMutation({ mutationFn: (jobId: string) => api.send<{ cancelled: boolean }>("POST", `/api/jobs/${jobId}/cancel`) });
@@ -178,6 +201,7 @@ export function useCleanupCounts() {
   const groups = useQuery({
     queryKey: ["analysis", "counts", "duplicates"],
     queryFn: () => api.get<DuplicateGroups>("/api/analysis/results/duplicates"),
+    staleTime: Infinity, // produit du scan — même raison que useDuplicateGroups
   });
   const untagged = useQuery({
     queryKey: ["raindrops", "counts", "untagged"],

@@ -32,3 +32,24 @@ export function pairesCertaines(groupes: { exact: DuplicateGroup[]; normalized: 
     return { garde, copies: copiesDe(g.items, garde.id) };
   });
 }
+
+/**
+ * L'élagage des groupes après mise à la corbeille.
+ *
+ * Les groupes vivent dans le CACHE d'analyse, calculé au scan — supprimer
+ * des signets ne les recalcule pas, et l'écran affichait encore les morts
+ * jusqu'au re-scan suivant. On taille : chaque copie corbeillée sort de son
+ * groupe, et un groupe réduit à UN exemplaire N'EST PLUS un doublon. Le
+ * prochain scan refera le travail de fond ; d'ici là, l'écran dit vrai.
+ */
+export function elaguerGroupes(
+  groupes: { exact: DuplicateGroup[]; normalized: DuplicateGroup[]; fuzzy: DuplicateGroup[] },
+  supprimes: readonly number[],
+): { exact: DuplicateGroup[]; normalized: DuplicateGroup[]; fuzzy: DuplicateGroup[] } {
+  const partis = new Set(supprimes);
+  const tailler = (gs: DuplicateGroup[]): DuplicateGroup[] =>
+    gs
+      .map((g) => ({ ...g, items: g.items.filter((i) => !partis.has(i.id)) }))
+      .filter((g) => g.items.length >= 2);
+  return { exact: tailler(groupes.exact), normalized: tailler(groupes.normalized), fuzzy: tailler(groupes.fuzzy) };
+}

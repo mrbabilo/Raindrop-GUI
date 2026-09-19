@@ -9,6 +9,7 @@ import { useRaindrops } from "../hooks/useRaindrops";
 import { useCollections } from "../hooks/useStaticData";
 import { racine } from "../lib/arbre";
 import { pairesCertaines } from "../lib/doublons";
+import { Icone } from "../design/icones";
 import type { DuplicateGroup } from "../../shared/types";
 import {
   DuplicateGroupCard,
@@ -40,6 +41,21 @@ const retirablesDe = (gs: DuplicateGroup[]) => signetsDe(gs) - gs.length;
 function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean; analyser?: () => void }) {
   const q = useDuplicateGroups();
   const { go } = useAppState();
+  const retourTableau = { label: t("cleanup.retour"), onClick: () => go({ kind: "cleanup" }) };
+  // La sélection vit dans la VUE, indexée par groupe : la corbeille globale
+  // rassemble plusieurs groupes en une seule Revue, et la garde se calcule
+  // par groupe au moment du geste.
+  const [coches, setCoches] = useState<Record<string, Set<number>>>({});
+  const cocheesDe = (g: DuplicateGroup) => coches[g.key] ?? new Set<number>();
+  const basculer = (g: DuplicateGroup, id: number) =>
+    setCoches((c) => {
+      const courantes = new Set(c[g.key] ?? []);
+      if (courantes.has(id)) courantes.delete(id);
+      else courantes.add(id);
+      return { ...c, [g.key]: courantes };
+    });
+  const definir = (g: DuplicateGroup, ids: number[]) =>
+    setCoches((c) => ({ ...c, [g.key]: new Set(ids) }));
   const surRevue = (copies: { id: number; url: string; title: string; collectionId: number; dedupeGarde: { id: number; title: string } }[]) => {
     go({
       kind: "review",
@@ -59,6 +75,16 @@ function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean; analys
   // de le démontrer. Le flou, lui, se trie groupe par groupe.
   const paires = pairesCertaines(data ?? { exact: [], normalized: [], fuzzy: [] });
   const triables = paires.flatMap((p) => p.copies.map((c) => ({ ...c, dedupeGarde: { id: p.garde.id, title: p.garde.title } })));
+  // La corbeille GLOBALE de la sélection : des copies cochées dans plusieurs
+  // groupes partent en UNE Revue, chacune vers son gardé. La garde — un
+  // exemplaire non coché par groupe — est structurelle : c'est elle qui
+  // désigne le gardé au moment du geste.
+  const selectionGlobale = Object.entries(coches).flatMap(([cle, cochees]) => {
+    const g = groupes.find((x) => x.key === cle);
+    if (!g || cochees.size === 0) return [];
+    const garde = g.items.find((i) => !cochees.has(i.id))!;
+    return g.items.filter((i) => cochees.has(i.id)).map((i) => ({ ...i, dedupeGarde: { id: garde.id, title: garde.title } }));
+  });
   return (
     <>
       {/* Le chip compte les GROUPES ; le détail par catégorie dit les signets
@@ -67,13 +93,22 @@ function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean; analys
           1 032 signets, dont 618 retirables. */}
       <Entete
         label={LABELS.duplicates}
+        retour={retourTableau}
         count={jamaisAnalyse === true ? undefined : groupes.length}
         action={
-          triables.length > 0 ? (
-            <button type="button" className="btn" onClick={() => surRevue(triables)}>
-              {t("cleanup.trierDoublons", { n: triables.length })}
-            </button>
-          ) : undefined
+          <span className="flex items-center gap-2">
+            {selectionGlobale.length > 0 && (
+              <button type="button" className="btn" onClick={() => surRevue(selectionGlobale)}>
+                <Icone nom="corbeille" className="inline align-[-2px] mr-1" />
+                {t("cleanup.selectionCorbeille", { n: selectionGlobale.length })}
+              </button>
+            )}
+            {triables.length > 0 && (
+              <button type="button" className="btn" onClick={() => surRevue(triables)}>
+                {t("cleanup.trierDoublons", { n: triables.length })}
+              </button>
+            )}
+          </span>
         }
       />
       <EtatListe
@@ -97,7 +132,15 @@ function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean; analys
                 </span>
               </h2>
               {gs.map((g) => (
-                <DuplicateGroupCard key={g.key} g={g} titreRacine={titreRacine} surRevue={surRevue} />
+                <DuplicateGroupCard
+                  key={g.key}
+                  g={g}
+                  titreRacine={titreRacine}
+                  cochees={cocheesDe(g)}
+                  basculer={(id) => basculer(g, id)}
+                  definir={(ids) => definir(g, ids)}
+                  surRevue={surRevue}
+                />
               ))}
             </section>
           );
@@ -112,6 +155,7 @@ function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean; analys
 // ouvre la fiche, où l'étiquette se corrige.
 function NonTaggues() {
   const { selectedRaindropId, selectRaindrop, selectedIds, toggleSelect, go } = useAppState();
+  const retourTableau = { label: t("cleanup.retour"), onClick: () => go({ kind: "cleanup" }) };
   const [etiquettes, setEtiquettes] = useState("");
   const q = useRaindrops({ collectionId: 0, notag: true });
   const items = q.data?.pages.flatMap((p) => p.items) ?? [];
@@ -134,6 +178,7 @@ function NonTaggues() {
     <>
       <Entete
         label={LABELS.untagged}
+        retour={retourTableau}
         count={q.data?.pages[0]?.count}
         action={
           <span className="flex items-center gap-2">
@@ -144,6 +189,23 @@ function NonTaggues() {
               value={etiquettes}
               onChange={(e) => setEtiquettes(e.target.value)}
             />
+            <button
+              type="button"
+              className="btn"
+              disabled={selectionnes.length === 0}
+              onClick={() => {
+                go({
+                  kind: "review",
+                  items: selectionnes.map((i) => ({ id: i.id, url: i.url, title: i.title, collectionId: i.collectionId })),
+                  action: { op: "trash" },
+                  sourceLabel: LABELS.untagged,
+                  returnView: { kind: "cleanupView", type: "untagged" },
+                });
+              }}
+            >
+              <Icone nom="corbeille" className="inline align-[-2px] mr-1" />
+              {t("cleanup.corbeille", { n: selectionnes.length })}
+            </button>
             <button
               type="button"
               className="btn"
@@ -192,12 +254,14 @@ function NonTaggues() {
 // en Revue (Task 15 exécutera), avec les items chargés comme aperçu gratuit.
 function Corbeille() {
   const { go } = useAppState();
+  const retourTableau = { label: t("cleanup.retour"), onClick: () => go({ kind: "cleanup" }) };
   const q = useRaindrops({ collectionId: -99 });
   const items = q.data?.pages.flatMap((p) => p.items) ?? [];
   return (
     <>
       <Entete
         label={LABELS.trash}
+        retour={retourTableau}
         count={q.data?.pages[0]?.count}
         action={
           <button
@@ -243,12 +307,14 @@ function Corbeille() {
 // (choix documenté au rapport) et T15 appellera POST /collections/cleanup.
 function CollectionsVides() {
   const { go } = useAppState();
+  const retourTableau = { label: t("cleanup.retour"), onClick: () => go({ kind: "cleanup" }) };
   const collections = useCollections().data;
   const vides = (collections ?? []).filter((c) => c.count === 0);
   return (
     <>
       <Entete
         label={LABELS["empty-collections"]}
+        retour={retourTableau}
         count={vides.length}
         action={
           <button

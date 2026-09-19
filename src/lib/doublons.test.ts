@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { choisirGarde, copiesDe, pairesCertaines } from "./doublons";
+import { choisirGarde, copiesDe, pairesCertaines, elaguerGroupes } from "./doublons";
 
 const item = (id: number, created: string, url = `https://a.example/${id}`) => ({ id, created, url });
 
@@ -46,5 +46,33 @@ describe("pairesCertaines — le tri global ne touche que l' certain", () => {
     expect(paires).toHaveLength(1);
     expect(paires[0]!.copies).toHaveLength(2);
     expect(copiesDe(g.items, paires[0]!.garde.id)).toHaveLength(2);
+  });
+});
+
+describe("elaguerGroupes — l'écran dit vrai après une suppression", () => {
+  const g = (kind: "exact" | "normalized" | "fuzzy", ids: number[]) => ({
+    key: kind + ids.join(","), kind,
+    items: ids.map((id) => ({ id, url: `https://a.example/${id}`, title: "t", collectionId: 1, created: "2020-01-01T00:00:00Z" })),
+  });
+  const trois = { exact: [g("exact", [1, 2, 3])], normalized: [], fuzzy: [g("fuzzy", [8, 9])] };
+
+  it("une copie sortie, le groupe tient encore", () => {
+    const r = elaguerGroupes(trois, [3]);
+    expect(r.exact[0]!.items.map((i) => i.id)).toEqual([1, 2]);
+    expect(r.fuzzy).toEqual(trois.fuzzy);
+  });
+
+  it("réduit à UN exemplaire, le groupe N'EST PLUS un doublon — il disparaît", () => {
+    // Retirer 3 du trio laisse une PAIRE : le groupe exact doit survivre —
+    // la présence d'abord, sinon ce test célèbrerait un filtre qui jette
+    // tout. Retirer 8 de la paire floue laisse UN exemplaire : le groupe
+    // cesse d'être un doublon, il disparaît.
+    const r = elaguerGroupes(trois, [3, 8]);
+    expect(r.exact[0]!.items.map((i) => i.id)).toEqual([1, 2]);
+    expect(r.fuzzy).toEqual([]);
+  });
+
+  it("rien de supprimé : les groupes sortent INTACTS", () => {
+    expect(elaguerGroupes(trois, [])).toEqual(trois);
   });
 });

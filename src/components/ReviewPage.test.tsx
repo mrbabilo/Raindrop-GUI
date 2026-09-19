@@ -369,3 +369,31 @@ describe("ReviewPage — le tri des doublons (op dedupe)", () => {
     );
   });
 });
+
+// Le retour d'usage : un bouton visible pour quitter la Revue sans exécuter.
+describe("ReviewPage — le retour visible", () => {
+  it("« Retour » rend la sélection et ramène à la vue d'origine", async () => {
+    renderReview();
+    await userEvent.click(screen.getByRole("button", { name: "Retour" }));
+    expect(goBack).toHaveBeenCalled();
+  });
+
+  it("le retour est verrouillé pendant que le job dedupe court", async () => {
+    // Un job qui court ne doit pas pouvoir être abandonné par un clic de
+    // travers — l'exécution reste la seule issue pendant la course.
+    sseMock.mockImplementation(() => new Promise(() => undefined)); // ne règle jamais
+    sendMock.mockResolvedValue({ jobId: "j-dedupe", total: 1 });
+    const revueLocale: View = {
+      kind: "review",
+      items: [{ id: 2, url: "https://a.example/copie", title: "Copie récente", collectionId: 7, dedupeGarde: { id: 1, title: "Ancienne page" } }],
+      action: { op: "dedupe" },
+      sourceLabel: "Doublons",
+      returnView: { kind: "cleanupView", type: "duplicates" },
+    };
+    renderReview(revueLocale);
+    await userEvent.click(screen.getByRole("checkbox", { name: /Je confirme l'action sur 1/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Exécuter" }));
+    await vi.waitFor(() => expect(sendMock).toHaveBeenCalled());
+    expect(screen.getByRole("button", { name: "Retour" })).toBeDisabled();
+  });
+});
