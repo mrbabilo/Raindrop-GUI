@@ -9,6 +9,7 @@ import {
   type ResultatArchivage,
 } from "../hooks/useBackup";
 import { annuler, suivreJob } from "../lib/suiviSauvegarde";
+import { BarreProgression } from "./BarreProgression";
 
 /** La borne du sidecar (`POST /api/backup/archive`). Tenue ICI comme un refus
  *  explicite : découper en lots derrière le dos de l'utilisateur
@@ -165,16 +166,22 @@ export function ArchiveJob({
   }
 
   return (
-    <p className="flex items-center gap-2 px-4 text-sm" aria-live="polite">
-      <span>
-        {t("review.archive.envol", {
-          done: vol.done.toLocaleString("fr-FR"),
-          total: vol.total.toLocaleString("fr-FR"),
-        })}
-      </span>
-      <button type="button" className="btn btn-icone" aria-label={t("sauvegarde.annuler")} onClick={() => void annuler(vol.jobId)}>
-        <Icone nom="croix" />
-      </button>
-    </p>
+    <div className="flex flex-col gap-1 px-4">
+      <p className="flex items-center gap-2 text-sm" aria-live="polite">
+        <span>
+          {t("review.archive.envol", {
+            done: vol.done.toLocaleString("fr-FR"),
+            total: vol.total.toLocaleString("fr-FR"),
+          })}
+        </span>
+        <button type="button" className="btn btn-icone" aria-label={t("sauvegarde.annuler")} onClick={() => void annuler(vol.jobId)}>
+          <Icone nom="croix" />
+        </button>
+      </p>
+      {/* L'archivage n'a qu'UNE étape : la barre y mesure bien le job entier.
+          Le temps restant compte, une copie permanente pesant 3,18 Mo en
+          moyenne — 500 identifiants se comptent en minutes. */}
+      <BarreProgression done={vol.done} total={vol.total} />
+    </div>
   );
 }

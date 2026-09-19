@@ -105,6 +105,13 @@ export const fr = {
   "cleanup.empty-collections": "Collections vides",
   "cleanup.trash": "Corbeille",
   "cleanup.lastScan": "Dernier scan",
+  // L'estimation du temps restant. « environ » et non un chiffre exact : elle
+  // repose sur un débit observé, qui varie.
+  "progress.label": "Progression",
+  "eta.moinsDUneMinute": "moins d'une minute",
+  "eta.minutes": "environ {n} minute|environ {n} minutes",
+  "eta.heures": "environ {n} h {minutes}",
+  "eta.restant": "{duree} restante|{duree} restantes",
   // Le quatrième état d'une liste de diagnostic : jamais mesuré ≠ rien à
   // réparer. Sans lui, un écran vide se lisait comme un bilan de santé.
   "state.neverScanned": "Aucune analyse n'a encore été lancée : rien n'a été mesuré.",

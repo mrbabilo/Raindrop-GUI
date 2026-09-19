@@ -246,6 +246,25 @@ Developer ID.
   erreur** pour toute autre forme : coller une URL donnait un écran vide
   que rien n'expliquait. Mesuré de bout en bout : 12 210 → 64.
 
+#### Barres de progression et temps restant (2026-09-19)
+
+- **Les trois travaux longs — analyse, sauvegarde, archivage — montrent une
+  barre et une estimation du temps restant.**
+- **Une barre par ÉTAPE, jamais une barre du job entier.** Une analyse de liens
+  en compte deux (lecture de la bibliothèque, puis vérification), une
+  sauvegarde cinq, aux totaux sans rapport : une barre unique y sauterait en
+  arrière sans explication. Chaque barre mesure l'étape que la phrase au-dessus
+  d'elle nomme — et le nom de l'étape s'affiche désormais aussi pendant
+  l'analyse, où il manquait.
+- **L'estimation vient du débit observé**, jamais d'une durée écrite en dur :
+  un réseau lent, une reprise après quota ou une bibliothèque deux fois plus
+  grande la corrigent d'eux-mêmes. Elle se tait tant qu'elle ne vaut rien —
+  mieux vaut ne rien annoncer qu'un temps calculé sur deux mesures collées — et
+  s'exprime en ordres de grandeur, la précision à la seconde étant une
+  exactitude qu'elle n'a pas.
+- Un travail sans total connu n'affiche **aucune** barre : figée ou inventée,
+  elle mentirait.
+
 #### Nettoyage — sept défauts, tous mesurés (2026-09-19)
 
 - **Un lien mort partagé par plusieurs signets n'apparaissait qu'une fois.**

@@ -21,6 +21,7 @@ import {
   type ResultatSauvegarde,
 } from "../hooks/useBackup";
 import { annuler, suivreJob, type SauvegardeEnVol } from "../lib/suiviSauvegarde";
+import { BarreProgression } from "./BarreProgression";
 
 /**
  * La sauvegarde locale dans les Réglages (spec sélection §3). Deux sources
@@ -258,7 +259,8 @@ function VolSauvegarde({ vol }: { vol: SauvegardeEnVol }) {
 
   const quoi = libelleProgression(vol.label);
   return (
-    <p className="mb-2 flex items-center gap-2 text-sm" aria-live="polite">
+    <div className="mb-2 flex flex-col gap-1">
+    <p className="flex items-center gap-2 text-sm" aria-live="polite">
       <span>
         {recule
           ? t("sauvegarde.reprise")
@@ -274,5 +276,11 @@ function VolSauvegarde({ vol }: { vol: SauvegardeEnVol }) {
         <Icone nom="croix" />
       </button>
     </p>
+    {/* La barre mesure L'ÉTAPE que la phrase ci-dessus nomme, jamais le job :
+        un balayage en enchaîne cinq, aux totaux sans rapport. `cle` la fait
+        repartir à chaque étape — et `recule` (le rejeu) la remet aussi à zéro,
+        ce que la phrase annonce déjà par « reprise du balayage ». */}
+    <BarreProgression done={vol.done} total={vol.total} cle={vol.label} />
+    </div>
   );
 }

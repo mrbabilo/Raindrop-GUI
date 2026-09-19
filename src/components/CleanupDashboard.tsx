@@ -11,6 +11,7 @@ import {
   type ScanEvent,
 } from "../hooks/useAnalysis";
 import { useJobsEnVol } from "../hooks/useBackup";
+import { BarreProgression } from "./BarreProgression";
 
 // DESIGN.md §6-§9 : compteur posé sur la surface work (rayon 11 px), la
 // valeur en 12 px quiet (§7), survol par la surface dédiée — pas d'ombre,
@@ -54,7 +55,7 @@ function BlocScan({ type, label, lastScan, running, reprise }: {
   reprise?: { verifies: number; total: number };
 }) {
   const [job, setJob] = useState<{ jobId: string; controller: AbortController } | null>(null);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number; label: string | null } | null>(null);
   const cancelJob = useCancelJob();
   // Le job EN VOL qu'on n'a pas lancé soi-même — parce qu'on avait quitté la
   // vue, et que ce composant perd son état au démontage. Sans cette adoption,
@@ -66,7 +67,7 @@ function BlocScan({ type, label, lastScan, running, reprise }: {
   const adopte = useJobsEnVol().data?.find((j) => j.type === `scan-${type}`);
   const start = useStartScan(type, (e: ScanEvent) => {
     if (e.kind === "start") setJob({ jobId: e.jobId, controller: e.controller });
-    else setProgress({ done: e.done, total: e.total });
+    else setProgress({ done: e.done, total: e.total, label: e.label });
   });
   const lancer = () =>
     start.mutate(undefined, {
@@ -85,8 +86,11 @@ function BlocScan({ type, label, lastScan, running, reprise }: {
     if (id) cancelJob.mutate(id);
   };
 
+  // Le suivi effectif : le job local d'abord, l'adopté sinon.
+  const vu = progress ?? adopte?.progress ?? null;
   return (
-    <section aria-label={label} className="flex items-center gap-3">
+    <section aria-label={label} className="flex flex-col gap-1">
+      <div className="flex items-center gap-3">
       <h2 className="text-sm font-medium">{label}</h2>
       <span className="text-xs text-app-muted">
         {t("cleanup.lastScan")} : {dateFr(lastScan)}
@@ -100,9 +104,13 @@ function BlocScan({ type, label, lastScan, running, reprise }: {
       )}
       {job || adopte ? (
         <>
-          {(progress ?? adopte?.progress) && (
+          {vu && (
             <span role="status">
-              {t("cleanup.scanning", progress ?? adopte!.progress)}
+              {/* L'ÉTAPE est nommée avant les nombres : le scan de liens en a
+                  deux, aux totaux différents, et la barre repart à chacune.
+                  Sans le nom, ce retour à zéro serait inexplicable. */}
+              {vu.label ? `${vu.label} — ` : ""}
+              {t("cleanup.scanning", { done: vu.done, total: vu.total })}
             </span>
           )}
           <button type="button" className="btn btn-icone" aria-label={t("cleanup.cancel")} onClick={annuler}>
@@ -126,6 +134,8 @@ function BlocScan({ type, label, lastScan, running, reprise }: {
           )}
         </>
       )}
+      </div>
+      {vu && <BarreProgression done={vu.done} total={vu.total} cle={vu.label} />}
     </section>
   );
 }

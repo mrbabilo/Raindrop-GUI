@@ -125,7 +125,16 @@ Rejetées :
   (`/api/user`) et des deux constantes de NOTRE conception — une page de 50
   par requête, file espacée de 550 ms. Compte inconnu : on dit ce que le
   balayage est, sans avancer de chiffre.
-- **Progression : un compteur nommé, pas une barre.** Faits mesurés : seuls deux
+- **Progression : un compteur nommé, pas une barre** — ⚠️ **révisé le
+  2026-09-19, sur demande de l'utilisateur : une barre PAR ÉTAPE s'ajoute au
+  compteur, avec une estimation du temps restant.** Les trois faits ci-dessous
+  restent vrais, et c'est pourquoi la barre ne mesure jamais LE JOB : elle
+  mesure l'étape que le compteur nomme. Repartir à zéro en changeant d'étape
+  cesse alors d'être un mensonge — c'est l'information. Un total absent ou nul
+  n'affiche AUCUNE barre (figée ou inventée, elle mentirait) ; l'estimation
+  vient du **débit observé**, jamais d'une constante, et se tait tant qu'elle
+  ne vaut rien. Le raisonnement d'origine :
+- **Ce qu'une barre GLOBALE ferait, et qui tient toujours :** Faits mesurés : seuls deux
   segments émettent un label (`bookmarks`, `éléments modifiés`) ; la corbeille
   et les auxiliaires n'émettent rien, donc **une barre en pourcentage gèle** ;
   le rejeu du balayage **ramène le numérateur à 0** ; l'incrémental pose

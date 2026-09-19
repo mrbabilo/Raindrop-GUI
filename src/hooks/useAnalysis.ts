@@ -76,7 +76,11 @@ export const useCancelJob = () =>
 // résolution 2) — jamais dans un global window.__scanAbort.
 export type ScanEvent =
   | { kind: "start"; jobId: string; controller: AbortController }
-  | { kind: "progress"; done: number; total: number };
+  // `label` : le scan de liens a DEUX étapes (« lecture de la bibliothèque »
+  // puis « vérification des liens »), avec deux totaux différents. Sans lui,
+  // la barre repart de zéro sans que rien ne l'explique — exactement le
+  // reproche que la spec faisait à une barre.
+  | { kind: "progress"; done: number; total: number; label: string | null };
 
 export const useStartScan = (type: AnalysisType, onEvent?: (e: ScanEvent) => void) => {
   const qc = useQueryClient();
@@ -101,11 +105,12 @@ export const useStartScan = (type: AnalysisType, onEvent?: (e: ScanEvent) => voi
             if (e.kind !== "progress") return;
             // Forme réelle du flux (sidecar/api/sse.ts) : le data de progress
             // est l'event sérialisé, la progression vit sous `progress`.
-            const p = e.progress as { done?: unknown; total?: unknown } | undefined;
+            const p = e.progress as { done?: unknown; total?: unknown; label?: unknown } | undefined;
             const done = typeof p?.done === "number" ? p.done : 0;
             const total = typeof p?.total === "number" ? p.total : 0;
+            const label = typeof p?.label === "string" ? p.label : null;
             qc.setQueryData(["analysis", "job", type], { done, total }); // relisible par T13
-            onEvent?.({ kind: "progress", done, total });
+            onEvent?.({ kind: "progress", done, total, label });
           },
           onDone: () => {
             if (!settled) resolve();
