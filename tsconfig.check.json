@@ -1,0 +1,11 @@
+{
+  // Le MÊME périmètre que tsconfig.json, tests et tooling compris —
+  // l'autre exclut **/*.test.ts et sidecar/testing parce qu'il SERT aussi
+  // de config de build (tsc émettrait les tests dans dist-sidecar).
+  // Chaîné par `npm run typecheck` ; guéri le 2026-09-19 : les 30 erreurs
+  // que cette cécité cachait étaient toutes réelles.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["shared/**/*.ts", "sidecar/**/*.ts"],
+  "exclude": ["src", "index.html"]
+}

@@ -2,13 +2,14 @@ import { repertoireTemporaire } from "../../testing/tmp.js";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { join } from "node:path";
 import type { Hono } from "hono";
-import { createApp, type SidecarDeps } from "../app.js";
+import { createApp } from "../app.js";
+import type { SidecarDeps } from "../deps.js";
 import { connectFake } from "../../testing/fakeServer.js";
 import { McpConnection } from "../../mcp/connection.js";
 import { JobStore } from "../../jobs/store.js";
 import { AnalysisCache } from "../../analysis/cache.js";
 import { Scanner } from "../../analysis/scanner.js";
-import type { LinkCheckResult, RaindropItem } from "../../../../shared/types.js";
+import type { LinkCheckResult, RaindropItem } from "../../../shared/types.js";
 
 let conn: McpConnection;
 let app: Hono;
@@ -18,7 +19,7 @@ let cache: AnalysisCache;
 // Adaptation brief : l'API locale est derrière l'auth Bearer (Task 7, spec §3.7)
 // → chaque requête du test fournit le token local (même motif que app.test.ts).
 const TOKEN = "t";
-const req = (hono: Hono, path: string, init?: RequestInit): Promise<Response> =>
+const req = async (hono: Hono, path: string, init?: RequestInit): Promise<Response> =>
   hono.request(path, { ...init, headers: { Authorization: `Bearer ${TOKEN}` } });
 
 beforeEach(async () => {
@@ -41,7 +42,16 @@ beforeEach(async () => {
     jobs,
     cache,
     scanner,
-    direct: { updateRaindropUrl: async () => ({ ok: true as const, data: { id: 1 } }) },
+    direct: {
+      updateRaindropUrl: async () => ({ ok: true as const, data: { id: 1 } }),
+      unrestore: async () => ({ ok: true as const, data: { restored: 0 } }),
+    },
+    origins: {
+      remember: async () => undefined,
+      take: async () => ({ known: new Map(), unknown: [] }),
+      forget: async () => undefined,
+      flush: async () => undefined,
+    } as unknown as SidecarDeps["origins"],
   };
   app = createApp(deps, { localToken: TOKEN });
 });

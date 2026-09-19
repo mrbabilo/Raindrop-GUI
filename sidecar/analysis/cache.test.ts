@@ -52,7 +52,7 @@ describe("AnalysisCache", () => {
       [
         { id: 1, url: "https://vieux.example", title: "v", collectionId: 0 },
         { id: 2, url: "https://nouveau.example", title: "n", collectionId: 0 },
-      ].map((x) => ({ ...x, excerpt: "", note: "", domain: "", tags: [], created: "", lastUpdate: "", important: false, type: "link", cover: null })),
+      ].map((x) => ({ ...x, excerpt: "", note: "", domain: "", tags: [], created: "", lastUpdate: "", important: false, type: "link", cover: null, cache: null, broken: false, highlights: [] })),
       30,
     );
     expect(stale.map((s) => s.url).sort()).toEqual(["https://nouveau.example", "https://vieux.example"]);

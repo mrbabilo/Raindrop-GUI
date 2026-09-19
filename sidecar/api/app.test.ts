@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { Hono } from "hono";
-import { createApp, type SidecarDeps } from "./app.js";
+import { createApp } from "./app.js";
+import type { SidecarDeps } from "./deps.js";
 import { connectFake } from "../testing/fakeServer.js";
 import { McpConnection } from "../mcp/connection.js";
 
@@ -13,17 +14,28 @@ beforeEach(async () => {
 afterEach(async () => conn.close());
 
 function makeDeps(overrides?: Partial<SidecarDeps>): SidecarDeps {
+  // Le spread d'un Partial rend chaque clé optionnelle aux yeux de TS, alors
+  // que la base ci-dessous est complète : l'union est totale au runtime, le
+  // `as` ne masque donc rien que l'appelant ne maîtrise déjà.
   return {
     mcp: (tool, args, timeoutMs) => conn.call(tool, args, timeoutMs),
     state: () => "connected",
     restart: async () => undefined,
-    jobs: {
-      get: () => undefined,
-      list: () => [],
-      // JobStore complet arrive en Task 10 — stub minimal pour compiler
-    } as SidecarDeps["jobs"],
+    jobs: { get: () => undefined, list: () => [] } as unknown as SidecarDeps["jobs"],
+    cache: {} as SidecarDeps["cache"],
+    scanner: { startScan: () => "", isRunning: () => false } as unknown as SidecarDeps["scanner"],
+    direct: {
+      updateRaindropUrl: async () => ({ ok: true as const, data: { id: 1 } }),
+      unrestore: async () => ({ ok: true as const, data: { restored: 0 } }),
+    },
+    origins: {
+      remember: async () => undefined,
+      take: async () => ({ known: new Map(), unknown: [] }),
+      forget: async () => undefined,
+      flush: async () => undefined,
+    } as unknown as SidecarDeps["origins"],
     ...overrides,
-  };
+  } as SidecarDeps;
 }
 
 const appFor = (deps?: Partial<SidecarDeps>) =>

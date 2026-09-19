@@ -240,10 +240,19 @@ les décisions structurantes.
   dépôt est `const dir = () => repertoireTemporaire("prefixe-")`
   (`sidecar/lockfile.test.ts`, `logger.test.ts`) — un répertoire neuf par
   appel, qui isole les tests.
-- **`npm run typecheck` est AVEUGLE sur les tests et sur `sidecar/testing/`**
-  (exclus par `tsconfig.json`). Toute retouche à `apiServer.ts` ou à un
-  `*.test.ts` exige un `npx tsc --noEmit` **explicite** sur les fichiers
-  touchés.
+- ~~**`npm run typecheck` est AVEUGLE sur les tests et sur `sidecar/testing/`**~~
+  **GUERI le 2026-09-19** : `tsconfig.check.json` reprend le même périmètre
+  sans les exclusions, et `npm run typecheck` chaîne les deux configs. La
+  cécité venait de là : `tsconfig.json` sert AUSSI de config de build (il
+  émettrait les tests dans `dist-sidecar`). Les **30 erreurs** qu'elle cachait
+  étaient toutes réelles — 4 imports de `SidecarDeps` depuis `app.js` (qui ne
+  l'exporte pas, tuant l'inférence de tous les params voisins), 3 chemins
+  `shared/types` à un cran de trop, 3 helpers `req` annotés `Promise<Response>`
+  sans être async, ~10 params implicitement `any`, des fixtures incomplètes, et
+  **un type de production qui contredisait le runtime** : `acquireLock` refusait
+  `pid` dans sa signature alors qu'il transmet l'objet tel quel et que le test
+  du sidecar mort en dépend. Côté FRONT, rien ne change : `tsconfig.front.json`
+  couvre déjà ses tests, et un `tsc` ad hoc y produit des faux positifs.
 
 ### La règle sortie de ce lot, sur les tests
 
@@ -421,10 +430,9 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
 - **Le cliquet de `scripts/build_app.py` EXCLUT les tests**, mais pas
   CLAUDE.md (« tests compris »). `sidecar/api/routes/raindrops.test.ts` vivait
   à 430 lignes sans que rien ne le signale ; il est découpé (lecture /
-  écriture). Corollaire mesuré : sous un tsconfig incluant les tests, **le
-  dépôt n'est pas type-clean** : **27 erreurs dans 6 fichiers** (comptées le
-  2026-09-19), vitest transpilant sans vérifier. Ne pas confondre avec un faux
-  positif de config — celles-là sont réelles, simplement jamais regardées.
+  écriture). Corollaire : **soldé le même jour** — les erreurs étaient
+  réelles, toutes corrigées, et le typecheck couvre désormais les tests en
+  permanence (`tsconfig.check.json`, trap sauvegarde).
 
 ## Traps reprise en vol — lot 2026-09-19
 

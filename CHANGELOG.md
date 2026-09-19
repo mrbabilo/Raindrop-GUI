@@ -295,6 +295,20 @@ L'interface ne propose donc aucun choix ET/OU : il n'y a rien derrière.
 Vérifié ensuite de bout en bout à travers le sidecar : mêmes chiffres, au
 signet près, y compris croisé avec le filtre de domaine.
 
+#### Le typecheck couvre désormais les tests (2026-09-19)
+
+- `tsconfig.json` sert aussi de config de build, il excluait donc tests et
+  tooling — et `npm run typecheck` avec lui. `tsconfig.check.json` reprend le
+  même périmètre sans ces exclusions, chaîné dans `typecheck` : une erreur de
+  type dans un `*.test.ts` casse désormais le typecheck (prouvé en plantant
+  une erreur et en la voyant vue).
+- **Les 30 erreurs que la cécité cachait étaient toutes réelles** : imports
+  depuis un module qui n'exporte pas le symbole (tuant l'inférence des
+  paramètres voisins), chemins erronés, helpers annotés d'un type qu'ils ne
+  tenaient pas, fixtures incomplètes — et un type de production contredisant
+  son propre runtime : `acquireLock` refusait `pid` que la transmission
+  réelle honore et qu'un test dépend pour simuler un sidecar mort.
+
 ### Modifié
 
 - **Principe d'épure — « l'écran ne surcharge jamais »** (DESIGN.md §9,

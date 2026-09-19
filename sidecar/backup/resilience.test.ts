@@ -10,7 +10,7 @@ afterEach(async () => {
 });
 
 const items = (n: number) =>
-  Array.from({ length: n }, (_, i) => ({ _id: 1000 + i, created: "2020-01-01T00:00:00.000Z", title: `t${i}` }));
+  Array.from({ length: n }, (_, i) => ({ _id: 1000 + i, created: "2020-01-01T00:00:00.000Z", lastUpdate: "2026-01-01T00:00:00.000Z", title: `t${i}` }));
 
 /** Une file espionne qui JOURNALISE l'entrée et la sortie du créneau. C'est
  *  elle qui rend observable « la pause vit hors de la file ». */

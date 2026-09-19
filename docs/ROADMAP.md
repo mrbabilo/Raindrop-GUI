@@ -59,9 +59,10 @@ finale de branche).*
       `raindrops.test.ts` (364, les écritures). Fait au moment où le lot
       « filtre multi-étiquettes » devait y ajouter des tests — « à la
       première retouche », comme prévu.
-      **Découvert au passage, non traité** : sous un tsconfig incluant les
-      tests, le sidecar porte **27 erreurs de typage préexistantes dans
-      6 fichiers** (comptées le 2026-09-19) (`SidecarDeps` importé d'`app.js` qui ne l'exporte pas,
+      **Découvert au passage — TRAITÉ le 2026-09-19** : les **30 erreurs**
+      (27 d'alors, 3 ajoutées depuis par mes propres tests) étaient toutes
+      réelles et sont corrigées ; `tsconfig.check.json` rend le typecheck
+      aveugle sur les tests impossible (`SidecarDeps` importé d'`app.js` qui ne l'exporte pas,
       `hono.request` rendant `Response | Promise<Response>`, fixtures
       incomplètes). Vitest transpile sans vérifier : rien ne les voit. Le
       nouveau fichier, lui, est type-clean.

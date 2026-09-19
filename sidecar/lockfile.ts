@@ -56,7 +56,10 @@ export async function writeLockfile(
  */
 export async function acquireLock(
   dataDir: string,
-  data: { port: number },
+  // pid injectable comme sur writeLockfile — il TRANSMET l'objet tel quel,
+  // le runtime honore donc un pid explicite. Le type refusait ce que le
+  // comportement permet : un test qui simule un sidecar mort en dépend.
+  data: { port: number; pid?: number },
 ): Promise<"created" | "reused"> {
   const existing = await readLockfile(dataDir);
   if (existing && isPidAlive(existing.pid)) return "reused";

@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import type { Hono } from "hono";
-import { createApp, type SidecarDeps } from "../app.js";
+import { createApp } from "../app.js";
+import type { SidecarDeps } from "../deps.js";
 import { connectFake } from "../../testing/fakeServer.js";
 import { McpConnection } from "../../mcp/connection.js";
-import type { Collection } from "../../../../shared/types.js";
+import type { Collection } from "../../../shared/types.js";
 
 let conn: McpConnection;
 let app: Hono;
@@ -13,14 +14,23 @@ const deps = (c: McpConnection): SidecarDeps => ({
   restart: async () => undefined,
   jobs: { get: () => undefined, list: () => [] } as unknown as SidecarDeps["jobs"],
   cache: {} as SidecarDeps["cache"],
-  scanner: { startScan: () => "", isRunning: () => false },
-  direct: { updateRaindropUrl: async () => ({ ok: true as const, data: { id: 1 } }) },
+  scanner: { startScan: () => "", isRunning: () => false } as unknown as SidecarDeps["scanner"],
+  direct: {
+    updateRaindropUrl: async () => ({ ok: true as const, data: { id: 1 } }),
+    unrestore: async () => ({ ok: true as const, data: { restored: 0 } }),
+  },
+  origins: {
+      remember: async () => undefined,
+      take: async () => ({ known: new Map(), unknown: [] }),
+      forget: async () => undefined,
+      flush: async () => undefined,
+    } as unknown as SidecarDeps["origins"],
 });
 
 // Adaptation brief : l'API locale est derrière l'auth Bearer (Task 7, spec §3.7)
 // → chaque requête du test fournit le token local (même motif que raindrops.test.ts).
 const TOKEN = "test-token";
-const req = (hono: Hono, path: string, init?: RequestInit, token: string = TOKEN): Promise<Response> =>
+const req = async (hono: Hono, path: string, init?: RequestInit, token: string = TOKEN): Promise<Response> =>
   hono.request(path, { ...init, headers: { Authorization: `Bearer ${token}` } });
 
 beforeEach(async () => {

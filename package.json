@@ -13,7 +13,7 @@
     "build:front": "vite build",
     "build:sidecar": "tsc -p tsconfig.json",
     "preview": "vite preview",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.check.json",
     "typecheck:front": "tsc -p tsconfig.front.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
