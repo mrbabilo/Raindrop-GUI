@@ -307,6 +307,14 @@ signet près, y compris croisé avec le filtre de domaine.
   consommateurs qui ne font que parler de sauvegardes importent sans la
   fabrique. 328 → 280.
 
+#### La mosaïque remplit son panneau (2026-09-20)
+
+- **Les tuiles s'étirent pour occuper toute la largeur** : les colonnes
+  étaient fixes à 221 px, le reliquat du panneau restait vide sur la droite.
+  221 px devient un plancher, et la vignette garde son ratio à toute
+  largeur. Arbitrage renversé — la largeur exacte était délibérée, DESIGN.md
+  §8 porte le renversement.
+
 #### Le retour d'usage sur les vues de Nettoyage (2026-09-20)
 
 - **L'écran des doublons dit vrai après une suppression** : les copies
