@@ -90,6 +90,18 @@ contraintes que notre throttle construit dessus (**120 req/min**,
 et `<link>` retirés avant hachage (noms de fichiers hashés par build). Un
 changement de doc = nouveau champ, limite ou dépréciation : à relire.
 
+**Relevé du 2026-09-19** (premier écart, +149 octets sur la page d'accueil) :
+contrat relu intégralement, **rien ne nous touche**. 120 req/min et
+`perpage 50 max` / « maximum 100 objects » confirmés sur `/v1/raindrops/multiple`.
+Le **changelog 1.0.4** retire `/raindrops/:collectionId/filters`,
+`GET /user/:id` et `GET /tags/suggest` — aucune n'est la nôtre (nous
+appelons `/user` authentifié ; l'analyse des filtres est locale, §5.1).
+`unrestore` reste absent de la doc (trap CLAUDE.md inchangé). Le MCP
+officiel (§2.1, déjà connu à la référence du 16) n'a pas bougé : bêta Pro,
+`/rest/v2/ai/mcp`, Streamable HTTP. La page d'accueil elle-même n'étant pas
+conservée, l'octet qui a bougé reste non identifié — le contrat, lui, est
+entier.
+
 **Relue le 2026-09-16** (signal de la veille : −86 octets). Constantes du
 projet toutes confirmées — 120 req/min, `perpage` 50 max, `-1`/`-99`, `link`
 modifiable par `PUT /raindrop/{id}`, suppression → corbeille puis définitive.
