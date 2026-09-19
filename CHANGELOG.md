@@ -213,6 +213,51 @@ Developer ID.
 - **Marqueur « Archivé »** à trois états, distinguant l'archive locale de la
   copie permanente qui vit chez Raindrop.
 
+#### Barres de progression et temps restant (2026-09-19)
+
+- **Les trois travaux longs — analyse, sauvegarde, archivage — montrent une
+  barre et une estimation du temps restant.**
+- **Une barre par ÉTAPE, jamais une barre du job entier.** Une analyse de liens
+  en compte deux (lecture de la bibliothèque, puis vérification), une
+  sauvegarde cinq, aux totaux sans rapport : une barre unique y sauterait en
+  arrière sans explication. Chaque barre mesure l'étape que la phrase au-dessus
+  d'elle nomme — et le nom de l'étape s'affiche désormais aussi pendant
+  l'analyse, où il manquait.
+- **L'estimation vient du débit observé**, jamais d'une durée écrite en dur :
+  un réseau lent, une reprise après quota ou une bibliothèque deux fois plus
+  grande la corrigent d'eux-mêmes. Elle se tait tant qu'elle ne vaut rien —
+  mieux vaut ne rien annoncer qu'un temps calculé sur deux mesures collées — et
+  s'exprime en ordres de grandeur, la précision à la seconde étant une
+  exactitude qu'elle n'a pas.
+- Un travail sans total connu n'affiche **aucune** barre : figée ou inventée,
+  elle mentirait.
+
+#### Filtre par plusieurs étiquettes (2026-09-19)
+
+- **Une étiquette cliquée entre dans le filtre ; recliquée, elle en sort.**
+  Jusqu'ici le clic *remplaçait* la recherche par `#tag` : une seconde
+  étiquette écrasait la première, et il n'existait aucun moyen de croiser
+  deux étiquettes. Le geste est le même partout — ligne de liste, fiche,
+  vue Collection, vue Tags, barre latérale, palette ⌘K.
+- **Les étiquettes retenues se lisent en rangée sous la recherche**, chacune
+  retirable d'un clic, avec un « et » entre elles et un « tout retirer » à
+  partir de deux. La pilule retenue **inverse ses valeurs en gardant sa
+  teinte** : son rôle change, pas son identité.
+- **La vue Tags sait filtrer sur les cases cochées** — elles ne servaient
+  qu'à la fusion, alors que c'est le seul endroit de l'application qui
+  ressemblait déjà à « cocher plusieurs étiquettes ».
+- Le filtre vit dans un champ `tags` à part, composé en termes `#"…"` **par
+  le sidecar** : le front ignore la syntaxe de recherche de Raindrop, et une
+  étiquette se retire sans chirurgie de chaîne.
+
+**Mesuré en réel avant d'écrire** (12 210 signets, lecture seule) : les
+étiquettes s'intersectent (`#webdesign` 1713, `#code` 886, les deux **113** ;
+trois → 1), l'opérateur ignore la casse, les guillemets sont transparents —
+et **l'union n'existe pas** (`#a OR #b` rend 60, « OR » étant lu comme un mot).
+L'interface ne propose donc aucun choix ET/OU : il n'y a rien derrière.
+Vérifié ensuite de bout en bout à travers le sidecar : mêmes chiffres, au
+signet près, y compris croisé avec le filtre de domaine.
+
 ### Modifié
 
 - **Principe d'épure — « l'écran ne surcharge jamais »** (DESIGN.md §9,
@@ -237,33 +282,15 @@ Developer ID.
 
 ### Corrigé
 
-- **Le champ Domaine ne filtrait rien** (2026-09-17). Le pont MCP envoie
-  `domain` en paramètre d'URL, que l'API Raindrop ignore : la bibliothèque
-  entière revenait, quel que soit le domaine demandé. Le filtre est
-  désormais composé dans la recherche, où il existe vraiment. La saisie est
-  normalisée au passage — minuscules, sans schéma, sans `www.`, sans
+#### Le champ Domaine ne filtrait rien (2026-09-17)
+
+- **La bibliothèque entière revenait**, quel que soit le domaine demandé : le
+  pont MCP envoie `domain` en paramètre d'URL, que l'API Raindrop ignore. Le
+  filtre est désormais composé dans la recherche, où il existe vraiment. La
+  saisie est normalisée au passage — minuscules, sans schéma, sans `www.`, sans
   chemin — car l'opérateur exige le domaine exact et rend zéro **sans
   erreur** pour toute autre forme : coller une URL donnait un écran vide
   que rien n'expliquait. Mesuré de bout en bout : 12 210 → 64.
-
-#### Barres de progression et temps restant (2026-09-19)
-
-- **Les trois travaux longs — analyse, sauvegarde, archivage — montrent une
-  barre et une estimation du temps restant.**
-- **Une barre par ÉTAPE, jamais une barre du job entier.** Une analyse de liens
-  en compte deux (lecture de la bibliothèque, puis vérification), une
-  sauvegarde cinq, aux totaux sans rapport : une barre unique y sauterait en
-  arrière sans explication. Chaque barre mesure l'étape que la phrase au-dessus
-  d'elle nomme — et le nom de l'étape s'affiche désormais aussi pendant
-  l'analyse, où il manquait.
-- **L'estimation vient du débit observé**, jamais d'une durée écrite en dur :
-  un réseau lent, une reprise après quota ou une bibliothèque deux fois plus
-  grande la corrigent d'eux-mêmes. Elle se tait tant qu'elle ne vaut rien —
-  mieux vaut ne rien annoncer qu'un temps calculé sur deux mesures collées — et
-  s'exprime en ordres de grandeur, la précision à la seconde étant une
-  exactitude qu'elle n'a pas.
-- Un travail sans total connu n'affiche **aucune** barre : figée ou inventée,
-  elle mentirait.
 
 #### Nettoyage — sept défauts, tous mesurés (2026-09-19)
 
@@ -336,32 +363,6 @@ Lectures seulement, par construction : le module décore le canal de lecture,
 qui n'expose que des GET. Rejouer une écriture dont on ignore si elle a abouti
 la ferait potentiellement deux fois.
 
-#### Filtre par plusieurs étiquettes (2026-09-19)
-
-- **Une étiquette cliquée entre dans le filtre ; recliquée, elle en sort.**
-  Jusqu'ici le clic *remplaçait* la recherche par `#tag` : une seconde
-  étiquette écrasait la première, et il n'existait aucun moyen de croiser
-  deux étiquettes. Le geste est le même partout — ligne de liste, fiche,
-  vue Collection, vue Tags, barre latérale, palette ⌘K.
-- **Les étiquettes retenues se lisent en rangée sous la recherche**, chacune
-  retirable d'un clic, avec un « et » entre elles et un « tout retirer » à
-  partir de deux. La pilule retenue **inverse ses valeurs en gardant sa
-  teinte** : son rôle change, pas son identité.
-- **La vue Tags sait filtrer sur les cases cochées** — elles ne servaient
-  qu'à la fusion, alors que c'est le seul endroit de l'application qui
-  ressemblait déjà à « cocher plusieurs étiquettes ».
-- Le filtre vit dans un champ `tags` à part, composé en termes `#"…"` **par
-  le sidecar** : le front ignore la syntaxe de recherche de Raindrop, et une
-  étiquette se retire sans chirurgie de chaîne.
-
-**Mesuré en réel avant d'écrire** (12 210 signets, lecture seule) : les
-étiquettes s'intersectent (`#webdesign` 1713, `#code` 886, les deux **113** ;
-trois → 1), l'opérateur ignore la casse, les guillemets sont transparents —
-et **l'union n'existe pas** (`#a OR #b` rend 60, « OR » étant lu comme un mot).
-L'interface ne propose donc aucun choix ET/OU : il n'y a rien derrière.
-Vérifié ensuite de bout en bout à travers le sidecar : mêmes chiffres, au
-signet près, y compris croisé avec le filtre de domaine.
-
 #### Interface — épure et corrections d'usage (2026-09-18 → 2026-09-19)
 
 - **Panneaux rétractables** : la barre latérale se replie et s'en souvient ;
@@ -384,7 +385,7 @@ signet près, y compris croisé avec le filtre de domaine.
   « jeux vidéos » vaut « jeu vidéo »). Mesuré sur 317 étiquettes réelles :
   **75 % des étiquettes affichées sortaient grises, contre 3 % ensuite.**
 
-### Corrigé (suite — 2026-09-18 → 2026-09-19)
+#### Défauts trouvés à l'usage (2026-09-18 → 2026-09-19)
 
 Tous trouvés **en usage réel ou sur données réelles**, aucun par la suite de
 tests. C'est en soi l'enseignement de ces deux journées.
@@ -447,6 +448,11 @@ l'heure — les notes de chaque version le disent.
 - **L'automatisme de sauvegarde des 24 h reste dormant** tant qu'aucune
   sauvegarde n'a été lancée à la main — conséquence assumée du choix
   « première sauvegarde explicite ».
+- **L'analyse des liens n'a jamais été exécutée en grand.** Elle vérifierait
+  11 968 adresses distinctes auprès d'autant de serveurs tiers ; seuls ses
+  mécanismes sont éprouvés — dédoublonnage confirmé sur le sidecar réel,
+  reprise après interruption couverte par trois tests. Sa durée réelle, son
+  taux de liens indéterminés et sa tenue sur la longueur restent inconnus.
 - Le budget d'archives de 5 Go tient **~1 600 archives** et non ~2 400 : il
   avait été calibré sur « 2,1 Mo pièce », la mesure réelle donne 3,18 Mo en
   moyenne. Le nombre est inchangé — c'est un budget, pas une prédiction — mais
