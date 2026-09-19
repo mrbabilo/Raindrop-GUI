@@ -307,6 +307,24 @@ signet près, y compris croisé avec le filtre de domaine.
   consommateurs qui ne font que parler de sauvegardes importent sans la
   fabrique. 328 → 280.
 
+#### L'en-tête plein-fond et le shell poli (2026-09-20)
+
+- **Les pastilles macOS se posent sur notre en-tête** (`titleBarStyle:
+  "Overlay"`), qui reste le nôtre — même surface, même filet, aucun chrome
+  simulé. Les vides de l'en-tête traînent la fenêtre ; les contrôles restent
+  des contrôles. La forme est écrite dans DESIGN.md §8bis.
+- **Le thème `system` suit l'OS à chaud** : basculer macOS bascule
+  l'application, sans rechargement. Un mode forcé (clair ou sombre) n'écoute
+  pas — l'OS n'écrase pas un choix.
+- **`prefers-reduced-motion` est respecté partout**, plus seulement sur la
+  barre latérale : qui demande moins d'animation garde tous les états, sans
+  mouvement.
+- **Le premier rendu naît dans la surface de l'application**, pas dans le
+  blanc WebKit (en sombre, l'éclair initial demeure — gardé pour quand il
+  dérange).
+- **Deux glyphes originaux** au trait de la maison : corbeille et restaurer,
+  posés sur les seuls verbes qui détruisent ou exécutent.
+
 #### Les vues de Nettoyage deviennent actionnables (2026-09-19)
 
 - **Tout sélectionner (page)** et **mettre à la corbeille** depuis les liens
