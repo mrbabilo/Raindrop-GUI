@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createApp } from "../app.js";
 import type { SidecarDeps } from "../deps.js";
 import { JobStore } from "../../jobs/store.js";
-import type { Sauvegarde } from "../../backup/sauvegarde.js";
+import type { Sauvegarde } from "../../backup/contrat-sauvegarde.js";
 import type { Archivage } from "../../backup/archivage.js";
 
 const TOKEN = "t";

@@ -5,7 +5,7 @@ import type { JobStore } from "../jobs/store.js"; // Task 10
 import type { AnalysisCache } from "../analysis/cache.js"; // Task 13
 import type { Scanner } from "../analysis/scanner.js"; // Task 14
 import type { OriginStore } from "../trash/origins.js"; // Task 0b
-import type { Sauvegarde } from "../backup/sauvegarde.js";
+import type { Sauvegarde } from "../backup/contrat-sauvegarde.js";
 import type { Archivage } from "../backup/archivage.js";
 
 export interface SidecarDeps {

@@ -18,7 +18,7 @@ import {
   type Manifeste,
 } from "./manifeste.js";
 import { reconcilier } from "./reconciliation.js";
-import type { ResultatSauvegarde } from "./sauvegarde.js";
+import type { ResultatSauvegarde } from "./contrat-sauvegarde.js";
 
 /** Ce que le ménage des archives a retiré, quand il a retiré quelque chose.
  *  ABSENT (et non deux zéros) lorsqu'aucun ménage n'a eu lieu — un balayage

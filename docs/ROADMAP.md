@@ -37,10 +37,17 @@ finale de branche).*
       d'exécution, non commité). Le **sélecteur du dossier de
       sauvegarde** reste hors plan : spec sauvegarde non validée. Les
       finitions parkées (revue finale) : « Réessayer » désactivé pendant
-      une installation ; extraire runtime.rs et node.rs à la première
-      retouche de chacun (400/400 — `commandes.rs` l'a été avec les
-      Réglages) ; aligner DELAI_SEQUENCE si les délais de boot venaient
-      à croître.
+      une installation ; aligner DELAI_SEQUENCE si les délais de boot
+      venaient à croître.
+      **Extraits le 2026-09-19, avant la retouche** : `runtime.rs` et
+      `node.rs` étaient à 400 lignes pile — la prochaine ligne ajoutée
+      aurait fait échouer tout build. Découpés à leurs coutures : la
+      **vérification SHASUMS** (la moitié qui ne se délègue pas au shell)
+      dans `verification.rs` (113), la **liste des endroits où chercher
+      Node** dans `candidats.rs` (141) — le OÙ et le QUEL, deux questions.
+      `runtime.rs` 305, `node.rs` 288. Même jour : le contrat du moteur de
+      sauvegarde (quatre interfaces) quitte `sauvegarde.ts` pour
+      `contrat-sauvegarde.ts` — 328 → 280, sous la cible.
 - [x] **Réglages (spec §6)** — fait le 2026-09-18 : overlay ⌘, +
       engrenage, état du pont traduit en français (un état inconnu
       tombe sur « — » plutôt que d'afficher son identifiant interne),

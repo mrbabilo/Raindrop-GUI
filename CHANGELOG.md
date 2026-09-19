@@ -295,6 +295,18 @@ L'interface ne propose donc aucun choix ET/OU : il n'y a rien derrière.
 Vérifié ensuite de bout en bout à travers le sidecar : mêmes chiffres, au
 signet près, y compris croisé avec le filtre de domaine.
 
+#### Les trois dettes de taille, soldées (2026-09-19)
+
+- **`runtime.rs` et `node.rs` étaient à 400 lignes pile** — le plafond dur :
+  la prochaine ligne ajoutée dans l'un ou l'autre faisait échouer tout build.
+  Découpés à leurs frontières naturelles **avant** la retouche, comme le veut
+  la règle : la vérification SHASUMS dans `verification.rs`, la liste des
+  endroits où chercher Node dans `candidats.rs`. 66 tests Rust au vert.
+- **`sauvegarde.ts` au-dessus de la cible** : son contrat — quatre interfaces
+  documentées — quitte l'orchestration pour `contrat-sauvegarde.ts`, que les
+  consommateurs qui ne font que parler de sauvegardes importent sans la
+  fabrique. 328 → 280.
+
 #### Le typecheck couvre désormais les tests (2026-09-19)
 
 - `tsconfig.json` sert aussi de config de build, il excluait donc tests et

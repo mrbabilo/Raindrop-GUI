@@ -1,3 +1,4 @@
+mod candidats;
 mod commandes;
 mod demarrage;
 mod etat_connexion;
@@ -10,6 +11,7 @@ mod signaux;
 mod sonde_mcp;
 mod trousseau;
 mod verrou;
+mod verification;
 
 use std::path::{Path, PathBuf};
 use tauri::Manager;
