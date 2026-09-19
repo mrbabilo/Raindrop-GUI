@@ -48,10 +48,18 @@ describe("Scanner", () => {
     const jobId = scanner.startScan("links");
     const snap = await waitForStatus(store, jobId, ["done"]);
     expect(snap.status).toBe("done");
-    expect(snap.progress.done).toBe(27); // 25 + 2 doublons fixture
-    // cache peuplé : 27 résultats uniques par URL
+    // 26 URL DISTINCTES pour 27 signets : la fixture porte un doublon d'URL,
+    // qu'on ne vérifie plus deux fois. Ce test affirmait 27 — il verrouillait
+    // le gaspillage qu'on vient de retirer (son propre commentaire le disait :
+    // « 25 + 2 doublons fixture »). Sur la bibliothèque réelle, ce sont 242
+    // requêtes de 10 s d'économisées pour un verdict identique.
+    expect(snap.progress.done).toBe(26);
     const results = cache.allResults();
-    expect(results.length).toBeGreaterThanOrEqual(25);
+    expect(results.length).toBe(26);
+    // ET AUCUN SIGNET N'EST PERDU : le résultat d'une URL partagée se
+    // redistribue à tous ses porteurs. C'est la moitié qui compte — sans
+    // elle, « moins de requêtes » voudrait dire « moins de couverture ».
+    expect(cache.resultatsParSignet().length).toBe(27);
     expect(cache.lastScan("links")).toBeTruthy();
   });
 
@@ -137,3 +145,97 @@ async function waitForStatus(store: JobStore, id: string, statuses: string[]) {
     check();
   });
 }
+
+// La REPRISE après coupure. Elle fonctionnait déjà par construction — les
+// résultats sont persistés en cours de route et `staleUrls` exclut ce qui est
+// frais — mais rien ne l'attestait, et rien ne la disait à l'écran :
+// `lastScan` reste `null` tant que le scan n'est pas allé au bout, si bien que
+// l'interface affichait « Dernier scan : jamais » au-dessus de milliers de
+// liens déjà vérifiés.
+describe("Scanner — reprise après une analyse interrompue", () => {
+  let conn: McpConnection;
+  let store: JobStore;
+  let cache: AnalysisCache;
+
+  beforeEach(async () => {
+    const fake = await connectFake({ raindropCount: 25 });
+    conn = McpConnection.fromClient(fake.client);
+    store = new JobStore();
+    cache = await AnalysisCache.load(join(repertoireTemporaire("reprise-"), "analysis.json"));
+  });
+
+  const mcpCaller = (tool: string, args: Record<string, unknown>) => conn.call(tool, args);
+
+  /** Un scan qu'on coupe dès que `combien` liens sont vérifiés. */
+  const scanInterrompu = async (combien: number, compteur: { n: number }) => {
+    const lent = async (url: string) => {
+      compteur.n++;
+      await new Promise((r) => setTimeout(r, 20));
+      return makeCheck(new Map())(url);
+    };
+    const scanner = new Scanner({ mcp: mcpCaller, jobs: store, cache, check: lent, concurrency: 1, ttlDays: 30 });
+    const jobId = scanner.startScan("links");
+    await new Promise<void>((resolve) => {
+      const id = setInterval(() => {
+        if ((store.get(jobId)?.progress.done ?? 0) >= combien) {
+          clearInterval(id);
+          store.getHandle(jobId)!.cancel();
+          resolve();
+        }
+      }, 5);
+    });
+    await waitForStatus(store, jobId, ["cancelled", "done"]);
+  };
+
+  it("relancer ne revérifie QUE ce qui manque", async () => {
+    const compteur = { n: 0 };
+    await scanInterrompu(3, compteur);
+    const faitsAvant = cache.allResults().length;
+    // La présence d'abord : sans travail déjà acquis, « reprendre » ne
+    // voudrait rien dire et le test célébrerait un vide.
+    expect(faitsAvant).toBeGreaterThanOrEqual(3);
+    const total = cache.avancementLiens(30).total;
+    expect(faitsAvant).toBeLessThan(total);
+
+    // Le second passage COMPTE lui aussi ses vérifications — sinon l'assertion
+    // porterait sur un compteur que personne n'incrémente, et passerait au
+    // vert quoi qu'il arrive.
+    let refaits = 0;
+    const compte = async (url: string) => {
+      refaits++;
+      return makeCheck(new Map())(url);
+    };
+    const scanner = new Scanner({
+      mcp: mcpCaller, jobs: store, cache,
+      check: compte, concurrency: 5, ttlDays: 30,
+    });
+    const jobId = scanner.startScan("links");
+    await waitForStatus(store, jobId, ["done"]);
+    // Le second passage ne refait QUE le reste : sans la reprise, il aurait
+    // revérifié les `total` liens depuis le début.
+    expect(refaits).toBe(total - faitsAvant);
+    expect(cache.avancementLiens(30).verifies).toBe(total);
+  });
+
+  it("interrompue, l'analyse n'a PAS de date — mais elle a un avancement", async () => {
+    const compteur = { n: 0 };
+    await scanInterrompu(3, compteur);
+    // `lastScan` reste nul : rien n'est terminé, et le prétendre ferait passer
+    // une analyse partielle pour un bilan complet.
+    expect(cache.lastScan("links")).toBeNull();
+    // Mais l'avancement, lui, existe — c'est ce que l'écran affichait comme
+    // « jamais », au-dessus d'un travail déjà fait.
+    const av = cache.avancementLiens(30);
+    expect(av.verifies).toBeGreaterThanOrEqual(3);
+    expect(av.verifies).toBeLessThan(av.total);
+  });
+
+  it("un TTL expiré remet tout à vérifier — l'avancement le dit", async () => {
+    const compteur = { n: 0 };
+    await scanInterrompu(3, compteur);
+    expect(cache.avancementLiens(30).verifies).toBeGreaterThanOrEqual(3);
+    // TTL de 0 jour : plus rien n'est frais. Sans cette lecture, l'écran
+    // annoncerait une reprise sur des résultats que le scan va refaire.
+    expect(cache.avancementLiens(0).verifies).toBe(0);
+  });
+});

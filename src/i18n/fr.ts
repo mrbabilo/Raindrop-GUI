@@ -93,11 +93,24 @@ export const fr = {
   "cleanup.title": "Nettoyage",
   "cleanup.dead": "Liens morts",
   "cleanup.redirects": "Redirections",
+  // DOMAINE.md : 401/403/429 — anti-bot, quota. « Jamais classé mort » : le
+  // libellé nomme donc ce qu'il reste à faire, pas un verdict.
+  "cleanup.indeterminate": "À vérifier à la main",
   "cleanup.duplicates": "Doublons",
+  // Le compteur dit les DEUX nombres : « 414 » seul se lisait « 414 signets en
+  // double », alors que ce sont 414 groupes pour 1 032 signets concernés.
+  "cleanup.duplicatesCount": "{n} groupe · {items} signets|{n} groupes · {items} signets",
+  "cleanup.dupDetail": "{items} signet(s) · {retirables} copie retirable|{items} signet(s) · {retirables} copies retirables",
   "cleanup.untagged": "Non-taggés",
   "cleanup.empty-collections": "Collections vides",
   "cleanup.trash": "Corbeille",
   "cleanup.lastScan": "Dernier scan",
+  // Le quatrième état d'une liste de diagnostic : jamais mesuré ≠ rien à
+  // réparer. Sans lui, un écran vide se lisait comme un bilan de santé.
+  "state.neverScanned": "Aucune analyse n'a encore été lancée : rien n'a été mesuré.",
+  "cleanup.jamaisAnalyse": "jamais analysé",
+  // La reprise, rendue visible. Aucun chiffre en dur : tout vient du cache.
+  "sauvegarde.repriseLiens": "{verifies} / {total} liens déjà vérifiés — l'analyse reprendra les suivants.",
   "cleanup.never": "jamais",
   "cleanup.scan": "Lancer l'analyse",
   "cleanup.rescan": "Relancer",

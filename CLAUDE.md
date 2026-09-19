@@ -456,6 +456,52 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   exécution qui décide d'un commit : `npm test > log 2>&1; rc=$?`, puis tester
   `$rc`.
 
+## Traps Nettoyage — lot 2026-09-19
+
+- **Un résultat de scan indexé par URL n'est pas un résultat par SIGNET.**
+  `allResults()` rendait `Object.values(results)`, donc une ligne par adresse ;
+  430 signets de la bibliothèque réelle partagent une URL au caractère près,
+  soit jusqu'à **242 signets morts invisibles**. Le `raindropId` stocké dans le
+  résultat est celui du DERNIER vérifié — un hasard d'ordonnancement, pas une
+  désignation : il se recalcule depuis l'index. Le stockage par URL reste
+  juste (une URL ne se vérifie qu'une fois) ; c'est la LECTURE qui doit
+  redistribuer.
+- **Un index jamais élagué devient dangereux dès qu'il DÉCIDE.**
+  `setItemsIndex` fusionnait : anodin tant qu'il ne servait qu'à décorer une
+  ligne d'un titre, fatal depuis qu'il décide quelles lignes exister — un
+  signet supprimé ressusciterait dans les liens morts, avec une action qui ne
+  peut plus aboutir. Il REMPLACE désormais ; c'est sûr parce que l'appelant ne
+  le nourrit que d'instantanés complets (le cas annulé est traité avant).
+- **Le scan vérifiait la même URL une fois par signet.** `checkAll` ne
+  dédoublonnait pas ses cibles : mesuré, **11 968 URL distinctes pour
+  12 210 signets**, soit 242 requêtes de 10 s pour un verdict identique. Le
+  test existant affirmait `27` avec le commentaire « 25 + 2 doublons
+  fixture » — il **verrouillait le gaspillage**.
+- **« 0 » sur un cache vierge est un mensonge d'écran, pas de sidecar.** La
+  route rend honnêtement `total: 0` ; c'est l'interface qui l'affichait comme
+  un résultat. Un compteur dont l'analyse dépend d'un scan jamais lancé doit
+  dire « jamais analysé ». Même faute que le `bookmarksCount` à zéro.
+- **Un composant qui possède l'état d'un job le perd au démontage.**
+  `BlocScan` gardait `{jobId, controller}` en state local : quitter le
+  Nettoyage pendant une analyse de 12 210 liens rendait le scan insuivable ET
+  **inannulable**, alors que `GET /api/jobs` porte tout (mesuré : `300/12210`
+  avec son libellé). Le patron d'adoption existait déjà pour la sauvegarde
+  (`suiviSauvegarde.ts`) — il n'avait simplement pas été appliqué ici.
+- **Une route absente du mock rend `{}`, et `{}.find` jette.** Le mock de
+  `CleanupDashboard.test` ne servait pas `/api/jobs` : l'arbre entier se
+  démontait et le compteur manquant passait pour un défaut du composant.
+  Deuxième occurrence de ce piège, après `/api/raindrops/:id` dans `App.test`.
+- **Un compteur de GROUPES ne se lit pas comme un compteur d'objets.**
+  « Doublons 414 » se lisait « 414 signets en double » ; la mesure réelle donne
+  **414 groupes pour 1 032 signets, dont 618 copies retirables**. Le nombre qui
+  dit ce qu'on gagne à nettoyer n'apparaissait nulle part.
+- **La reprise d'un scan de liens EXISTAIT sans se voir.** Les résultats sont
+  persistés tous les 20 et `staleUrls` exclut ce qui est frais : relancer ne
+  refait que le reste. Mais `lastScan` ne se pose qu'à l'achèvement, donc
+  l'écran annonçait « jamais » au-dessus de milliers de liens vérifiés, puis
+  une progression repartant de zéro sur un total mystérieusement réduit.
+  `avancementLiens()` le lit dans le cache, sans une requête.
+
 ## Git
 
 Travailler sur `main`. **Pousser uniquement quand l'utilisateur le demande.**

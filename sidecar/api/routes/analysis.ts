@@ -20,12 +20,22 @@ export function analysisRoutes(deps: SidecarDeps): Hono {
     }
   });
 
-  app.get("/status", (c) =>
-    c.json({
-      links: { lastScan: deps.cache.lastScan("links"), running: deps.scanner.isRunning("links") },
+  app.get("/status", (c) => {
+    // L'avancement des liens vient du CACHE, pas d'une requête : il rend
+    // visible une reprise qui, jusqu'ici, fonctionnait sans le dire. Après une
+    // coupure, `lastScan` reste `null` — la date ne se pose qu'à
+    // l'achèvement — et l'écran affichait « jamais » au-dessus de milliers de
+    // liens déjà vérifiés.
+    const avancement = deps.cache.avancementLiens(deps.scanner.ttlJours());
+    return c.json({
+      links: {
+        lastScan: deps.cache.lastScan("links"),
+        running: deps.scanner.isRunning("links"),
+        ...avancement,
+      },
       duplicates: { lastScan: deps.cache.lastScan("duplicates"), running: deps.scanner.isRunning("duplicates") },
-    }),
-  );
+    });
+  });
 
   app.get("/results/links", (c) => {
     const q = z.object({
@@ -36,7 +46,9 @@ export function analysisRoutes(deps: SidecarDeps): Hono {
     if (!q.success) return apiError(c, "INVALID_INPUT", z.prettifyError(q.error));
 
     const index = deps.cache.getItemsIndex();
-    const all = deps.cache.allResults();
+    // PAR SIGNET, non par URL : une URL portée par trois signets rendait UNE
+    // ligne, et les deux autres restaient morts sans que rien ne le dise.
+    const all = deps.cache.resultatsParSignet();
     const filtered = q.data.filter === "all" ? all : all.filter((r) => r.status === q.data.filter);
     filtered.sort((a, b) => (FILTER_ORDER[a.status] ?? 9) - (FILTER_ORDER[b.status] ?? 9));
     const start = q.data.page * q.data.per_page;

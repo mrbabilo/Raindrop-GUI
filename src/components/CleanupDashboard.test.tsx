@@ -70,17 +70,35 @@ function stubSseAbordable(jobId: string) {
   });
 }
 
-function mockApi(opts: { linksRunning?: boolean } = {}) {
+function mockApi(opts: { linksRunning?: boolean; jamais?: boolean; enVol?: unknown[]; reprise?: { verifies: number; total: number } } = {}) {
+  // `jamais` : aucune analyse n'a jamais tourné. Le défaut est l'inverse —
+  // une bibliothèque déjà analysée — pour que les tests de compteurs lisent
+  // des NOMBRES, et que le cas « jamais » ait son test à lui.
+  const scanne = opts.jamais === true ? null : "2026-09-19T08:00:00.000Z";
   getMock.mockReset().mockImplementation((path: string, query?: Record<string, unknown>) => {
+    // La route RÉELLE rend un TABLEAU. Elle manquait ici, et le `{}` du repli
+    // faisait jeter `.find` — l'arbre entier se démontait, et le compteur
+    // absent passait pour un défaut du composant.
+    if (path === "/api/jobs") return Promise.resolve(opts.enVol ?? []);
     if (path === "/api/analysis/status")
       return Promise.resolve({
-        links: { lastScan: null, running: opts.linksRunning ?? false },
-        duplicates: { lastScan: null, running: false },
+        links: { lastScan: scanne, running: opts.linksRunning ?? false, ...(opts.reprise ?? {}) },
+        duplicates: { lastScan: scanne, running: false },
       });
     if (path === "/api/analysis/results/links")
-      return Promise.resolve({ items: [], total: query?.filter === "redirect" ? 7 : 12, page: 0, perPage: 1 });
+      return Promise.resolve({
+        items: [],
+        total: query?.filter === "redirect" ? 7 : query?.filter === "indeterminate" ? 3 : 12,
+        page: 0,
+        perPage: 1,
+      });
     if (path === "/api/analysis/results/duplicates")
-      return Promise.resolve({ exact: [{ key: "k", kind: "exact", items: [] }], normalized: [], fuzzy: [] });
+      // Un groupe de DEUX signets : le compteur doit dire les deux nombres.
+      return Promise.resolve({
+        exact: [{ key: "k", kind: "exact", items: [{ id: 1 }, { id: 2 }] }],
+        normalized: [],
+        fuzzy: [],
+      });
     if (path === "/api/raindrops")
       return Promise.resolve({ items: [], count: query?.notag ? 42 : 5, page: 0, perPage: 1 });
     return Promise.resolve({});
@@ -104,20 +122,62 @@ beforeEach(() => mockApi());
 afterEach(() => vi.unstubAllGlobals());
 
 describe("CleanupDashboard", () => {
-  it("affiche les 6 compteurs avec leurs valeurs et la fraîcheur des scans", async () => {
+  it("affiche les 7 compteurs avec leurs valeurs", async () => {
     renderDashboard();
     // L'élément existe dès le premier rendu (valeur « … » en attendant les
     // queries) : c'est le CONTENU qui signale la résolution, d'où waitFor.
     await waitFor(() => {
       expect(screen.getByTestId("compteur-dead")).toHaveTextContent("12");
       expect(screen.getByTestId("compteur-redirect")).toHaveTextContent("7");
-      expect(screen.getByTestId("compteur-duplicates")).toHaveTextContent("1");
+      // DOMAINE.md en fait une catégorie à part — « jamais classé mort ».
+      expect(screen.getByTestId("compteur-indeterminate")).toHaveTextContent("3");
+      // GROUPES et SIGNETS : « 1 » seul se lisait « 1 signet en double ».
+      expect(screen.getByTestId("compteur-duplicates")).toHaveTextContent("1 groupe · 2 signets");
       expect(screen.getByTestId("compteur-untagged")).toHaveTextContent("42");
       expect(screen.getByTestId("compteur-empty-collections")).toHaveTextContent("0");
       expect(screen.getByTestId("compteur-trash")).toHaveTextContent("5");
     });
-    // lastScan null → « jamais » sur les deux blocs de scan.
-    expect(screen.getAllByText(/jamais/)).toHaveLength(2);
+  });
+
+  // « 0 lien mort » se lit « bibliothèque saine ». Le sidecar rend
+  // honnêtement `total: 0` sur un cache vierge — c'est l'écran qui mentait.
+  it("aucune analyse jamais lancée : les compteurs qui en dépendent ne disent PAS zéro", async () => {
+    mockApi({ jamais: true });
+    renderDashboard();
+    await waitFor(() => {
+      expect(screen.getByTestId("compteur-dead")).toHaveTextContent("jamais analysé");
+    });
+    expect(screen.getByTestId("compteur-redirect")).toHaveTextContent("jamais analysé");
+    expect(screen.getByTestId("compteur-indeterminate")).toHaveTextContent("jamais analysé");
+    expect(screen.getByTestId("compteur-duplicates")).toHaveTextContent("jamais analysé");
+    // Les comptes VIVANTS, eux, restent des nombres : ils ne dépendent
+    // d'aucune analyse et sont vrais à tout instant.
+    expect(screen.getByTestId("compteur-untagged")).toHaveTextContent("42");
+    expect(screen.getByTestId("compteur-trash")).toHaveTextContent("5");
+    expect(screen.getAllByText(/jamais$/)).toHaveLength(2); // la fraîcheur des deux blocs
+  });
+
+  // Une analyse de 12 210 liens dure longtemps. Quitter la vue démontait ce
+  // composant : au retour, un bouton grisé, ni progression ni annulation —
+  // alors que `/api/jobs` porte tout (mesuré : 300/12210 avec son libellé).
+  it("un scan qu'on n'a pas lancé soi-même est ADOPTÉ : progression et annulation", async () => {
+    mockApi({
+      linksRunning: true,
+      enVol: [{ id: "job-9", type: "scan-links", status: "running", progress: { done: 300, total: 12210, label: null } }],
+    });
+    sendMock.mockImplementation(async () => ({ cancelled: true }));
+    renderDashboard();
+    expect(await screen.findByText("Analyse en cours… 300/12210")).toBeInTheDocument();
+    const blocLiens = screen.getByRole("region", { name: "Liens" });
+    await userEvent.click(within(blocLiens).getByRole("button", { name: "Annuler le scan" }));
+    expect(sendMock).toHaveBeenCalledWith("POST", "/api/jobs/job-9/cancel");
+  });
+
+  // La reprise après coupure fonctionnait déjà ; elle ne se voyait pas.
+  it("une vérification déjà entamée est annoncée avant de relancer", async () => {
+    mockApi({ jamais: true, reprise: { verifies: 9400, total: 12210 } });
+    renderDashboard();
+    expect(await screen.findByText(/9400 \/ 12210 liens déjà vérifiés/)).toBeInTheDocument();
   });
 
   it("cliquer « Liens morts » navigue vers cleanupView/dead", async () => {
@@ -130,6 +190,7 @@ describe("CleanupDashboard", () => {
   });
 
   it("Lancer appelle POST /api/analysis/scan et affiche la progression du SSE", async () => {
+    mockApi({ jamais: true });
     vi.stubGlobal("fetch", stubSse("job-1"));
     sendMock.mockImplementation(async (_m: string, p: string) =>
       p === "/api/analysis/scan" ? { jobId: "job-1" } : { cancelled: true });
@@ -141,6 +202,7 @@ describe("CleanupDashboard", () => {
   });
 
   it("Annuler interrompt le suivi et appelle POST /api/jobs/:id/cancel", async () => {
+    mockApi({ jamais: true });
     vi.stubGlobal("fetch", stubSse("job-1"));
     sendMock.mockImplementation(async (_m: string, p: string) =>
       p === "/api/analysis/scan" ? { jobId: "job-1" } : { cancelled: true });
@@ -156,6 +218,7 @@ describe("CleanupDashboard", () => {
   // AbortError — une annulation VOLONTAIRE n'est pas une erreur, l'alerte
   // inline ne doit jamais apparaître.
   it("Annuler n'affiche aucune alerte (l'AbortError est filtré)", async () => {
+    mockApi({ jamais: true }); // le bouton se nomme « Lancer l'analyse »
     vi.stubGlobal("fetch", stubSseAbordable("job-1"));
     sendMock.mockImplementation(async (_m: string, p: string) =>
       p === "/api/analysis/scan" ? { jobId: "job-1" } : { cancelled: true });
@@ -197,7 +260,7 @@ describe("CleanupDashboard", () => {
   // ferme le trou du remount — le lancement est désactivé tant que le
   // sidecar signale un scan en cours pour ce type.
   it("désactive le lancement quand le sidecar signale un scan en cours", async () => {
-    mockApi({ linksRunning: true });
+    mockApi({ linksRunning: true, jamais: true });
     renderDashboard();
     const blocLiens = await screen.findByRole("region", { name: "Liens" });
     // La region existe dès le premier rendu : c'est le BOUTON (posé par la

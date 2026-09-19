@@ -39,7 +39,12 @@ function Paginateur({ page, total, perPage, onPage }: { page: number; total: num
 // avant d'en créer un, sinon N rendus = N observateurs).
 // dead / redirect : la même page de résultats filtrée — useAnalysisResults
 // (résolution contrôleur 2 : enum filter réel du sidecar, page qui va bien).
-export function ResultatsLiens({ type }: { type: "dead" | "redirect" }) {
+export function ResultatsLiens({ type, jamaisAnalyse, analyser }: {
+  type: "dead" | "redirect" | "indeterminate";
+  /** Aucune analyse de liens n'a jamais tourné : « rien ici » mentirait. */
+  jamaisAnalyse?: boolean;
+  analyser?: () => void;
+}) {
   const [page, setPage] = useState(0);
   const q = useAnalysisResults("links", type, page);
   const arbre = useCollections().data ?? [];
@@ -69,6 +74,10 @@ export function ResultatsLiens({ type }: { type: "dead" | "redirect" }) {
     });
     clearSelection(); // R9P-1 : le clear appartient à l'action
   };
+  // `indeterminate` emprunte la ligne des redirections : DOMAINE.md interdit
+  // de le traiter comme un mort (« jamais classé mort »), donc surtout pas
+  // `DeadRow` et son filet rouge — ces liens attendent une vérification, ils
+  // ne portent aucun verdict.
   const ligne = (r: (typeof items)[number]) =>
     type === "dead" ? (
       <DeadRow
@@ -85,7 +94,7 @@ export function ResultatsLiens({ type }: { type: "dead" | "redirect" }) {
     <>
       <Entete
         label={LABELS[type]}
-        count={q.data?.total}
+        count={jamaisAnalyse === true ? undefined : q.data?.total}
         action={
           archivable ? (
             <button type="button" className="btn" disabled={selectionnes.length === 0} onClick={archiver}>
@@ -99,6 +108,8 @@ export function ResultatsLiens({ type }: { type: "dead" | "redirect" }) {
         erreur={q.isError ? q.error?.message : null}
         vide={items.length === 0 && !q.isLoading}
         reessayer={() => void q.refetch()}
+        jamaisAnalyse={jamaisAnalyse === true && items.length === 0}
+        {...(analyser ? { analyser } : {})}
       />
       <div className="min-h-0 flex-1 overflow-y-auto">{items.map(ligne)}</div>
       {q.data && <Paginateur page={page} total={q.data.total} perPage={q.data.perPage} onPage={setPage} />}

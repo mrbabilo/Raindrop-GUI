@@ -33,7 +33,10 @@ export type View =
   // dans lequel des deux cas ils sont.
   | { kind: "collection"; collectionId: number; label: string }
   | { kind: "cleanup" }
-  | { kind: "cleanupView"; type: "dead" | "redirect" | "duplicates" | "untagged" | "empty-collections" | "trash" }
+  // `indeterminate` : 401/403/429 — anti-bot ou quota. DOMAINE.md en fait une
+  // catégorie à part entière (« vérification manuelle ; JAMAIS classé mort »),
+  // et le filtre existait déjà côté sidecar ; il n'avait aucun lecteur.
+  | { kind: "cleanupView"; type: "dead" | "redirect" | "indeterminate" | "duplicates" | "untagged" | "empty-collections" | "trash" }
   | { kind: "tags" }
   // Task 9 : la Revue de l'action, construite par BulkBar puis exécutée
   // (Task 15). Items réduits au nécessaire — `collectionId` porte

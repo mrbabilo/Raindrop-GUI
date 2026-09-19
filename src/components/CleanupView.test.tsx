@@ -10,19 +10,31 @@ import { raindrop, collections } from "../test/fixtures";
 // Hooks et api mockés (pattern CleanupDashboard.test.tsx) : les mocks sont
 // hisés (vi.hoisted) et rechargés par test via mockReturnValue — les branches
 // de CleanupView lisent des hooks différents selon `type`.
-const { resultsMock, groupsMock, raindropsMock, collectionsMock, getMock, sendMock } = vi.hoisted(() => ({
+const { resultsMock, groupsMock, raindropsMock, collectionsMock, getMock, sendMock, statutMock, scanMock } = vi.hoisted(() => ({
   resultsMock: vi.fn(),
   groupsMock: vi.fn(),
   raindropsMock: vi.fn(),
   collectionsMock: vi.fn(),
   getMock: vi.fn(),
   sendMock: vi.fn(),
+  statutMock: vi.fn(() => ({
+    data: {
+      links: { lastScan: "2026-09-19T08:00:00.000Z", running: false },
+      duplicates: { lastScan: "2026-09-19T08:00:00.000Z", running: false },
+    },
+  })),
+  scanMock: vi.fn(),
 }));
 
 vi.mock("../lib/api", () => ({ api: { get: getMock, send: sendMock } }));
 vi.mock("../hooks/useAnalysis", () => ({
   useAnalysisResults: resultsMock,
   useDuplicateGroups: groupsMock,
+  // La vue sait désormais si une analyse a jamais tourné, et porte l'action
+  // qui corrige le manque. Défaut : « déjà analysé », pour que les tests
+  // existants lisent des listes et non l'invite au premier scan.
+  useAnalysisStatus: statutMock,
+  useStartScan: () => ({ mutate: scanMock }),
 }));
 vi.mock("../hooks/useRaindrops", () => ({ useRaindrops: raindropsMock }));
 vi.mock("../hooks/useStaticData", () => ({

@@ -108,6 +108,14 @@ export type AnalysisType = "links" | "duplicates";
 export interface AnalysisStatusEntry {
   lastScan: string | null; // ISO du dernier scan terminé (ou en cours : startedAt)
   running: boolean;
+  /** Liens (URL distinctes) déjà vérifiés et encore frais au sens du TTL, sur
+   *  le total de la bibliothèque. Rend VISIBLE une reprise qui fonctionnait
+   *  déjà sans le dire : après une coupure, `lastScan` reste `null` — la date
+   *  ne se pose qu'à l'achèvement — et l'écran annonçait « jamais » au-dessus
+   *  de milliers de liens déjà vérifiés. Absent sur les doublons, qui n'ont
+   *  pas d'avancement partiel (le calcul est local et instantané). */
+  verifies?: number;
+  total?: number;
 }
 
 // ─── Jobs ────────────────────────────────────────────────────────────────────

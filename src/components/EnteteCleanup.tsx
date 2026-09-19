@@ -13,6 +13,7 @@ export type CleanupType = Extract<View, { kind: "cleanupView" }>["type"];
 export const LABELS: Record<CleanupType, string> = {
   dead: t("cleanup.dead"),
   redirect: t("cleanup.redirects"),
+  indeterminate: t("cleanup.indeterminate"),
   duplicates: t("cleanup.duplicates"),
   untagged: t("cleanup.untagged"),
   "empty-collections": t("cleanup.empty-collections"),

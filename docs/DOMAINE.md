@@ -48,7 +48,24 @@ Ce que le code ne dit pas. À lire avant de toucher au nettoyage, aux vues ou
   finale » est l'action de correction — REST direct, car `update_raindrop`
   n'expose pas `url`.
 - **Indéterminé** : 401/403/429 (anti-bot, rate-limit) → vérification
-  manuelle ; jamais classé « mort ».
+  manuelle ; jamais classé « mort ». **A son compteur et sa vue** (« À vérifier
+  à la main ») depuis le 2026-09-19 : la catégorie existait dans le code et
+  dans ce document, mais rien à l'écran ne la montrait — ces liens étaient donc
+  invisibles, ni morts ni sains.
+- **Un diagnostic appartient à un SIGNET, pas à une URL.** Le cache de
+  vérification, lui, est bien indexé par URL — une URL ne se vérifie qu'une
+  fois, et c'est ce qui rend l'analyse tenable. Mais la lecture doit
+  redistribuer ce verdict à **tous** les signets qui portent cette adresse.
+  Mesuré le 2026-09-19 sur la bibliothèque réelle : **430 signets partagent une
+  URL au caractère près**, soit jusqu'à **242 signets morts invisibles** —
+  l'utilisateur réparait celui qu'on lui montrait, les autres restaient morts
+  sans que rien ne le signale jamais.
+- **« Jamais analysé » n'est pas « rien à nettoyer ».** Un compteur dont
+  l'analyse n'a pas tourné ne vaut pas zéro : il ne vaut rien. « 0 lien mort »
+  se lit « bibliothèque saine » alors que personne n'a regardé — et une vue
+  vide disait « Rien ici », c'est-à-dire « il n'y a plus rien à réparer ». Les
+  compteurs qui dépendent d'une analyse affichent « jamais analysé », et les
+  vues portent l'action qui corrige le manque.
 - **TTL** : fraîcheur d'un résultat de scan (30 j par défaut) ; les re-scans
   incrémentaux ne revérifient que le nouveau, le modifié ou l'expiré.
 - **`library_audit` et filtres serveur `broken`/`duplicates` : interdits** —

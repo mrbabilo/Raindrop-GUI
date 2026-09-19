@@ -137,6 +137,12 @@ export function useCleanupCounts() {
     queryKey: ["analysis", "counts", "redirect"],
     queryFn: () => api.get<{ total: number }>("/api/analysis/results/links", { filter: "redirect", page: 0, per_page: 1 }),
   });
+  // DOMAINE.md en fait une catégorie à part — « vérification manuelle ;
+  // jamais classé mort ». Le filtre existait, personne ne le lisait.
+  const indeterminate = useQuery({
+    queryKey: ["analysis", "counts", "indeterminate"],
+    queryFn: () => api.get<{ total: number }>("/api/analysis/results/links", { filter: "indeterminate", page: 0, per_page: 1 }),
+  });
   const groups = useQuery({
     queryKey: ["analysis", "counts", "duplicates"],
     queryFn: () => api.get<DuplicateGroups>("/api/analysis/results/duplicates"),
@@ -150,12 +156,17 @@ export function useCleanupCounts() {
     queryFn: () => api.get<Paginated<unknown>>("/api/raindrops", { collection_id: -99, per_page: 1 }),
   });
   const collections = useCollections().data;
+  const gd = groups.data;
+  const compter = (gs: DuplicateGroup[]) => gs.reduce((n, g) => n + g.items.length, 0);
   return {
     dead: dead.data?.total,
     redirect: redirect.data?.total,
-    duplicates: groups.data
-      ? groups.data.exact.length + groups.data.normalized.length + groups.data.fuzzy.length
-      : undefined,
+    indeterminate: indeterminate.data?.total,
+    // GROUPES et SIGNETS. « 414 » seul se lisait « 414 signets en double » ;
+    // la mesure réelle donne 414 groupes pour 1 032 signets concernés, dont
+    // 618 copies retirables (un exemplaire gardé par groupe).
+    duplicates: gd ? gd.exact.length + gd.normalized.length + gd.fuzzy.length : undefined,
+    duplicatesItems: gd ? compter(gd.exact) + compter(gd.normalized) + compter(gd.fuzzy) : undefined,
     untagged: untagged.data?.count,
     emptyCollections: collections?.filter((c) => c.count === 0).length,
     trash: trash.data?.count,

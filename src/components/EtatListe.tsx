@@ -11,7 +11,7 @@ import { t } from "../i18n/fr";
 // L'ordre compte : l'échec prime sur le vide, puisque c'est LUI qui explique
 // le vide.
 export function EtatListe({
-  chargement, erreur, vide, reessayer,
+  chargement, erreur, vide, reessayer, jamaisAnalyse, analyser,
 }: {
   chargement: boolean;
   /** Message d'échec, s'il y en a un. */
@@ -19,6 +19,19 @@ export function EtatListe({
   vide: boolean;
   /** Relance la requête — sans quoi il ne resterait qu'à recharger la page. */
   reessayer?: () => void;
+  /**
+   * QUATRIÈME état : aucune analyse n'a jamais tourné.
+   *
+   * Le troisième mentait à son tour, pour les vues de diagnostic. « Rien
+   * ici » y disait « il n'y a plus rien à réparer » alors que la vérité était
+   * « je n'ai jamais regardé » — et le compteur du tableau de bord affichait
+   * un « 0 » qui se lit « bibliothèque saine ». Deux écrans se lisaient donc
+   * comme un bilan de santé là où rien n'avait été mesuré.
+   */
+  jamaisAnalyse?: boolean;
+  /** L'action qui corrige le vide — §10 : le bouton nomme ce qui va se
+   *  produire. Absente, la mention reste informative. */
+  analyser?: () => void;
 }) {
   if (erreur != null && erreur !== "") {
     return (
@@ -35,6 +48,19 @@ export function EtatListe({
     );
   }
   if (chargement) return <p className="p-4 text-app-muted">{t("state.loading")}</p>;
+  // AVANT le vide : c'est lui qui explique le vide, comme l'échec plus haut.
+  if (jamaisAnalyse === true) {
+    return (
+      <p className="flex items-center gap-3 p-4 text-sm text-app-muted">
+        <span>{t("state.neverScanned")}</span>
+        {analyser !== undefined && (
+          <button type="button" className="btn shrink-0" onClick={analyser}>
+            {t("cleanup.scan")}
+          </button>
+        )}
+      </p>
+    );
+  }
   // §10 : « Rien ici » dit qu'il n'y a plus rien à traiter, pas un échec.
   if (vide) return <p className="p-4 text-app-muted">{t("state.empty")}</p>;
   return null;

@@ -246,6 +246,35 @@ Developer ID.
   erreur** pour toute autre forme : coller une URL donnait un écran vide
   que rien n'expliquait. Mesuré de bout en bout : 12 210 → 64.
 
+#### Nettoyage — sept défauts, tous mesurés (2026-09-19)
+
+- **Un lien mort partagé par plusieurs signets n'apparaissait qu'une fois.**
+  Les résultats d'analyse étaient rangés par adresse, pas par signet : sur la
+  bibliothèque réelle, 430 signets partagent une URL au caractère près, soit
+  jusqu'à **242 signets morts invisibles**. On réparait celui qu'on voyait, les
+  autres restaient morts et rien ne l'aurait jamais signalé.
+- **« Liens morts : 0 » ne s'affiche plus quand aucune analyse n'a tourné.**
+  Trois compteurs se lisaient comme un bilan de santé là où personne n'avait
+  regardé ; les vues disaient « Rien ici », c'est-à-dire « plus rien à
+  réparer ». Elles annoncent maintenant l'absence d'analyse et portent le
+  bouton qui la lance.
+- **Une analyse en cours se suit et s'annule même après avoir quitté la vue.**
+  Elle devenait invisible **et inarrêtable** : sur 12 210 liens, c'est long.
+- **« À vérifier à la main » a son compteur et sa vue.** Les liens rendus
+  indéterminés par un anti-bot ou un quota (401/403/429) existaient dans le
+  code et dans la doctrine, mais rien ne les montrait — ni morts, ni sains,
+  ni visibles.
+- **Le compteur de doublons dit les deux nombres.** « 414 » se lisait
+  « 414 signets en double » ; ce sont 414 groupes pour **1 032 signets**, dont
+  **618 copies retirables** — le seul nombre qui dise ce qu'on gagne à
+  nettoyer, et il n'apparaissait nulle part.
+- **Une même adresse n'est plus vérifiée une fois par signet** : 11 968
+  adresses distinctes pour 12 210 signets, soit 242 requêtes épargnées sans
+  qu'aucun signet perde son diagnostic.
+- **Une analyse interrompue reprend où elle en était, et le dit.** Elle le
+  faisait déjà en silence, sous un écran qui annonçait « Dernier scan :
+  jamais » au-dessus de milliers de liens déjà vérifiés.
+
 #### Les archives : mémoire, budget et silence (2026-09-19)
 
 - **Une copie permanente volumineuse ne passe plus entière en mémoire.** Elle

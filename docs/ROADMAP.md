@@ -143,6 +143,22 @@ fidèle, recompression quand la signature manque, test sabordé pour le prouver.
       signets déjà archivés ferait croire le budget plein sur un total
       imaginaire.
 
+- [x] **Nettoyage : sept défauts corrigés** (2026-09-19) — tous mesurés sur la
+      bibliothèque réelle, aucun supposé. Le plus grave : les résultats
+      d'analyse étaient rangés **par URL** et non par signet, cachant jusqu'à
+      242 signets morts (430 signets partagent une adresse au caractère près).
+      Les six autres : trois compteurs affichant « 0 » sans qu'aucune analyse
+      n'ait tourné ; un scan quitté devenu insuivable **et inannulable** alors
+      que `GET /api/jobs` porte tout ; la catégorie « Indéterminé » de
+      DOMAINE.md sans compteur ni vue ; un compteur de doublons qui comptait
+      des groupes (414 groupes, 1 032 signets, 618 copies retirables) ; la même
+      URL vérifiée une fois par signet (11 968 distinctes pour 12 210) ; et la
+      reprise après coupure, qui fonctionnait sans se voir.
+      **Non vérifié en réel** : un scan complet des 12 210 liens frapperait des
+      milliers de serveurs tiers. Le chemin est éprouvé par les tests, dont
+      trois sur la reprise (interruption, relance, TTL expiré), et le
+      dédoublonnage est confirmé par le sidecar réel (`total: 11968`).
+
 ### Reste à faire sur le lot sauvegarde
 
 - [x] **Reprise EN VOL** (2026-09-19, `sidecar/backup/resilience.ts`) — un 429

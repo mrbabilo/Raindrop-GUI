@@ -9,19 +9,30 @@ import { AppStateProvider, useAppState } from "../state/appState";
 // Hooks et api mockés (pattern CleanupDashboard.test.tsx) : les mocks sont
 // hisés (vi.hoisted) et rechargés par test via mockReturnValue — les branches
 // de CleanupView lisent des hooks différents selon `type`.
-const { resultsMock, groupsMock, raindropsMock, collectionsMock, getMock, sendMock } = vi.hoisted(() => ({
+const { resultsMock, groupsMock, raindropsMock, collectionsMock, getMock, sendMock, statutMock, scanMock } = vi.hoisted(() => ({
   resultsMock: vi.fn(),
   groupsMock: vi.fn(),
   raindropsMock: vi.fn(),
   collectionsMock: vi.fn(),
   getMock: vi.fn(),
   sendMock: vi.fn(),
+  // Défaut « déjà analysé » : sans cela, les vues affichent l'invite au
+  // premier scan au lieu de leurs listes.
+  statutMock: vi.fn<() => { data: { links: { lastScan: string | null; running: boolean }; duplicates: { lastScan: string | null; running: boolean } } }>(() => ({
+    data: {
+      links: { lastScan: "2026-09-19T08:00:00.000Z", running: false },
+      duplicates: { lastScan: "2026-09-19T08:00:00.000Z", running: false },
+    },
+  })),
+  scanMock: vi.fn(),
 }));
 
 vi.mock("../lib/api", () => ({ api: { get: getMock, send: sendMock } }));
 vi.mock("../hooks/useAnalysis", () => ({
   useAnalysisResults: resultsMock,
   useDuplicateGroups: groupsMock,
+  useAnalysisStatus: statutMock,
+  useStartScan: () => ({ mutate: scanMock }),
 }));
 vi.mock("../hooks/useRaindrops", () => ({ useRaindrops: raindropsMock }));
 vi.mock("../hooks/useStaticData", () => ({
@@ -172,4 +183,39 @@ describe("ResultatsLiens — liens morts et redirections", () => {
     expect(screen.queryByRole("button", { name: /Archiver/ })).not.toBeInTheDocument();
   });
 
+});
+
+// « Rien ici » disait « il n'y a plus rien à réparer » quand la vérité était
+// « je n'ai jamais regardé ». Deux écrans se lisaient comme un bilan de santé
+// là où rien n'avait été mesuré.
+describe("les vues de diagnostic distinguent « jamais analysé » de « rien à faire »", () => {
+  beforeEach(() => {
+    resultsMock.mockReturnValue({ data: { items: [], total: 0, page: 0, perPage: 50 }, isLoading: false });
+  });
+
+  it("analyse déjà passée et liste vide : c'est bien « Rien ici »", () => {
+    // La présence D'ABORD : sans ce cas, l'assertion suivante célébrerait une
+    // absence que rien ne distinguait.
+    render(<CleanupView type="dead" />, { wrapper });
+    expect(screen.getByText(/Rien ici/i)).toBeInTheDocument();
+  });
+
+  it("jamais analysé : on le dit, et on porte l'action qui le corrige", async () => {
+    statutMock.mockReturnValue({
+      data: { links: { lastScan: null, running: false }, duplicates: { lastScan: null, running: false } },
+    });
+    render(<CleanupView type="dead" />, { wrapper });
+    expect(screen.queryByText(/Rien ici/i)).toBeNull();
+    expect(screen.getByText(/Aucune analyse n'a encore été lancée/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Lancer l'analyse" }));
+    expect(scanMock).toHaveBeenCalled();
+  });
+
+  it("la 7e catégorie a sa vue : « À vérifier à la main »", () => {
+    // DOMAINE.md : 401/403/429, « vérification manuelle ; jamais classé mort ».
+    // Le filtre existait côté sidecar et n'avait aucun lecteur.
+    render(<CleanupView type="indeterminate" />, { wrapper });
+    expect(screen.getByRole("heading", { name: "À vérifier à la main" })).toBeInTheDocument();
+    expect(resultsMock).toHaveBeenCalledWith("links", "indeterminate", 0);
+  });
 });

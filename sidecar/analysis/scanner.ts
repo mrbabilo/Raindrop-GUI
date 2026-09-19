@@ -9,6 +9,7 @@ import type { CheckOutcome } from "./linkchecker.js";
 import { findDuplicates } from "./duplicates.js";
 
 const SAVE_EVERY = 20;
+const TTL_JOURS_DEFAUT = 30;
 const TIMEOUT_MS = 10_000;
 
 export interface ScannerDeps {
@@ -32,10 +33,17 @@ export class Scanner {
     return this.running.has(type);
   }
 
+  /** Le TTL effectif, exposé pour que la route de statut n'ait pas à recopier
+   *  le défaut. Une valeur de fraîcheur qui divergerait entre le scan et son
+   *  affichage ferait annoncer « déjà vérifié » ce que le scan refera. */
+  ttlJours(): number {
+    return this.deps.ttlDays ?? TTL_JOURS_DEFAUT;
+  }
+
   startScan(type: AnalysisType): string {
     if (this.running.has(type)) throw new Error(`scan ${type} déjà en cours`);
     this.running.add(type);
-    const ttlDays = this.deps.ttlDays ?? 30;
+    const ttlDays = this.ttlJours();
     const concurrency = this.deps.concurrency ?? 6;
     const timeoutMs = this.deps.timeoutMs ?? TIMEOUT_MS;
     const check = this.deps.check ?? ((url: string) => checkUrl(url, { timeoutMs, retry: 1 }));
@@ -56,10 +64,22 @@ export class Scanner {
         return { groups: groups.exact.length + groups.normalized.length + groups.fuzzy.length };
       }
 
-      // staleUrls rend {id,url} — le check attend {raindropId,url}
-      const targets = this.deps.cache
-        .staleUrls(snap.items, ttlDays)
-        .map((t) => ({ raindropId: t.id, url: t.url }));
+      // staleUrls rend {id,url} — le check attend {raindropId,url}.
+      //
+      // DÉDOUBLONNÉ PAR URL : plusieurs signets peuvent porter la même adresse
+      // (430 sur la bibliothèque réelle, mesuré le 2026-09-19), et la vérifier
+      // une fois par signet c'est autant de requêtes pour un verdict identique
+      // — jusqu'à 10 s de délai chacune. Le résultat, lui, est indexé par URL
+      // et `resultatsParSignet()` le redistribue à TOUS les signets
+      // concernés : aucun n'est perdu. Effet de bord bienvenu, la progression
+      // annonce enfin un total vrai plutôt qu'un total gonflé de redites.
+      const vues = new Set<string>();
+      const targets: { raindropId: number; url: string }[] = [];
+      for (const t of this.deps.cache.staleUrls(snap.items, ttlDays)) {
+        if (vues.has(t.url)) continue;
+        vues.add(t.url);
+        targets.push({ raindropId: t.id, url: t.url });
+      }
       j.progress(0, targets.length, "vérification des liens");
 
       // Les saves sont SÉRIALISÉS : save() passe par un .tmp unique, deux saves

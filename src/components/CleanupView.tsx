@@ -4,7 +4,7 @@ import { EtatListe } from "./EtatListe";
 import { useRovingFocus } from "../hooks/useRovingFocus";
 import { ChargePlus } from "./ChargePlus";
 import { useAppState } from "../state/appState";
-import { useDuplicateGroups } from "../hooks/useAnalysis";
+import { useAnalysisStatus, useDuplicateGroups, useStartScan } from "../hooks/useAnalysis";
 import { useRaindrops } from "../hooks/useRaindrops";
 import { useCollections } from "../hooks/useStaticData";
 import { racine } from "../design/Signaux";
@@ -30,7 +30,13 @@ const DUP_LABELS: Record<DuplicateGroup["kind"], string> = {
   fuzzy: t("cleanup.dup-fuzzy"),
 };
 
-function Doublons() {
+// Un groupe de N signets ne rend RETIRABLES que N−1 d'entre eux : on en garde
+// toujours un. C'est le seul nombre qui dise ce qu'on gagne à nettoyer, et il
+// n'apparaissait nulle part.
+const signetsDe = (gs: DuplicateGroup[]) => gs.reduce((n, g) => n + g.items.length, 0);
+const retirablesDe = (gs: DuplicateGroup[]) => signetsDe(gs) - gs.length;
+
+function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean; analyser?: () => void }) {
   const q = useDuplicateGroups();
   const arbre = useCollections().data ?? [];
   const titreRacine = (id: number) => racine(arbre, id)?.title;
@@ -38,13 +44,18 @@ function Doublons() {
   const groupes = data ? KINDS.flatMap((k) => data[k]) : [];
   return (
     <>
-      {/* Même sémantique que le compteur T12 : le chip compte les groupes. */}
-      <Entete label={LABELS.duplicates} count={groupes.length} />
+      {/* Le chip compte les GROUPES ; le détail par catégorie dit les signets
+          concernés et les copies retirables. « 414 » seul se lisait
+          « 414 signets en double » — la mesure réelle donne 414 groupes pour
+          1 032 signets, dont 618 retirables. */}
+      <Entete label={LABELS.duplicates} count={jamaisAnalyse === true ? undefined : groupes.length} />
       <EtatListe
         chargement={!!q.isLoading}
         erreur={q.isError ? q.error?.message : null}
         vide={groupes.length === 0 && !q.isLoading}
         reessayer={() => void q.refetch()}
+        jamaisAnalyse={jamaisAnalyse === true && groupes.length === 0}
+        {...(analyser ? { analyser } : {})}
       />
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
         {KINDS.map((kind) => {
@@ -54,6 +65,9 @@ function Doublons() {
             <section key={kind} aria-label={DUP_LABELS[kind]} className="flex flex-col gap-2">
               <h2 className="text-sm font-medium">
                 {DUP_LABELS[kind]} ({gs.length})
+                <span className="ml-2 text-xs font-normal text-app-muted">
+                  {t("cleanup.dupDetail", { n: retirablesDe(gs), items: signetsDe(gs), retirables: retirablesDe(gs) })}
+                </span>
               </h2>
               {gs.map((g) => (
                 <DuplicateGroupCard key={g.key} g={g} titreRacine={titreRacine} />
@@ -194,6 +208,16 @@ function CollectionsVides() {
 }
 
 export function CleanupView({ type }: { type: CleanupType }) {
+  // « Jamais analysé » ≠ « rien à nettoyer ». La vue le sait par le statut, et
+  // porte l'action qui corrige le manque — arriver ici depuis un compteur
+  // vide sans pouvoir lancer l'analyse obligerait à repartir en arrière.
+  const statut = useAnalysisStatus();
+  const jamais = (quoi: "links" | "duplicates") =>
+    statut.data !== undefined && statut.data[quoi].lastScan === null;
+  const lienScan = useStartScan("links");
+  const dupScan = useStartScan("duplicates");
+  const lancerLiens = () => lienScan.mutate(undefined);
+  const lancerDoublons = () => dupScan.mutate(undefined);
   // Lot a11y : la vue n'est qu'UN arrêt de tabulation. Les lignes portent
   // `data-nav` (CleanupRows.Ligne) ; Enter/F2 y entrent — leurs contrôles ne
   // sont tabulables qu'ensuite (pattern « ligne activée »). Le maillage ARIA
@@ -211,9 +235,12 @@ export function CleanupView({ type }: { type: CleanupType }) {
       onKeyDown={roving.surTouche}
       className="flex h-full min-h-0 flex-col"
     >
-      {type === "dead" && <ResultatsLiens type="dead" />}
-      {type === "redirect" && <ResultatsLiens type="redirect" />}
-      {type === "duplicates" && <Doublons />}
+      {type === "dead" && <ResultatsLiens type="dead" jamaisAnalyse={jamais("links")} analyser={lancerLiens} />}
+      {type === "redirect" && <ResultatsLiens type="redirect" jamaisAnalyse={jamais("links")} analyser={lancerLiens} />}
+      {type === "indeterminate" && (
+        <ResultatsLiens type="indeterminate" jamaisAnalyse={jamais("links")} analyser={lancerLiens} />
+      )}
+      {type === "duplicates" && <Doublons jamaisAnalyse={jamais("duplicates")} analyser={lancerDoublons} />}
       {type === "untagged" && <NonTaggues />}
       {type === "empty-collections" && <CollectionsVides />}
       {type === "trash" && <Corbeille />}
