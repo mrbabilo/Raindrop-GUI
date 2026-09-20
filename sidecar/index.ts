@@ -113,6 +113,10 @@ const deps: SidecarDeps = {
   cache,
   scanner,
   origins,
+  // Le journal consultable depuis l'app (Réglages) : les routes d'écriture
+  // l'alimentent, GET /api/journal lit le fichier du jour.
+  journal: logger,
+  logsDir: join(dataDir, "logs"),
   ...(sauvegarde ? { sauvegarde } : {}),
   ...(archivage ? { archivage } : {}),
   // REST direct sous la MÊME file que le MCP (550 ms partagées) : les appels

@@ -73,6 +73,8 @@ beforeEach(async () => {
     scanner: { startScan: () => "", isRunning: () => false } as unknown as SidecarDeps["scanner"],
     direct: unrestoreDirect([]),
     origins: makeOriginsFake([]).store,
+    journal: { info: () => undefined, warn: () => undefined, error: () => undefined },
+    logsDir: "/non-existant",
   };
 });
 afterEach(async () => conn.close());

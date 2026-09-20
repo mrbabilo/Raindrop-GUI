@@ -34,6 +34,8 @@ function makeDeps(overrides?: Partial<SidecarDeps>): SidecarDeps {
       forget: async () => undefined,
       flush: async () => undefined,
     } as unknown as SidecarDeps["origins"],
+    journal: { info: () => undefined, warn: () => undefined, error: () => undefined },
+    logsDir: "/non-existant",
     ...overrides,
   } as SidecarDeps;
 }

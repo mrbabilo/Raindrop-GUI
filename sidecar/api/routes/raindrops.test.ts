@@ -86,6 +86,8 @@ beforeEach(async () => {
     scanner: { startScan: () => "", isRunning: () => false } as unknown as SidecarDeps["scanner"],
     direct: unrestoreDirect([]),
     origins: makeOriginsFake([]).store,
+    journal: { info: () => undefined, warn: () => undefined, error: () => undefined },
+    logsDir: "/non-existant",
   };
   app = createApp(baseDeps, { localToken: TOKEN });
 });
@@ -326,5 +328,66 @@ describe("POST /dedupe", () => {
       body: JSON.stringify({ paires: [{ garde: 1, copies: [{ id: 2 }] }] }),
     });
     expect(res.status).toBe(400);
+  });
+});
+
+// Le journal des ÉCRITURES (2026-09-20) : une corbeille qui ne fait rien
+// doit laisser une trace lisible depuis l'app — c'est le silence qui a
+// permis au défaut `-99` de rester invisible deux semaines.
+describe("le journal des écritures", () => {
+  const journalDeps = (mcpReffuse = false) => {
+    const entrees: { msg: string; champs?: Record<string, unknown> }[] = [];
+    const deps: SidecarDeps = {
+      ...baseDeps,
+      jobs: new JobStore(),
+      journal: {
+        info: (msg: string, champs?: Record<string, unknown>) => { entrees.push({ msg, champs }); },
+        warn: (msg: string, champs?: Record<string, unknown>) => { entrees.push({ msg, champs }); },
+        error: (msg: string, champs?: Record<string, unknown>) => { entrees.push({ msg, champs }); },
+      },
+      logsDir: repertoireTemporaire("journal-ecritures-"),
+      ...(mcpReffuse
+        ? { mcp: async () => ({ ok: false as const, code: "RAINDROP_API" as const, message: "hoquet" }) }
+        : {}),
+    };
+    return { deps, entrees };
+  };
+
+  it("DELETE /:id logge la corbeille avec l'id et l'origine", async () => {
+    const { deps, entrees } = journalDeps();
+    const h = createApp(deps, { localToken: TOKEN });
+    const list = (await (await req(h, "/api/raindrops?per_page=1")).json()) as Paginated<RaindropItem>;
+    const id = list.items[0]!.id;
+    await req(h, `/api/raindrops/${id}?from=42`, { method: "DELETE" });
+    expect(entrees.some((e) => e.msg === "corbeille" && e.champs?.id === id && e.champs?.from === 42)).toBe(true);
+  });
+
+  it("une écriture REFUSÉE logge un avertissement avec la raison", async () => {
+    const { deps, entrees } = journalDeps(true);
+    const h = createApp(deps, { localToken: TOKEN });
+    await req(h, "/api/raindrops/999?from=0", { method: "DELETE" });
+    expect(entrees.some((e) => e.msg === "corbeille refusée" && String(e.champs?.err).includes("hoquet"))).toBe(true);
+  });
+
+  it("POST /bulk logge l'opération et les ids", async () => {
+    const { deps, entrees } = journalDeps();
+    const h = createApp(deps, { localToken: TOKEN });
+    await req(h, "/api/raindrops/bulk", {
+      method: "POST",
+      body: JSON.stringify({ operation: "delete", collection_id: 0, ids: [11, 12] }),
+    });
+    expect(entrees.some((e) => e.msg === "bulk" && e.champs?.operation === "delete")).toBe(true);
+    expect(entrees.find((e) => e.msg === "bulk")?.champs?.ids).toEqual([11, 12]);
+  });
+
+  it("POST /dedupe logge le lancement (le terme passe par le journal du job)", async () => {
+    const { deps, entrees } = journalDeps();
+    const h = createApp(deps, { localToken: TOKEN });
+    const res = await req(h, "/api/raindrops/dedupe", {
+      method: "POST",
+      body: JSON.stringify({ paires: [{ garde: 1, copies: [{ id: 2, collectionId: 7 }] }] }),
+    });
+    expect(res.status).toBe(200);
+    expect(entrees.some((e) => e.msg === "dedupe lancé")).toBe(true);
   });
 });

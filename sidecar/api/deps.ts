@@ -8,6 +8,14 @@ import type { OriginStore } from "../trash/origins.js"; // Task 0b
 import type { Sauvegarde } from "../backup/contrat-sauvegarde.js";
 import type { Archivage } from "../backup/archivage.js";
 
+/** Le journal du sidecar, tel que les routes l'écrivent (consultation depuis
+ *  l'app, 2026-09-20) : écritures et leurs issues, jobs, erreurs. */
+export interface Journal {
+  info(msg: string, champs?: Record<string, unknown>): void;
+  warn(msg: string, champs?: Record<string, unknown>): void;
+  error(msg: string, champs?: Record<string, unknown>): void;
+}
+
 export interface SidecarDeps {
   /** Appel tool MCP throttled (espacement 550 ms en prod). */
   mcp: (
@@ -31,6 +39,12 @@ export interface SidecarDeps {
    *  même condition que `sauvegarde` : sans `BACKUP_DIR`, pas de dossier
    *  `archives/` où écrire. */
   archivage?: Archivage;
+  /** Le journal (écritures, jobs, erreurs) — la consultation depuis l'app
+   *  le lit par GET /api/journal ; les routes d'écriture l'alimentent. */
+  journal: Journal;
+  /** Le dossier des logs du jour (`<dataDir>/logs`) — la route /api/journal
+   *  y lit le fichier JSONL courant. */
+  logsDir: string;
   /** Appels REST directs Raindrop — Task 8 (contournement : update_raindrop
    *  MCP v1.3.1 n'expose pas `url` ; unrestore — MCP n'expose pas la
    *  restauration, Task 0b). Throttled en prod comme les appels MCP. */

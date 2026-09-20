@@ -10,6 +10,7 @@ import { maintenanceRoutes } from "./routes/maintenance.js";
 import { analysisRoutes } from "./routes/analysis.js";
 import { jobsRoutes } from "./routes/jobs.js";
 import { sauvegardeRoutes } from "./routes/sauvegarde.js";
+import { journalRoutes } from "./routes/journal.js";
 
 function bearerOk(expected: string, got: string | undefined): boolean {
   if (!got?.startsWith("Bearer ")) return false;
@@ -79,6 +80,9 @@ export function createApp(deps: SidecarDeps, opts: { localToken: string }): Hono
   app.route("/api/maintenance", maintenanceRoutes(deps));
   app.route("/api/analysis", analysisRoutes(deps));
   app.route("/api/jobs", jobsRoutes(deps));
+  // Le journal consultable depuis l'app (Réglages, 2026-09-20) : écritures,
+  // jobs, erreurs — 500 dernières entrées du jour.
+  app.route("/api/journal", journalRoutes(deps));
   // Montée MÊME sans dossier configuré : la route dit alors que la
   // sauvegarde est inactive (un 404 serait le silence que §6 interdit).
   app.route("/api/backup", sauvegardeRoutes(deps));

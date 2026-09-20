@@ -25,6 +25,8 @@ const deps = (c: McpConnection): SidecarDeps => ({
       forget: async () => undefined,
       flush: async () => undefined,
     } as unknown as SidecarDeps["origins"],
+    journal: { info: () => undefined, warn: () => undefined, error: () => undefined },
+    logsDir: "/non-existant",
 });
 
 // Adaptation brief : l'API locale est derrière l'auth Bearer (Task 7, spec §3.7)

@@ -37,6 +37,8 @@ beforeEach(async () => {
     scanner: { startScan: () => "", isRunning: () => false } as unknown as SidecarDeps["scanner"],
     direct: {} as SidecarDeps["direct"],
     origins: {} as SidecarDeps["origins"],
+  journal: { info: () => undefined, warn: () => undefined, error: () => undefined },
+  logsDir: "/non-existant",
   };
   app = createApp(baseDeps, { localToken: TOKEN });
 });

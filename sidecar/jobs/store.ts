@@ -116,17 +116,46 @@ type InternalJob = {
   result: unknown;
 };
 
-/** Lance fn en arrière-plan : succès → finish, exception → fail. */
+/** Le journal tel que runJob l'écrit (optionnel : les appels qui n'en ont
+ *  pas — et tous les tests existants — restent valides). */
+export interface JournalJob {
+  info(msg: string, champs?: Record<string, unknown>): void;
+  error(msg: string, champs?: Record<string, unknown>): void;
+}
+
+/** Lance fn en arrière-plan : succès → finish, exception → fail.
+ *
+ *  `journal` (optionnel, fourni par les routes qui possèdent deps.journal)
+ *  trace le CYCLE du job — lancé, terminé/annulé, échec avec la raison —
+ *  en UN point unique : dedupe, scans, sauvegarde et archivage y passent
+ *  sans que chaque module ait à se journaliser. */
 export function runJob(
   store: JobStore,
   type: string,
   total: number,
   fn: (job: JobHandle) => Promise<unknown>,
+  journal?: JournalJob,
 ): JobHandle {
   const job = store.create(type, total);
+  journal?.info("job lancé", { type, total });
   void fn(job).then(
-    (result) => job.finish(result),
-    (e) => job.fail(e instanceof Error ? e.message : String(e)),
+    (result) => {
+      job.finish(result);
+      // Un résultat qui porte `annule: true` se lit « job annulé » — c'est
+      // ainsi que dedupe (et la sauvegarde) rapportent une annulation : le
+      // job « finit » normalement, mais avec un mot différent à dire.
+      const annule =
+        !!result && typeof result === "object" && "annule" in result && result.annule === true;
+      journal?.info(annule ? "job annulé" : "job terminé", {
+        type,
+        ...(result !== undefined ? { resultat: result } : {}),
+      });
+    },
+    (e) => {
+      const message = e instanceof Error ? e.message : String(e);
+      job.fail(message);
+      journal?.error("job en échec", { type, err: message });
+    },
   );
   return job;
 }

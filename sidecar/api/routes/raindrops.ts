@@ -177,7 +177,13 @@ export function raindropsRoutes(deps: SidecarDeps): Hono {
     // mémorisation dégrade en « destination demandée au front », pas en 500.
     if (from.data !== undefined) await deps.origins.remember(id, from.data);
     const out = await deps.mcp("delete_raindrop", { id });
-    if (!out.ok) return apiError(c, out.code, out.message, out.tool);
+    if (!out.ok) {
+      deps.journal.warn("corbeille refusée", { id, err: out.message });
+      return apiError(c, out.code, out.message, out.tool);
+    }
+    // Une écriture qui ne fait rien doit laisser une trace — le silence a
+    // caché la corbeille `-99` entière (2026-09-20).
+    deps.journal.info("corbeille", { id, from: from.data ?? null });
     return c.json({ deleted: true });
   });
 
@@ -239,7 +245,19 @@ export function raindropsRoutes(deps: SidecarDeps): Hono {
     // `origins` est un contrat front↔sidecar : il n'existe pas côté tool MCP.
     const { origins: _origines, ...args } = body.data;
     const out = await deps.mcp("bulk_raindrops", args);
-    if (!out.ok) return apiError(c, out.code, out.message, out.tool);
+    if (!out.ok) {
+      deps.journal.warn("bulk refusé", {
+        operation: body.data.operation,
+        ids: body.data.ids ?? null,
+        err: out.message,
+      });
+      return apiError(c, out.code, out.message, out.tool);
+    }
+    deps.journal.info("bulk", {
+      operation: body.data.operation,
+      ids: body.data.ids ?? null,
+      to: body.data.to_collection_id ?? null,
+    });
     return c.json(out.data);
   });
 
@@ -252,7 +270,10 @@ export function raindropsRoutes(deps: SidecarDeps): Hono {
     if (!body.success) return apiError(c, "INVALID_INPUT", z.prettifyError(body.error));
     const total = body.data.paires.reduce((n, p) => n + p.copies.length, 0);
     const deduper = makeDedupe({ mcp: deps.mcp, origins: deps.origins });
-    const job = runJob(deps.jobs, "dedupe", total, (j) => deduper(body.data.paires, j));
+    // Le journal traverse jusqu'au job : le terme (corbeillées, échecs) se
+    // logge au point unique de runJob, lisible depuis l'app.
+    const job = runJob(deps.jobs, "dedupe", total, (j) => deduper(body.data.paires, j), deps.journal);
+    deps.journal.info("dedupe lancé", { paires: body.data.paires.length, copies: total });
     return c.json({ jobId: job.id, total });
   });
 

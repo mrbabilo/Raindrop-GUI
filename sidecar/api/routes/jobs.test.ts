@@ -11,6 +11,8 @@ const deps = (jobs: JobStore): SidecarDeps => ({
   cache: {} as SidecarDeps["cache"],
   scanner: {} as SidecarDeps["scanner"],
   origins: {} as SidecarDeps["origins"],
+  journal: { info: () => undefined, warn: () => undefined, error: () => undefined },
+  logsDir: "/non-existant",
   direct: {} as SidecarDeps["direct"],
 });
 

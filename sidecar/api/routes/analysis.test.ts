@@ -54,6 +54,8 @@ beforeEach(async () => {
       forget: async () => undefined,
       flush: async () => undefined,
     } as unknown as SidecarDeps["origins"],
+    journal: { info: () => undefined, warn: () => undefined, error: () => undefined },
+    logsDir: "/non-existant",
   };
   app = createApp(deps, { localToken: TOKEN });
 });

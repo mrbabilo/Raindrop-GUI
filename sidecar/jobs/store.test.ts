@@ -49,3 +49,51 @@ describe("JobStore", () => {
     expect(store.list().length).toBe(50);
   });
 });
+
+describe("runJob — le journal du job", () => {
+  const journal = () => {
+    const entrees: { msg: string; champs?: Record<string, unknown> }[] = [];
+    return {
+      log: {
+        info: (msg: string, champs?: Record<string, unknown>) => { entrees.push({ msg, champs }); },
+        warn: (msg: string, champs?: Record<string, unknown>) => { entrees.push({ msg, champs }); },
+        error: (msg: string, champs?: Record<string, unknown>) => { entrees.push({ msg, champs }); },
+      },
+      entrees,
+    };
+  };
+
+  it("un job heureux : lancé puis terminé, avec son résultat en champs", async () => {
+    const { log, entrees } = journal();
+    const store = new JobStore();
+    runJob(store, "dedupe", 2, async () => ({ corbeille: 2 }), log);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(entrees.map((e) => e.msg)).toEqual(["job lancé", "job terminé"]);
+    expect(entrees[0]?.champs).toEqual({ type: "dedupe", total: 2 });
+    expect(entrees[1]?.champs).toMatchObject({ type: "dedupe", resultat: { corbeille: 2 } });
+  });
+
+  it("un job en échec : « job en échec » avec la raison", async () => {
+    const { log, entrees } = journal();
+    const store = new JobStore();
+    runJob(store, "backup", 1, async () => { throw new Error("réseau coupé"); }, log);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(entrees).toHaveLength(2);
+    expect(entrees[1]).toMatchObject({ msg: "job en échec", champs: { type: "backup", err: "réseau coupé" } });
+  });
+
+  it("un résultat qui porte annule:true se lit « job annulé »", async () => {
+    const { log, entrees } = journal();
+    const store = new JobStore();
+    runJob(store, "dedupe", 3, async () => ({ corbeille: 1, annule: true }), log);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(entrees.map((e) => e.msg)).toEqual(["job lancé", "job annulé"]);
+  });
+
+  it("sans journal, rien ne casse — les appels existants n'en passent pas", async () => {
+    const store = new JobStore();
+    const job = runJob(store, "x", 1, async () => "ok");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(store.get(job.id)?.status).toBe("done");
+  });
+});

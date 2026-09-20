@@ -31,6 +31,8 @@ const deps = (c: McpConnection, origins = makeOriginsFake()): SidecarDeps => ({
   cache: {} as SidecarDeps["cache"],
   scanner: {} as SidecarDeps["scanner"],
   origins,
+  journal: { info: () => undefined, warn: () => undefined, error: () => undefined },
+  logsDir: "/non-existant",
   direct: {} as SidecarDeps["direct"],
 });
 
