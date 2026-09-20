@@ -1,3 +1,13 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+
+/** Le contexte qui repère une tâche EN VOL : posé autour de l'exécution de
+ *  fn, hérité par toutes ses continuations async (même après await) — c'est
+ *  ce qui rend l'imbrication détectable dans run(), d'où qu'elle soit soumise. */
+const CONTEXTE_TACHE = new AsyncLocalStorage<Record<string, never>>();
+// Une VALEUR, pas undefined : als.run(undefined, fn) définirait le store à
+// undefined, indistinguable de l'absence — la garde serait morte.
+const EN_TACHE: Record<string, never> = {};
+
 type Rang = "interactif" | "fond";
 
 interface Tache {
@@ -59,6 +69,19 @@ export class Throttle {
   }
 
   run<T>(fn: () => Promise<T>, opts?: { rang?: Rang }): Promise<T> {
+    // LA GARDE D'IMBRICATION : une tâche en vol qui soumet file.run ferait
+    // deadlocker la file entière en silence — enMarche reste vrai jusqu'au
+    // finally de l'englobante, qui attend justement la sous-tâche. Le
+    // contexte (posé autour de l'exécution de fn seulement, jamais sur la
+    // promesse exposée — sinon les .then légitimes des appelants, comme le
+    // retry de makeMcpCaller, seraient refusés à tort) rend l'erreur claire.
+    if (CONTEXTE_TACHE.getStore() !== undefined) {
+      return Promise.reject(new Error(
+        "imbrication de file interdite : une tâche en vol ne soumet pas file.run " +
+        "(la sous-tâche ne serait jamais servie — deadlock). Déroulez l'appel " +
+        "autour du créneau, jamais dedans.",
+      ));
+    }
     this._pending++;
     const rang = opts?.rang ?? "interactif";
     return new Promise<T>((resoudre, rejeter) => {
@@ -69,10 +92,11 @@ export class Throttle {
           // promesse) : sans ce filet, l'exception s'échappe avant
           // `.then`/`.finally`, `enMarche` reste bloqué à `true` pour
           // toujours et la file entière — MCP et REST confondus — s'arrête
-          // de servir qui que ce soit.
+          // de servir qui que ce soit. Le contexte d'imbrication est posé
+          // ICI (autour de fn), pas sur la promesse retournée par run().
           let resultat: Promise<T>;
           try {
-            resultat = fn();
+            resultat = CONTEXTE_TACHE.run(EN_TACHE, fn);
           } catch (e) {
             resultat = Promise.reject(e);
           }

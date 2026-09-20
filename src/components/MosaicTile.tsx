@@ -31,7 +31,7 @@ export function MosaicTile({
       <div className="wash aspect-[221/118] w-full overflow-hidden" style={variablesTeinte(collectionRacine)}>
         {/* alt="" : le titre est juste en dessous, l'image est décorative. */}
         {r.cover
-          ? <img src={r.cover} alt="" className="h-full w-full object-cover" />
+          ? <img src={r.cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
           : <span className="grid h-full w-full place-items-center text-2xl">{r.title[0] ?? "?"}</span>}
       </div>
       <span className="line-clamp-2 px-2 pt-1 text-[13px] leading-tight">{r.title}</span>

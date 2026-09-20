@@ -17,6 +17,15 @@ const queryClient = new QueryClient({
     queries: {
       retry: false,
       staleTime: 30_000,
+      // refetchOnWindowFocus: false — même argument que `networkMode` :
+      // notre API est locale, et au retour de fenêtre le défaut v5
+      // refetcherait TOUTES les pages chargées d'une liste infinie à
+      // travers la file 550 ms (une fiche en « Chargement… » pendant que
+      // la liste se rattrape). La fraîcheur continue se demande
+      // explicitement (refetchInterval sur status et jobs), les écritures
+      // de l'app invalident, et le reste se rattrape à la navigation ; la
+      // resynchronisation hors-app sera un geste explicite (lot hors ligne).
+      refetchOnWindowFocus: false,
       // `networkMode: "always"` — et ce n'est pas un contournement.
       //
       // Par défaut (« online »), react-query MET EN PAUSE toute requête quand

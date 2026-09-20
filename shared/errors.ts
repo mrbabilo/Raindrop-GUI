@@ -5,14 +5,16 @@ export type ErrorCode =
   | "MCP_CRASHED"
   | "RATE_LIMITED"
   | "RAINDROP_API"
-  | "INVALID_INPUT";
+  | "INVALID_INPUT"
+  | "SCAN_EN_COURS";
 
 export interface ApiErrorBody {
   error: { code: ErrorCode; message: string; tool?: string };
 }
 
-const STATUS_BY_CODE: Record<ErrorCode, 400 | 429 | 502 | 503 | 504> = {
+const STATUS_BY_CODE: Record<ErrorCode, 400 | 409 | 429 | 502 | 503 | 504> = {
   INVALID_INPUT: 400,
+  SCAN_EN_COURS: 409,
   RATE_LIMITED: 429,
   RAINDROP_API: 502,
   MCP_CRASHED: 503,
@@ -36,5 +38,5 @@ export function apiError(
   tool?: string,
 ): Response {
   const body: ApiErrorBody = { error: { code, message, ...(tool ? { tool } : {}) } };
-  return c.json(body, errorStatus(code) as 400 | 429 | 502 | 503 | 504);
+  return c.json(body, errorStatus(code) as 400 | 409 | 429 | 502 | 503 | 504);
 }

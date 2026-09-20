@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitForElementToBeRemoved } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import type { ReactNode } from "react";
 // fixtures AVANT Sidebar : la factory vi.mock (hisée au-dessus des imports)
 // référence `collections` — voir la note de useStaticData.test.tsx (TDZ).
 import { collections } from "../test/fixtures";

@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from "vites
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import type { ReactNode } from "react";
 // fixtures AVANT ListPane : la factory vi.mock (hisée au-dessus des imports)
 // référence `raindrop` — piège TDZ documenté dans useStaticData.test.tsx.
 import { raindrop, collections } from "../test/fixtures";
@@ -206,6 +205,19 @@ describe("ListPane", () => {
     renderList();
     expect(screen.getByText("Rien ici")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  // La PREMIÈRE charge (requête en vol, rien encore reçu) rendait un
+  // virtualiseur à zéro SANS UN MOT — ni liste, ni « Chargement… ».
+  it("la première charge d'une vue se dit : « Chargement… »", () => {
+    etatListe.valeur = {
+      data: undefined, isError: false, isFetching: true,
+      fetchNextPage: vi.fn(), hasNextPage: false, isFetchingNextPage: false, refetch: vi.fn(),
+    };
+    renderList();
+    expect(screen.getByText(/Chargement/i)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText("Rien ici")).not.toBeInTheDocument();
   });
 });
 

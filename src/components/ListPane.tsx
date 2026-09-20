@@ -105,18 +105,18 @@ export function ListPane() {
   // À vide aussi le composer reste monté : c'est LUI qui crée le premier
   // bookmark de la collection — l'état vide seul le priverait de raison d'être.
   //
-  // L'échec compte ici comme un vide : sans lui, une requête en erreur
-  // tombait dans cette branche et annonçait « Rien ici » — « cette collection
-  // ne contient rien », quand la vérité était « je n'ai pas pu regarder ».
-  if (items.length === 0 && (!query.isFetching || query.isError))
+  // Les quatre états se disent ici, dans l'ordre d'EtatListe (l'échec prime
+  // sur le vide) : sans la branche de chargement, la PREMIÈRE requête d'une
+  // vue rendait un virtualiseur à zéro sans un mot.
+  if (items.length === 0)
     return (
       <div className="flex h-full min-h-0 flex-col">
         <Composer />
         <main className="grid min-h-0 flex-1 place-items-center">
           <EtatListe
-            chargement={false}
+            chargement={query.isFetching && !query.isError}
             erreur={query.isError ? query.error?.message : null}
-            vide
+            vide={!query.isFetching && !query.isError}
             reessayer={() => void query.refetch()}
           />
         </main>

@@ -133,6 +133,33 @@ describe("ResultatsLiens — liens morts et redirections", () => {
     await waitFor(() => expect(screen.queryByText("Page déplacée")).not.toBeInTheDocument());
   });
 
+  // Un diagnostic orphelin (le signet a disparu) se voit et se DIT, mais
+  // n'est plus emporté par les actions de masse : sur un id disparu, elles
+  // ne peuvent plus aboutir.
+  it("l'orphelin n'est pas emporté par « Tout sélectionner », et la ligne le dit", async () => {
+    const mort = (id: number, titre: string, orphelin?: boolean) => ({
+      raindropId: id,
+      url: `https://mort.example/${id}`,
+      status: "dead",
+      redirectKind: null,
+      finalUrl: null,
+      httpStatus: null,
+      redirectChain: null,
+      reason: "http_404",
+      checkedAt: "2026-09-16T00:00:00Z",
+      title: titre,
+      collectionId: 101,
+      ...(orphelin === undefined ? {} : { orphelin }),
+    });
+    resultsMock.mockReturnValue({
+      data: { items: [mort(2000, "Vivant"), mort(2001, "Fantôme", true)], total: 2, page: 0, perPage: 50 },
+    });
+    render(<CleanupView type="dead" />, { wrapper });
+    await userEvent.click(await screen.findByRole("button", { name: "Tout sélectionner (page)" }));
+    expect(screen.getByRole("button", { name: "Mettre à la corbeille (1)" })).toBeEnabled();
+    expect(screen.getByText(/Signet disparu/)).toBeInTheDocument();
+  });
+
   it("liens morts : chip d'entête comptée + piste Wayback Machine", async () => {
     resultsMock.mockReturnValue({
       data: {

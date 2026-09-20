@@ -68,7 +68,12 @@ export function ResultatsLiens({ type, jamaisAnalyse, analyser }: {
   // de la liste principale), et sélectionner ce qu'on ne voit pas trahit le
   // geste. La Revue reste de toute façon l'aperçu désélectionnable.
   const toutSelectionner = () => {
-    for (const r of items) if (!selectedIds.has(r.raindropId)) toggleSelect(r.raindropId);
+    // Les orphelins restent hors de la sélection : leur signet n'existe plus,
+    // les actions de masse ne peuvent plus y aboutir.
+    for (const r of items) {
+      if (r.orphelin || selectedIds.has(r.raindropId)) continue;
+      toggleSelect(r.raindropId);
+    }
   };
   const corbeille = () => {
     go({

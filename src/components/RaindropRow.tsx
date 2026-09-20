@@ -65,7 +65,7 @@ export function RaindropRow(props: {
         // franchi, donc trop tard. Une ligne de liste ne se sélectionne pas :
         // le texte se copie depuis le détail.
         "flex min-h-9 cursor-pointer select-none items-center gap-2 overflow-hidden border-b border-app-border px-3 " +
-        (props.isDetail ? "bg-app-panel " : "") +
+        (props.isDetail ? "bg-app-sel " : "") +
         (etat ? "filet " + etat : "")
       }
       {...props.poignee}

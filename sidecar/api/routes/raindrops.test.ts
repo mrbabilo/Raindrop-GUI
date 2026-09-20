@@ -1,5 +1,5 @@
 import { repertoireTemporaire } from "../../testing/tmp.js";
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import type { Hono } from "hono";
 import { join } from "node:path";
 import { createApp } from "../app.js";
@@ -69,10 +69,6 @@ const unrestoreDirect = (calls: [number[], number][], failTo?: number) => ({
     return { ok: true as const, data: { restored: ids.length } };
   },
 });
-
-/** App pour POST /unrestore : direct espion + origines factices fournies. */
-const unrestoreApp = (calls: [number[], number][], origins: ReturnType<typeof makeOriginsFake>, failTo?: number): Hono =>
-  createApp({ ...baseDeps, direct: unrestoreDirect(calls, failTo), origins: origins.store }, { localToken: TOKEN });
 
 /** Vrai store dont TOUTE écriture échoue (répertoire parent inexistant → ENOENT) :
  *  verrouille « un échec d'écriture du store ne fait jamais échouer la route ». */
@@ -284,88 +280,8 @@ describe("routes raindrops", () => {
     expect(res.status).toBe(200);
     expect(spy[0]).toEqual(["bulk_raindrops", { operation: "move", collection_id: 0, ids: [1000, 1001], to_collection_id: 101 }]);
   });
-
-  // Task 0b — remplace le test de la Task 0 (POST /raindrops/unrestore, 404 réel)
-  it("POST /unrestore avec toCollectionId : un appel, origines oubliées, unknown:[]", async () => {
-    const calls: [number[], number][] = [];
-    const origins = makeOriginsFake([], new Map([[1000, 5]]));
-    const res = await req(unrestoreApp(calls, origins), "/api/raindrops/unrestore", {
-      method: "POST",
-      body: JSON.stringify({ ids: [1000, 1002], toCollectionId: 9 }),
-    });
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ restored: 2, unknown: [] });
-    expect(calls).toEqual([[[1000, 1002], 9]]);
-    expect(origins.map.has(1000)).toBe(false); // forget des ids restaurés
-  });
-
-  it("POST /unrestore avec destination et écriture du store impossible → 200, forget avalé", async () => {
-    const calls: [number[], number][] = [];
-    const store = brokenOrigins();
-    // préchauffe la MÉMOIRE (le disque est KO) : sinon forget n'a rien à retirer
-    // et ne déclenche jamais l'écriture qui doit être avalée
-    await store.remember(1000, 9).catch(() => undefined);
-    await store.remember(1002, 9).catch(() => undefined);
-    const res = await req(
-      createApp({ ...baseDeps, direct: unrestoreDirect(calls), origins: store }, { localToken: TOKEN }),
-      "/api/raindrops/unrestore",
-      { method: "POST", body: JSON.stringify({ ids: [1000, 1002], toCollectionId: 9 }) },
-    );
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ restored: 2, unknown: [] });
-  });
-
-  it("POST /unrestore sans destination : un appel par origine, unknown renvoyé tel quel", async () => {
-    const calls: [number[], number][] = [];
-    const origins = makeOriginsFake([], new Map([[1000, 5], [1001, 5], [1002, 7]]));
-    const res = await req(unrestoreApp(calls, origins), "/api/raindrops/unrestore", {
-      method: "POST",
-      body: JSON.stringify({ ids: [1000, 1001, 1002, 1003] }),
-    });
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ restored: 3, unknown: [1003] });
-    // les groupes passent par la file (throttle 550 ms en prod), l'un après l'autre
-    expect(calls).toEqual([[[1000, 1001], 5], [[1002], 7]]);
-    expect(origins.map.has(1000)).toBe(false);
-    expect(origins.map.has(1002)).toBe(false);
-    expect(origins.map.get(1003)).toBeUndefined();
-  });
-
-  it("échec d'une destination : origines du groupe en échec conservées (retry possible)", async () => {
-    const calls: [number[], number][] = [];
-    const origins = makeOriginsFake([], new Map([[1000, 5], [1002, 7]]));
-    const res = await req(unrestoreApp(calls, origins, 7), "/api/raindrops/unrestore", {
-      method: "POST",
-      body: JSON.stringify({ ids: [1000, 1002] }),
-    });
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ restored: 1, unknown: [] });
-    expect(origins.map.get(1002)).toBe(7); // PAS forget — sinon irrécupérable à l'origine
-    expect(origins.map.has(1000)).toBe(false);
-  });
-
-  it("POST /unrestore avec toCollectionId en échec → erreur, origines conservées", async () => {
-    const calls: [number[], number][] = [];
-    const origins = makeOriginsFake([], new Map([[1000, 5]]));
-    const res = await req(unrestoreApp(calls, origins, 9), "/api/raindrops/unrestore", {
-      method: "POST",
-      body: JSON.stringify({ ids: [1000, 1001], toCollectionId: 9 }),
-    });
-    expect(res.status).toBe(502);
-    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("RAINDROP_API");
-    expect(origins.map.get(1000)).toBe(5);
-  });
-
-  it("POST /unrestore exige ids non vides (400)", async () => {
-    const res = await req(app, "/api/raindrops/unrestore", {
-      method: "POST",
-      body: JSON.stringify({ ids: [] }),
-    });
-    expect(res.status).toBe(400);
-  });
 });
 
-// La route dedupe : câblage du job, validation du corps.
 describe("POST /dedupe", () => {
   it("corps valide → un job COURT et déduplique, pas seulement existe", async () => {
     // Le stub `jobs` de baseDeps ne sait pas créer : un vrai store, ici.

@@ -73,12 +73,7 @@ pub fn ecrire(token: &str) -> Result<(), String> {
 }
 
 /// Effacer un token absent n'est pas une erreur : le résultat voulu est
-/// « plus de token », et il est atteint.
-///
-/// Sans appelant aujourd'hui : servira à l'écran de réglages
-/// (déconnexion), parké en ROADMAP. La déconnexion effective d'un jeton
-/// remplacé n'en a pas besoin — `ecrire()` écrase.
-#[allow(dead_code)]
+/// « plus de token », et il est atteint. Appelée par `commandes::deconnecter`.
 pub fn effacer() -> Result<(), String> {
     match entree()?.delete_credential() {
         Ok(()) | Err(Error::NoEntry) => Ok(()),

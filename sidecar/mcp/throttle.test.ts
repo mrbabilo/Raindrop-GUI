@@ -81,6 +81,22 @@ describe("Throttle", () => {
     expect(ordre.filter((x) => x === "f")).toHaveLength(3);
   });
 
+  // Le piège du file.run englobant : une sous-tâche soumise DEPUIS une
+  // tâche en vol ne serait JAMAIS servie — enMarche reste vrai jusqu'au
+  // finally de l'englobante, qui attend justement la sous-tâche. Deadlock
+  // silencieux de toute la file (MCP et REST confondus). La garde en fait
+  // une erreur claire au lieu d'un figement.
+  it("un run imbriqué dans une tâche en vol est refusé d'une erreur claire, jamais mis en file", async () => {
+    const t = new Throttle(0);
+    const englobante = t.run(async () => {
+      await expect(t.run(async () => 1)).rejects.toThrow(/imbrication/i);
+    });
+    await expect(englobante).resolves.toBeUndefined();
+    // La file continue de servir après coup.
+    await expect(t.run(async () => 42)).resolves.toBe(42);
+    expect(t.pendingCount).toBe(0);
+  });
+
   it("sans rang précisé, le comportement d'avant est inchangé", async () => {
     const t = new Throttle(0);
     const ordre: number[] = [];

@@ -2,7 +2,6 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import type { ReactNode } from "react";
 // fixtures AVANT CleanupDashboard : la factory vi.mock (hisée au-dessus des
 // imports) référence `collections` — même note TDZ que Sidebar.test.tsx.
 import { collections } from "../test/fixtures";
@@ -236,6 +235,26 @@ describe("CleanupDashboard", () => {
   // R12P-1 : un échec de lancement ne doit pas être silencieux (pattern T8 :
   // erreur inline, brouillon non détruit). Ex. scan déjà en cours côté
   // sidecar après un quit/retour sur la vue.
+  // Quitter le Nettoyage pendant un scan ne doit pas laisser la connexion
+  // SSE ouverte jusqu'à la fin du job : le composant qui la lisait est
+  // démonté, le controller doit couper le flux au démontage. (Le job
+  // sidecar, lui, continue — le retour ré-adopte par /api/jobs.)
+  it("quitter le Nettoyage pendant un scan coupe le suivi SSE", async () => {
+    sendMock.mockResolvedValue({ jobId: "j1" });
+    let recu: AbortSignal | undefined;
+    const interne = stubSseAbordable("j1");
+    vi.stubGlobal("fetch", (url: unknown, init?: { signal?: AbortSignal }) => {
+      if (String(url).includes("/api/jobs/j1/events")) recu = init?.signal;
+      return interne(url as string, init);
+    });
+    const { unmount } = renderDashboard();
+    const blocLiens = await screen.findByRole("region", { name: "Liens" });
+    await userEvent.click(within(blocLiens).getByRole("button", { name: "Lancer l'analyse" }));
+    await within(blocLiens).findByRole("status"); // progression affichée : le suivi est ouvert
+    unmount();
+    expect(recu?.aborted).toBe(true);
+  });
+
   it("affiche l'erreur inline quand le lancement échoue", async () => {
     sendMock.mockRejectedValue(new Error("scan links déjà en cours"));
     renderDashboard();

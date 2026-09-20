@@ -16,6 +16,7 @@ let conn: McpConnection;
 let app: Hono;
 let jobs: JobStore;
 let cache: AnalysisCache;
+let scanner: Scanner;
 
 // Adaptation brief : l'API locale est derrière l'auth Bearer (Task 7, spec §3.7)
 // → chaque requête du test fournit le token local (même motif que app.test.ts).
@@ -28,7 +29,7 @@ beforeEach(async () => {
   conn = McpConnection.fromClient(fake.client);
   jobs = new JobStore();
   cache = await AnalysisCache.load(join(repertoireTemporaire("ra-"), "analysis.json"));
-  const scanner = new Scanner({
+  scanner = new Scanner({
     mcp: (t, a) => conn.call(t, a),
     jobs,
     cache,
@@ -87,6 +88,26 @@ describe("routes analyse", () => {
     expect(res.status).toBe(400);
   });
 
+  // La garde de ré-entrance n'est pas une saisie invalide : un 400
+  // « INVALID_INPUT » sur « scan déjà en cours » étiquette mal la panne
+  // (le message écran restait juste, le code mentait).
+  it("POST /scan pendant un scan en cours : 409 SCAN_EN_COURS", async () => {
+    const bloque = createApp(
+      { ...({ mcp: () => new Promise<never>(() => undefined) }) as unknown as SidecarDeps,
+        state: () => "connected",
+        restart: async () => undefined,
+        jobs,
+        cache,
+        scanner,
+      } as unknown as SidecarDeps,
+      { localToken: TOKEN },
+    );
+    await req(bloque, "/api/analysis/scan", { method: "POST", body: JSON.stringify({ type: "links" }) });
+    const res = await req(bloque, "/api/analysis/scan", { method: "POST", body: JSON.stringify({ type: "links" }) });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("SCAN_EN_COURS");
+  });
+
   it("GET /results/duplicates renvoie les groupes", async () => {
     await req(app, "/api/analysis/scan", { method: "POST", body: JSON.stringify({ type: "duplicates" }) });
     await new Promise((r) => setTimeout(r, 400));
@@ -127,6 +148,23 @@ describe("GET /etats — les diagnostics de la liste principale", () => {
     // Un lien sain ne porte aucune marque (DESIGN.md §5) : rien à dire, donc
     // rien à transmettre. La charge suit les PROBLÈMES, pas la bibliothèque.
     expect(body.etats).toEqual({ "2": "dead" });
+  });
+
+  // Le diagnostic orphelin (URL dont plus aucun signet connu ne porte) se
+  // voit — choix du 2026-09-19 — mais il doit se DIRE : sans la marque, une
+  // ligne sans titre ni collection proposait des actions qui ne peuvent plus
+  // aboutir, et le front ne pouvait pas l'écarter de « Tout sélectionner ».
+  it("une URL sans signet connu sort marquée orphelin", async () => {
+    cache.setResult({ url: "https://perdue.example/fini", status: "dead", httpStatus: 404, redirectChain: null, finalUrl: null, redirectKind: null, reason: "http_404", checkedAt: "2026-09-20T00:00:00Z", raindropId: 9_999 });
+    cache.setResult({ url: "https://autre.example/x", status: "ok", httpStatus: 200, redirectChain: null, finalUrl: null, redirectKind: null, reason: null, checkedAt: "2026-09-20T00:00:00Z", raindropId: 5 });
+    cache.setItemsIndex([{ id: 5, url: "https://autre.example/x", title: "Autre", collectionId: 7, created: "2025-01-01T00:00:00Z", lastUpdate: "2025-01-01T00:00:00Z", tags: [], type: "link", cover: null, important: false, excerpt: "", note: "", domain: "autre.example", highlights: [] } as unknown as RaindropItem]);
+    const res = await req(app, "/api/analysis/results/links"); // all : le verdict ok du non-orphelin y figure aussi
+    const body = (await res.json()) as { items: { orphelin?: boolean; title: string }[] };
+    const perdue = body.items.find((i) => i.title === "https://perdue.example/fini");
+    expect(perdue).toBeDefined();
+    expect(perdue?.orphelin).toBe(true);
+    const autre = body.items.find((i) => i.title === "Autre");
+    expect(autre?.orphelin).toBe(false);
   });
 
   it("trois signets sur une URL morte reçoivent TOUS leur marque", async () => {

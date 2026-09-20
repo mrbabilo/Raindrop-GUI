@@ -17,7 +17,10 @@ export function analysisRoutes(deps: SidecarDeps): Hono {
       const jobId = deps.scanner.startScan(body.data.type);
       return c.json({ jobId }, 202);
     } catch (e) {
-      return apiError(c, "INVALID_INPUT", e instanceof Error ? e.message : String(e));
+      // startScan ne lève QUE la garde de ré-entrance (« scan déjà en
+      // cours ») : un 400 INVALID_INPUT étiquetait mal la panne — c'est un
+      // conflit d'état, pas une saisie fausse.
+      return apiError(c, "SCAN_EN_COURS", e instanceof Error ? e.message : String(e));
     }
   });
 
@@ -100,9 +103,20 @@ export function analysisRoutes(deps: SidecarDeps): Hono {
   return app;
 }
 
-type EnrichedLink = LinkCheckResult & { title: string; collectionId: number };
+type EnrichedLink = LinkCheckResult & { title: string; collectionId: number; orphelin: boolean };
 
 function enrich(r: LinkCheckResult, index: Record<number, { title: string; collectionId: number; url: string }>): EnrichedLink {
   const meta = index[r.raindropId];
-  return { ...r, title: meta?.title ?? r.url, collectionId: meta?.collectionId ?? -1 };
+  // `orphelin` : le signet qui portait ce diagnostic n'est plus connu de
+  // l'instantané (corbellé, supprimé). La ligne se voit — choix du
+  // 2026-09-19, un diagnostic orphelin se voit quand un diagnostic effacé
+  // ne se voit pas — mais elle se DIT maintenant, et le front l'écarte des
+  // actions de masse : sur un id disparu, elles ne peuvent plus aboutir.
+  // (`-1` ne suffit pas : c'est l'identifiant Raindrop des non-classés.)
+  return {
+    ...r,
+    title: meta?.title ?? r.url,
+    collectionId: meta?.collectionId ?? -1,
+    orphelin: !meta,
+  };
 }

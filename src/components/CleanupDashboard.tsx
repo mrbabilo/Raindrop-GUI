@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { useAppState } from "../state/appState";
@@ -56,6 +56,11 @@ function BlocScan({ type, label, lastScan, running, reprise }: {
 }) {
   const [job, setJob] = useState<{ jobId: string; controller: AbortController } | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number; label: string | null } | null>(null);
+  // Quitter le Nettoyage pendant un scan coupe le SUIVI SSE — le composant
+  // qui la lisait est démonté, la connexion ne doit pas rester ouverte
+  // jusqu'à la fin du job. (Le job sidecar, lui, continue : le retour au
+  // Nettoyage le ré-adopte par /api/jobs.)
+  useEffect(() => () => job?.controller.abort(), [job]);
   const cancelJob = useCancelJob();
   // Le job EN VOL qu'on n'a pas lancé soi-même — parce qu'on avait quitté la
   // vue, et que ce composant perd son état au démontage. Sans cette adoption,

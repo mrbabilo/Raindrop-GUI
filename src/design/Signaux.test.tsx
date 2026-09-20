@@ -3,7 +3,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CarreCollection, PiluleEtiquette, filetEtat, teinteCollection } from "./Signaux";
 import type { Collection } from "../../shared/types";
-import { collections } from "../test/fixtures";
 
 // Ce que jsdom PEUT vérifier de DESIGN.md : que les variables de teinte
 // arrivent bien sur les jetons. Il ne calcule aucune couleur oklch — le rendu

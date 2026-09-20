@@ -131,6 +131,7 @@ export const fr = {
   "cleanup.empty-trash": "Vider la corbeille",
   "cleanup.delete-empty": "Supprimer les collections vides",
   "cleanup.wayback": "Chercher une copie archivée",
+  "cleanup.orphelin": "Signet disparu de la bibliothèque — la ligne se garde, ses actions de masse ne s'y appliquent plus",
   "cleanup.dup-exact": "Doublons exacts",
   "cleanup.dup-normalized": "Doublons normalisés",
   "cleanup.dup-fuzzy": "Doublons flous",

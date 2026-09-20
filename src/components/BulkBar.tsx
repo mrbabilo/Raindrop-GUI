@@ -26,6 +26,11 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
   // qui n'en contient aucun affichait une barre « 0 sélectionnés » offrant
   // la corbeille, l'archivage et l'étiquetage sur un ensemble VIDE.
   if (selected.length === 0) return null;
+  // La garde porte la liste PARSÉE, calculée UNE fois et lue par le bouton
+  // ET le handler (le même motif que NonTaggues) : « , , » est truthy mais
+  // parse vide — le bulk update qui en résulterait effacerait toutes les
+  // étiquettes des items sélectionnés.
+  const etiquettesParses = tags.split(",").map((s) => s.trim()).filter(Boolean);
   // R9P-1 : la Revue CONSOMME la sélection — go PUIS clearSelection, dans cet
   // ordre (chirurgical : le clear appartient à l'action, pas au `go` général ;
   // une navigation ordinaire garde sa sélection).
@@ -78,10 +83,9 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
       <button
         type="button"
         className="rounded border border-app-border px-2 py-1 disabled:opacity-40"
-        disabled={tags.split(",").map((s) => s.trim()).filter(Boolean).length === 0}
+        disabled={etiquettesParses.length === 0}
         onClick={() => {
-          const parsed = tags.split(",").map((s) => s.trim()).filter(Boolean);
-          if (parsed.length > 0) build({ op: "tag", tags: parsed });
+          if (etiquettesParses.length > 0) build({ op: "tag", tags: etiquettesParses });
         }}
       >
         {t("bulk.tag")}

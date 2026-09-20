@@ -56,6 +56,7 @@ export function DeadRow({
       <CarreCollection collectionId={r.collectionId} titre={collectionRacine} />
       <span className="min-w-[8rem] flex-1 truncate font-medium">{r.title}</span>
       <span className="url shrink-0 text-[11px] text-app-muted">{r.url}</span>
+      {r.orphelin && <span className="shrink-0 text-xs text-app-muted">{t("cleanup.orphelin")}</span>}
       {r.reason && <span className="shrink-0 text-xs text-app-broken">{r.reason}</span>}
       <ActionLigne el="a" className="btn shrink-0" href={`https://web.archive.org/web/*/${r.url}`} target="_blank" rel="noreferrer">
         {t("cleanup.wayback")}
@@ -90,6 +91,7 @@ export function RedirectRow({ r, collectionRacine, onRemplace }: {
       <span className="shrink-0 text-xs text-app-muted">
         {t(r.redirectKind === "temporary" ? "cleanup.redirect-temporary" : "cleanup.redirect-permanent")}
       </span>
+      {r.orphelin && <span className="shrink-0 text-xs text-app-muted">{t("cleanup.orphelin")}</span>}
       <ActionLigne
         disabled={update.isPending}
         onClick={() => {

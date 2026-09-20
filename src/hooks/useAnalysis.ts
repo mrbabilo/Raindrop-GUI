@@ -27,7 +27,7 @@ export interface DuplicateGroups {
 export type StatusBody = { links: AnalysisStatusEntry; duplicates: AnalysisStatusEntry };
 
 export interface LinksResultsPage {
-  items: (LinkCheckResult & { title: string; collectionId: number })[];
+  items: (LinkCheckResult & { title: string; collectionId: number; orphelin?: boolean })[];
   total: number;
   page: number;
   perPage: number;
@@ -47,7 +47,9 @@ export type LinksFilter = "all" | "dead" | "indeterminate" | "redirect" | "ok";
 
 // Task 13 : activé par les vues cleanupView dead/redirect (résolution
 // contrôleur 1). `enabled` garde la porte ouverte à un hook monté sans fetch ;
-// les vues ne montent la branche concernée que si nécessaire.
+// les vues ne montent la branche concernée que si nécessaire. `perPage` fait
+// partie de la clé : deux appelants à per_page différents pour le même
+// filtre/page liraient sinon le cache l'un de l'autre, sans erreur.
 export const useAnalysisResults = (
   type: "links",
   filter: LinksFilter,
@@ -56,22 +58,25 @@ export const useAnalysisResults = (
   enabled = true,
 ): UseQueryResult<LinksResultsPage> =>
   useQuery({
-    queryKey: ["analysis", "results", type, filter, page],
+    queryKey: ["analysis", "results", type, filter, page, perPage],
     queryFn: () =>
       api.get<LinksResultsPage>(`/api/analysis/results/${type}`, { page, per_page: perPage, filter }),
     enabled,
   });
 
-// Groupes de doublons (GET /api/analysis/results/duplicates) consommés par la
-// vue doublons — mêmes données que useCleanupCounts, clé distincte : le
-// dashboard compte, la vue liste.
+// Groupes de doublons (GET /api/analysis/results/duplicates) — UNE SEULE
+// clé pour les deux consommateurs (le dashboard compte, la vue liste) :
+// le payload vit une fois en cache et TanStack déduplique, là où deux clés
+// en gardaient deux exemplaires. Les groupes sont un PRODUIT DU SCAN :
+// refetcher le cache serveur inchangé ne rapporte rien — et réécrirait
+// l'élagage qu'un tri vient d'appliquer côté client. Seul un scan invalide
+// la clé (useStartScan).
+export const CLE_GROUPES = ["analysis", "results", "duplicates"] as const;
+
 export const useDuplicateGroups = () =>
   useQuery({
-    queryKey: ["analysis", "results", "duplicates"],
+    queryKey: CLE_GROUPES,
     queryFn: () => api.get<DuplicateGroups>("/api/analysis/results/duplicates"),
-    // Les groupes sont un PRODUIT DU SCAN : refetcher le cache serveur
-    // inchangé ne rapporte rien — et réécrirait l'élagage qu'un tri vient
-    // d'appliquer côté client. Seul un scan invalide la clé (useStartScan).
     staleTime: Infinity,
   });
 
@@ -105,17 +110,16 @@ export const useEtatsAnalyse = () =>
  * L'écran des doublons dit vrai APRÈS une suppression : les copies corbeillées
  * sortent des groupes en cache, et un groupe réduit à un exemplaire cesse
  * d'être un doublon. Le cache d'analyse ne se recalcule qu'au scan — sans cet
- * élagage, l'écran affichait les morts jusqu'au re-scan suivant.
+ * élagage, l'écran affichait les morts jusqu'au re-scan suivant. UNE seule
+ * clé désormais : dashboard et vue partagent le même payload.
  */
 export const useElaguerDoublons = () => {
   const qc = useQueryClient();
   return (supprimes: readonly number[]) => {
     if (supprimes.length === 0) return;
-    for (const cle of [["analysis", "results", "duplicates"], ["analysis", "counts", "duplicates"]]) {
-      qc.setQueryData<DuplicateGroups | undefined>(cle, (vieille) =>
-        vieille ? elaguerGroupes(vieille, supprimes) : vieille,
-      );
-    }
+    qc.setQueryData<DuplicateGroups | undefined>(CLE_GROUPES, (vieille) =>
+      vieille ? elaguerGroupes(vieille, supprimes) : vieille,
+    );
   };
 };
 
@@ -160,7 +164,6 @@ export const useStartScan = (type: AnalysisType, onEvent?: (e: ScanEvent) => voi
             const done = typeof p?.done === "number" ? p.done : 0;
             const total = typeof p?.total === "number" ? p.total : 0;
             const label = typeof p?.label === "string" ? p.label : null;
-            qc.setQueryData(["analysis", "job", type], { done, total }); // relisible par T13
             onEvent?.({ kind: "progress", done, total, label });
           },
           onDone: () => {
@@ -200,7 +203,7 @@ export function useCleanupCounts() {
     queryFn: () => api.get<{ total: number }>("/api/analysis/results/links", { filter: "indeterminate", page: 0, per_page: 1 }),
   });
   const groups = useQuery({
-    queryKey: ["analysis", "counts", "duplicates"],
+    queryKey: CLE_GROUPES, // le MÊME payload que la vue — une seule copie en cache
     queryFn: () => api.get<DuplicateGroups>("/api/analysis/results/duplicates"),
     staleTime: Infinity, // produit du scan — même raison que useDuplicateGroups
   });

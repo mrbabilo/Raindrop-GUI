@@ -402,6 +402,42 @@ signet près, y compris croisé avec le filtre de domaine.
 
 ### Corrigé
 
+#### La moisson de l'audit fichier par fichier (2026-09-20)
+
+Relecture de ~60 fichiers (front, sidecar, shell Rust) — constats consignés
+dans `docs/audit-2026-09-20.md`. Les corrections :
+
+- **La file d'appels n'est plus imbricable.** Une tâche en vol qui soumet
+  `file.run` gelait la file entière en silence — la sous-tâche attendait un
+  créneau que l'englobante ne rend qu'après elle. La garde
+  (`AsyncLocalStorage`) en fait une erreur claire au lieu d'un deadlock.
+- **Un second scan lancé pendant un autre répondait 400 « saisie
+  invalide »** : le message écran était juste, le code mentait — c'est un
+  conflit d'état, il répond 409 `SCAN_EN_COURS`.
+- **Un diagnostic orphelin se DIT** : une URL dont plus aucun signet connu
+  ne porte (corbellé, supprimé) sort marquée à l'écran et reste hors des
+  actions de masse — sur un identifiant disparu, elles ne peuvent plus
+  aboutir.
+- **Le suivi d'un scan se coupe au démontage** du composant qui le lisait ;
+  le job sidecar, lui, continue et se ré-adopte au retour dans la vue.
+- **La première requête d'une vue ne rend plus un virtualiseur muet** :
+  chargement, erreur, vide et contenu se disent chacun, dans cet ordre.
+- **Les couvertures de la mosaïque se chargent paresseusement**
+  (`loading="lazy"`) : 12 210 tuiles ne tirent plus leurs images d'un bloc.
+- **Au retour de fenêtre, la liste ne se refetchait pas en bloc** : le défaut
+  v5 de react-query relançait TOUTES les pages chargées à travers la file
+  550 ms — une fiche restait en « Chargement… » pendant que la liste se
+  rattrapait. La fraîcheur continue reste explicite (statut, jobs) et les
+  écritures invalident.
+- Cache d'analyse : la taille de page fait partie de la clé des résultats
+  paginés ; dashboard et vue des doublons partagent UNE copie du payload au
+  lieu de deux ; une écriture de cache jamais relue est retirée.
+- Divers : les étiquettes du bulk sont parsées une fois et lues par le
+  bouton et son gestionnaire ; la ligne de détail porte la teinte de
+  sélection ; `trousseau::effacer` n'est plus signalé mort (la
+  déconnexion l'appelle) ; les tests de `/unrestore` et du dedupe sortent
+  dans leurs fichiers (plafond dur de 400 lignes).
+
 #### Le champ Domaine ne filtrait rien (2026-09-17)
 
 - **La bibliothèque entière revenait**, quel que soit le domaine demandé : le
