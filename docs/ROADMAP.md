@@ -599,6 +599,56 @@ app.raindrop.io (captures dans `.playwright-mcp/raindrop-ref-*.png`).
 - [ ] **Divergence des deux étoiles** : résolue dans la fix wave (`Etoile`
       partagé) — reste à vérifier visuellement la grille 13 px héritée.
 
+## Audit fichier par fichier (ouvert le 2026-09-20)
+
+Le suivi complet vit dans `docs/audit-2026-09-20.md` (document vivant :
+constats avec leur état, pistes écartées et leur mesure). Premier lot
+corrigé et poussé : `bb13bd1` (CleanupView + satellites — garde des
+doublons relue sur les données vivantes, suppression de collection en
+Revue L2, patron « ligne activable » partout, `CleanupView` 390 → 289).
+Ce qui reste :
+
+- [ ] **`useAnalysis.ts:162`** : écriture de cache sans lecteur
+      (`["analysis","job",type]`, commentaire « relisible par T13 »
+      périmé) — retirer la ligne.
+- [ ] **`useAnalysisResults`** : la clé de cache omet `perPage` —
+      l'inclure, ou supprimer le paramètre (mort, tout le monde au défaut
+      50).
+- [ ] **SSE de scan non aborté au démontage** : un `useEffect` d'abort
+      dans `BlocScan` (CleanupDashboard), ou assumer au contrat de
+      `useStartScan` — aujourd'hui la connexion reste ouverte jusqu'à la
+      fin du job quand on quitte le Nettoyage.
+- [ ] **Compteur doublons = payload complet, en deux exemplaires de
+      cache** (dette « à surveiller » déjà notée) : remède = compteur
+      dédié côté sidecar — chantier, pas patch ; coût actuel borné
+      (414 groupes / 1 032 signets).
+- [ ] **4 erreurs `noUnusedLocals` préexistantes** (imports morts :
+      CleanupDashboard.test, ListPane.test, Sidebar.test, Signaux.test) —
+      une ligne chacune, au fil de l'eau.
+- [ ] **`refetchOnWindowFocus`** (défaut v5 non désactivé, `main.tsx`) :
+      au retour de fenêtre >30 s, une liste infinie refetch TOUTES ses
+      pages à travers la file 550 ms — à trancher (le désactiver, ou le
+      resserrer par query).
+- [ ] **Sémantique Raindrop du « vide »** : valider contre l'API réelle
+      (1 requête de métadonnées) le sort d'un parent sans signets mais
+      avec enfants — `PUT /collections/cleanup` et `DELETE
+      /collection/{id}` — pour confirmer le prédicat conservateur
+      `collectionsVides`.
+- [ ] **Ligne orpheline dans les vues de liens : visible mais sans garde**
+      (`analysis.ts` enrich + `cache.ts` resultatsParSignet — le choix du
+      2026-09-19 de garder le diagnostic tient) : un id corbellé/supprimé
+      depuis le scan laisse une ligne `title = url`, `collectionId = -1`
+      (collision de sémantique avec « non classés »), et les actions de
+      masse restent armées sur un id qui n'est plus dans la bibliothèque.
+      Correctif proposé : `enrich` porte `orphelin: true` quand la meta
+      manque ; le front écarte la ligne de « Tout sélectionner » et le
+      dit. Le cas orphelin n'existe PAS dans `analysis.test.ts` — le
+      sabordage est à faire à la correction.
+- [ ] **`POST /api/analysis/scan` répond 400 INVALID_INPUT sur une garde
+      de ré-entrance** (`startScan` lève « scan déjà en cours ») — le
+      message écran est clair, le code ment ; un 409-like, au passage de
+      l'audit `scanner.ts`.
+
 ## Veille
 
 `python3 tools/check_sources.py` — 7 sources, aucune n'a bougé au 2026-09-16.
