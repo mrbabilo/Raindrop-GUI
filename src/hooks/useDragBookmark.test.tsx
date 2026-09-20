@@ -16,12 +16,13 @@ beforeEach(() => {
 // une cible par SORTE de dépôt — la corbeille, les favoris, « Tous », une
 // étiquette ne déplacent plus : chaque sorte a son verbe.
 function Harness({ cocher = [] as number[] }) {
-  const { toggleSelect, selectedRaindropId, selectRaindrop } = useAppState();
+  const { toggleSelect, selectedRaindropId, selectRaindrop, go } = useAppState();
   const { survoler } = useDrag();
   const { poignee, enCours, erreur } = useDragBookmark();
   return (
     <>
       <button type="button" onClick={() => cocher.forEach((id) => toggleSelect(id))}>cocher</button>
+      <button type="button" onClick={() => go({ kind: "list", collectionId: -99, label: "Corbeille" })}>aller-corbeille</button>
       <button type="button" onClick={() => survoler({ sorte: "collection", id: 101 })}>survoler-coll</button>
       <button type="button" onClick={() => survoler({ sorte: "tous" })}>survoler-tous</button>
       <button type="button" onClick={() => survoler({ sorte: "favoris" })}>survoler-favoris</button>
@@ -156,6 +157,40 @@ describe("les dépôts par cible", () => {
     await act(async () => { await Promise.resolve(); });
     expect(sendApi).toHaveBeenCalledWith("POST", "/api/raindrops/bulk", {
       operation: "move", collection_id: 0, ids: [1000], to_collection_id: 101,
+    });
+  });
+
+  // La SOURCE du bulk move est la collection D'OÙ l'on tire (trap compilé
+  // MCP : `PUT /raindrops/{collection_id}`). Depuis la liste Corbeille, les
+  // ids vivent en -99 : déposer sur une collection les en FAIT SORTIR —
+  // `PUT /raindrops/-99` — la destination choisie par le dépôt. Depuis 0,
+  // Raindrop ne trouvait rien à déplacer : rien ne sortait jamais de la
+  // corbeille par drag (défaut signalé 2026-09-20).
+  it("depuis la corbeille, déposer sur une collection les en sort (source -99)", async () => {
+    rendu();
+    act(() => { screen.getByText("aller-corbeille").click(); });
+    const ligne = screen.getByTestId("ligne-1000");
+    pointer(ligne, "pointerdown", 100, 100);
+    fenetre("pointermove", 110, 100);
+    act(() => { screen.getByText("survoler-coll").click(); });
+    fenetre("pointerup", 110, 100);
+    await act(async () => { await Promise.resolve(); });
+    expect(sendApi).toHaveBeenCalledWith("POST", "/api/raindrops/bulk", {
+      operation: "move", collection_id: -99, ids: [1000], to_collection_id: 101,
+    });
+  });
+
+  it("depuis la corbeille, déposer sur « Tous » sort vers les non classés (source -99)", async () => {
+    rendu();
+    act(() => { screen.getByText("aller-corbeille").click(); });
+    const ligne = screen.getByTestId("ligne-1000");
+    pointer(ligne, "pointerdown", 100, 100);
+    fenetre("pointermove", 110, 100);
+    act(() => { screen.getByText("survoler-tous").click(); });
+    fenetre("pointerup", 110, 100);
+    await act(async () => { await Promise.resolve(); });
+    expect(sendApi).toHaveBeenCalledWith("POST", "/api/raindrops/bulk", {
+      operation: "move", collection_id: -99, ids: [1000], to_collection_id: -1,
     });
   });
 

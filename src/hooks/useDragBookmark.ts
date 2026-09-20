@@ -42,10 +42,19 @@ const rendreSelection = (garde: HTMLStyleElement | null): void => {
 // choisit le verbe.
 
 export function useDragBookmark() {
-  const { selectedIds } = useAppState();
+  const { selectedIds, view } = useAppState();
   const { ids, commencer, terminer } = useDrag();
   const bulk = useBulk();
   const [erreur, setErreur] = useState<string | null>(null);
+
+  // La SOURCE du bulk move est l'endroit D'OÙ l'on tire (trap compilé MCP :
+  // `PUT /raindrops/{collection_id}`). Depuis la liste Corbeille, les ids
+  // vivent en -99 : déposer les en FAIT SORTIR — `PUT /raindrops/-99` avec
+  // la destination choisie par le dépôt, exactement la voie de restauration.
+  // Depuis 0, Raindrop ne trouvait rien à déplacer et rien ne sortait jamais
+  // de la corbeille par drag (défaut signalé 2026-09-20).
+  const sourceCorbeille = view.kind === "list" && view.collectionId === -99;
+  const sourceMove = sourceCorbeille ? -99 : 0;
 
   // Origine du geste et signets embarqués, hors du rendu : ils changent à
   // chaque pixel parcouru, et un rendu par pixel ferait ramer la liste.
@@ -63,16 +72,19 @@ export function useDragBookmark() {
       const { ids: portes, cible } = porte;
       if (portes === null || portes.length === 0 || cible === null) return;
       setErreur(null);
-      // La table des sortes : une cible, un verbe. `collection_id: 0` comme
-      // la Revue : le contexte du bulk n'est jamais un marqueur front (R3P).
+      // La table des sortes : une cible, un verbe. `sourceMove` porte la
+      // source du bulk move (0 hors corbeille, -99 dedans) — jamais un
+      // marqueur front (R3P).
       const verbe = (async () => {
         switch (cible.sorte) {
           case "collection":
-            return bulk.mutateAsync({ operation: "move", collection_id: 0, ids: portes, to_collection_id: cible.id });
+            return bulk.mutateAsync({ operation: "move", collection_id: sourceMove, ids: portes, to_collection_id: cible.id });
           case "tous":
             // Y déposer SORT le signet de sa collection : non classés (-1),
-            // destination réelle côté API (demande du 2026-09-20).
-            return bulk.mutateAsync({ operation: "move", collection_id: 0, ids: portes, to_collection_id: -1 });
+            // destination réelle côté API (demande du 2026-09-20). Depuis la
+            // corbeille, la source est -99 : c'est une sortie vers les non
+            // classés.
+            return bulk.mutateAsync({ operation: "move", collection_id: sourceMove, ids: portes, to_collection_id: -1 });
           case "favoris":
             // Non destructeur : `important` est un booléen, la route bulk
             // l'accepte telle quelle.
@@ -90,7 +102,9 @@ export function useDragBookmark() {
       })();
       verbe.catch((e: unknown) => setErreur(e instanceof Error ? e.message : String(e)));
     },
-    [bulk],
+    // `view` dans les deps : quitter la corbeille doit recalculer la source
+    // du move — une closure périmée corbeillerait depuis -99 hors corbeille.
+    [bulk, view],
   );
 
   // Les mouvements s'écoutent sur la FENÊTRE, pas sur la ligne : le pointeur
