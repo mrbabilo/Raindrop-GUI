@@ -7,8 +7,9 @@ import { toCsv, downloadCsv } from "../lib/csv";
 import { useBulk, useEmptyTrash, useDeleteCollection, useInvalidate } from "../hooks/useMutations";
 import { useAppState, type View } from "../state/appState";
 import { useArchives, useInvalidateSauvegarde } from "../hooks/useBackup";
-import { useElaguerDoublons } from "../hooks/useAnalysis";
+import { useElaguerDoublons, type ResultatDedupe } from "../hooks/useAnalysis";
 import { AnnonceArchive, ArchiveJob, BORNE_ARCHIVE, porteeArchive } from "./RevueArchive";
+import { RevueDedupeFin } from "./RevueDedupeFin";
 import { BarreProgression } from "./BarreProgression";
 import { api } from "../lib/api";
 import { jobEvents } from "../lib/sse";
@@ -104,6 +105,9 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
   // Le suivi du job dedupe : N lectures + M écritures dans la file à 550 ms —
   // le tri global des doublons se compte en minutes, la barre le dit.
   const [dedupeProgress, setDedupeProgress] = useState<{ done: number; total: number } | null>(null);
+  // Le terme du job, retenu quand il porte un DÉFICIT : la Revue tient pour
+  // le dire (le silence a déjà caché une corbeille entière — 2026-09-20).
+  const [dedupeFin, setDedupeFin] = useState<ResultatDedupe | null>(null);
   const pending = bulk.isPending || emptyTrash.isPending || dedupeProgress !== null;
 
   // Un DELETE PAR collection, SÉQUENTIELLEMENT dans l'ordre reçu (les ids de
@@ -150,6 +154,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
           { paires: [...parGarde.entries()].map(([garde, copies]) => ({ garde, copies })) },
         );
         setDedupeProgress({ done: 0, total });
+        let resultat: ResultatDedupe | undefined;
         await new Promise<void>((resolve, reject) => {
           // Même garde que useStartScan : l'event `error` rejette AVANT le
           // onDone, sinon l'échec se résoudrait comme une fin normale.
@@ -161,9 +166,16 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
                 reject(new Error(typeof e.message === "string" && e.message ? e.message : "event error sans message"));
                 return;
               }
-              if (e.kind !== "progress") return;
-              const p = e.progress;
-              if (p && typeof p.done === "number") setDedupeProgress({ done: p.done, total });
+              if (e.kind !== "progress" && e.kind !== "done") return;
+              if (e.kind === "progress") {
+                const p = e.progress;
+                if (p && typeof p.done === "number") setDedupeProgress({ done: p.done, total });
+                return;
+              }
+              // Sur `done`, le sidecar sérialise LE RÉSULTAT à plat (sse.ts) :
+              // retenu pour DIRE le terme — le jeter cachait les échecs.
+              const { kind: _kind, ...reste } = e;
+              resultat = reste as ResultatDedupe;
             },
             onDone: () => {
               if (!settled) resolve();
@@ -172,14 +184,26 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
             if (!settled) reject(err);
           });
         });
+        // L'élagage ne retire que ce qui est VRAIMENT parti : un id en échec
+        // reste vivant chez Raindrop — le sortir de la vue serait un mensonge
+        // de plus.
+        const echoues = new Set((resultat?.echecs ?? []).map((x) => x.id));
+        elaguerDoublons(remaining.filter((i) => i.dedupeGarde && !echoues.has(i.id)).map((i) => i.id));
+        invalidate("raindrops", "collections", "tags");
+        clearSelection();
+        if (resultat && (resultat.echecs.length > 0 || resultat.nonFusionnees.length > 0)) {
+          // Un terme portant un déficit TIENT la Revue : le résumé se lit, le
+          // « Retour » du haut (déverrouillé) part — jamais un retour en
+          // silence sur des échecs nommés (R8P-1).
+          setDedupeProgress(null);
+          setDedupeFin(resultat);
+          return;
+        }
       } catch (e) {
         setErreur(e instanceof Error ? e.message : String(e));
         setDedupeProgress(null);
         return;
       }
-      elaguerDoublons(remaining.filter((i) => i.dedupeGarde).map((i) => i.id));
-      invalidate("raindrops", "collections", "tags");
-      clearSelection();
       goBack();
       return;
     }
@@ -312,6 +336,9 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
             }}
           />
         </footer>
+      ) : dedupeFin ? (
+        // Un terme dedupe portant un déficit : la Revue tient pour le dire.
+        <RevueDedupeFin r={dedupeFin} />
       ) : (
       <footer className="flex flex-col gap-2 border-t border-app-border bg-app-panel px-4 py-3 text-sm">
         {dedupeProgress !== null && (

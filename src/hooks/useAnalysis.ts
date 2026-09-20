@@ -106,6 +106,26 @@ export const useEtatsAnalyse = () =>
     staleTime: 60_000,
   });
 
+/** Ce que rend le job dedupe du sidecar (`sidecar/trash/dedupe.ts`), arrivé
+ *  À PLAT sur l'event `done` du flux SSE (trap sse.ts : sur done, le sidecar
+ *  sérialise le RÉSULTAT, pas l'événement). Le front le lit pour DIRE le
+ *  terme — le silence ici a déjà caché une corbeille entière qui ne faisait
+ *  rien (défaut du 2026-09-20). */
+export interface ResultatDedupe {
+  paires: number;
+  /** Copies mises à la corbeille (tentées avec succès). */
+  corbeille: number;
+  /** Copies dont les étiquettes ont été consolidées dans le gardé. */
+  fusionnees: number;
+  /** Étiquettes NOUVELLES effectivement ajoutées aux gardés. */
+  etiquettesAjoutees: number;
+  /** Corbeillées QUAND MÊME, dont les étiquettes n'ont pas pu être lues. */
+  nonFusionnees: { id: number; raison: string }[];
+  /** Copies non corbeillées — encore vivantes chez Raindrop. */
+  echecs: { id: number; raison: string }[];
+  annule: boolean;
+}
+
 /**
  * L'écran des doublons dit vrai APRÈS une suppression : les copies corbeillées
  * sortent des groupes en cache, et un groupe réduit à un exemplaire cesse

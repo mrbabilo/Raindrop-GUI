@@ -162,6 +162,12 @@ export const fr = {
   "review.dedupeNote": "Les étiquettes de chaque copie remontent dans le gardé (le plus ancien), puis les copies partent à la corbeille — réversible. Les surlignages restent dans la corbeille.",
   "review.dedupeGarde": "→ gardé : {titre}",
   "review.dedupeEnCours": "Consolidation et mise à la corbeille…",
+  // Le terme du job dedupe est DIT : le silence a déjà caché une corbeille
+  // entière qui ne faisait rien (défaut du 2026-09-20). Règle du `|` : `n`
+  // porte l'accord (le singulier vaut pour 0), `etiquettes`/`raisons` en `(s)`.
+  "review.dedupe.termine": "Terminé : {n} copie corbeillée · {etiquettes} étiquette(s) récupérée(s).|Terminé : {n} copies corbeillées · {etiquettes} étiquette(s) récupérée(s).",
+  "review.dedupe.echec": "{n} copie NON corbeillée : {raisons}|{n} copies NON corbeillées : {raisons}",
+  "review.dedupe.nonFusionnees": "{n} copie corbeillée sans ses étiquettes (lecture impossible) : {raisons}|{n} copies corbeillées sans leurs étiquettes (lecture impossible) : {raisons}",
   "tags.rename": "Renommer",
   "tags.merge": "Fusionner",
   "tags.delete": "Supprimer",
