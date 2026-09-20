@@ -678,7 +678,8 @@ Ce qui reste :
       deadlockerait toute la file en silence (l'invariant vit dans la
       discipline des appelants ; montage actuel vérifié sans imbrication :
       retry de `makeMcpCaller` hors créneau, `lecture.ts` un `run` par
-      requête). Correctif proposé : `AsyncLocalStorage` autour de
+      requête, et `archivage.ts:1-13` documente le piège et l'évite
+      expressément). Correctif proposé : `AsyncLocalStorage` autour de
       `tache.lancer()`, throw clair dans `run()` si store présent.
 
 ## Veille
