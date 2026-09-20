@@ -218,35 +218,46 @@ describe("la garde de sélection pendant le geste", () => {
   // sélection sur les zones TRAVERSÉES (barre latérale, fiche), là où le
   // texte reste sélectionnable. La garde vit donc AU POINTERDOWN, avant
   // tout pixel, dans le geste lui-même.
-  it("le pointerdown pose user-select:none, le pointerup le rend", () => {
+  // MESURÉ dans le vrai WebKit (sonde, 2026-09-22) : la forme STANDARD
+  // `style.userSelect` y est IGNORÉE — le computed reste `text` — quand la
+  // forme PRÉFIXÉE décide. La garde est donc une FEUILLE DE STYLE qui pose
+  // les deux formes en CSS pur (comme le fichier Tailwind), et qui se
+  // retire à la fin du geste. jsdom ignore les propriétés préfixées dans
+  // style.setProperty : l'assertion porte sur l'élément et son contenu.
+  const gardeDrag = () => document.head.querySelector("style[data-garde-drag]");
+
+  it("le pointerdown pose la garde (deux formes), le pointerup la retire", () => {
     const { getByTestId } = rendu();
-    expect(document.body.style.userSelect).toBe("");
+    expect(gardeDrag()).toBeNull();
     pointer(getByTestId("ligne-1000"), "pointerdown", 0, 0);
-    expect(document.body.style.userSelect).toBe("none");
+    const garde = gardeDrag();
+    expect(garde).not.toBeNull();
+    expect(garde!.textContent).toContain("user-select: none");
+    expect(garde!.textContent).toContain("-webkit-user-select: none");
     fenetre("pointerup", 0, 0);
-    expect(document.body.style.userSelect).toBe("");
+    expect(gardeDrag()).toBeNull();
   });
 
   it("un clic simple (seuil non franchi) ne laisse RIEN posé", () => {
     const { getByTestId } = rendu();
     pointer(getByTestId("ligne-1000"), "pointerdown", 0, 0);
     fenetre("pointerup", 2, 2); // sous les 5 px : c'est un clic
-    expect(document.body.style.userSelect).toBe("");
+    expect(gardeDrag()).toBeNull();
   });
 
   it("un drag complet restaure à la fin", () => {
     const { getByTestId } = rendu();
     pointer(getByTestId("ligne-1000"), "pointerdown", 0, 0);
     fenetre("pointermove", 30, 0); // seuil franchi
-    expect(document.body.style.userSelect).toBe("none");
+    expect(gardeDrag()).not.toBeNull();
     fenetre("pointerup", 30, 0);
-    expect(document.body.style.userSelect).toBe("");
+    expect(gardeDrag()).toBeNull();
   });
 
   it("un pointercancel restaure aussi (filet : geste interrompu par le système)", () => {
     const { getByTestId } = rendu();
     pointer(getByTestId("ligne-1000"), "pointerdown", 0, 0);
     fenetre("pointercancel", 30, 0);
-    expect(document.body.style.userSelect).toBe("");
+    expect(gardeDrag()).toBeNull();
   });
 });

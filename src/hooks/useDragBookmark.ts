@@ -16,10 +16,30 @@ import { api } from "../lib/api";
 /** En deçà, le geste reste un clic : la main tremble, elle ne déplace pas. */
 const SEUIL_PX = 5;
 
+// La garde de sélection, MESURÉE dans le vrai WebKit (sonde, 2026-09-22) :
+// la forme STANDARD `style.userSelect` y est ignorée — le computed reste
+// `text` — quand la forme PRÉFIXÉE décide. La garde est donc une FEUILLE DE
+// STYLE qui pose les deux formes en CSS pur — le parseur du webview lit les
+// deux, exactement comme le `select-none` de Tailwind — et se retire à la
+// fin du geste. Posée AU POINTERDOWN, pas au rendu du fantôme : quelques
+// frames plus tard, WebKit avait déjà amorcé la sélection sur les zones
+// traversées (barre latérale, fiche).
+const couperSelection = (): HTMLStyleElement => {
+  const garde = document.createElement("style");
+  garde.dataset.gardeDrag = "";
+  garde.textContent =
+    "body, body * { user-select: none !important; -webkit-user-select: none !important; }";
+  document.head.appendChild(garde);
+  return garde;
+};
+const rendreSelection = (garde: HTMLStyleElement | null): void => {
+  garde?.remove();
+};
+
 // `depotPermis` a vécu : la garde n'est plus une interdiction de nombre mais
 // une TABLE DES SORTES — chaque entrée de la sidebar pose SA cible (ou pas,
-// pour Non-lus, un filtre d'état), et c'est ici que la sorte choisit le
-// verbe.
+// pour Non-lus, un filtre d'état), et c'est dans `deposer` que la sorte
+// choisit le verbe.
 
 export function useDragBookmark() {
   const { selectedIds } = useAppState();
@@ -29,12 +49,11 @@ export function useDragBookmark() {
 
   // Origine du geste et signets embarqués, hors du rendu : ils changent à
   // chaque pixel parcouru, et un rendu par pixel ferait ramer la liste.
-  // `avant` : le user-select du document, à rendre au relâchement — la garde
-  // vit AU POINTERDOWN, pas au rendu du fantôme : posée quelques frames trop
-  // tard, WebKit avait déjà amorcé la sélection sur les zones traversées
-  // (barre latérale, fiche) même quand la ligne d'origine ne se sélectionnait
-  // pas (constat utilisateur du 2026-09-20).
-  const geste = useRef<{ x: number; y: number; ids: number[]; libelle: string; franchi: boolean; avant: string } | null>(null);
+  // `garde` : les DEUX formes de user-select posées au document au
+  // pointerdown, à rendre au relâchement — posées AU POINTERDOWN, pas au
+  // rendu du fantôme : quelques frames plus tard, WebKit avait déjà amorcé
+  // la sélection sur les zones traversées (barre latérale, fiche).
+  const geste = useRef<{ x: number; y: number; ids: number[]; libelle: string; franchi: boolean; garde: HTMLStyleElement } | null>(null);
   // Vrai tant que le clic de fin appartient à un déplacement. Sans cette
   // garde, relâcher au-dessus d'une ligne ouvrirait la fiche en prime.
   const etaitDrag = useRef(false);
@@ -89,7 +108,7 @@ export function useDragBookmark() {
       const g = geste.current;
       geste.current = null;
       if (g === null) return;
-      document.body.style.userSelect = g.avant;
+      rendreSelection(g.garde);
       if (!g.franchi) return;
       deposer(terminer());
     };
@@ -100,7 +119,7 @@ export function useDragBookmark() {
       const g = geste.current;
       geste.current = null;
       if (g === null) return;
-      document.body.style.userSelect = g.avant;
+      rendreSelection(g.garde);
     };
     window.addEventListener("pointermove", bouge);
     window.addEventListener("pointerup", lache);
@@ -123,7 +142,7 @@ export function useDragBookmark() {
       const g = notre.current;
       if (g !== null) {
         notre.current = null;
-        document.body.style.userSelect = g.avant;
+        rendreSelection(g.garde);
       }
     };
   }, []);
@@ -136,9 +155,8 @@ export function useDragBookmark() {
     (id: number, ouvrir: () => void, titre = "") => ({
       onPointerDown: (e: { clientX: number; clientY: number; button?: number }) => {
         if (e.button !== undefined && e.button !== 0) return; // clic droit : pas un déplacement
-        // La garde AVANT tout pixel : voir le commentaire du ref `geste`.
-        const avant = document.body.style.userSelect;
-        document.body.style.userSelect = "none";
+        // La garde AVANT tout pixel (les deux formes — voir plus haut).
+        const garde = couperSelection();
         // Sélection liée : tirer un signet COCHÉ emmène toute la sélection ;
         // un signet non coché ne s'agrège pas à elle — on tire ce qu'on
         // montre, pas ce qui est coché ailleurs.
@@ -146,7 +164,7 @@ export function useDragBookmark() {
         // Un fantôme qui annonce « 3 signets » vaut mieux que trois titres
         // empilés : on déplace un LOT, sa taille est la seule chose à savoir.
         const libelle = embarques.length > 1 ? t("drag.count", { n: embarques.length }) : titre;
-        geste.current = { x: e.clientX, y: e.clientY, ids: embarques, libelle, franchi: false, avant };
+        geste.current = { x: e.clientX, y: e.clientY, ids: embarques, libelle, franchi: false, garde };
         etaitDrag.current = false;
       },
       onClick: () => {
