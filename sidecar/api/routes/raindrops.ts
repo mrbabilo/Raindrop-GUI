@@ -126,9 +126,11 @@ export function raindropsRoutes(deps: SidecarDeps): Hono {
     // l'envoie en paramètre d'URL et l'API Raindrop l'ignore. Le filtre par
     // domaine n'existe que dans la recherche : on l'y compose, et on RETIRE
     // le paramètre mort des arguments (sinon le pont l'ajoute quand même).
-    // `tags` suit la même règle, pour la même raison.
-    const { domain, tags, ...args } = q.data;
-    const search = composerRecherche(q.data.search, domain, tags);
+    // `tags` suit la même règle, et `media` pareillement — l'opérateur
+    // `type:` est le seul filtre de nature : le paramètre mort faisait
+    // flotter les puces (2026-09-20).
+    const { domain, tags, media, ...args } = q.data;
+    const search = composerRecherche(q.data.search, domain, tags, media);
     const out = await deps.mcp("search_raindrops", { ...args, ...(search === undefined ? {} : { search }) });
     if (!out.ok) return apiError(c, out.code, out.message, out.tool);
     const raw = out.data as { count: number; items: RawRaindrop[] };

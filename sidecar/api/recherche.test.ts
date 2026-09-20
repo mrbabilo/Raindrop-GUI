@@ -112,3 +112,16 @@ describe("composerRecherche — étiquettes", () => {
     expect(composerRecherche(undefined, undefined, [])).toBeUndefined();
   });
 });
+
+describe("composerRecherche — la nature", () => {
+  // La nature de Raindrop ne se filtre QUE par l'opérateur `type:` dans la
+  // recherche (l'API n'a pas de paramètre `media` — même schéma que
+  // `domain`, dont le paramètre mort faisait flotter le filtre).
+  it("la nature devient un terme type: qui s'intersecte avec le reste", () => {
+    expect(composerRecherche(undefined, undefined, undefined, "article")).toBe("type:article");
+    expect(composerRecherche("rust", undefined, undefined, "video")).toBe("rust type:video");
+    expect(composerRecherche("rust", "youtube.com", ["code"], "video")).toBe(
+      'rust domain:"youtube.com" #"code" type:video',
+    );
+  });
+});

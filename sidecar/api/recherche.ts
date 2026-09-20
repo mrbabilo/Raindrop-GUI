@@ -90,12 +90,17 @@ export function composerRecherche(
   search: string | undefined,
   domain: string | undefined,
   tags?: readonly string[],
+  media?: string,
 ): string | undefined {
   const dom = domaineRecherche(domain);
   const termes = [
     search,
     dom === undefined ? undefined : `domain:"${dom}"`,
     ...etiquettesRecherche(tags),
+    // La nature (spec puces §11) : l'API n'a pas de paramètre `media` — le
+    // filtre n'existe que comme opérateur `type:` de la recherche, exactement
+    // comme `domain:` (le paramètre mort du pont faisait flotter le filtre).
+    media === undefined ? undefined : `type:${media}`,
   ].filter((t): t is string => t !== undefined && t !== "");
   return termes.length === 0 ? undefined : termes.join(" ");
 }
