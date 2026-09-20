@@ -627,8 +627,18 @@ Ce qui reste :
       une ligne chacune, au fil de l'eau.
 - [ ] **`refetchOnWindowFocus`** (défaut v5 non désactivé, `main.tsx`) :
       au retour de fenêtre >30 s, une liste infinie refetch TOUTES ses
-      pages à travers la file 550 ms — à trancher (le désactiver, ou le
-      resserrer par query).
+      pages à travers la file 550 ms — le grief du trap « cinq requêtes »
+      par une autre porte. **Audit 2026-09-20 recommande : `false` global,
+      même argument que `networkMode: "always"`** — la fraîcheur continue
+      se demande explicitement (`refetchInterval` déjà posé sur status et
+      jobs), les écritures invalident, le reste se rattrape à la
+      navigation ; la resynchronisation hors-app sera un geste explicite
+      (lot hors ligne).
+- [ ] **La Revue hérite de la colonne détail (320 px) si une fiche est
+      ouverte** (`App.tsx` : `detailOuvert` ignore `view.kind`, rien ne
+      ferme la fiche en allant en Revue) — DESIGN §9 fait de la Revue « le
+      seul écran aéré ». À arbitrer : fermer la fiche à l'entrée en Revue,
+      au coût de rouvrir au retour.
 - [ ] **Sémantique Raindrop du « vide »** : valider contre l'API réelle
       (1 requête de métadonnées) le sort d'un parent sans signets mais
       avec enfants — `PUT /collections/cleanup` et `DELETE
