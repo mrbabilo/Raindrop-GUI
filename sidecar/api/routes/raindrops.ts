@@ -5,6 +5,7 @@ import type { SidecarDeps } from "../deps.js";
 import { toRaindropItem } from "../mappers.js";
 import { composerRecherche } from "../recherche.js";
 import { makeDedupe } from "../../trash/dedupe.js";
+import { corbeilleEnMasse, marquerEtiquette } from "../../trash/bulk.js";
 import { runJob } from "../../jobs/store.js";
 import type { RawRaindrop } from "../mappers.js";
 
@@ -86,6 +87,14 @@ const dedupeBody = z.object({
       }),
     )
     .min(1),
+});
+
+// Les dépôts du glisser-déposer (2026-09-20). Borne 50 : ~1,1 s par item
+// sous la file (lecture + écriture), et le front attend 70 s au plus.
+const bulkTrashBody = z.object({ ids: z.array(z.number().int()).min(1).max(50) });
+const bulkTagBody = z.object({
+  ids: z.array(z.number().int()).min(1).max(50),
+  tag: z.string().min(1),
 });
 
 const unrestoreBody = z.object({
@@ -275,6 +284,24 @@ export function raindropsRoutes(deps: SidecarDeps): Hono {
     const job = runJob(deps.jobs, "dedupe", total, (j) => deduper(body.data.paires, j), deps.journal);
     deps.journal.info("dedupe lancé", { paires: body.data.paires.length, copies: total });
     return c.json({ jobId: job.id, total });
+  });
+
+  // Dépôt du glisser-déposer sur la corbeille (2026-09-20). La sélection
+  // tirée ne transporte pas les origines : le sidecar les LIT, item par
+  // item, et les mémorise avant la corbeille (§4.2).
+  app.post("/bulk-trash", async (c) => {
+    const body = bulkTrashBody.safeParse(await c.req.json().catch(() => null));
+    if (!body.success) return apiError(c, "INVALID_INPUT", "ids : 1 à 50 identifiants");
+    const r = await corbeilleEnMasse({ mcp: deps.mcp, origins: deps.origins, journal: deps.journal }, body.data.ids);
+    return c.json(r);
+  });
+
+  // Dépôt du glisser-déposer sur une étiquette (2026-09-20) : l'union SEULE.
+  app.post("/bulk-tag", async (c) => {
+    const body = bulkTagBody.safeParse(await c.req.json().catch(() => null));
+    if (!body.success) return apiError(c, "INVALID_INPUT", "ids : 1 à 50 identifiants, tag requis");
+    const r = await marquerEtiquette({ mcp: deps.mcp, origins: deps.origins, journal: deps.journal }, body.data.ids, body.data.tag);
+    return c.json(r);
   });
 
   return app;
