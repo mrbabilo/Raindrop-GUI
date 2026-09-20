@@ -441,6 +441,36 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   réelles, toutes corrigées, et le typecheck couvre désormais les tests en
   permanence (`tsconfig.check.json`, trap sauvegarde).
 
+## Traps garde de sélection — lot 2026-09-20
+
+- **Un `disabled` n'est pas une garde structurelle.** La garde « un groupe
+  garde toujours un représentant » vivait dans un `verrouille` calculé par
+  `items.length - cochees.size === 1` — or `cochees` (state local) survit aux
+  données : un refetch de scan (l'invalidation `["analysis"]` passe outre
+  `staleTime: Infinity`, et la promesse d'`useStartScan` survit au démontage
+  du composant qui l'a lancé) change les items d'un groupe à clé inchangée
+  PENDANT que la vue est montée. Cochés fantômes → le verrou s'ouvre ;
+  gardé disparu → `find(...)!` rend `undefined` et le `!` crashe le rendu.
+  **Lire toujours l'intersection cochés ∩ vivant** (`cocheesDe`), et jamais
+  de `!` sur un `find` de rendu.
+- **Cette app n'a PAS d'ErrorBoundary** : un TypeError au rendu est un
+  écran blanc, pas un panneau. Tout garde « ça ne peut pas arriver » doit
+  alors se payer un `if (!x) return` — la branche impossible est celle qui
+  arrive au refetch suivant.
+- **Un keydown « englobant » doit se taire quand le geste naît dans un
+  contrôle interne.** `LigneActivable.Ligne` « entrait » à chaque Enter —
+  y compris quand la ligne était déjà active et le focus sur son bouton :
+  le focus sautait au premier contrôle et le click d'Entrée partait de la
+  CASE au lieu du bouton visé. Règle : `if (e.target !== e.currentTarget)
+  return` — trouvé en écrivant le test (deux items pour que l'assert final
+  distingue), pas en relisant le code.
+- **Migrer des tests entre fichiers par découpage de chaînes python :
+  vérifier les positions relatives des bornes AVANT d'écrire.** Un
+  `s.index(A)`/`s.index(B)` où B précède A découpe à l'envers et duplique
+  des blocs — le fichier corrompu passait encore ses tests (doublons),
+  seul `wc -l` a trahi. Reconstituer au `Write` intégral plutôt que
+  rafistoler.
+
 ## Traps reprise en vol — lot 2026-09-19
 
 - **Une pause de reprise DANS le créneau de file gèle l'interface.** La file
