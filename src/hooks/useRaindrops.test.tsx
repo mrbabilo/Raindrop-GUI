@@ -82,14 +82,15 @@ describe("useRaindrops", () => {
     expect(result.current.hasNextPage).toBe(false);
   });
 
-  it("convertit le marqueur -2 (Non-lus) en search status:unread — il ne sort pas du front", async () => {
+  // « Non classés » (-1) est une VRAIE collection Raindrop : elle passe
+  // telle quelle (l'entrée « Non-lus » qui l'occupait est retirée — la
+  // bibliothèque n'a aucun non-lu, l'entrée ne correspondait à rien).
+  it("-1 (non classés) passe tel quel — destination et liste réelles", async () => {
     const fetchMock = stubFetch(60);
-    const { result } = renderHook(() => useRaindrops({ collectionId: -2 }), { wrapper });
+    const { result } = renderHook(() => useRaindrops({ collectionId: -1 }), { wrapper });
     await waitFor(() => expect(result.current.data?.pages).toHaveLength(1));
     const url = fetchMock.mock.calls[0]![0] as string;
-    expect(url).toContain("search=status%3Aunread");
-    expect(url).toContain("collection_id=0");
-    expect(url).not.toContain("collection_id=-2");
+    expect(url).toContain("collection_id=-1");
   });
 
   it("convertit le marqueur -3 (Favoris) en important=true sur Tous — il ne sort pas du front", async () => {

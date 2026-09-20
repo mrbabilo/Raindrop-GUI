@@ -14,7 +14,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
  *  - `favoris` : marquer favori ;
  *  - `corbeille` : mettre à la corbeille (origines lues par le sidecar) ;
  *  - `tag` : marquer avec l'étiquette (union, jamais remplacement).
- *  Non-lus n'existe pas ici : un filtre d'état n'est pas une destination. */
+ *  Non-taggés n'existe pas ici : un filtre d'état n'est pas une destination. */
 export type CibleDepot =
   | { sorte: "collection"; id: number }
   | { sorte: "tous" }

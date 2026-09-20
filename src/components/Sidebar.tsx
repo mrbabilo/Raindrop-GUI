@@ -91,7 +91,8 @@ export function Sidebar() {
   const roots = arbre.filter((c) => c.parentId === null);
   const childrenOf = (id: number) => arbre.filter((c) => c.parentId === id);
 
-  // Vues fixes : Tous (0), Non-lus (-2), Favoris (-3), Corbeille (-99).
+  // Vues fixes : Tous (0), Non classés (-1), Non-taggés (0 + notag),
+  // Favoris (-3), Corbeille (-99).
   // -2/-3 sont des marqueurs front (ruling R3P) : useRaindrops les convertit
   // en requêtes ; la Sidebar n'émet que `go`.
   return (
@@ -99,9 +100,12 @@ export function Sidebar() {
       <section className="flex flex-col gap-0.5">
         {/* Déposer sur « Tous » sort le signet de sa collection ; sur
             « Favoris », le marque favori ; sur la corbeille, le corbeille
-            (origines lues par le sidecar). Non-lus n'accueille rien. */}
+            (origines lues par le sidecar) ; sur « Non classés », y déplace.
+            « Non-taggés » n'accueille rien : un filtre d'état n'est pas une
+            destination. */}
         <button data-nav className={item + (isList(0) ? selected : "") + survolee({ sorte: "tous" })} {...accueil({ sorte: "tous" })} onClick={() => go({ kind: "list", collectionId: 0, label: t("nav.all") })}>{t("nav.all")}</button>
-        <button data-nav className={item + (isList(-2) ? selected : "")} onClick={() => go({ kind: "list", collectionId: -2, label: t("nav.unread") })}>{t("nav.unread")}</button>
+        <button data-nav className={item + (isList(-1) ? selected : "") + survolee({ sorte: "collection", id: -1 })} {...accueil({ sorte: "collection", id: -1 })} onClick={() => go({ kind: "list", collectionId: -1, label: t("nav.unsorted") })}>{t("nav.unsorted")}</button>
+        <button data-nav className={item} onClick={() => go({ kind: "list", collectionId: 0, label: t("nav.untagged"), notag: true })}>{t("nav.untagged")}</button>
         <button data-nav className={item + (isList(-3) ? selected : "") + survolee({ sorte: "favoris" })} {...accueil({ sorte: "favoris" })} onClick={() => go({ kind: "list", collectionId: -3, label: t("nav.favorites") })}>{t("nav.favorites")}</button>
         <button data-nav className={item + (isList(-99) ? selected : "") + survolee({ sorte: "corbeille" })} {...accueil({ sorte: "corbeille" })} onClick={() => go({ kind: "list", collectionId: -99, label: t("nav.trash") })}>{t("nav.trash")}</button>
       </section>

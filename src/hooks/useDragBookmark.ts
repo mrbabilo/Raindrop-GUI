@@ -38,7 +38,7 @@ const rendreSelection = (garde: HTMLStyleElement | null): void => {
 
 // `depotPermis` a vécu : la garde n'est plus une interdiction de nombre mais
 // une TABLE DES SORTES — chaque entrée de la sidebar pose SA cible (ou pas,
-// pour Non-lus, un filtre d'état), et c'est dans `deposer` que la sorte
+// pour Non-taggés, un filtre d'état), et c'est dans `deposer` que la sorte
 // choisit le verbe.
 
 export function useDragBookmark() {

@@ -1,7 +1,10 @@
 export const fr = {
   "app.title": "Raindrop GUI",
   "nav.all": "Tous",
-  "nav.unread": "Non-lus",
+  // Remplace « Non-lus » (demande du 2026-09-20 : la bibliothèque n'a aucun
+  // non-lu, l'entrée ne correspondait à rien). « Non classés » est la
+  // collection -1 de Raindrop : réelle, listable, destination de dépôt.
+  "nav.unsorted": "Non classés",
   "nav.favorites": "Favoris",
   "nav.trash": "Corbeille",
   "nav.untagged": "Non-taggés",

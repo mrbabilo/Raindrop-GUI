@@ -19,11 +19,9 @@ export interface RaindropQuery {
 }
 
 // Marqueurs d'UI (ruling projet R3P) : ils n'existent PAS côté sidecar.
-// -2 (Non-lus) → search "status:unread" sur Tous (0) ;
 // -3 (Favoris) → important=true sur Tous (0) ;
 // -1 (non classés) et -99 (corbeille) passent tels quels.
 // Aucun marqueur ne sort jamais du front.
-const UNREAD = -2;
 const FAVORITES = -3;
 
 // Booleans → "true"/"false" ou undefined (jamais d'autre valeur — le zod du
@@ -31,14 +29,13 @@ const FAVORITES = -3;
 const bool = (v?: boolean) => (v === undefined ? undefined : v ? "true" : "false");
 
 export function useRaindrops(q: RaindropQuery) {
-  const isUnread = q.collectionId === UNREAD;
   const isFavorites = q.collectionId === FAVORITES;
   return useInfiniteQuery({
     queryKey: ["raindrops", q],
     queryFn: ({ pageParam }) =>
       api.get<Paginated<RaindropItem>>("/api/raindrops", {
-        collection_id: isUnread || isFavorites ? 0 : q.collectionId,
-        search: q.search ?? (isUnread ? "status:unread" : undefined),
+        collection_id: isFavorites ? 0 : q.collectionId,
+        search: q.search,
         // Répété (`?tags=a&tags=b`), jamais joint : un séparateur suppose une
         // étiquette qui ne le contient pas, et rien ne le garantit.
         tags: q.tags,

@@ -48,7 +48,8 @@ describe("Sidebar", () => {
   it("affiche vues fixes, collections (arbre) et tags", () => {
     renderSidebar();
     expect(screen.getByText("Tous")).toBeInTheDocument();
-    expect(screen.getByText("Non-lus")).toBeInTheDocument();
+    expect(screen.getByText("Non classés")).toBeInTheDocument();
+    expect(screen.getByText("Non-taggés")).toBeInTheDocument();
     expect(screen.getByText("Favoris")).toBeInTheDocument();
     expect(screen.getByText("Corbeille")).toBeInTheDocument();
     expect(screen.getByText("Dev")).toBeInTheDocument();
@@ -232,7 +233,7 @@ describe("Sidebar", () => {
     const premier = screen.getByRole("button", { name: "Tous" });
     premier.focus();
     await userEvent.keyboard("{ArrowDown}");
-    expect(screen.getByRole("button", { name: "Non-lus" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Non classés" })).toHaveFocus();
   });
 
   // « →/← déplient/replient un parent » : le pliage au clavier passe par la
@@ -287,12 +288,12 @@ describe("Sidebar", () => {
 
   // Demande du 2026-09-20 : chaque destination a SON verbe. La corbeille,
   // les favoris et « Tous » (sortie de collection) ACCUEILLENT désormais un
-  // dépôt — seul Non-lus reste inerte : un filtre d'état n'est pas une
+  // dépôt — seul Non-taggés reste inerte : un filtre d'état n'est pas une
   // destination.
-  it("corbeille, Favoris et Tous s'allument comme cibles — Non-lus, jamais", async () => {
+  it("corbeille, Favoris, Tous et Non classés s'allument — Non-taggés, jamais", async () => {
     renderSidebar(true);
     await userEvent.click(screen.getByText("tirer"));
-    for (const nom of ["Corbeille", "Tous", "Favoris"]) {
+    for (const nom of ["Corbeille", "Tous", "Favoris", "Non classés"]) {
       const entree = screen.getByText(nom).closest("button")!;
       // Comparer l'avant et l'après : « Tous » est la vue COURANTE et porte
       // déjà `bg-app-sel` de ce fait — c'est l'apparition du contour au
@@ -303,10 +304,10 @@ describe("Sidebar", () => {
       await userEvent.unhover(entree);
       expect(entree.className).toBe(avant);
     }
-    const nonlus = screen.getByText("Non-lus").closest("button")!;
-    const avant = nonlus.className;
-    await userEvent.hover(nonlus);
-    expect(nonlus.className).toBe(avant);
+    const nonTaggues = screen.getByText("Non-taggés").closest("button")!;
+    const avant = nonTaggues.className;
+    await userEvent.hover(nonTaggues);
+    expect(nonTaggues.className).toBe(avant);
   });
 
   // Une étiquette est une cible : y déposer un signet le marque avec elle.
