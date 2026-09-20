@@ -103,14 +103,6 @@ export const useEmptyTrash = () => {
   });
 };
 
-export const useCleanupCollections = () => {
-  const invalidate = useInvalidate();
-  return useMutation({
-    mutationFn: (confirm: boolean) => api.send("POST", "/api/collections/cleanup", { confirm }),
-    onSuccess: () => invalidate("collections"),
-  });
-};
-
 export const useDeleteCollection = () => {
   const invalidate = useInvalidate();
   return useMutation({

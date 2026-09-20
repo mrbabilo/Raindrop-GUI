@@ -240,7 +240,10 @@ export function TrashRow({ r }: { r: RaindropItem }) {
 // Collection vide : la suppression INDIVIDUELLE est IRRÉVERSIBLE (DOMAINE.md
 // niveau 2 — « supprimer des collections ») : elle part en Revue, où la
 // frappe SUPPRIMER la porte. Le DELETE direct au clic n'avait AUCUN garde.
-export function EmptyCollectionRow({ c }: { c: Collection }) {
+// `ids` : la CHAÎNE entière, déjà ordonnée feuilles d'abord par l'appelant
+// (chaineDe + triPourSuppression) — une collection « vide » peut être un
+// parent, et son DELETE à lui seul emporterait ou déracinerait les enfants.
+export function EmptyCollectionRow({ c, ids }: { c: Collection; ids: number[] }) {
   const { go } = useAppState();
   return (
     <Ligne etat={null}>
@@ -251,10 +254,10 @@ export function EmptyCollectionRow({ c }: { c: Collection }) {
           go({
             kind: "review",
             items: [],
-            action: { op: "delete-collections", ids: [c.id] },
+            action: { op: "delete-collections", ids },
             // Une collection n'a pas la forme raindrop des items de Revue —
-            // le VRAI nombre est 1.
-            totalServer: 1,
+            // le VRAI nombre est celui de la chaîne.
+            totalServer: ids.length,
             sourceLabel: c.title,
             returnView: { kind: "cleanupView", type: "empty-collections" },
           })

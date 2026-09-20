@@ -147,15 +147,43 @@ describe("CleanupView", () => {
     expect(sendMock).not.toHaveBeenCalled();
   });
 
-  it("collections vides : « Supprimer les collections vides » va en Revue niveau 2 (total porté)", async () => {
-    const vide = (id: number, titre: string) => ({ id, title: titre, parentId: null, count: 0, public: false, view: "list", cover: null, color: null });
-    collectionsMock.mockReturnValue({ data: [vide(301, "Vide"), vide(302, "Vide aussi"), { id: 303, title: "Pleine", parentId: null, count: 4, public: false, view: "list", cover: null, color: null }] });
+  // Une collection « vide » peut être un PARENT (d'enfants eux-mêmes vides) :
+  // son DELETE à lui seul laisserait Raindrop emporter ou déraciner les
+  // enfants. La ligne emporte la CHAÎNE, déjà ordonnée feuilles d'abord, et
+  // la Revue annonce les ids réels — pas 1.
+  it("collections vides : la suppression d'un parent emporte sa chaîne, feuilles d'abord", async () => {
+    const vide = (id: number, parentId: number | null = null) => ({ id, title: `V${id}`, parentId, count: 0, public: false, view: "list", cover: null, color: null });
+    collectionsMock.mockReturnValue({ data: [vide(301), vide(302, 301), vide(303, 302)] });
+    render(<CleanupView type="empty-collections" />, { wrapper });
+    // La chaîne de 301 (V301) : deux boutons « Supprimer la collection »
+    // existent aussi pour V302/V303 — viser la ligne dont le titre est V301.
+    const ligne = screen.getByText("V301").closest('[role="row"]')!;
+    await userEvent.click(ligne.querySelector("button")!);
+    expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({
+      kind: "review",
+      action: { op: "delete-collections", ids: [303, 302, 301] },
+      totalServer: 3,
+    });
+  });
+
+  // L'action de masse porte ses ids DÉJÀ ORDONNÉS (triPourSuppression,
+  // feuilles d'abord) : la Revue les exécute tels quels, et un parent ne
+  // part jamais avant sa descendance.
+  it("collections vides : « Supprimer les collections vides » va en Revue niveau 2, ids ordonnés des feuilles vers la racine", async () => {
+    const vide = (id: number, parentId: number | null = null) => ({ id, title: `V${id}`, parentId, count: 0, public: false, view: "list", cover: null, color: null });
+    collectionsMock.mockReturnValue({
+      data: [
+        vide(301), // racine vide isolée
+        vide(310), vide(311, 310), vide(312, 311), // chaîne de trois, sans signets
+        { id: 303, title: "Pleine", parentId: null, count: 4, public: false, view: "list", cover: null, color: null },
+      ],
+    });
     render(<CleanupView type="empty-collections" />, { wrapper });
     await userEvent.click(await screen.findByRole("button", { name: "Supprimer les collections vides" }));
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({
       kind: "review",
-      action: { op: "delete-empty-collections" },
-      totalServer: 2, // les DEUX vides — pas 0 (items de Revue vides pour cette action)
+      action: { op: "delete-empty-collections", ids: [312, 311, 301, 310] },
+      totalServer: 4, // les QUATRE vides — pas 0 (items de Revue vides pour cette action)
     });
   });
 
@@ -169,16 +197,16 @@ describe("CleanupView", () => {
     expect(screen.getByRole("button", { name: "Réessayer" })).toBeInTheDocument();
   });
 
-  // Le compte de Raindrop ne voit que les signets DIRECTS : un parent sans
-  // signets mais avec des sous-collections n'est pas vide — le lister
-  // (et le supprimer) emporterait ou déracinerait sa descendance.
-  it("collections vides : un parent avec sous-collections n'est pas vide", () => {
+  // Définition tranchée (2026-09-20) : une chaîne SANS AUCUN signet est vide
+  // ENTIÈRE — le `count` de Raindrop ne voit que les signets directs, mais le
+  // verdict est récursif. Le compteur et la liste le disent tous les deux.
+  it("collections vides : une chaîne parent-enfant sans AUCUN signet est vide entière", () => {
     const c = (id: number, titre: string, parentId: number | null) => ({ id, title: titre, parentId, count: 0, public: false, view: "list", cover: null, color: null });
     collectionsMock.mockReturnValue({ data: [c(301, "Parent", null), c(302, "Enfant", 301)] });
     render(<CleanupView type="empty-collections" />, { wrapper });
-    expect(screen.getByText("(1)")).toBeInTheDocument();
+    expect(screen.getByText("(2)")).toBeInTheDocument();
+    expect(screen.getByText("Parent")).toBeInTheDocument();
     expect(screen.getByText("Enfant")).toBeInTheDocument();
-    expect(screen.queryByText("Parent")).not.toBeInTheDocument();
   });
 });
 

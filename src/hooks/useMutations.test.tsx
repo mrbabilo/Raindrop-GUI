@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import {
-  useBulk, useCleanupCollections, useCreateRaindrop, useDeleteCollection,
+  useBulk, useCreateRaindrop, useDeleteCollection,
   useEmptyTrash, useTagManage, useTrashRaindrop, useUnrestore, useUpdateRaindrop,
 } from "./useMutations";
 
@@ -139,15 +139,6 @@ describe("useEmptyTrash", () => {
     expect(appel?.slice(0, 2)).toEqual(["POST", "/api/maintenance/empty-trash"]);
     expect(appel?.[2]).toEqual({ confirm: true });
     expect(invalidees).toEqual(["raindrops"]);
-  });
-});
-
-describe("useCleanupCollections", () => {
-  it("passe la confirmation reçue et n'invalide que les collections", async () => {
-    const appel = await jouer(() => useCleanupCollections(), true);
-    expect(appel?.slice(0, 2)).toEqual(["POST", "/api/collections/cleanup"]);
-    expect(appel?.[2]).toEqual({ confirm: true });
-    expect(invalidees).toEqual(["collections"]);
   });
 });
 

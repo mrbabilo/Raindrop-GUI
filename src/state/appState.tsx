@@ -49,7 +49,7 @@ export type View =
   // R15P-4 (ex-R4P) : l'action porte ses paramètres — `move` sa destination,
   // `tag` ses étiquettes — la Revue les envoie tels quels au bulk.
   // Task 13 : les deux actions de niveau 2 des vues de traitement — la Revue
-  // (T15) exécutera empty-trash / collections/cleanup. `items` reste la forme
+  // (T15) exécute empty-trash par sa mutation dédiée. `items` reste la forme
   // raindrop : empty-trash passe les items de corbeille chargés (aperçu
   // gratuit), delete-empty-collections une liste vide (une collection n'a pas
   // cette forme — l'action porte le sens).
@@ -71,7 +71,11 @@ export type View =
         | { op: "archive" } // copies permanentes → POST /api/backup/archive (spec sélection §4.2)
         | { op: "dedupe" } // doublons : étiquettes des copies → gardé, puis corbeille
         | { op: "empty-trash" }
-        | { op: "delete-empty-collections" }
+        // Suppression de masse des collections vides : les ids viennent de
+        // triPourSuppression — DÉJÀ ORDONNÉS des feuilles vers la racine, la
+        // Revue les exécute tels quels (jamais le cleanup GLOBAL de Raindrop,
+        // dont la définition du « vide » n'est pas la nôtre).
+        | { op: "delete-empty-collections"; ids: number[] }
         // Suppression INDIVIDUELLE d'une collection vide (CleanupRows) :
         // irréversible (DOMAINE.md niveau 2), elle emprunte la même Revue
         // que la masse — R15P-4 : l'action porte ses ids.

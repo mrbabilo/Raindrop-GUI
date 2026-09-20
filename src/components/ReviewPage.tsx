@@ -4,7 +4,7 @@ import { useIndexClavier } from "../hooks/useIndexClavier";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { toCsv, downloadCsv } from "../lib/csv";
-import { useBulk, useEmptyTrash, useCleanupCollections, useDeleteCollection, useInvalidate } from "../hooks/useMutations";
+import { useBulk, useEmptyTrash, useDeleteCollection, useInvalidate } from "../hooks/useMutations";
 import { useAppState, type View } from "../state/appState";
 import { useArchives, useInvalidateSauvegarde } from "../hooks/useBackup";
 import { useElaguerDoublons } from "../hooks/useAnalysis";
@@ -30,7 +30,6 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
   const { clearSelection } = useAppState();
   const bulk = useBulk();
   const emptyTrash = useEmptyTrash();
-  const cleanup = useCleanupCollections();
   const deleteCollection = useDeleteCollection();
   const invalidate = useInvalidate();
   const elaguerDoublons = useElaguerDoublons();
@@ -105,7 +104,27 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
   // Le suivi du job dedupe : N lectures + M écritures dans la file à 550 ms —
   // le tri global des doublons se compte en minutes, la barre le dit.
   const [dedupeProgress, setDedupeProgress] = useState<{ done: number; total: number } | null>(null);
-  const pending = bulk.isPending || emptyTrash.isPending || cleanup.isPending || dedupeProgress !== null;
+  const pending = bulk.isPending || emptyTrash.isPending || dedupeProgress !== null;
+
+  // Un DELETE PAR collection, SÉQUENTIELLEMENT dans l'ordre reçu (les ids de
+  // delete-empty-collections arrivent déjà triés feuilles d'abord —
+  // triPourSuppression) : au moment où un parent part, sa descendance a déjà
+  // répondu, et le comportement de Raindrop face aux enfants restants
+  // (emportés ? déracinés ?) devient sans objet. allSettled lançait tout en
+  // parallèle — l'ordre n'y était qu'une intention. Un échec n'avorte pas
+  // les suivantes (un id déjà parti répond 404 et ne doit pas bloquer sa
+  // chaîne) ; le premier rejeté reste inline (R8P-1), la Revue tient.
+  const supprimerCollections = async (ids: number[]) => {
+    let premierEchec: unknown = null;
+    for (const id of ids) {
+      try {
+        await deleteCollection.mutateAsync(id);
+      } catch (e) {
+        if (premierEchec === null) premierEchec = e;
+      }
+    }
+    if (premierEchec !== null) throw premierEchec;
+  };
 
   const execute = async () => {
     // L'archivage est un JOB (202 + SSE), pas une mutation : on bascule le
@@ -185,19 +204,8 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
       else if (review.action.op === "tag")
         await bulk.mutateAsync({ operation: "update", collection_id: 0, ids, tags: review.action.tags });
       else if (review.action.op === "empty-trash") await emptyTrash.mutateAsync();
-      else if (review.action.op === "delete-collections") {
-        // Suppression INDIVIDUELLE : un DELETE par collection, jamais le
-        // cleanup GLOBAL (le bras `else` qui l'appelait traiterait une op
-        // inconnue en purge globale — silencieux et bien plus large).
-        // allSettled : un échec n'avorte pas les suivantes ; le premier
-        // rejeté reste inline (R8P-1), la Revue tient.
-        const resultats = await Promise.allSettled(
-          review.action.ids.map((id) => deleteCollection.mutateAsync(id)),
-        );
-        const echec = resultats.find((r) => r.status === "rejected");
-        if (echec) throw (echec as PromiseRejectedResult).reason;
-      }
-      else await cleanup.mutateAsync(true);
+      else if (review.action.op === "delete-collections") await supprimerCollections(review.action.ids);
+      else if (review.action.op === "delete-empty-collections") await supprimerCollections(review.action.ids);
     } catch (e) {
       // R8P-1 : un échec reste inline (role="alert"), la Revue reste
       // affichée — pas de goBack, la sélection et la confirmation tiennent.

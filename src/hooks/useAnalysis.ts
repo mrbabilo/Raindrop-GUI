@@ -228,7 +228,8 @@ export function useCleanupCounts() {
     duplicates: gd ? gd.exact.length + gd.normalized.length + gd.fuzzy.length : undefined,
     duplicatesItems: gd ? compter(gd.exact) + compter(gd.normalized) + compter(gd.fuzzy) : undefined,
     untagged: untagged.data?.count,
-    // Le helper partagé exclut les parents-avec-enfants — la même définition
+    // Le helper partagé rend toute chaîne SANS AUCUN signet (verdict
+    // récursif, triPourSuppression pour l'exécution) — la même définition
     // que la vue, sinon le tableau de bord annonce plus que l'action n'en
     // supprime.
     emptyCollections: collections ? collectionsVides(collections).length : undefined,

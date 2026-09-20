@@ -7,7 +7,7 @@ import { useAppState } from "../state/appState";
 import { useAnalysisStatus, useStartScan } from "../hooks/useAnalysis";
 import { useRaindrops } from "../hooks/useRaindrops";
 import { useCollections } from "../hooks/useStaticData";
-import { collectionsVides } from "../lib/arbre";
+import { collectionsVides, triPourSuppression, chaineDe } from "../lib/arbre";
 import { Icone } from "../design/icones";
 import { EmptyCollectionRow, TrashRow } from "./CleanupRows";
 import { ActionLigne, Ligne } from "./LigneActivable";
@@ -194,16 +194,20 @@ function Corbeille() {
 
 // Collections vides : suppression individuelle en ligne ; « Supprimer les
 // collections vides » (niveau 2) part en Revue SANS items — une collection
-// n'a pas la forme raindrop des items de Revue, l'action porte le sens
-// (choix documenté au rapport) et T15 appellera POST /collections/cleanup.
+// n'a pas la forme raindrop des items de Revue, l'action porte le sens et
+// SES IDS, déjà ordonnés des feuilles vers la racine (triPourSuppression).
+// JAMAIS le cleanup GLOBAL de Raindrop : sa définition du « vide » est la
+// sienne, l'annonce ne coinciderait pas avec ce qui partirait.
 function CollectionsVides() {
   const { go } = useAppState();
   const retourTableau = { label: t("cleanup.retour"), onClick: () => go({ kind: "cleanup" }) };
   const cols = useCollections();
-  // Le helper partagé exclut les parents-avec-enfants (le `count` de
-  // Raindrop ne voit que les signets directs) — même définition que le
-  // compteur du tableau de bord, sinon deux chiffres pour une action.
-  const vides = collectionsVides(cols.data ?? []);
+  // Le helper partagé rend toute chaîne SANS AUCUN signet (verdict
+  // récursif) — même définition que le compteur du tableau de bord, sinon
+  // deux chiffres pour une action.
+  const toutes = cols.data ?? [];
+  const vides = collectionsVides(toutes);
+  const idsOrdonnes = triPourSuppression(toutes, vides.map((c) => c.id));
   return (
     <>
       <Entete
@@ -219,7 +223,7 @@ function CollectionsVides() {
               go({
                 kind: "review",
                 items: [],
-                action: { op: "delete-empty-collections" },
+                action: { op: "delete-empty-collections", ids: idsOrdonnes },
                 // Revue finale : les items de Revue sont vides (une collection
                 // n'a pas leur forme) — le VRAI nombre est vides.length.
                 totalServer: vides.length,
@@ -240,7 +244,14 @@ function CollectionsVides() {
       />
       <div className="min-h-0 flex-1 overflow-y-auto">
         {vides.map((c) => (
-          <EmptyCollectionRow key={c.id} c={c} />
+          <EmptyCollectionRow
+            key={c.id}
+            c={c}
+            // La chaîne ENTIÈRE (une « vide » peut être un parent), déjà
+            // ordonnée des feuilles vers la racine — la Revue l'exécute tels
+            // quels, séquentiellement.
+            ids={triPourSuppression(toutes, chaineDe(toutes, c.id))}
+          />
         ))}
       </div>
     </>
