@@ -6,7 +6,8 @@ import { CarreCollection } from "../design/Signaux";
 // Tags en a eu besoin à son tour (LigneActivable.tsx).
 import { ActionLigne, ErreurLigne, Ligne } from "./LigneActivable";
 import { choisirGarde, copiesDe } from "../lib/doublons";
-import { useUpdateRaindrop, useUnrestore, useDeleteCollection } from "../hooks/useMutations";
+import { useUpdateRaindrop, useUnrestore } from "../hooks/useMutations";
+import { useAppState } from "../state/appState";
 import { useCollections } from "../hooks/useStaticData";
 import type { Collection, DuplicateGroup, RaindropItem } from "../../shared/types";
 import type { LinksResultsPage } from "../hooks/useAnalysis";
@@ -68,7 +69,14 @@ export function DeadRow({
 // l'URL finale » PATCH {url} seul (le sidecar refuse url + autres champs et
 // le route en REST direct — trap `update_raindrop` v1.3.1) ; la ligne
 // remplacée quitte la vue, le scan la rattrapera.
-export function RedirectRow({ r, collectionRacine }: { r: LinkEnrichi; collectionRacine?: string }) {
+export function RedirectRow({ r, collectionRacine, onRemplace }: {
+  r: LinkEnrichi;
+  collectionRacine?: string;
+  /** Remonte le succès à la VUE (ResultatsLiens) : l'état de remplacement ne
+   *  peut pas vivre ici — la pagination démonte la ligne, et la ligne
+   *  remplacée reviendrait de l'aller-retour de page. */
+  onRemplace?: (id: number) => void;
+}) {
   const update = useUpdateRaindrop(r.raindropId);
   const [remplace, setRemplace] = useState(false);
   if (remplace) return null;
@@ -85,7 +93,13 @@ export function RedirectRow({ r, collectionRacine }: { r: LinkEnrichi; collectio
       <ActionLigne
         disabled={update.isPending}
         onClick={() => {
-          if (r.finalUrl) update.mutate({ url: r.finalUrl }, { onSuccess: () => setRemplace(true) });
+          if (r.finalUrl)
+            update.mutate({ url: r.finalUrl }, {
+              onSuccess: () => {
+                setRemplace(true);
+                onRemplace?.(r.raindropId);
+              },
+            });
         }}
       >
         {t("cleanup.replace-url")}
@@ -119,11 +133,16 @@ export function DuplicateGroupCard({ g, titreRacine, cochees, basculer, definir,
     definir(copiesDe(g.items, garde.id).map((c) => c.id));
   };
   const envoyer = () => {
-    const gardeId = g.items.find((i) => cochees.has(i.id) === false)!.id;
+    const dernier = g.items.find((i) => cochees.has(i.id) === false);
+    // Défense : la vue intersecte les cochés avec le vivant (CleanupView
+    // `cocheesDe`), donc ce cas ne survient plus par les données — s'il
+    // survenait, on ne part PAS sans gardé désigné (un `!` ici serait un
+    // crash de rendu, et il n'y a aucun ErrorBoundary).
+    if (!dernier) return;
     surRevue(
       g.items
         .filter((i) => cochees.has(i.id))
-        .map((i) => ({ id: i.id, url: i.url, title: i.title, collectionId: i.collectionId, dedupeGarde: { id: gardeId, title: g.items.find((x) => x.id === gardeId)!.title } })),
+        .map((i) => ({ id: i.id, url: i.url, title: i.title, collectionId: i.collectionId, dedupeGarde: { id: dernier.id, title: dernier.title } })),
     );
     definir([]);
   };
@@ -216,18 +235,31 @@ export function TrashRow({ r }: { r: RaindropItem }) {
   );
 }
 
-// Collection vide : suppression individuelle (DELETE /api/collections/:id) —
-// la suppression en masse est l'action niveau 2 de la Revue (T15).
+// Collection vide : la suppression INDIVIDUELLE est IRRÉVERSIBLE (DOMAINE.md
+// niveau 2 — « supprimer des collections ») : elle part en Revue, où la
+// frappe SUPPRIMER la porte. Le DELETE direct au clic n'avait AUCUN garde.
 export function EmptyCollectionRow({ c }: { c: Collection }) {
-  const suppr = useDeleteCollection();
+  const { go } = useAppState();
   return (
     <Ligne etat={null}>
       <CarreCollection collectionId={c.id} titre={c.title} />
       <span className="min-w-[8rem] flex-1 truncate font-medium">{c.title}</span>
-      <ActionLigne disabled={suppr.isPending} onClick={() => suppr.mutate(c.id)}>
+      <ActionLigne
+        onClick={() =>
+          go({
+            kind: "review",
+            items: [],
+            action: { op: "delete-collections", ids: [c.id] },
+            // Une collection n'a pas la forme raindrop des items de Revue —
+            // le VRAI nombre est 1.
+            totalServer: 1,
+            sourceLabel: c.title,
+            returnView: { kind: "cleanupView", type: "empty-collections" },
+          })
+        }
+      >
         {t("cleanup.delete-collection")}
       </ActionLigne>
-      {suppr.isError && <ErreurLigne message={String(suppr.error?.message ?? "")} />}
     </Ligne>
   );
 }

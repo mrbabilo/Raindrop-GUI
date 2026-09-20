@@ -397,3 +397,43 @@ describe("ReviewPage — le retour visible", () => {
     expect(screen.getByRole("button", { name: "Retour" })).toBeDisabled();
   });
 });
+
+// DOMAINE.md : supprimer des collections est IRRÉVERSIBLE (niveau 2). La
+// suppression INDIVIDUELLE (une ligne de CollectionsVides) emprunte la même
+// Revue que la masse — la frappe SUPPRIMER la porte, chaque id part par son
+// DELETE, jamais par le cleanup GLOBAL.
+describe("ReviewPage — suppression de collections individuelles (niveau 2)", () => {
+  const revue: View = {
+    kind: "review",
+    items: [],
+    action: { op: "delete-collections", ids: [301, 302] },
+    sourceLabel: "Collections vides",
+    totalServer: 2,
+    returnView: { kind: "cleanupView", type: "empty-collections" },
+  };
+
+  it("la frappe ouvre Exécuter, qui envoie UN DELETE par id — pas le cleanup global", async () => {
+    sendMock.mockResolvedValue({});
+    renderReview(revue);
+    expect(screen.getByText(/2 item\(s\) affecté\(s\)/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Exécuter" })).toBeDisabled();
+    await userEvent.type(screen.getByPlaceholderText(/SUPPRIMER/), "SUPPRIMER");
+    await userEvent.click(screen.getByRole("button", { name: "Exécuter" }));
+    await vi.waitFor(() => expect(sendMock).toHaveBeenCalledWith("DELETE", "/api/collections/301"));
+    expect(sendMock).toHaveBeenCalledWith("DELETE", "/api/collections/302");
+    expect(sendMock).not.toHaveBeenCalledWith("POST", "/api/collections/cleanup", expect.anything());
+    expect(goBack).toHaveBeenCalled();
+  });
+
+  it("un échec reste inline, la Revue tient, pas de retour", async () => {
+    // Les DELETE partent dans l'ordre des ids : 301 passe, 302 rejette.
+    sendMock.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error("http 500"));
+    renderReview(revue);
+    await userEvent.type(screen.getByPlaceholderText(/SUPPRIMER/), "SUPPRIMER");
+    await userEvent.click(screen.getByRole("button", { name: "Exécuter" }));
+    // Le premier rejeté se dit (role="alert") et R8P-1 tient : pas de
+    // goBack, la Revue reste affichée.
+    await vi.waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+    expect(goBack).not.toHaveBeenCalled();
+  });
+});

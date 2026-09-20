@@ -4,7 +4,7 @@ import { useIndexClavier } from "../hooks/useIndexClavier";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { toCsv, downloadCsv } from "../lib/csv";
-import { useBulk, useEmptyTrash, useCleanupCollections, useInvalidate } from "../hooks/useMutations";
+import { useBulk, useEmptyTrash, useCleanupCollections, useDeleteCollection, useInvalidate } from "../hooks/useMutations";
 import { useAppState, type View } from "../state/appState";
 import { useArchives, useInvalidateSauvegarde } from "../hooks/useBackup";
 import { useElaguerDoublons } from "../hooks/useAnalysis";
@@ -31,11 +31,15 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
   const bulk = useBulk();
   const emptyTrash = useEmptyTrash();
   const cleanup = useCleanupCollections();
+  const deleteCollection = useDeleteCollection();
   const invalidate = useInvalidate();
   const elaguerDoublons = useElaguerDoublons();
   const invaliderSauvegarde = useInvalidateSauvegarde();
 
-  const level2 = review.action.op === "empty-trash" || review.action.op === "delete-empty-collections";
+  const level2 =
+    review.action.op === "empty-trash" ||
+    review.action.op === "delete-empty-collections" ||
+    review.action.op === "delete-collections";
   // L'archivage n'écrit rien chez Raindrop : c'est un job local, borné, qui
   // ne détruit rien. Il garde la confirmation de niveau 1, jamais la frappe
   // SUPPRIMER — celle-ci est réservée aux deux écritures définitives.
@@ -181,6 +185,18 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
       else if (review.action.op === "tag")
         await bulk.mutateAsync({ operation: "update", collection_id: 0, ids, tags: review.action.tags });
       else if (review.action.op === "empty-trash") await emptyTrash.mutateAsync();
+      else if (review.action.op === "delete-collections") {
+        // Suppression INDIVIDUELLE : un DELETE par collection, jamais le
+        // cleanup GLOBAL (le bras `else` qui l'appelait traiterait une op
+        // inconnue en purge globale — silencieux et bien plus large).
+        // allSettled : un échec n'avorte pas les suivantes ; le premier
+        // rejeté reste inline (R8P-1), la Revue tient.
+        const resultats = await Promise.allSettled(
+          review.action.ids.map((id) => deleteCollection.mutateAsync(id)),
+        );
+        const echec = resultats.find((r) => r.status === "rejected");
+        if (echec) throw (echec as PromiseRejectedResult).reason;
+      }
       else await cleanup.mutateAsync(true);
     } catch (e) {
       // R8P-1 : un échec reste inline (role="alert"), la Revue reste
@@ -200,6 +216,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
     : review.action.op === "tag" ? t("bulk.tag")
     : review.action.op === "dedupe" ? t("review.dedupe")
     : review.action.op === "empty-trash" ? t("cleanup.empty-trash")
+    : review.action.op === "delete-collections" ? t("cleanup.delete-collection")
     : t("cleanup.delete-empty");
   const titre = level2 ? actionLabel : `${actionLabel} — ${review.sourceLabel}`;
 

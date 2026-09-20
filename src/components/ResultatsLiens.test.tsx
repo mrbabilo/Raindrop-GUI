@@ -99,6 +99,40 @@ describe("ResultatsLiens — liens morts et redirections", () => {
     );
   });
 
+  // Le cache de scan du sidecar ne change qu'au re-scan : si le succès ne
+  // vit que dans la LIGNE (démontée par la pagination), changer de page et
+  // revenir ressuscite la ligne remplacée, avec son bouton.
+  it("remplacer : la ligne ne revient pas après un aller-retour de page", async () => {
+    const item = (id: number, titre: string) => ({
+      raindropId: id,
+      url: `https://old.example/${id}`,
+      status: "redirect",
+      redirectKind: "permanent",
+      finalUrl: `https://new.example/${id}`,
+      httpStatus: 301,
+      redirectChain: [],
+      reason: null,
+      checkedAt: "2026-09-16T00:00:00Z",
+      title: titre,
+      collectionId: 101,
+    });
+    resultsMock.mockImplementation((_t: unknown, _f: unknown, page: number) => ({
+      data: page === 0
+        ? { items: [item(1000, "Page déplacée")], total: 60, page: 0, perPage: 50 }
+        : { items: [item(1001, "Autre page déplacée")], total: 60, page: 1, perPage: 50 },
+    }));
+    render(<CleanupView type="redirect" />, { wrapper });
+    await userEvent.click(await screen.findByRole("button", { name: /Remplacer par l'URL finale/ }));
+    await waitFor(() =>
+      expect(sendMock).toHaveBeenCalledWith("PATCH", "/api/raindrops/1000", { url: "https://new.example/1000" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Suivante" }));
+    expect(await screen.findByText("Autre page déplacée")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Précédente" }));
+    // La ligne remplacée reste absente : son état appartient à la VUE.
+    await waitFor(() => expect(screen.queryByText("Page déplacée")).not.toBeInTheDocument());
+  });
+
   it("liens morts : chip d'entête comptée + piste Wayback Machine", async () => {
     resultsMock.mockReturnValue({
       data: {
@@ -265,5 +299,47 @@ describe("liens morts — tout sélectionner et corbeille", () => {
     expect(vue.action).toEqual({ op: "trash" });
     expect(vue.items.map((i) => i.collectionId)).toEqual([101, 101]);
     expect(vue.returnView).toEqual({ kind: "cleanupView", type: "dead" });
+  });
+});
+
+// Le grief du lot a11y : chaque ligne de traitement portait un arrêt de
+// tabulation PAR CONTRÔLE (Restaurer, select, liens). La LIGNE est
+// l'arrêt ; ses contrôles n'existent pour Tab qu'une fois la ligne
+// activée (Enter), et Échap rend la ligne.
+describe("le patron « ligne activable »", () => {
+  it("la ligne est l'arrêt, ses contrôles s'ouvrent à Enter et se referment à Échap", async () => {
+    const user = userEvent.setup();
+    resultsMock.mockReturnValue({ data: redirectPage });
+    render(<CleanupView type="redirect" />, { wrapper });
+    const ligne = screen.getByRole("row");
+    const remplacer = screen.getByRole("button", { name: "Remplacer par l'URL finale" });
+    // Au repos : la ligne est l'unique arrêt, le contrôle est hors Tab.
+    expect(ligne.getAttribute("tabindex")).toBe("0");
+    expect(remplacer.getAttribute("tabindex")).toBe("-1");
+
+    ligne.focus();
+    await user.keyboard("{Enter}");
+    expect(remplacer).toHaveFocus();
+    expect(remplacer.getAttribute("tabindex")).toBe("0");
+
+    // Échap rend la ligne, les contrôles se referment.
+    await user.keyboard("{Escape}");
+    expect(ligne).toHaveFocus();
+    expect(remplacer.getAttribute("tabindex")).toBe("-1");
+  });
+
+  // Sortir du focus (flèches vers une autre ligne, clic ailleurs) désarme
+  // aussi : l'état activé ne survit pas à la ligne.
+  it("quitter la ligne désarme ses contrôles", async () => {
+    const user = userEvent.setup();
+    resultsMock.mockReturnValue({ data: redirectPage });
+    render(<CleanupView type="redirect" />, { wrapper });
+    const ligne = screen.getByRole("row");
+    const remplacer = screen.getByRole("button", { name: "Remplacer par l'URL finale" });
+    ligne.focus();
+    await user.keyboard("{Enter}");
+    expect(remplacer.getAttribute("tabindex")).toBe("0");
+    await user.click(screen.getByRole("heading", { name: /Redirections/i }));
+    expect(remplacer.getAttribute("tabindex")).toBe("-1");
   });
 });

@@ -5,6 +5,7 @@ import { jobEvents } from "../lib/sse";
 import { useCollections } from "./useStaticData";
 import type { EtatLien } from "../design/Signaux";
 import { elaguerGroupes } from "../lib/doublons";
+import { collectionsVides } from "../lib/arbre";
 import type {
   AnalysisStatusEntry,
   AnalysisType,
@@ -224,7 +225,10 @@ export function useCleanupCounts() {
     duplicates: gd ? gd.exact.length + gd.normalized.length + gd.fuzzy.length : undefined,
     duplicatesItems: gd ? compter(gd.exact) + compter(gd.normalized) + compter(gd.fuzzy) : undefined,
     untagged: untagged.data?.count,
-    emptyCollections: collections?.filter((c) => c.count === 0).length,
+    // Le helper partagé exclut les parents-avec-enfants — la même définition
+    // que la vue, sinon le tableau de bord annonce plus que l'action n'en
+    // supprime.
+    emptyCollections: collections ? collectionsVides(collections).length : undefined,
     trash: trash.data?.count,
   };
 }

@@ -71,7 +71,11 @@ export type View =
         | { op: "archive" } // copies permanentes → POST /api/backup/archive (spec sélection §4.2)
         | { op: "dedupe" } // doublons : étiquettes des copies → gardé, puis corbeille
         | { op: "empty-trash" }
-        | { op: "delete-empty-collections" };
+        | { op: "delete-empty-collections" }
+        // Suppression INDIVIDUELLE d'une collection vide (CleanupRows) :
+        // irréversible (DOMAINE.md niveau 2), elle emprunte la même Revue
+        // que la masse — R15P-4 : l'action porte ses ids.
+        | { op: "delete-collections"; ids: number[] };
       sourceLabel: string;
       // Revue finale : sur les deux actions L2, l'aperçu chargé ne vaut PAS
       // la portée réelle (empty-trash vide TOUTE la corbeille au-delà des

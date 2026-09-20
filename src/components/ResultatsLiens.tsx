@@ -50,7 +50,14 @@ export function ResultatsLiens({ type, jamaisAnalyse, analyser }: {
   const arbre = useCollections().data ?? [];
   const { selectedIds, toggleSelect, clearSelection, go } = useAppState();
   const titreRacine = (id: number) => racine(arbre, id)?.title;
-  const items = q.data?.items ?? [];
+  // Les URL remplacées sont notées PAR LA VUE, pas par la ligne : le cache
+  // de scan du sidecar ne change qu'au re-scan, et la pagination démonte la
+  // ligne — un état local ressusciterait la ligne remplacée (et son
+  // bouton) à chaque aller-retour de page. Le `total` du chip reste le
+  // total du scan : le scan le rattrape, comme pour l'élagage des doublons.
+  const [remplaces, setRemplaces] = useState<ReadonlySet<number>>(new Set());
+  const marquerRemplace = (id: number) => setRemplaces((s) => new Set(s).add(id));
+  const items = (q.data?.items ?? []).filter((r) => !remplaces.has(r.raindropId));
   // L'archive vaut le plus ici : la page est morte, la copie permanente est
   // tout ce qui en reste (spec sélection §4.2). La vue suit son propre motif
   // — « action d'entête → Revue » — comme la corbeille et les collections
@@ -104,7 +111,7 @@ export function ResultatsLiens({ type, jamaisAnalyse, analyser }: {
         onToggle={() => toggleSelect(r.raindropId)}
       />
     ) : (
-      <RedirectRow key={r.raindropId} r={r} collectionRacine={titreRacine(r.collectionId)} />
+      <RedirectRow key={r.raindropId} r={r} collectionRacine={titreRacine(r.collectionId)} onRemplace={marquerRemplace} />
     );
   return (
     <>

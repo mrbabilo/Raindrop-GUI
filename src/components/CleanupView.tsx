@@ -4,155 +4,29 @@ import { EtatListe } from "./EtatListe";
 import { useRovingFocus } from "../hooks/useRovingFocus";
 import { ChargePlus } from "./ChargePlus";
 import { useAppState } from "../state/appState";
-import { useAnalysisStatus, useDuplicateGroups, useStartScan } from "../hooks/useAnalysis";
+import { useAnalysisStatus, useStartScan } from "../hooks/useAnalysis";
 import { useRaindrops } from "../hooks/useRaindrops";
 import { useCollections } from "../hooks/useStaticData";
-import { racine } from "../lib/arbre";
-import { pairesCertaines } from "../lib/doublons";
+import { collectionsVides } from "../lib/arbre";
 import { Icone } from "../design/icones";
-import type { DuplicateGroup } from "../../shared/types";
-import {
-  DuplicateGroupCard,
-  EmptyCollectionRow,
-  TrashRow,
-} from "./CleanupRows";
+import { EmptyCollectionRow, TrashRow } from "./CleanupRows";
+import { ActionLigne, Ligne } from "./LigneActivable";
 import { Entete, LABELS, type CleanupType } from "./EnteteCleanup";
 import { ResultatsLiens } from "./ResultatsLiens";
+import { Doublons } from "./ResultatsDoublons";
 
 // Task 13 — les vues de traitement joignables depuis le dashboard (T12) :
-// un composant à branch par `type`, chacun ≤ 60 lignes (brief). Les jetons
-// et classes viennent de styles.css ; DESIGN.md §8-§10 fait foi.
+// un composant à branch par `type`. Les jetons et classes viennent de
+// styles.css ; DESIGN.md §8-§10 fait foi. Les branches lourdes vivent chez
+// elles (`ResultatsLiens`, `ResultatsDoublons` — même frontière que le
+// plafond de 400 a imposée au 2026-09-20) ; ici ne restent que les trois
+// listes raindrops et l'agencement.
 
-// Doublons : les trois catégories restent séparées (DOMAINE.md — jamais
-// fusionnées), chaque section étiquetée, les groupes en grappes.
-const KINDS = ["exact", "normalized", "fuzzy"] as const;
-const DUP_LABELS: Record<DuplicateGroup["kind"], string> = {
-  exact: t("cleanup.dup-exact"),
-  normalized: t("cleanup.dup-normalized"),
-  fuzzy: t("cleanup.dup-fuzzy"),
-};
-
-// Un groupe de N signets ne rend RETIRABLES que N−1 d'entre eux : on en garde
-// toujours un. C'est le seul nombre qui dise ce qu'on gagne à nettoyer, et il
-// n'apparaissait nulle part.
-const signetsDe = (gs: DuplicateGroup[]) => gs.reduce((n, g) => n + g.items.length, 0);
-const retirablesDe = (gs: DuplicateGroup[]) => signetsDe(gs) - gs.length;
-
-function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean; analyser?: () => void }) {
-  const q = useDuplicateGroups();
-  const { go } = useAppState();
-  const retourTableau = { label: t("cleanup.retour"), onClick: () => go({ kind: "cleanup" }) };
-  // La sélection vit dans la VUE, indexée par groupe : la corbeille globale
-  // rassemble plusieurs groupes en une seule Revue, et la garde se calcule
-  // par groupe au moment du geste.
-  const [coches, setCoches] = useState<Record<string, Set<number>>>({});
-  const cocheesDe = (g: DuplicateGroup) => coches[g.key] ?? new Set<number>();
-  const basculer = (g: DuplicateGroup, id: number) =>
-    setCoches((c) => {
-      const courantes = new Set(c[g.key] ?? []);
-      if (courantes.has(id)) courantes.delete(id);
-      else courantes.add(id);
-      return { ...c, [g.key]: courantes };
-    });
-  const definir = (g: DuplicateGroup, ids: number[]) =>
-    setCoches((c) => ({ ...c, [g.key]: new Set(ids) }));
-  const surRevue = (copies: { id: number; url: string; title: string; collectionId: number; dedupeGarde: { id: number; title: string } }[]) => {
-    go({
-      kind: "review",
-      items: copies,
-      action: { op: "dedupe" },
-      sourceLabel: LABELS.duplicates,
-      returnView: { kind: "cleanupView", type: "duplicates" },
-    });
-  };
-  const arbre = useCollections().data ?? [];
-  const titreRacine = (id: number) => racine(arbre, id)?.title;
-  const data = q.data;
-  const groupes = data ? KINDS.flatMap((k) => data[k]) : [];
-  // Le tri GLOBAL est borné aux catégories certaines (exact, normalisé) :
-  // même domaine + même titre flou n'est pas une certitude — la pollution au
-  // titre d'interstitiel (« Weiterleitungshinweis », 163 signets réels) vient
-  // de le démontrer. Le flou, lui, se trie groupe par groupe.
-  const paires = pairesCertaines(data ?? { exact: [], normalized: [], fuzzy: [] });
-  const triables = paires.flatMap((p) => p.copies.map((c) => ({ ...c, dedupeGarde: { id: p.garde.id, title: p.garde.title } })));
-  // La corbeille GLOBALE de la sélection : des copies cochées dans plusieurs
-  // groupes partent en UNE Revue, chacune vers son gardé. La garde — un
-  // exemplaire non coché par groupe — est structurelle : c'est elle qui
-  // désigne le gardé au moment du geste.
-  const selectionGlobale = Object.entries(coches).flatMap(([cle, cochees]) => {
-    const g = groupes.find((x) => x.key === cle);
-    if (!g || cochees.size === 0) return [];
-    const garde = g.items.find((i) => !cochees.has(i.id))!;
-    return g.items.filter((i) => cochees.has(i.id)).map((i) => ({ ...i, dedupeGarde: { id: garde.id, title: garde.title } }));
-  });
-  return (
-    <>
-      {/* Le chip compte les GROUPES ; le détail par catégorie dit les signets
-          concernés et les copies retirables. « 414 » seul se lisait
-          « 414 signets en double » — la mesure réelle donne 414 groupes pour
-          1 032 signets, dont 618 retirables. */}
-      <Entete
-        label={LABELS.duplicates}
-        retour={retourTableau}
-        count={jamaisAnalyse === true ? undefined : groupes.length}
-        action={
-          <span className="flex items-center gap-2">
-            {selectionGlobale.length > 0 && (
-              <button type="button" className="btn" onClick={() => surRevue(selectionGlobale)}>
-                <Icone nom="corbeille" className="inline align-[-2px] mr-1" />
-                {t("cleanup.selectionCorbeille", { n: selectionGlobale.length })}
-              </button>
-            )}
-            {triables.length > 0 && (
-              <button type="button" className="btn" onClick={() => surRevue(triables)}>
-                {t("cleanup.trierDoublons", { n: triables.length })}
-              </button>
-            )}
-          </span>
-        }
-      />
-      <EtatListe
-        chargement={!!q.isLoading}
-        erreur={q.isError ? q.error?.message : null}
-        vide={groupes.length === 0 && !q.isLoading}
-        reessayer={() => void q.refetch()}
-        jamaisAnalyse={jamaisAnalyse === true && groupes.length === 0}
-        {...(analyser ? { analyser } : {})}
-      />
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-        {KINDS.map((kind) => {
-          const gs = data?.[kind] ?? [];
-          if (gs.length === 0) return null;
-          return (
-            <section key={kind} aria-label={DUP_LABELS[kind]} className="flex flex-col gap-2">
-              <h2 className="text-sm font-medium">
-                {DUP_LABELS[kind]} ({gs.length})
-                <span className="ml-2 text-xs font-normal text-app-muted">
-                  {t("cleanup.dupDetail", { n: retirablesDe(gs), items: signetsDe(gs), retirables: retirablesDe(gs) })}
-                </span>
-              </h2>
-              {gs.map((g) => (
-                <DuplicateGroupCard
-                  key={g.key}
-                  g={g}
-                  titreRacine={titreRacine}
-                  cochees={cocheesDe(g)}
-                  basculer={(id) => basculer(g, id)}
-                  definir={(ids) => definir(g, ids)}
-                  surRevue={surRevue}
-                />
-              ))}
-            </section>
-          );
-        })}
-      </div>
-    </>
-  );
-}
-
-// Non-taggés : liste raindrops standard (notag=true). Ligne simple, pas de
-// cases (BulkBar n'est pas monté ici — pas de sélection sans issue) ; le clic
-// ouvre la fiche, où l'étiquette se corrige.
+// Non-taggés : liste raindrops standard (notag=true), au PATRON « ligne
+// activable » comme toutes les vues — un arrêt de tabulation par CASE de
+// cette liste en faisait des centaines, et la fiche était inatteignable au
+// clavier. Le clic de la LIGNE ouvre la fiche (où l'étiquette se corrige) ;
+// au clavier, le titre en est le bouton.
 function NonTaggues() {
   const { selectedRaindropId, selectRaindrop, selectedIds, toggleSelect, go } = useAppState();
   const retourTableau = { label: t("cleanup.retour"), onClick: () => go({ kind: "cleanup" }) };
@@ -160,16 +34,19 @@ function NonTaggues() {
   const q = useRaindrops({ collectionId: 0, notag: true });
   const items = q.data?.pages.flatMap((p) => p.items) ?? [];
   const selectionnes = items.filter((r) => selectedIds.has(r.id));
+  // Le garde porte la liste PARSÉE, calculée UNE fois et lue par le bouton
+  // ET le handler (même règle que le BulkBar) : « , , » est truthy mais
+  // parse vide — le bulk update qui en résulterait effacerait toutes les
+  // étiquettes des items sélectionnés.
+  const etiquettesParses = etiquettes.split(",").map((s) => s.trim()).filter(Boolean);
+  const versRevue = () =>
+    selectionnes.map((i) => ({ id: i.id, url: i.url, title: i.title, collectionId: i.collectionId }));
   const etiqueter = () => {
-    // Le garde porte la liste PARSÉE (même règle que le BulkBar) : « , , »
-    // est truthy mais parse vide — le bulk update qui en résulterait effacerait
-    // toutes les étiquettes des items sélectionnés.
-    const tags = etiquettes.split(",").map((s) => s.trim()).filter(Boolean);
-    if (tags.length === 0 || selectionnes.length === 0) return;
+    if (etiquettesParses.length === 0 || selectionnes.length === 0) return;
     go({
       kind: "review",
-      items: selectionnes.map((i) => ({ id: i.id, url: i.url, title: i.title, collectionId: i.collectionId })),
-      action: { op: "tag", tags },
+      items: versRevue(),
+      action: { op: "tag", tags: etiquettesParses },
       sourceLabel: LABELS.untagged,
       returnView: { kind: "cleanupView", type: "untagged" },
     });
@@ -193,15 +70,15 @@ function NonTaggues() {
               type="button"
               className="btn"
               disabled={selectionnes.length === 0}
-              onClick={() => {
+              onClick={() =>
                 go({
                   kind: "review",
-                  items: selectionnes.map((i) => ({ id: i.id, url: i.url, title: i.title, collectionId: i.collectionId })),
+                  items: versRevue(),
                   action: { op: "trash" },
                   sourceLabel: LABELS.untagged,
                   returnView: { kind: "cleanupView", type: "untagged" },
-                });
-              }}
+                })
+              }
             >
               <Icone nom="corbeille" className="inline align-[-2px] mr-1" />
               {t("cleanup.corbeille", { n: selectionnes.length })}
@@ -209,7 +86,7 @@ function NonTaggues() {
             <button
               type="button"
               className="btn"
-              disabled={selectionnes.length === 0 || etiquettes.split(",").map((s) => s.trim()).filter(Boolean).length === 0}
+              disabled={selectionnes.length === 0 || etiquettesParses.length === 0}
               onClick={etiqueter}
             >
               {t("cleanup.etiqueter", { n: selectionnes.length })}
@@ -225,24 +102,38 @@ function NonTaggues() {
       />
       <div className="min-h-0 flex-1 overflow-y-auto">
         {items.map((r) => (
-          <div
+          <Ligne
             key={r.id}
-            className={"flex min-h-9 cursor-pointer items-center gap-2 overflow-hidden border-b border-app-border px-3 " + (selectedRaindropId === r.id ? "bg-app-sel" : "hover:bg-app-hover")}
+            etat={null}
             onClick={() => selectRaindrop(r.id)}
+            className={
+              "flex min-h-9 items-center gap-2 overflow-hidden border-b border-app-border px-3 " +
+              (selectedRaindropId === r.id ? "bg-app-sel" : "hover:bg-app-hover")
+            }
           >
             {/* C'est la LIGNE qui ouvre la fiche ; la case, elle, sélectionne
                 pour l'étiquetage en masse — stopPropagation, sinon cocher
                 ouvrirait la fiche au passage. */}
-            <input
+            <ActionLigne
+              el="input"
               type="checkbox"
               aria-label={t("list.select", { title: r.title })}
               checked={selectedIds.has(r.id)}
               onClick={(e) => e.stopPropagation()}
               onChange={() => toggleSelect(r.id)}
             />
-            <span className="min-w-[8rem] flex-1 truncate font-medium">{r.title}</span>
+            {/* Au clavier, le titre est le bouton qui ouvre la fiche — le
+                bubble vers la ligne rejoue selectRaindrop, même id, sans
+                effet de plus. */}
+            <ActionLigne
+              type="button"
+              className="min-w-[8rem] flex-1 truncate text-left font-medium"
+              onClick={() => selectRaindrop(r.id)}
+            >
+              {r.title}
+            </ActionLigne>
             <span className="url shrink-0 text-[11px] text-app-muted">{r.domain}</span>
-          </div>
+          </Ligne>
         ))}
         <ChargePlus q={q} />
       </div>
@@ -308,8 +199,11 @@ function Corbeille() {
 function CollectionsVides() {
   const { go } = useAppState();
   const retourTableau = { label: t("cleanup.retour"), onClick: () => go({ kind: "cleanup" }) };
-  const collections = useCollections().data;
-  const vides = (collections ?? []).filter((c) => c.count === 0);
+  const cols = useCollections();
+  // Le helper partagé exclut les parents-avec-enfants (le `count` de
+  // Raindrop ne voit que les signets directs) — même définition que le
+  // compteur du tableau de bord, sinon deux chiffres pour une action.
+  const vides = collectionsVides(cols.data ?? []);
   return (
     <>
       <Entete
@@ -338,7 +232,12 @@ function CollectionsVides() {
           </button>
         }
       />
-      <EtatListe chargement={collections === undefined} vide={vides.length === 0 && collections !== undefined} />
+      <EtatListe
+        chargement={!!cols.isLoading}
+        erreur={cols.isError ? cols.error?.message : null}
+        vide={vides.length === 0 && !cols.isLoading}
+        reessayer={() => void cols.refetch()}
+      />
       <div className="min-h-0 flex-1 overflow-y-auto">
         {vides.map((c) => (
           <EmptyCollectionRow key={c.id} c={c} />

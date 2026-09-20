@@ -32,7 +32,7 @@ import { filetEtat, type EtatLien } from "../design/Signaux";
 // complète.
 const ContexteLigne = createContext(false);
 
-export function Ligne({ etat, children, balise = "div", role = "row", className = "" }: {
+export function Ligne({ etat, children, balise = "div", role = "row", className = "", ...props }: {
   etat: EtatLien | null;
   children: ReactNode;
   /** `li` pour une liste, `div` pour une grille de vues. Une `<ul>` qui
@@ -42,7 +42,7 @@ export function Ligne({ etat, children, balise = "div", role = "row", className 
   /** Remplace la géométrie par défaut quand la zone a la sienne (la vue Tags
    *  suit la densité « entrée de navigation », 28 px — DESIGN.md §8). */
   className?: string;
-}) {
+} & ComponentPropsWithoutRef<"div">) {
   const [active, setActive] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const filet = filetEtat(etat);
@@ -53,13 +53,20 @@ export function Ligne({ etat, children, balise = "div", role = "row", className 
       role={role}
       data-nav
       tabIndex={-1} // le roving de la vue décide (0 pour la première, -1 pour les autres)
+      {...props}
       onBlur={(e) => {
         // Le focus quitte la ligne → désarmer. Le passage ligne → contrôle
         // interne est un focus DANS la ligne : rien ne bouge.
         if (!ref.current?.contains(e.relatedTarget as Node | null)) setActive(false);
+        props.onBlur?.(e);
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === "F2") {
+          // Entrer SEULEMENT depuis la ligne elle-même : si le keydown naît
+          // dans un contrôle interne (ligne déjà active), Enter LUI appartient
+          // — repartir au premier contrôle lui volerait le focus, et le click
+          // d'Entrée partirait de la case au lieu du bouton visé.
+          if (e.target !== e.currentTarget) return;
           e.preventDefault();
           setActive(true);
           // Le focus programmatique ignore le tabIndex=-1 momentané : React
@@ -76,6 +83,7 @@ export function Ligne({ etat, children, balise = "div", role = "row", className 
           setActive(false);
           ref.current?.focus();
         }
+        props.onKeyDown?.(e);
       }}
       className={
         (className || "flex min-h-9 items-center gap-2 overflow-hidden border-b border-app-border px-3 ") +

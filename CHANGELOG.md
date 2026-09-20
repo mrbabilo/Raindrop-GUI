@@ -548,6 +548,37 @@ tests. C'est en soi l'enseignement de ces deux journées.
   durée relevée sur une bibliothèque cesse d'être vraie pour une autre, et pour
   celle-là dès qu'elle change de taille.
 
+#### Le lot d'audit des vues de Nettoyage (2026-09-20)
+
+- **La garde des doublons relit les données vivantes.** Les cochés sont
+  réconciliés avec le groupe courant à chaque rendu : un refetch de scan
+  pendant que la vue est montée ne verrouille plus des cases libres (cochés
+  fantômes) et ne fait plus crasher le rendu quand le gardé a disparu — un
+  `!` sur un `find` restait, et l'application n'a pas d'ErrorBoundary : le
+  crash y est un écran blanc. Rien ne part en Revue sans gardé désigné.
+- **La suppression INDIVIDUELLE d'une collection vide passe en Revue niveau
+  2** (nouvelle op `delete-collections`) : le DELETE partait au clic, sans
+  aucun garde — DOMAINE.md classe « supprimer des collections » parmi les
+  irréversibles (frappe SUPPRIMER). Chaque id part par son DELETE ; une op
+  de Revue inconnue ne retombe plus dans le cleanup global.
+- **Un parent avec sous-collections n'est plus « vide »** : le `count` de
+  Raindrop ne voit que les signets directs — la vue et le compteur du
+  tableau de bord partagent désormais la même définition
+  (`collectionsVides`), sinon deux chiffres pour une même action.
+  L'échec de chargement se dit enfin (un « Chargement… » éternel avant),
+  avec son Réessayer.
+- **Non-taggés au patron « ligne activable »** : un arrêt de tabulation par
+  LIGNE (un par case avant — des centaines), et la fiche ouvrable au
+  clavier : le titre en est le bouton. Au passage `Ligne` reçoit les props
+  de sa balise et n'« entre » plus depuis un contrôle interne — le click
+  d'Entrée partait de la case au lieu du bouton visé.
+- **« Remplacer par l'URL finale » tient à la pagination** : le succès
+  remonte à la vue — la ligne remplacée ressuscitait à chaque retour sur sa
+  page, avec son bouton.
+- **`CleanupView` redescend à 289 lignes** (390, à dix du plafond) :
+  `Doublons` vit dans `ResultatsDoublons`, ses tests avec lui — même
+  frontière que `ResultatsLiens` avant elle.
+
 ### Pré-versions publiées
 
 `v0.1.0-pre.1` (2026-09-17) à `v0.1.0-pre.5` (2026-09-19), macOS Apple

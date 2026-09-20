@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -44,9 +44,16 @@ vi.mock("../hooks/useStaticData", () => ({
 
 // Espion de navigation : le contrat des actions niveau 2 (vider, supprimer
 // les vides) est un `go({kind:"review", …})` — la Revue (T15) exécutera.
+// `selection` : la fiche ouverte (selectRaindrop), lisible depuis les tests
+// de ligne (la vue NonTaggues ouvre la fiche, les autres non).
 const Spy = () => {
-  const { view } = useAppState();
-  return <span data-testid="view">{JSON.stringify(view)}</span>;
+  const { view, selectedRaindropId } = useAppState();
+  return (
+    <>
+      <span data-testid="view">{JSON.stringify(view)}</span>
+      <span data-testid="selection">{selectedRaindropId ?? ""}</span>
+    </>
+  );
 };
 
 const wrapper = ({ children }: { children: ReactNode }) => (
@@ -58,28 +65,6 @@ const wrapper = ({ children }: { children: ReactNode }) => (
   </QueryClientProvider>
 );
 
-// Page de résultats « links » au format LinksResultsPage (sidecar analysis.ts).
-const redirectPage = {
-  items: [
-    {
-      raindropId: 1000,
-      url: "https://old.example/a",
-      status: "redirect",
-      redirectKind: "permanent",
-      finalUrl: "https://new.example/a",
-      httpStatus: 301,
-      redirectChain: [],
-      reason: null,
-      checkedAt: "2026-09-16T00:00:00Z",
-      title: "Page déplacée",
-      collectionId: 101,
-    },
-  ],
-  total: 1,
-  page: 0,
-  perPage: 50,
-};
-
 beforeEach(() => {
   getMock.mockReset().mockResolvedValue({ items: [], count: 0 });
   sendMock.mockReset().mockResolvedValue({});
@@ -90,24 +75,6 @@ beforeEach(() => {
 });
 
 describe("CleanupView", () => {
-  it("doublons : les trois catégories restent séparées et étiquetées", async () => {
-    const item = (id: number, url: string) => ({ id, url, title: `Article ${id}`, collectionId: 101, created: "2025-01-01T12:00:00Z" });
-    groupsMock.mockReturnValue({
-      data: {
-        exact: [{ key: "k1", kind: "exact", items: [item(1, "https://a.example/x"), item(2, "https://a.example/x")] }],
-        normalized: [],
-        fuzzy: [{ key: "k2", kind: "fuzzy", items: [item(3, "https://b.example/y"), item(4, "https://b.example/y")] }],
-      },
-    });
-    render(<CleanupView type="duplicates" />, { wrapper });
-    expect(await screen.findByText(/Doublons exacts/)).toBeInTheDocument();
-    expect(screen.getByText(/Doublons flous/)).toBeInTheDocument();
-    // catégorie normalisée vide : pas de section
-    expect(screen.queryByText(/Doublons normalisés/)).not.toBeInTheDocument();
-    // le chip compte les groupes (même sémantique que le dashboard T12)
-    expect(screen.getByText("(2)")).toBeInTheDocument();
-  });
-
   it("corbeille : restaure un item par POST /api/raindrops/unrestore", async () => {
     raindropsMock.mockReturnValue({
       data: {
@@ -161,13 +128,23 @@ describe("CleanupView", () => {
     });
   });
 
-  it("collections vides : supprime une collection par DELETE /api/collections/:id", async () => {
+  // DOMAINE.md : supprimer des collections est IRRÉVERSIBLE (niveau 2 —
+  // frappe SUPPRIMER). Le clic passait le DELETE en direct, sans aucun
+  // garde : il part en Revue, qui porte la frappe.
+  it("collections vides : la suppression INDIVIDUELLE part en Revue niveau 2 (op delete-collections)", async () => {
     collectionsMock.mockReturnValue({
       data: [{ id: 301, title: "Vide", parentId: null, count: 0, public: false, view: "list", cover: null, color: null }],
     });
     render(<CleanupView type="empty-collections" />, { wrapper });
     await userEvent.click(await screen.findByRole("button", { name: "Supprimer la collection" }));
-    await waitFor(() => expect(sendMock).toHaveBeenCalledWith("DELETE", "/api/collections/301"));
+    expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({
+      kind: "review",
+      action: { op: "delete-collections", ids: [301] },
+      totalServer: 1,
+      returnView: { kind: "cleanupView", type: "empty-collections" },
+    });
+    // Aucune écriture directe : rien n'a été envoyé au sidecar.
+    expect(sendMock).not.toHaveBeenCalled();
   });
 
   it("collections vides : « Supprimer les collections vides » va en Revue niveau 2 (total porté)", async () => {
@@ -182,129 +159,39 @@ describe("CleanupView", () => {
     });
   });
 
-  // Le grief du lot a11y : chaque ligne de traitement portait un arrêt de
-  // tabulation PAR CONTRÔLE (Restaurer, select, liens). La LIGNE est
-  // l'arrêt ; ses contrôles n'existent pour Tab qu'une fois la ligne
-  // activée (Enter), et Échap rend la ligne.
-  it("la ligne est l'arrêt, ses contrôles s'ouvrent à Enter et se referment à Échap", async () => {
-    const user = userEvent.setup();
-    resultsMock.mockReturnValue({ data: redirectPage });
-    render(<CleanupView type="redirect" />, { wrapper });
-    const ligne = screen.getByRole("row");
-    const remplacer = screen.getByRole("button", { name: "Remplacer par l'URL finale" });
-    // Au repos : la ligne est l'unique arrêt, le contrôle est hors Tab.
-    expect(ligne.getAttribute("tabindex")).toBe("0");
-    expect(remplacer.getAttribute("tabindex")).toBe("-1");
-
-    ligne.focus();
-    await user.keyboard("{Enter}");
-    expect(remplacer).toHaveFocus();
-    expect(remplacer.getAttribute("tabindex")).toBe("0");
-
-    // Échap rend la ligne, les contrôles se referment.
-    await user.keyboard("{Escape}");
-    expect(ligne).toHaveFocus();
-    expect(remplacer.getAttribute("tabindex")).toBe("-1");
+  // L'échec du chargement laissait un « Chargement… » ÉTERNEL (chargement =
+  // data undefined, qui reste vrai en erreur) — l'erreur doit se dire, avec
+  // le bouton qui corrige (même contrat que les autres vues).
+  it("collections vides : un échec du chargement se dit, avec Réessayer", async () => {
+    collectionsMock.mockReturnValue({ data: undefined, isError: true, error: new Error("http 500") });
+    render(<CleanupView type="empty-collections" />, { wrapper });
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Réessayer" })).toBeInTheDocument();
   });
 
-  // Sortir du focus (flèches vers une autre ligne, clic ailleurs) désarme
-  // aussi : l'état activé ne survit pas à la ligne.
-  it("quitter la ligne désarme ses contrôles", async () => {
-    const user = userEvent.setup();
-    resultsMock.mockReturnValue({ data: redirectPage });
-    render(<CleanupView type="redirect" />, { wrapper });
-    const ligne = screen.getByRole("row");
-    const remplacer = screen.getByRole("button", { name: "Remplacer par l'URL finale" });
-    ligne.focus();
-    await user.keyboard("{Enter}");
-    expect(remplacer.getAttribute("tabindex")).toBe("0");
-    await user.click(screen.getByRole("heading", { name: /Redirections/i }));
-    expect(remplacer.getAttribute("tabindex")).toBe("-1");
-  });
-});
-
-// Les doublons deviennent actionnables : garde anti-double-suppression,
-// sélection intelligente, tri global borné aux catégories certaines.
-describe("doublons — la garde, le gardé, et le tri", () => {
-  const groupe = (kind: "exact" | "normalized" | "fuzzy", items: { id: number; title: string; created: string }[]) => ({
-    key: kind + items.map((i) => i.id).join(","),
-    kind,
-    items: items.map((i) => ({ id: i.id, url: `https://a.example/${i.id}`, title: i.title, collectionId: 101, created: i.created })),
-  });
-  const deuxGroupes = {
-    exact: [groupe("exact", [
-      { id: 1, title: "Ancienne page", created: "2020-01-01T00:00:00Z" },
-      { id: 2, title: "Copie récente", created: "2024-06-01T00:00:00Z" },
-    ])],
-    normalized: [],
-    fuzzy: [groupe("fuzzy", [
-      { id: 5, title: "Flou A", created: "2020-01-01T00:00:00Z" },
-      { id: 6, title: "Flou B", created: "2024-06-01T00:00:00Z" },
-    ])],
-  };
-
-  it("LA GARDE : cocher une copie sur deux verrouille la dernière restante", async () => {
-    groupsMock.mockReturnValue({ data: deuxGroupes });
-    render(<CleanupView type="duplicates" />, { wrapper });
-    await screen.findByText("Ancienne page");
-    await userEvent.click(screen.getByRole("checkbox", { name: /Copie récente/ }));
-    // Il ne reste qu'un exemplaire non coché : sa case se verrouille — un
-    // groupe ne perd jamais son dernier représentant.
-    expect(screen.getByRole("checkbox", { name: /Ancienne page/ })).toBeDisabled();
-    // Un item DÉJÀ coché reste décochable : la garde porte sur ce qui
-    // restera, pas sur le geste.
-    await userEvent.click(screen.getByRole("checkbox", { name: /Copie récente/ }));
-    expect(screen.getByRole("checkbox", { name: /Ancienne page/ })).toBeEnabled();
-  });
-
-  it("« Garder le meilleur » coche la copie, pas l'originale", async () => {
-    groupsMock.mockReturnValue({ data: deuxGroupes });
-    render(<CleanupView type="duplicates" />, { wrapper });
-    await screen.findByText("Ancienne page");
-    // Deux cartes portent le même bouton (exact et flou) : on cible la carte
-    // du groupe exact par son conteneur.
-    const carte = screen.getByText("Ancienne page").closest("div.bg-app-panel") as HTMLElement;
-    await userEvent.click(within(carte).getByRole("button", { name: "Garder le meilleur" }));
-    expect(screen.getByRole("checkbox", { name: /Copie récente/ })).toBeChecked();
-    expect(screen.getByRole("checkbox", { name: /Ancienne page/ })).not.toBeChecked();
-  });
-
-  it("la corbeille du groupe part en Revue dedupe, gardé porté par chaque copie", async () => {
-    groupsMock.mockReturnValue({ data: deuxGroupes });
-    render(<CleanupView type="duplicates" />, { wrapper });
-    await screen.findByText("Ancienne page");
-    const carte = screen.getByText("Ancienne page").closest("div.bg-app-panel") as HTMLElement;
-    await userEvent.click(within(carte).getByRole("button", { name: "Garder le meilleur" }));
-    await userEvent.click(within(carte).getByRole("button", { name: "Corbeille (1)" }));
-    const vue = JSON.parse(screen.getByTestId("view").textContent ?? "{}") as {
-      action: { op: string };
-      items: { id: number; dedupeGarde: { id: number; title: string } }[];
-    };
-    expect(vue.action).toEqual({ op: "dedupe" });
-    expect(vue.items[0]!.dedupeGarde).toEqual({ id: 1, title: "Ancienne page" });
-  });
-
-  it("le tri GLOBAL est borné aux catégories certaines — le flou reste manuel", async () => {
-    groupsMock.mockReturnValue({ data: deuxGroupes });
-    render(<CleanupView type="duplicates" />, { wrapper });
-    await screen.findByText("Ancienne page");
-    // 1 copie : la paire exacte seulement. Les 2 copies floues n'y sont pas.
-    await userEvent.click(screen.getByRole("button", { name: "Trier les doublons (1)" }));
-    const vue = JSON.parse(screen.getByTestId("view").textContent ?? "{}") as {
-      items: { id: number }[];
-    };
-    expect(vue.items.map((i) => i.id)).toEqual([2]);
+  // Le compte de Raindrop ne voit que les signets DIRECTS : un parent sans
+  // signets mais avec des sous-collections n'est pas vide — le lister
+  // (et le supprimer) emporterait ou déracinerait sa descendance.
+  it("collections vides : un parent avec sous-collections n'est pas vide", () => {
+    const c = (id: number, titre: string, parentId: number | null) => ({ id, title: titre, parentId, count: 0, public: false, view: "list", cover: null, color: null });
+    collectionsMock.mockReturnValue({ data: [c(301, "Parent", null), c(302, "Enfant", 301)] });
+    render(<CleanupView type="empty-collections" />, { wrapper });
+    expect(screen.getByText("(1)")).toBeInTheDocument();
+    expect(screen.getByText("Enfant")).toBeInTheDocument();
+    expect(screen.queryByText("Parent")).not.toBeInTheDocument();
   });
 });
 
 // Les non-taggés deviennent étiquetables depuis la vue (Revue op tag).
 describe("non-taggés — étiqueter en masse", () => {
+  const items = () => ({
+    data: { pages: [{ items: [
+      { id: 3000, url: "https://n.example/a", title: "Sans étiquette", domain: "n.example", collectionId: 5 },
+    ], count: 1, page: 0, perPage: 50 }] },
+  });
+
   it("cases + étiquettes → Revue op tag", async () => {
-    raindropsMock.mockReturnValue({
-      data: { pages: [{ items: [
-        { id: 3000, url: "https://n.example/a", title: "Sans étiquette", domain: "n.example", collectionId: 5 },
-      ], count: 1, page: 0, perPage: 50 }] },
-    });
+    raindropsMock.mockReturnValue(items());
     render(<CleanupView type="untagged" />, { wrapper });
     await screen.findByText("Sans étiquette");
     await userEvent.type(screen.getByLabelText("Étiquettes à ajouter"), "a-lire");
@@ -318,62 +205,51 @@ describe("non-taggés — étiqueter en masse", () => {
     expect(vue.action).toEqual({ op: "tag", tags: ["a-lire"] });
     expect(vue.items.map((i) => i.id)).toEqual([3000]);
   });
-});
 
-// Le retour d'usage du 2026-09-20 : l'écran des doublons doit dire vrai
-// après une suppression, la sélection de PLUSIEURS groupes part en une
-// Revue, et chaque vue de traitement a son retour.
-describe("doublons — la corbeille globale de la sélection, et le retour", () => {
-  const groupe = (kind: "exact" | "normalized" | "fuzzy", items: { id: number; title: string; created: string }[]) => ({
-    key: kind + items.map((i) => i.id).join(","),
-    kind,
-    items: items.map((i) => ({ id: i.id, url: `https://a.example/${i.id}`, title: i.title, collectionId: 101, created: i.created })),
-  });
-  const deux = {
-    exact: [groupe("exact", [
-      { id: 1, title: "Ancienne page", created: "2020-01-01T00:00:00Z" },
-      { id: 2, title: "Copie récente", created: "2024-06-01T00:00:00Z" },
-    ])],
-    normalized: [],
-    fuzzy: [groupe("fuzzy", [
-      { id: 5, title: "Flou A", created: "2020-01-01T00:00:00Z" },
-      { id: 6, title: "Flou B", created: "2024-06-01T00:00:00Z" },
-    ])],
-  };
-
-  it("des copies de DEUX groupes partent en UNE Revue, chacune vers son gardé", async () => {
-    groupsMock.mockReturnValue({ data: deux });
-    render(<CleanupView type="duplicates" />, { wrapper });
-    await screen.findByText("Ancienne page");
-    // Une copie du groupe exact, une du flou : la sélection traverse les
-    // groupes, la garde désigne le gardé de CHACUN.
-    await userEvent.click(screen.getByRole("checkbox", { name: /Copie récente/ }));
-    await userEvent.click(screen.getByRole("checkbox", { name: /Flou B/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Corbeille de la sélection (2)" }));
-    const vue = JSON.parse(screen.getByTestId("view").textContent ?? "{}") as {
-      action: { op: string };
-      items: { id: number; dedupeGarde: { id: number; title: string } }[];
-    };
-    expect(vue.action).toEqual({ op: "dedupe" });
-    expect(vue.items).toHaveLength(2);
-    expect(vue.items.map((i) => i.dedupeGarde.id)).toEqual([1, 5]);
+  // Même grief que le lot a11y : la vue était hors du patron « ligne
+  // activable » — un arrêt de tabulation PAR case, et la fiche inatteignable
+  // au clavier. La LIGNE est l'arrêt ; Enter/F2 ouvrent ses contrôles.
+  it("la ligne est l'arrêt, ses contrôles s'ouvrent à Enter et se referment à Échap", async () => {
+    raindropsMock.mockReturnValue(items());
+    render(<CleanupView type="untagged" />, { wrapper });
+    const ligne = screen.getByRole("row");
+    const coche = screen.getByRole("checkbox", { name: "Sélectionner Sans étiquette" });
+    // Au repos : la ligne est l'unique arrêt, la case est hors Tab.
+    expect(ligne.getAttribute("tabindex")).toBe("0");
+    expect(coche.getAttribute("tabindex")).toBe("-1");
+    ligne.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(coche).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    expect(ligne).toHaveFocus();
   });
 
-  it("la vue a son retour vers le tableau de bord", async () => {
-    groupsMock.mockReturnValue({ data: deux });
-    render(<CleanupView type="duplicates" />, { wrapper });
-    await screen.findByText("Ancienne page");
-    await userEvent.click(screen.getByRole("button", { name: "Retour" }));
-    const vue = JSON.parse(screen.getByTestId("view").textContent ?? "{}");
-    expect(vue).toEqual({ kind: "cleanup" });
+  it("la fiche s'ouvre au clic de la ligne — et au clavier, le titre en est le bouton", async () => {
+    // DEUX items : l'assert final doit distinguer — la fiche du second
+    // ouverte au clavier après celle du premier à la souris, sinon le test
+    // célèbre un état déjà atteint.
+    const item = (id: number, titre: string) => ({ id, url: `https://n.example/${id}`, title: titre, domain: "n.example", collectionId: 5 });
+    raindropsMock.mockReturnValue({
+      data: { pages: [{ items: [item(3000, "Sans étiquette"), item(3100, "Autre sans étiquette")], count: 2, page: 0, perPage: 50 }] },
+    });
+    render(<CleanupView type="untagged" />, { wrapper });
+    const lignes = screen.getAllByRole("row");
+    // Souris : le clic de la LIGNE ouvre la fiche (comportement existant).
+    await userEvent.click(lignes[0]!);
+    expect(screen.getByTestId("selection").textContent).toBe("3000");
+    // Clavier sur la seconde ligne : Enter ouvre la ligne, Tab atteint le
+    // titre-bouton, Entrée ouvre CETTE fiche.
+    lignes[1]!.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Autre sans étiquette" }).getAttribute("tabindex")).toBe("0");
+    await userEvent.keyboard("{Tab}");
+    expect(screen.getByRole("button", { name: "Autre sans étiquette" })).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByTestId("selection").textContent).toBe("3100");
   });
 
   it("les non-taggés ont leur corbeille — même contrat Revue que la liste", async () => {
-    raindropsMock.mockReturnValue({
-      data: { pages: [{ items: [
-        { id: 3000, url: "https://n.example/a", title: "Sans étiquette", domain: "n.example", collectionId: 5 },
-      ], count: 1, page: 0, perPage: 50 }] },
-    });
+    raindropsMock.mockReturnValue(items());
     render(<CleanupView type="untagged" />, { wrapper });
     await screen.findByText("Sans étiquette");
     await userEvent.click(screen.getByRole("checkbox", { name: "Sélectionner Sans étiquette" }));

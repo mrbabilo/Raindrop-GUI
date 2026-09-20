@@ -18,3 +18,15 @@ export function racine(collections: Collection[], id: number): Collection | unde
   }
   return courant;
 }
+
+/** « Collection vide » au sens où l'on peut la supprimer : AUCUN signet ET
+ *  AUCUNE sous-collection, à n'importe quelle profondeur. Le `count` de
+ *  Raindrop ne voit que les signets directs — un parent vide de signets mais
+ *  porteur d'enfants n'est pas vide, et le supprimer emporterait (ou
+ *  déracinerait) sa descendance. Partagé par la vue Nettoyage et le compteur
+ *  du tableau de bord : deux définitions diraient deux chiffres pour une
+ *  même action. */
+export function collectionsVides(toutes: readonly Collection[]): Collection[] {
+  const parents = new Set(toutes.map((c) => c.parentId).filter((p): p is number => p !== null));
+  return toutes.filter((c) => c.count === 0 && !parents.has(c.id));
+}
