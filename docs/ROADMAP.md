@@ -608,32 +608,35 @@ doublons relue sur les données vivantes, suppression de collection en
 Revue L2, patron « ligne activable » partout, `CleanupView` 390 → 289).
 Ce qui reste :
 
-- [ ] **`useAnalysis.ts:162`** : écriture de cache sans lecteur
+- [x] **`useAnalysis.ts:162`** : écriture de cache sans lecteur
       (`["analysis","job",type]`, commentaire « relisible par T13 »
-      périmé) — retirer la ligne.
-- [ ] **`useAnalysisResults`** : la clé de cache omet `perPage` —
-      l'inclure, ou supprimer le paramètre (mort, tout le monde au défaut
-      50).
-- [ ] **SSE de scan non aborté au démontage** : un `useEffect` d'abort
-      dans `BlocScan` (CleanupDashboard), ou assumer au contrat de
-      `useStartScan` — aujourd'hui la connexion reste ouverte jusqu'à la
-      fin du job quand on quitte le Nettoyage.
-- [ ] **Compteur doublons = payload complet, en deux exemplaires de
-      cache** (dette « à surveiller » déjà notée) : remède = compteur
-      dédié côté sidecar — chantier, pas patch ; coût actuel borné
-      (414 groupes / 1 032 signets).
-- [ ] **4 erreurs `noUnusedLocals` préexistantes** (imports morts :
+      périmé) — retirée le 2026-09-20.
+- [x] **`useAnalysisResults`** : la clé de cache omet `perPage` —
+      incluse le 2026-09-20 (deux appelants à per_page différents pour le
+      même filtre/page lisaient sinon le cache l'un de l'autre).
+- [x] **SSE de scan non aborté au démontage** — abort par `useEffect`
+      dans `BlocScan` (CleanupDashboard) le 2026-09-20 : quitter le
+      Nettoyage coupe la connexion ; le job sidecar, lui, continue et se
+      ré-adopte au retour par `/api/jobs`.
+- [ ] **Compteur doublons = payload complet** (dette « à surveiller »
+      déjà notée) : remède = compteur dédié côté sidecar — chantier, pas
+      patch ; coût actuel borné (414 groupes / 1 032 signets). **Moitié
+      soldée le 2026-09-20** : dashboard et vue partagent UNE clé
+      (`CLE_GROUPES`) — un exemplaire de cache au lieu de deux ; le
+      payload complet reste.
+- [x] **4 erreurs `noUnusedLocals` préexistantes** (imports morts :
       CleanupDashboard.test, ListPane.test, Sidebar.test, Signaux.test) —
-      une ligne chacune, au fil de l'eau.
-- [ ] **`refetchOnWindowFocus`** (défaut v5 non désactivé, `main.tsx`) :
+      retirées le 2026-09-20 ; `--noUnusedLocals` repasse vert sur les
+      deux configs.
+- [x] **`refetchOnWindowFocus`** (défaut v5 non désactivé, `main.tsx`) :
       au retour de fenêtre >30 s, une liste infinie refetch TOUTES ses
       pages à travers la file 550 ms — le grief du trap « cinq requêtes »
-      par une autre porte. **Audit 2026-09-20 recommande : `false` global,
-      même argument que `networkMode: "always"`** — la fraîcheur continue
-      se demande explicitement (`refetchInterval` déjà posé sur status et
-      jobs), les écritures invalident, le reste se rattrape à la
-      navigation ; la resynchronisation hors-app sera un geste explicite
-      (lot hors ligne).
+      par une autre porte. **Fait le 2026-09-20, recommandation suivie :
+      `false` global**, même argument que `networkMode: "always"` — la
+      fraîcheur continue se demande explicitement (`refetchInterval`
+      déjà posé sur status et jobs), les écritures invalident, le reste
+      se rattrape à la navigation ; la resynchronisation hors-app sera
+      un geste explicite (lot hors ligne).
 - [ ] **La Revue hérite de la colonne détail (320 px) si une fiche est
       ouverte** (`App.tsx` : `detailOuvert` ignore `view.kind`, rien ne
       ferme la fiche en allant en Revue) — DESIGN §9 fait de la Revue « le
@@ -644,54 +647,63 @@ Ce qui reste :
       avec enfants — `PUT /collections/cleanup` et `DELETE
       /collection/{id}` — pour confirmer le prédicat conservateur
       `collectionsVides`.
-- [ ] **Ligne orpheline dans les vues de liens : visible mais sans garde**
+- [x] **Ligne orpheline dans les vues de liens : visible mais sans garde**
       (`analysis.ts` enrich + `cache.ts` resultatsParSignet — le choix du
       2026-09-19 de garder le diagnostic tient) : un id corbellé/supprimé
-      depuis le scan laisse une ligne `title = url`, `collectionId = -1`
+      depuis le scan laissait une ligne `title = url`, `collectionId = -1`
       (collision de sémantique avec « non classés »), et les actions de
-      masse restent armées sur un id qui n'est plus dans la bibliothèque.
-      Correctif proposé : `enrich` porte `orphelin: true` quand la meta
-      manque ; le front écarte la ligne de « Tout sélectionner » et le
-      dit. Le cas orphelin n'existe PAS dans `analysis.test.ts` — le
-      sabordage est à faire à la correction.
-- [ ] **`POST /api/analysis/scan` répond 400 INVALID_INPUT sur une garde
+      masse restaient armées sur un id qui n'est plus dans la bibliothèque.
+      **Fait le 2026-09-20 comme proposé** : `enrich` porte
+      `orphelin: true` quand la meta manque (le `-1` ne suffisait pas :
+      c'est l'identifiant Raindrop des non-classés) ; le front écarte la
+      ligne de « Tout sélectionner » et la marque à l'écran. Test sabordé
+      (orphelin forcé à `false` → rouge, restauration → vert).
+- [x] **`POST /api/analysis/scan` répond 400 INVALID_INPUT sur une garde
       de ré-entrance** (`startScan` lève « scan déjà en cours ») — le
-      message écran est clair, le code ment ; un 409-like, au passage de
-      l'audit `scanner.ts`.
+      message écran était clair, le code mentait. **409 `SCAN_EN_COURS`
+      le 2026-09-20** (nouveau code dans `shared/errors.ts`) ; test
+      sabordé (INVALID_INPUT remis → rouge, restauration → vert).
 
-- [ ] **Mosaïque : ni virtualisée ni lazy** (`ListPane.tsx:141`,
-      `MosaicTile.tsx:34`) — qui traverse « Tous » en mosaïque finit à
-      12 210 tuiles DOM, et le `<img>` sans `loading="lazy"` fait partir
-      les vignettes même hors champ. Patch immédiat : lazy + decoding ;
-      vrai fix : fenêtrage de la grille.
-- [ ] **Premier chargement d'une vue : écran muet** (`ListPane.tsx:111`)
-      — le branch « vide » exige `!isFetching`, la première charge rend un
-      virtualiseur à zéro sans « Chargement… ».
-- [ ] **Micro-dettes au fil de l'eau** : garde anti-parse dupliquée dans
-      `BulkBar` (motif dédupliqué dans NonTaggues le même jour) ; la
-      fiche ouverte marquée `bg-app-panel` dans la liste principale mais
-      `bg-app-sel` dans NonTaggues (un même état, deux surfaces — DESIGN
-      §6).
+- [ ] **Mosaïque : non virtualisée** (`ListPane.tsx:141`) — qui traverse
+      « Tous » en mosaïque finit à 12 210 tuiles DOM. **Patch immédiat
+      posé le 2026-09-20** (`loading="lazy"` + `decoding="async"` sur le
+      `<img>` — les vignettes ne partent plus hors champ) ; le vrai fix,
+      le fenêtrage de la grille, reste ouvert.
+- [x] **Premier chargement d'une vue : écran muet** (`ListPane.tsx:111`)
+      — la branche « vide » exigeait `!isFetching`, la première charge
+      rendait un virtualiseur à zéro sans un mot. **Branché le
+      2026-09-20** : les quatre états se disent dans l'ordre d'EtatListe
+      (chargement, erreur, vide, contenu — l'échec prime sur le vide).
+- [x] **Micro-dettes au fil de l'eau** — soldées le 2026-09-20 avec la
+      moisson de l'audit : la garde anti-parse de `BulkBar` porte le
+      résultat parsé calculé une fois (motif de NonTaggues), et la fiche
+      ouverte porte `bg-app-sel` partout (un même état, une seule surface
+      — DESIGN §6).
 
-- [ ] **Pas de garde contre l'imbrication de `file.run`** (`sidecar/mcp/
+- [x] **Pas de garde contre l'imbrication de `file.run`** (`sidecar/mcp/
       throttle.ts`) — une sous-tâche soumise depuis une tâche en vol
       deadlockerait toute la file en silence (l'invariant vit dans la
       discipline des appelants ; montage actuel vérifié sans imbrication :
       retry de `makeMcpCaller` hors créneau, `lecture.ts` un `run` par
       requête, et `archivage.ts:1-13` documente le piège et l'évite
-      expressément). Correctif proposé : `AsyncLocalStorage` autour de
-      `tache.lancer()`, throw clair dans `run()` si store présent.
+      expressément). **Posée le 2026-09-20** comme proposé :
+      `AsyncLocalStorage` autour de l'exécution de `fn` (pas de la
+      promesse exposée — les `.then` légitimes des appelants resteraient
+      sinon refusés), `run()` rejette d'une erreur claire si un store est
+      présent ; le test RED pendait 15 s au deadlock avant la garde.
 
-- [ ] **Ré-armer le compte front du cliquet** (`build_app.py:33-40,139`)
-      — la consigne « ré-armer après le découpage » est restée lettre
-      morte : la dette nommée (`raindrops.test.ts` 430) est soldée, mais
-      mesuré le 2026-09-20, DEUX fichiers de test dépassent le plafond :
-      `ReviewPage.test.tsx` 439, `raindrops.test.ts` 414 (l'écriture
-      seule). Découper ces deux-là d'abord, puis retirer le filtre
-      `.test.ts(x)` et la mention d'exception du commentaire.
-- [ ] **`trousseau.rs:81`** : `#[allow(dead_code)]` et son commentaire
-      (« sans appelant aujourd'hui ») sont périmés — `effacer()` a son
-      appelant depuis la déconnexion (`commandes.rs:160`). Deux lignes.
+- [x] **Ré-armer le compte front du cliquet** (`build_app.py:33-40,139`)
+      — fait le 2026-09-20 : la dette nommée (`raindrops.test.ts` 430) et
+      les deux dépassements mesurés (`ReviewPage.test.tsx` 439,
+      `raindrops.test.ts` 414) sont découpés ; au ré-armement, le plus
+      gros test fait 397 (`DetailPane.test.tsx`) — sous le plafond,
+      au-dessus de la cible comme les 7 autres avertissements. Le filtre
+      `.test.ts(x)` et la mention d'exception du commentaire sont
+      retirés.
+- [x] **`trousseau.rs:81`** : `#[allow(dead_code)]` et son commentaire
+      (« sans appelant aujourd'hui ») étaient périmés — `effacer()` a son
+      appelant depuis la déconnexion (`commandes.rs:160`). Retiré le
+      2026-09-20.
 
 ## Veille
 

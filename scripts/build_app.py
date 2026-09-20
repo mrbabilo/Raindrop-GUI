@@ -30,14 +30,13 @@ MCP_EPINGLE = "1.3.1"
 # StarHubTH ». Le plafond est ici une BARRE dure (une violation échoue au
 # build), la cible un avertissement.
 #
-# Les tests FRONT (*.test.ts/tsx) sont HORS COMPTE — en désaccord avec la
-# lettre de CLAUDE.md (« tests compris »), assumé : le compte intégral
-# ferait échouer ce build sur `sidecar/api/routes/raindrops.test.ts`
-# (430 lignes, préexistant au plan 3, à découper — dette « Dette cliquet »
-# de la ROADMAP). Les tests RUST, eux, sont comptés (inline, dans les
-# motifs). Ré-armer le compte front après le découpage. Hors compte
-# également : généré (dist*, target, ressources, node_modules), binaires,
-# locks.
+# Les tests sont COMPTIS (lettre de CLAUDE.md : « tests compris ») —
+# ré-armé le 2026-09-20 : l'exception front datait d'une dette soldée
+# (`raindrops.test.ts` 430 lignes, découpé) ; au ré-armement, le plus gros
+# test fait 397 (DetailPane.test.tsx), sous le plafond. Les harnais de test
+# (sidecar/testing/, src/test/) restent hors compte : pas du code livré au
+# sens du cliquet. Hors compte également : généré (dist*, target,
+# ressources, node_modules), binaires, locks.
 PLAFOND_DUR = 400
 CIBLE = 300
 MOTIFS_CODE = ["src/**/*.ts", "src/**/*.tsx", "sidecar/**/*.ts",
@@ -136,7 +135,7 @@ def verifier_tailles() -> None:
     for motif in MOTIFS_CODE:
         for p in RACINE.glob(motif):
             rel = p.relative_to(RACINE).as_posix()
-            if rel in vues or rel.startswith(PREFIXES_EXCLUS) or p.name.endswith((".test.ts", ".test.tsx")):
+            if rel in vues or rel.startswith(PREFIXES_EXCLUS):
                 continue
             vues.add(rel)
             n = len(p.read_text(encoding="utf-8").splitlines())
