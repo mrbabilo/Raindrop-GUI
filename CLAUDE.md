@@ -469,7 +469,12 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   `s.index(A)`/`s.index(B)` où B précède A découpe à l'envers et duplique
   des blocs — le fichier corrompu passait encore ses tests (doublons),
   seul `wc -l` a trahi. Reconstituer au `Write` intégral plutôt que
-  rafistoler.
+  rafistoler. L'autre extrémité du même piège (deuxième occurrence le
+  2026-09-20) : la migration **ampute** la fermeture du `describe`, le
+  fichier ne compile plus — mais dans un run multi-fichiers, le «
+  Unexpected end of file » d'esbuild ne nomme pas le fautif. Passer esbuild
+  sur CHAQUE fichier migré avant la suite, et `--noUnusedLocals` après (les
+  helpers morts de l'origine ne sont signalés par rien).
 
 ## Traps reprise en vol — lot 2026-09-19
 
