@@ -673,6 +673,14 @@ Ce qui reste :
       `bg-app-sel` dans NonTaggues (un même état, deux surfaces — DESIGN
       §6).
 
+- [ ] **Pas de garde contre l'imbrication de `file.run`** (`sidecar/mcp/
+      throttle.ts`) — une sous-tâche soumise depuis une tâche en vol
+      deadlockerait toute la file en silence (l'invariant vit dans la
+      discipline des appelants ; montage actuel vérifié sans imbrication :
+      retry de `makeMcpCaller` hors créneau, `lecture.ts` un `run` par
+      requête). Correctif proposé : `AsyncLocalStorage` autour de
+      `tache.lancer()`, throw clair dans `run()` si store présent.
+
 ## Veille
 
 `python3 tools/check_sources.py` — 7 sources, aucune n'a bougé au 2026-09-16.
