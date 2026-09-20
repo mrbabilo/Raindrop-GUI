@@ -659,6 +659,20 @@ Ce qui reste :
       message écran est clair, le code ment ; un 409-like, au passage de
       l'audit `scanner.ts`.
 
+- [ ] **Mosaïque : ni virtualisée ni lazy** (`ListPane.tsx:141`,
+      `MosaicTile.tsx:34`) — qui traverse « Tous » en mosaïque finit à
+      12 210 tuiles DOM, et le `<img>` sans `loading="lazy"` fait partir
+      les vignettes même hors champ. Patch immédiat : lazy + decoding ;
+      vrai fix : fenêtrage de la grille.
+- [ ] **Premier chargement d'une vue : écran muet** (`ListPane.tsx:111`)
+      — le branch « vide » exige `!isFetching`, la première charge rend un
+      virtualiseur à zéro sans « Chargement… ».
+- [ ] **Micro-dettes au fil de l'eau** : garde anti-parse dupliquée dans
+      `BulkBar` (motif dédupliqué dans NonTaggues le même jour) ; la
+      fiche ouverte marquée `bg-app-panel` dans la liste principale mais
+      `bg-app-sel` dans NonTaggues (un même état, deux surfaces — DESIGN
+      §6).
+
 ## Veille
 
 `python3 tools/check_sources.py` — 7 sources, aucune n'a bougé au 2026-09-16.
