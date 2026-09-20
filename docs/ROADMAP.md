@@ -642,11 +642,17 @@ Ce qui reste :
       ferme la fiche en allant en Revue) — DESIGN §9 fait de la Revue « le
       seul écran aéré ». À arbitrer : fermer la fiche à l'entrée en Revue,
       au coût de rouvrir au retour.
-- [ ] **Sémantique Raindrop du « vide »** : valider contre l'API réelle
-      (1 requête de métadonnées) le sort d'un parent sans signets mais
-      avec enfants — `PUT /collections/cleanup` et `DELETE
-      /collection/{id}` — pour confirmer le prédicat conservateur
-      `collectionsVides`.
+- [x] **Sémantique Raindrop du « vide »** — levée autrement (2026-09-20) :
+      la définition est tranchée côté produit (vide = sans AUCUN signet,
+      soi ET toute sa descendance, verdict récursif dans
+      `collectionsVides`) et l'exécution part en DELETE individuels
+      SÉQUENTIELS, feuilles d'abord (`triPourSuppression`) — le sort que
+      Raindrop réserve aux enfants restants (emportés ? déracinés ?) est
+      rendu sans objet, plus rien à confirmer pour la justesse. Reste,
+      purement documentaire : observer un jour le comportement réel d'un
+      `DELETE /collection/{id}` parent (1 requête de métadonnées). La route
+      sidecar `/api/collections/cleanup` n'a plus de consommateur front
+      (le hook `useCleanupCollections` est supprimé).
 - [x] **Ligne orpheline dans les vues de liens : visible mais sans garde**
       (`analysis.ts` enrich + `cache.ts` resultatsParSignet — le choix du
       2026-09-19 de garder le diagnostic tient) : un id corbellé/supprimé

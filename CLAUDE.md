@@ -581,6 +581,33 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   marque » recouvre vérifié sain, jamais vérifié, et périmé au sens du TTL.
   La limite est tablée dans DESIGN.md §5 plutôt que laissée tacite.
 
+## Traps collections vides — lot 2026-09-20
+
+- **`Promise.allSettled` lance TOUT EN PARALLÈLE — l'ordre du tableau n'y est
+  qu'une intention.** Les ids triés feuilles d'abord partaient tous en vol au
+  même tick ; seul le destinataire (la file à 550 ms, l'API Raindrop) voit un
+  ordre, et l'arrivée de fetch concurrents ne le garantit pas. Dès qu'un
+  ordre compte chez l'autre bout : boucle `for` + `await`. Le test qui le
+  prouve RETIENT LA PREMIÈRE réponse (promesse libérée à la main) et asserte
+  que le second appel n'existe pas encore — avec des mocks à résolution
+  immédiate, allSettled passe pour séquentiel.
+- **Changer une définition partagée invalide les tests qui la verrouillent
+  AILLEURS que là où elle vit.** Le nouveau prédicat récursif de
+  `collectionsVides` rendait faux un test de `CleanupView` qui exigeait
+  « parent avec enfants ≠ vide » : le fichier qui VERROUILLE n'est pas le
+  fichier qui DÉFINIT — grep les consommateurs avant de croire la suite verte.
+- **Une ligne de liste peut devenir un parent quand la définition s'élargit.**
+  L'ancien prédicat ne listait que des feuilles, donc le DELETE individuel
+  d'une ligne était sûr ; le nouveau liste des parents (d'enfants vides) et
+  le DELETE d'une seule ligne laissait Raindrop emporter ou déraciner les
+  enfants. La ligne emporte désormais la chaîne entière (`chaineDe` +
+  `triPourSuppression`), et le compteur de la Revue dit la chaîne, pas la
+  ligne.
+- **`vi.fn(async () => ({}))` type chaque appel en tuple VIDE** —
+  `mock.calls[i][1]` ne compile pas (TS2493). Nommer les arguments du mock
+  (`async (_methode: string, _chemin: string, _corps?: unknown) => …`) une
+  fois pour toutes.
+
 ## Git
 
 Travailler sur `main`. **Pousser uniquement quand l'utilisateur le demande.**
