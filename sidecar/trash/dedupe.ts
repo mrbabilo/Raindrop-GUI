@@ -120,7 +120,15 @@ export function makeDedupe(deps: { mcp: Mcp; origins: OriginStore }) {
       await Promise.all(paire.copies.map((c) => deps.origins.remember(c.id, c.collectionId)));
       const out = await deps.mcp("bulk_raindrops", {
         operation: "delete",
-        collection_id: -99,
+        // ⚠️ SÉMANTIQUE RÉELLE (code compilé MCP 1.3.1) : le bulk delete
+        // frappe `DELETE /raindrops/{collection_id}` — la collection y est
+        // la SOURCE depuis laquelle on retire les ids, pas la destination.
+        // 0 (« Tous ») met à la corbeille ; -99 chercherait les ids DANS la
+        // corbeille, n'y en trouve aucun (ils sont vivants), ne fait RIEN —
+        // et répond `result: true`, un succès inventé. Corrigé le
+        // 2026-09-20 : deux doublons « corbeillés » restaient intacts sans
+        // la moindre erreur.
+        collection_id: 0,
         ids: paire.copies.map((c) => c.id),
       });
       if (out.ok) {

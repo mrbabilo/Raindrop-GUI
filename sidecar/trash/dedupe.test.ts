@@ -57,7 +57,14 @@ describe("deduper — la consolidation avant la corbeille", () => {
     // Origines mémorisées AVANT la corbeille (§4.2).
     expect(journal.indexOf("origines:1:7")).toBeLessThan(journal.findIndex((j) => j.startsWith("bulk_raindrops")));
     const bulk = journal.find((j) => j.startsWith("bulk_raindrops"))!;
-    expect(bulk).toContain('"collection_id":-99');
+    // ⚠️ CONTRAT réel (code compilé MCP 1.3.1) : un bulk delete frappe
+    // `DELETE /raindrops/{collection_id}` — la collection y est la SOURCE
+    // depuis laquelle on retire. 0 (« Tous ») MET À LA CORBEILLE ; -99
+    // viserait des ids DÉJÀ corbeillés et ne ferait RIEN pour des signets
+    // vivants — avec `result: true`, donc un succès inventé. Défaut réel du
+    // 2026-09-20 : deux doublons « corbeillés » restés intacts, aucune
+    // erreur nulle part. La source n'est JAMAIS la corbeille elle-même.
+    expect(bulk).toContain('"collection_id":0');
     expect(bulk).toContain("[1,2]");
     expect(r).toMatchObject({ paires: 1, corbeille: 2, fusionnees: 2, etiquettesAjoutees: 2, nonFusionnees: [], echecs: [], annule: false });
   });
