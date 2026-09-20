@@ -62,6 +62,13 @@ export const fr = {
   "detail.favorite": "Favori",
   "detail.unfavorite": "Retirer des favoris",
   "detail.trash": "Mettre à la corbeille",
+  // Le geste inverse, pour un signet DÉJÀ en corbeille (fiche, vue -99) :
+  // re-corbeiller un corbeillé était le seul geste proposé — absurde.
+  "detail.restore": "Restaurer",
+  "bulk.restore": "Restaurer ({n})",
+  // Les corbeillés SANS origine mémorisée : non restaurés par le bloc, et
+  // jamais confondus avec des restaurés (§5 : l'état se dit tel quel).
+  "bulk.restore.unknown": "{n} élément sans origine connue — non restauré|{n} éléments sans origine connue — non restaurés",
   "detail.highlights": "Surlignages",
   "detail.guest": "Sélectionnez un bookmark pour voir le détail.",
   "detail.breadcrumb": "Fil d'Ariane",

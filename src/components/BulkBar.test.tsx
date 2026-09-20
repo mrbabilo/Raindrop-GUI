@@ -12,6 +12,13 @@ import { AppStateProvider, useAppState } from "../state/appState";
 // — aucun fetch réseau dans un test de composant.
 vi.mock("../hooks/useStaticData", () => ({ useCollections: () => ({ data: collections }) }));
 
+// La restauration de masse exécute DIRECTEMENT (pas une Revue) : le POST est
+// mocké, l'assertion porte sur son corps. vi.hoisted : la factory vi.mock
+// est hissée au-dessus de tout import — une const ordinaire serait lue
+// avant son initialisation (TDZ, piège documenté).
+const sendMock = vi.hoisted(() => vi.fn(async (_m: string, _p: string, _c?: unknown) => ({ restored: 2, unknown: [] })));
+vi.mock("../lib/api", () => ({ api: { send: sendMock, get: vi.fn() } }));
+
 // Spy étendu (R9P-1) : expose la vue ET la sélection — la Revue « consomme »
 // la sélection, chaque action doit laisser selectedIds vide. Même pattern
 // Spy que Task 5-8 : asserté hors de App.
@@ -178,5 +185,49 @@ describe("BulkBar — défaire, et ne rien proposer sur du vide", () => {
     expect(screen.getByTestId("sel")).toHaveTextContent("999");
     expect(screen.queryByRole("button", { name: "Corbeille" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Tout désélectionner" })).not.toBeInTheDocument();
+  });
+});
+
+// En vue CORBEILLE, la sélection offre la SORTIE : « Restaurer (n) »
+// exécute directement (une restauration est réversible, pas une suppression
+// — pas de Revue). « Corbeille » se masque : re-corbeiller un corbeillé
+// n'a pas de sens (signalement du 2026-09-20).
+describe("BulkBar — en vue corbeille", () => {
+  const AllerCorbeille = () => {
+    const { go } = useAppState();
+    return <button type="button" onClick={() => go({ kind: "list", collectionId: -99, label: "Corbeille" })}>aller-corbeille</button>;
+  };
+  const renderBarCorbeille = async (ids: number[]) => {
+    const r = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AppStateProvider>
+          <Spy />
+          <AllerCorbeille />
+          <Preselect ids={ids} />
+          <BulkBar items={items} />
+        </AppStateProvider>
+      </QueryClientProvider>,
+    );
+    await userEvent.click(screen.getByText("aller-corbeille"));
+    await userEvent.click(screen.getByText("pre"));
+    return r;
+  };
+
+  beforeEach(() => sendMock.mockClear());
+
+  it("la sélection propose « Restaurer (n) » qui restaure sans Revue", async () => {
+    await renderBarCorbeille([1000, 1001]);
+    expect(screen.getByRole("button", { name: "Restaurer (2)" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Corbeille" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Restaurer (2)" }));
+    expect(sendMock).toHaveBeenCalledWith("POST", "/api/raindrops/unrestore", { ids: [1000, 1001] });
+    // Pas de Revue : la restauration s'exécute là, réversible par nature.
+    expect(screen.getByTestId("view").textContent).toBe("list");
+  });
+
+  it("hors corbeille, ni « Restaurer » ni le masque de « Corbeille »", async () => {
+    await renderBar([1000, 1001]);
+    expect(screen.queryByRole("button", { name: /Restaurer/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Corbeille" })).toBeInTheDocument();
   });
 });

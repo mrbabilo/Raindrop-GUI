@@ -2,6 +2,7 @@ import { useState } from "react";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { useAppState, type View } from "../state/appState";
+import { useUnrestore } from "../hooks/useMutations";
 import type { RaindropItem } from "../../shared/types";
 
 // L'action portée par la vue review — dérivée de View, jamais recopiée :
@@ -18,7 +19,12 @@ type BulkAction = Extract<View, { kind: "review" }>["action"];
 // qui vit dans une colonne rétrécie par les panneaux latéraux.
 export function BulkBar({ items }: { items: RaindropItem[] }) {
   const { view, selectedIds, go, clearSelection } = useAppState();
+  const unrestore = useUnrestore();
   const [tags, setTags] = useState("");
+  // Le compte des corbeillés SANS origine mémorisée : non restaurés par le
+  // bloc, dit tel quel — jamais confondus avec des restaurés.
+  const [nonRestaures, setNonRestaures] = useState(0);
+  const enCorbeille = view.kind === "list" && view.collectionId === -99;
   const selected = items.filter((i) => selectedIds.has(i.id));
   // La garde porte sur ce qui est RÉELLEMENT actionnable ici, pas sur la
   // taille de la sélection. Garder une sélection en changeant de vue est
@@ -65,12 +71,43 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
       {/* R15P-2 : compteur honnête — seuls les items de la page embarqués
           dans la Revue sont comptés (selectedIds peut déborder la page). */}
       <span className="font-medium">{t("bulk.selected", { n: selected.length })}</span>
-      {/* §6 : le seul rouge légitime est --color-app-broken, couleur d'un
-          diagnostic — le snippet du brief portait un jeton fantôme (R9P-2). */}
-      <button type="button" className="rounded border border-app-broken px-2 py-1 text-app-broken" onClick={() => build({ op: "trash" })}>
-        <Icone nom="corbeille" className="inline align-[-2px] mr-1" />
-        {t("bulk.trash")}
-      </button>
+      {/* En vue corbeille, re-corbeiller un corbeillé n'a pas de sens : le
+          verbe devient RESTAURER, exécuté là (réversible par nature — pas
+          une Revue). Les items à l'origine inconnue restent en liste, la vue
+          Nettoyage→Corbeille y choisit leur destination (§4.2). */}
+      {enCorbeille ? (
+        <>
+          <button
+            type="button"
+            className="rounded border border-app-border px-2 py-1 disabled:opacity-40"
+            disabled={unrestore.isPending}
+            onClick={() =>
+              unrestore.mutate(
+                { ids: selected.map((i) => i.id) },
+                {
+                  onSuccess: (res) => {
+                    setNonRestaures((res.unknown ?? []).length);
+                    clearSelection();
+                  },
+                },
+              )
+            }
+          >
+            <Icone nom="restaurer" className="inline align-[-2px] mr-1" />
+            {t("bulk.restore", { n: selected.length })}
+          </button>
+          {nonRestaures > 0 && (
+            <span className="text-xs text-app-broken">
+              {t("bulk.restore.unknown", { n: nonRestaures })}
+            </span>
+          )}
+        </>
+      ) : (
+        <button type="button" className="rounded border border-app-broken px-2 py-1 text-app-broken" onClick={() => build({ op: "trash" })}>
+          <Icone nom="corbeille" className="inline align-[-2px] mr-1" />
+          {t("bulk.trash")}
+        </button>
+      )}
       {/* L'archive est la seule action qui n'écrit RIEN chez Raindrop : elle
           copie en local ce qui existe déjà côté serveur. */}
       <button type="button" className="rounded border border-app-border px-2 py-1" onClick={() => build({ op: "archive" })}>

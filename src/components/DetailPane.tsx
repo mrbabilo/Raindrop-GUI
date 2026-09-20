@@ -7,7 +7,7 @@ import { useAppState } from "../state/appState";
 import { useFiltreEtiquettes } from "../hooks/filtreEtiquettes";
 import { useCollections } from "../hooks/useStaticData";
 import { useArchives } from "../hooks/useBackup";
-import { useUpdateRaindrop, useTrashRaindrop } from "../hooks/useMutations";
+import { useUpdateRaindrop, useTrashRaindrop, useUnrestore } from "../hooks/useMutations";
 import { Glyphe } from "../design/glyphes";
 import { Etoile } from "../design/Etoile";
 import { CarreCollection, PiluleEtiquette } from "../design/Signaux";
@@ -51,8 +51,14 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
   const filtreTags = useFiltreEtiquettes();
   const update = useUpdateRaindrop(selectedRaindropId ?? 0);
   const trash = useTrashRaindrop();
+  const unrestore = useUnrestore();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Partial<Pick<RaindropItem, ChampEdition>>>({});
+  // Restauration d'un corbeillé : l'origine mémorisée suffit ; sinon la
+  // fiche demande une destination (même mécanique que la vue corbeille du
+  // Nettoyage — §4.2, la corbeille ne garde pas les origines).
+  const [destInconnue, setDestInconnue] = useState(false);
+  const [dest, setDest] = useState("");
 
   const detail = useQuery({
     queryKey: ["raindrop", selectedRaindropId],
@@ -72,6 +78,8 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
   useEffect(() => {
     setEditing(false);
     setDraft({});
+    setDestInconnue(false);
+    setDest("");
     update.reset();
     trash.reset();
   }, [selectedRaindropId]);
@@ -226,23 +234,61 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
         >
           <Etoile />
         </button>
-        {/* `from` = collection courante : sans lui le sidecar ne mémorise pas
-            l'origine et la restauration devient impossible (spec §4.2, Task 0b).
-            --color-app-broken, seul rouge légitime : couleur d'un diagnostic (§6). */}
-        <button
-          type="button"
-          className="rounded border border-app-broken px-2 py-1 text-xs text-app-broken"
-          onClick={() => void trash.mutateAsync({ id: r.id, from: r.collectionId }).catch(() => { /* inline via trash.isError */ })}
-        >
-          {t("detail.trash")}
-        </button>
+        {/* Un corbeillé ne peut pas être re-corbeillé : le geste devient
+            RESTAURER — à l'origine mémorisée, ou vers la destination choisie
+            ici si elle est inconnue (§4.2). */}
+        {r.collectionId === -99 ? (
+          <>
+            <button
+              type="button"
+              className="rounded border border-app-border px-2 py-1 text-xs"
+              disabled={destInconnue && dest === ""}
+              onClick={() =>
+                void unrestore.mutateAsync(
+                  destInconnue ? { ids: [r.id], toCollectionId: Number(dest) } : { ids: [r.id] },
+                ).then(
+                  (res) => setDestInconnue((res.unknown ?? []).includes(r.id)),
+                  () => { /* erreur inline via unrestore.isError */ },
+                )
+              }
+            >
+              {t("detail.restore")}
+            </button>
+            {destInconnue && (
+              <>
+                <span className="shrink-0 text-xs text-app-broken">{t("cleanup.unknown-origin")}</span>
+                <select
+                  aria-label={t("bulk.destination")}
+                  className="input w-36 shrink-0"
+                  value={dest}
+                  onChange={(e) => setDest(e.target.value)}
+                >
+                  <option value="">{t("bulk.chooseCollection")}</option>
+                  {arbre.map((c) => (
+                    <option key={c.id} value={String(c.id)}>
+                      {c.title}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
+          </>
+        ) : (
+          <button
+            type="button"
+            className="rounded border border-app-broken px-2 py-1 text-xs text-app-broken"
+            onClick={() => void trash.mutateAsync({ id: r.id, from: r.collectionId }).catch(() => { /* inline via trash.isError */ })}
+          >
+            {t("detail.trash")}
+          </button>
+        )}
       </div>
       {/* R8P-1 : l'échec d'une écriture s'affiche ici, inline — l'édition
           reste ouverte et le brouillon intact (Enregistrer), l'item reste
           affiché (Corbeille). --color-app-broken : couleur d'un diagnostic (§6). */}
-      {(update.isError || trash.isError) && (
+      {(update.isError || trash.isError || unrestore.isError) && (
         <p role="alert" className="text-xs text-app-broken">
-          {t("state.error", { message: String((update.error ?? trash.error)?.message ?? "") })}
+          {t("state.error", { message: String((update.error ?? trash.error ?? unrestore.error)?.message ?? "") })}
         </p>
       )}
       {/* Trois états, jamais confondus (spec sélection §4.1) : archivé EN
