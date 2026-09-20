@@ -13,6 +13,34 @@ Developer ID.
 
 ### Ajouté
 
+#### Sortir de la corbeille, restaurer partout, le journal lisible (2026-09-20 → 2026-09-21)
+
+- **« Restaurer » dans la fiche** d'un signet corbeillé : à l'origine
+  mémorisée, ou vers une destination choisie dans la fiche si l'origine est
+  inconnue (§4.2 — même mécanique que la vue corbeille du Nettoyage).
+- **« Restaurer (n) » dans la barre de sélection** en vue corbeille :
+  exécution directe (une restauration est réversible — pas une Revue) ;
+  les sans-origine sont comptés inline, « Corbeille » se masque.
+- **Le dépôt du glisser-déposer s'étend** : déposer sur la Corbeille met à
+  la corbeille (origines lues par le sidecar), sur **Favoris** marque
+  favori, sur **« Tous »** sort de la collection, sur **une étiquette** de
+  la barre latérale marque avec elle (union, jamais remplacement). Chaque
+  destination s'allume au survol.
+- **Le journal lisible dans les Réglages (⌘,)** : écritures, jobs et
+  erreurs du jour — « Rafraîchir » relit, « Copier » emporte le texte.
+- **« Non classés » et « Non-taggés »** remplacent « Non-lus » (vide par
+  nature dans cette bibliothèque) : une vraie collection, listable et
+  destination de dépôt, et le filtre `notag`.
+
+#### La nature identifiée, la grille qui garde sa place (2026-09-20 → 2026-09-21)
+
+- Le glyphe de nature est accompagné de **son libellé en toutes lettres**
+  (« Lien · exemple.com », « Vidéo · … ») en liste et en grille — une icône
+  à deviner n'identifie pas (DESIGN §2.1 documente l'évolution). Un type
+  inconnu de Raindrop se rend tel quel.
+- **La vignette de mosaïque ouverte porte la surface `sel`** et est ramenée
+  en vue quand le panneau détail fait re-flux la grille.
+
 #### Sidecar — plan 1/3, 16 tasks (2026-09-15 → 2026-09-16)
 
 - Pont vers `@kud/mcp-raindrop-io` **épinglé à 1.3.1**, lancé en
@@ -402,6 +430,27 @@ signet près, y compris croisé avec le filtre de domaine.
 
 ### Corrigé
 
+#### La corbeille qui ne corbeillait pas, et le drag qui sélectionnait (2026-09-20 → 2026-09-21)
+
+- **La corbeille des doublons ne faisait RIEN** : le bulk delete partait avec
+  la corbeille comme *source* au lieu de « Tous » — Raindrop ne trouvait rien
+  à supprimer et répondait quand même « succès » ; des signets « corbeillés »
+  restaient intacts, sans la moindre erreur, et le test affirmait la valeur
+  fautive. Réparé (source « Tous ») et **la Revue dit désormais le terme** du
+  tri (copies corbeillées, étiquettes récupérées, échecs nommés).
+- **Rien ne sortait de la corbeille par glisser-déposer**, même schéma : la
+  source du bulk move est l'endroit d'où l'on tire — depuis la corbeille,
+  elle vaut -99, et déposer sur une collection restaure vers elle.
+- **Les puces de nature (Liens / Articles / Images…) ne filtraient rien** :
+  le paramètre `media` du pont est un paramètre mort comme `domain` — le
+  filtre se compose en opérateur `type:` dans la recherche.
+- **Le glisser-déposer sélectionnait le texte des zones traversées** (barre
+  latérale, fiche) : WebKit ignore la forme standard de `user-select` posée
+  en style inline — la garde est une feuille de style aux deux formes,
+  mesurée dans le vrai webview.
+- **Le clic ouvre la fiche dans toutes les vues du Nettoyage** (doublons,
+  liens morts, redirections, corbeille) — aucune ligne n'était activable.
+
 #### La moisson de l'audit fichier par fichier (2026-09-20)
 
 Relecture de ~60 fichiers (front, sidecar, shell Rust) — constats consignés
@@ -617,10 +666,12 @@ tests. C'est en soi l'enseignement de ces deux journées.
 
 ### Pré-versions publiées
 
-`v0.1.0-pre.1` (2026-09-17) à `v0.1.0-pre.5` (2026-09-19), macOS Apple
+`v0.1.0-pre.1` (2026-09-17) à `v0.1.0-pre.15` (2026-09-21), macOS Apple
 Silicon, signature ad-hoc. `pre.2` et `pre.3` ont vu leurs binaires
 **remplacés** après publication, un défaut ayant été trouvé à l'usage dans
-l'heure — les notes de chaque version le disent.
+l'heure — les notes de chaque version le disent. `pre.13` embarquait un
+correctif de sélection de drag **inopérant dans le vrai webview** :
+`pre.14` (publiée le jour même) le remplace.
 
 ### Problèmes connus
 
