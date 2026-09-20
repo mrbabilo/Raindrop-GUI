@@ -352,6 +352,14 @@ couverture, c'est une intention.
   démarraient une sélection de texte, ce qui faisait échouer le geste — y
   compris le déplacement d'une sélection multiple, qui fonctionnait pourtant.
   La ligne porte `select-none` ; le texte se copie depuis le détail.
+  **Encore insuffisant (2026-09-20)** : avec la ligne protégée, WebKit
+  amorce quand même la sélection sur les ZONES TRAVERSÉES (barre latérale,
+  fiche) — l'ancre `none` ne bloque pas l'amorce ailleurs, et la garde du
+  fantôme arrive quelques frames React trop tard. La garde vit désormais
+  AU POINTERDOWN du geste (`useDragBookmark`), restaurée au relâchement, au
+  pointercancel, et au démontage — ce dernier dans un `useEffect` à deps
+  vides SÉPARÉ : un re-render qui re-court l'effet des listeners ne doit
+  jamais tuer un geste en cours (le geste vit hors du rendu, par design).
 - **Une route absente du mock ne ressemble pas à un mock absent.** `App.test`
   ne servait pas `/api/raindrops/:id` : `DetailPane` recevait la réponse de
   *health*, jetait sur `r.highlights.length`, et l'arbre se démontait — le
