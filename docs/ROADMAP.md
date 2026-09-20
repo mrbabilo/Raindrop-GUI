@@ -682,6 +682,17 @@ Ce qui reste :
       expressément). Correctif proposé : `AsyncLocalStorage` autour de
       `tache.lancer()`, throw clair dans `run()` si store présent.
 
+- [ ] **Ré-armer le compte front du cliquet** (`build_app.py:33-40,139`)
+      — la consigne « ré-armer après le découpage » est restée lettre
+      morte : la dette nommée (`raindrops.test.ts` 430) est soldée, mais
+      mesuré le 2026-09-20, DEUX fichiers de test dépassent le plafond :
+      `ReviewPage.test.tsx` 439, `raindrops.test.ts` 414 (l'écriture
+      seule). Découper ces deux-là d'abord, puis retirer le filtre
+      `.test.ts(x)` et la mention d'exception du commentaire.
+- [ ] **`trousseau.rs:81`** : `#[allow(dead_code)]` et son commentaire
+      (« sans appelant aujourd'hui ») sont périmés — `effacer()` a son
+      appelant depuis la déconnexion (`commandes.rs:160`). Deux lignes.
+
 ## Veille
 
 `python3 tools/check_sources.py` — 7 sources, aucune n'a bougé au 2026-09-16.
