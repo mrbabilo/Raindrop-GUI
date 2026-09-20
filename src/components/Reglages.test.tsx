@@ -15,6 +15,11 @@ vi.mock("../lib/api", () => ({ api: { get: getMock, send: vi.fn() } }));
 // test : ici elle est isolée, pour que les contrats de Reglages restent
 // lisibles seuls.
 vi.mock("./SectionSauvegarde", () => ({ SectionSauvegarde: () => <div data-testid="section-sauvegarde" /> }));
+// La section Journal a ses propres contrats et son propre fichier de test
+// (SectionJournal.test) — et elle pose un useQuery : sans ce mock, les tests
+// de Reglages, rendus NU sans QueryClientProvider, casseraient tous
+// (« No QueryClient set » — le piège des providers).
+vi.mock("./SectionJournal", () => ({ SectionJournal: () => <div data-testid="section-journal" /> }));
 vi.mock("../lib/amorce", () => ({
   remplacerJeton: remplacerMock,
   deconnecter: deconnecterMock,

@@ -219,6 +219,13 @@ export const fr = {
   "reglages.deconnecter": "Déconnecter",
   "reglages.fermer": "Fermer",
   "reglages.refuse": "Ce jeton n'a pas été accepté par Raindrop.",
+  // Le journal consultable (2026-09-20) : une action « qui n'a rien fait »
+  // se vérifie là, sans quitter l'application.
+  "reglages.journal": "Journal",
+  "reglages.journal.vide": "Rien encore aujourd'hui.",
+  "reglages.journal.rafraichir": "Rafraîchir",
+  "reglages.journal.copier": "Copier",
+  "reglages.journal.copie": "Copié",
   // Les cinq états de lifecycle.ts, en français. Le front ne montre jamais
   // les identifiants internes.
   "reglages.mcp.connected": "Connecté",
