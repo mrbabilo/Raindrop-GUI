@@ -24,6 +24,11 @@ export type LinkEnrichi = LinksResultsPage["items"][number];
 // (§5 — la forme distingue autant que la couleur). Mêmes classes que
 // RaindropRow pour que les six vues respirent comme la liste principale.
 //
+// TOUTE ligne qui représente un signet OUVRIT sa fiche au clic — une ligne
+// ressemble partout à la même chose, en rendre la moitié inerte fait douter
+// de l'autre. Les contrôles internes (ActionLigne) stopPropagent : cocher,
+// restaurer ou remplacer n'ouvre jamais en prime.
+//
 // Lien mort : filet --broken, raison brute du scan (dns, http_404…), et la
 // piste de secours buku §12 — la Wayback Machine en simple <a> externe.
 export function DeadRow({
@@ -41,8 +46,13 @@ export function DeadRow({
   selected?: boolean;
   onToggle?: () => void;
 }) {
+  const { selectRaindrop, selectedRaindropId } = useAppState();
   return (
-    <Ligne etat="dead">
+    <Ligne
+      etat="dead"
+      sel={selectedRaindropId === r.raindropId}
+      onClick={() => selectRaindrop(r.raindropId)}
+    >
       {onToggle !== undefined && (
         <input
           type="checkbox"
@@ -50,6 +60,7 @@ export function DeadRow({
           className="shrink-0"
           aria-label={r.title}
           checked={selected ?? false}
+          onClick={(e) => e.stopPropagation()}
           onChange={onToggle}
         />
       )}
@@ -80,9 +91,14 @@ export function RedirectRow({ r, collectionRacine, onRemplace }: {
 }) {
   const update = useUpdateRaindrop(r.raindropId);
   const [remplace, setRemplace] = useState(false);
+  const { selectRaindrop, selectedRaindropId } = useAppState();
   if (remplace) return null;
   return (
-    <Ligne etat="redirect">
+    <Ligne
+      etat="redirect"
+      sel={selectedRaindropId === r.raindropId}
+      onClick={() => selectRaindrop(r.raindropId)}
+    >
       <CarreCollection collectionId={r.collectionId} titre={collectionRacine} />
       <span className="min-w-[6rem] flex-1 truncate font-medium">{r.title}</span>
       <span className="url shrink-0 text-[11px] text-app-muted">{r.url}</span>
@@ -130,6 +146,7 @@ export function DuplicateGroupCard({ g, titreRacine, cochees, basculer, definir,
   // LA GARDE : le dernier exemplaire non coché se verrouille — un groupe ne
   // perd jamais son dernier représentant.
   const dernierRestant = g.items.length - cochees.size === 1;
+  const { selectRaindrop, selectedRaindropId } = useAppState();
   const garderMeilleur = () => {
     const garde = choisirGarde(g.items);
     definir(copiesDe(g.items, garde.id).map((c) => c.id));
@@ -155,7 +172,12 @@ export function DuplicateGroupCard({ g, titreRacine, cochees, basculer, definir,
         // décochable — la garde porte sur ce qui RESTERA, pas sur le geste.
         const verrouille = dernierRestant && !cochees.has(item.id);
         return (
-          <Ligne key={item.id} etat="duplicate">
+          <Ligne
+            key={item.id}
+            etat="duplicate"
+            sel={selectedRaindropId === item.id}
+            onClick={() => selectRaindrop(item.id)}
+          >
             <ActionLigne
               el="input"
               type="checkbox"
@@ -201,6 +223,7 @@ export function DuplicateGroupCard({ g, titreRacine, cochees, basculer, definir,
 export function TrashRow({ r }: { r: RaindropItem }) {
   const unrestore = useUnrestore();
   const collections = useCollections().data ?? [];
+  const { selectRaindrop, selectedRaindropId } = useAppState();
   const [dest, setDest] = useState("");
   const [origineInconnue, setOrigineInconnue] = useState(false);
   const restaurer = () =>
@@ -211,7 +234,7 @@ export function TrashRow({ r }: { r: RaindropItem }) {
       },
     );
   return (
-    <Ligne etat={null}>
+    <Ligne etat={null} sel={selectedRaindropId === r.id} onClick={() => selectRaindrop(r.id)}>
       <CarreCollection collectionId={r.collectionId} />
       <span className="min-w-[8rem] flex-1 truncate font-medium">{r.title}</span>
       <span className="url shrink-0 text-[11px] text-app-muted">{r.url}</span>

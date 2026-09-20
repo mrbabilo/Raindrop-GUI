@@ -32,7 +32,7 @@ import { filetEtat, type EtatLien } from "../design/Signaux";
 // complète.
 const ContexteLigne = createContext(false);
 
-export function Ligne({ etat, children, balise = "div", role = "row", className = "", ...props }: {
+export function Ligne({ etat, children, balise = "div", role = "row", className = "", sel = false, ...props }: {
   etat: EtatLien | null;
   children: ReactNode;
   /** `li` pour une liste, `div` pour une grille de vues. Une `<ul>` qui
@@ -42,6 +42,10 @@ export function Ligne({ etat, children, balise = "div", role = "row", className 
   /** Remplace la géométrie par défaut quand la zone a la sienne (la vue Tags
    *  suit la densité « entrée de navigation », 28 px — DESIGN.md §8). */
   className?: string;
+  /** La FICHE de ce signet est ouverte : même surface que la liste
+   *  principale (DESIGN.md §6 — la sélection se marque par une surface).
+   *  Sans elle, la fiche s'ouvrirait sans que la ligne le dise. */
+  sel?: boolean;
 } & ComponentPropsWithoutRef<"div">) {
   const [active, setActive] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -87,6 +91,7 @@ export function Ligne({ etat, children, balise = "div", role = "row", className 
       }}
       className={
         (className || "flex min-h-9 items-center gap-2 overflow-hidden border-b border-app-border px-3 ") +
+        (sel ? "bg-app-sel " : "") +
         (filet ? "filet " + filet : "")
       }
     >
@@ -106,11 +111,20 @@ export function Ligne({ etat, children, balise = "div", role = "row", className 
 type BaliseAction = "button" | "a" | "select" | "input";
 
 export function ActionLigne<T extends BaliseAction = "button">(
-  { el, ...props }: { el?: T } & ComponentPropsWithoutRef<T>,
+  { el, onClick, ...props }: { el?: T } & ComponentPropsWithoutRef<T>,
 ) {
   const active = useContext(ContexteLigne);
   const Tag = (el ?? "button") as ElementType;
-  return <Tag tabIndex={active ? 0 : -1} {...props} />;
+  // Le clic d'un CONTRÔLE n'active jamais sa ligne : cocher, restaurer ou
+  // remplacer ne doit pas ouvrir la fiche en prime. Le stop est ICI, une
+  // fois — tout contrôle interne en hérite, quelle que soit la vue. Le cast
+  // vers SyntheticEvent est le prix du composant générique : React passe le
+  // MÊME événement, seule la vue du compilateur change.
+  const enveloppe: ComponentPropsWithoutRef<T>["onClick"] = ((e: React.SyntheticEvent) => {
+    e.stopPropagation();
+    (onClick as ((e: React.SyntheticEvent) => void) | undefined)?.(e);
+  }) as ComponentPropsWithoutRef<T>["onClick"];
+  return <Tag tabIndex={active ? 0 : -1} {...props} onClick={enveloppe} />;
 }
 
 // Erreur d'action inline (pattern T8/R12P-1) : ce qui s'est passé, jamais
