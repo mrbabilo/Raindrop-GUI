@@ -36,10 +36,12 @@ describe("RaindropRow — signalétique (DESIGN.md §2)", () => {
     expect(screen.queryByText("#python")).toBeNull();
     // §3 : un mot hors lexique reste gris — c'est le résultat attendu.
     expect(screen.getByText("zzz-inconnu").style.getPropertyValue("--sat")).toBe("0");
-    // §2.1/§7 : le glyphe de nature précède le domaine, qui est en chasse fixe.
-    const domaine = container.querySelector(".url");
-    expect(domaine).toHaveTextContent("example.com");
-    expect(domaine!.previousElementSibling?.tagName.toLowerCase()).toBe("svg");
+    // §2.1/§7 : le glyphe de nature précède le libellé, puis le domaine en
+    // chasse fixe — la nature identifiée en toutes lettres (2026-09-20).
+    const urls = container.querySelectorAll(".url");
+    expect(urls[0]).toHaveTextContent("Lien");
+    expect(urls[0]!.previousElementSibling?.tagName.toLowerCase()).toBe("svg");
+    expect(urls[1]).toHaveTextContent("example.com");
   });
 
   it("une ligne saine ne porte AUCUN filet d'état (§2 : le quatrième signal est conditionnel)", () => {
@@ -125,5 +127,29 @@ describe("RaindropRow — marqueur d'archive", () => {
   it("une copie permanente chez Raindrop ne vaut PAS une archive locale", () => {
     ligne({ r: raindrop({ cache: { status: "ready" } }), archive: false });
     expect(screen.queryByText("Archivé")).not.toBeInTheDocument();
+  });
+});
+
+// La nature est IDENTIFIÉE EN TOUTES LETTRES (signalement 2026-09-20 : le
+// glyphe seul exige de le deviner). Libellé singulier de l'item, dans le
+// filet du domaine — Lien · exemple.com.
+describe("RaindropRow — la nature identifiée", () => {
+  it("le libellé de la nature précède le domaine", () => {
+    const { container } = render(
+      <table><tbody><RaindropRow r={raindrop({ type: "link" })} selected={false} isDetail={false} poignee={{ onPointerDown: () => undefined, onClick: () => undefined }} onToggle={() => undefined} onTag={() => undefined} /></tbody></table>,
+    );
+    expect(container.textContent).toContain("Lien");
+    // Le domaine reste SON nœud texte (les assertions exactes tiennent).
+    expect(screen.getByText("example.com")).toBeInTheDocument();
+  });
+
+  it("chaque nature a son libellé — vidéo, article…", () => {
+    for (const [type, libelle] of [["video", "Vidéo"], ["article", "Article"], ["document", "Document"], ["audio", "Audio"], ["image", "Image"]] as const) {
+      const { container, unmount } = render(
+        <table><tbody><RaindropRow r={raindrop({ type })} selected={false} isDetail={false} poignee={{ onPointerDown: () => undefined, onClick: () => undefined }} onToggle={() => undefined} onTag={() => undefined} /></tbody></table>,
+      );
+      expect(container.textContent).toContain(libelle);
+      unmount();
+    }
   });
 });

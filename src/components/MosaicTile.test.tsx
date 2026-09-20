@@ -59,13 +59,15 @@ describe("MosaicTile", () => {
     }
   });
 
-  // §2.1 : le glyphe de nature précède le domaine ; §7 : le domaine en chasse
-  // fixe, et rien d'autre.
+  // §2.1 : le glyphe de nature précède son libellé puis le domaine ; §7 : le
+  // domaine en chasse fixe, et rien d'autre. Le libellé est la nature en
+  // toutes lettres (2026-09-20).
   it("glyphe de nature puis domaine en chasse fixe", () => {
     const { container } = render(<MosaicTile r={raindrop({ type: "video" })} onOpen={() => undefined} />);
-    const domaine = container.querySelector(".url")!;
-    expect(domaine).toHaveTextContent("example.com");
-    expect(domaine.previousElementSibling?.tagName.toLowerCase()).toBe("svg");
+    const urls = container.querySelectorAll(".url");
+    expect(urls[0]).toHaveTextContent("Vidéo");
+    expect(urls[0]!.previousElementSibling?.tagName.toLowerCase()).toBe("svg");
+    expect(urls[1]).toHaveTextContent("example.com");
   });
 });
 
@@ -82,4 +84,13 @@ describe("MosaicTile — la tuile remplit sa colonne", () => {
     expect(tuile.querySelector(".wash")?.className).toContain("aspect-[221/118]");
     expect(tuile.querySelector(".wash")?.className).not.toContain("h-[118px]");
   });
+});
+
+// La nature est IDENTIFIÉE EN TOUTES LETTRES dans la vignette aussi
+// (signalement 2026-09-20) — le glyphe seul exige de le deviner.
+it("le libellé de la nature accompagne le domaine", () => {
+  const { container } = render(<MosaicTile r={raindrop({ type: "video" })} onOpen={() => undefined} />);
+  expect(container.textContent).toContain("Vidéo");
+  // Le domaine reste SON nœud texte.
+  expect(screen.getByText("example.com")).toBeInTheDocument();
 });

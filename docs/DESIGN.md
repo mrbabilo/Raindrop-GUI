@@ -60,6 +60,12 @@ Le glyphe se place **avant le domaine**, dans le même filet de texte secondaire
 et partage sa couleur. Il ne prend ni fond, ni bordure, ni pilule : c'est une
 lettre de plus dans la ligne du domaine, pas un badge.
 
+**Depuis le 2026-09-20, le glyphe est accompagné de son libellé en toutes
+lettres** (« Lien · exemple.com », « Vidéo · exemple.com ») en liste et en
+grille : une icône à deviner n'identifie pas — le nom de la nature se lit,
+il ne se reconnaît pas. Le libellé est singulier (la nature de *l'item*), là
+où les puces de §11 portent les catégories plurielles.
+
 ### 2.2 L'étiquette retenue
 
 Une étiquette **cliquée entre dans le filtre** ; recliquée, elle en sort. Deux

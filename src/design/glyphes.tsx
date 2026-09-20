@@ -68,3 +68,21 @@ export function Glyphe({ type, className }: { type: string; className?: string }
     </svg>
   );
 }
+
+// Le libellé SINGULIER de la nature de l'item (« Lien », « Vidéo »…) —
+// distinct des catégories plurielles des puces (nature.* du dictionnaire).
+// Identifié EN TOUTES LETTRES à côté du glyphe en liste et grille
+// (signalement 2026-09-20 : le glyphe seul exige de le deviner). Un type
+// inconnu se rend tel quel plutôt que de se déguiser en maillon.
+const LIBELLES: Record<NatureType, string> = {
+  link: "Lien",
+  article: "Article",
+  image: "Image",
+  video: "Vidéo",
+  document: "Document",
+  audio: "Audio",
+};
+
+export function libelleNature(type: string): string {
+  return (LIBELLES as Record<string, string>)[type] ?? type;
+}

@@ -1,7 +1,7 @@
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import type { RaindropItem } from "../../shared/types";
-import { Glyphe } from "../design/glyphes";
+import { Glyphe, libelleNature } from "../design/glyphes";
 import { Etoile } from "../design/Etoile";
 import { CarreCollection, PiluleEtiquette, filetEtat, type EtatLien } from "../design/Signaux";
 
@@ -106,9 +106,13 @@ export function RaindropRow(props: {
       </div>
       {/* §2.1 : le glyphe se place AVANT le domaine, dans le même filet de
           texte secondaire, et partage sa couleur — pas un badge, une lettre
-          de plus. §7 : le domaine en chasse fixe (.url), et rien d'autre. */}
+          de plus. §7 : le domaine en chasse fixe (.url), et rien d'autre.
+          La nature est aussi identifiée EN TOUTES LETTRES : le glyphe seul
+          exige de le deviner (signalement 2026-09-20). */}
       <span className="flex shrink-0 items-center gap-1 text-app-muted">
         <Glyphe type={r.type} />
+        <span className="url text-[11px]">{libelleNature(r.type)}</span>
+        <span aria-hidden="true">·</span>
         <span className="url text-[11px]">{r.domain}</span>
       </span>
       <span className="shrink-0 text-xs text-app-muted">{dateFr(r.created)}</span>
