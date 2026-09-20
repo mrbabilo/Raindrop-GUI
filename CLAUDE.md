@@ -360,6 +360,16 @@ couverture, c'est une intention.
   pointercancel, et au démontage — ce dernier dans un `useEffect` à deps
   vides SÉPARÉ : un re-render qui re-court l'effet des listeners ne doit
   jamais tuer un geste en cours (le geste vit hors du rendu, par design).
+  **Encore insuffisant (2026-09-22, mesuré par sonde dans le vrai
+  webview)** : `element.style.userSelect = "none"` (forme STANDARD, inline)
+  y est POSÉ mais IGNORÉ — le computed reste `text` ; WebKit n'obéit qu'à
+  la forme PRÉFIXÉE, que l'inline standard ne porte pas (le `select-none`
+  de Tailwind marchait parce que le CSS compilé émet LES DEUX formes). La
+  garde est donc une FEUILLE DE STYLE dynamique (`style[data-garde-drag]`,
+  `body, body *` + les deux formes + `!important`), posée au pointerdown,
+  retirée à la fin — et testable en jsdom par l'existence de l'élément
+  (`style.setProperty("-webkit-…")` y est avalé : n'assertionner jamais le
+  préfixé via l'API inline).
 - **Une route absente du mock ne ressemble pas à un mock absent.** `App.test`
   ne servait pas `/api/raindrops/:id` : `DetailPane` recevait la réponse de
   *health*, jetait sur `r.highlights.length`, et l'arbre se démontait — le
