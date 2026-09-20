@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { t } from "../i18n/fr";
 import type { View } from "../state/appState";
@@ -54,6 +54,17 @@ export function ListPane() {
   // et recliquer la même la retire.
   const filtreTags = useFiltreEtiquettes();
   const parentRef = useRef<HTMLDivElement>(null);
+  // La fiche vole 320 px à la grille : les colonnes de la mosaïque re-flux
+  // et la vignette ouverte pouvait sortir du champ (signalement 2026-09-20).
+  // On la ramène AU PLUS PRÈS — « nearest » ne scrolle pas si elle est
+  // déjà visible. Exécuté après le layout (effet), au changement de
+  // sélection ET de mode d'affichage.
+  useEffect(() => {
+    if (selectedRaindropId === null) return;
+    parentRef.current
+      ?.querySelector(`[data-testid="tile-${selectedRaindropId}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [selectedRaindropId, q.viewMode]);
   // estimateSize suit la densité §8 (36 px) : measureElement (R7P) corrige
   // ensuite chaque hauteur réelle, mais un estimate faux ferait sauter la
   // barre de défilement sur 12 000 lignes dès le premier scroll.
@@ -139,7 +150,7 @@ export function ListPane() {
           // restait vide sur la droite — jusqu'à 220 px perdus. 221 px est le
           // PLANCHER de la colonne ; les tuiles s'étirent pour remplir.
           <div className="grid grid-cols-[repeat(auto-fill,minmax(221px,1fr))] gap-3 p-3">
-            {items.map((r) => <MosaicTile key={r.id} r={r} collectionRacine={titreRacine(r.collectionId)} etat={etats?.get(r.id) ?? null} onOpen={() => selectRaindrop(r.id)} />)}
+            {items.map((r) => <MosaicTile key={r.id} r={r} isDetail={selectedRaindropId === r.id} collectionRacine={titreRacine(r.collectionId)} etat={etats?.get(r.id) ?? null} onOpen={() => selectRaindrop(r.id)} />)}
           </div>
         ) : (
           <div style={{ height: virtual.getTotalSize(), position: "relative" }}>

@@ -13,15 +13,25 @@ export function MosaicTile({
   onOpen,
   collectionRacine,
   etat,
+  isDetail,
 }: {
   r: RaindropItem;
   onOpen(): void;
   collectionRacine?: string;
   etat?: EtatLien | null;
+  /** La fiche de CE signet est ouverte : surface `sel` (§6), comme la ligne
+   *  de liste — sinon la vignette cliquée ne se distingue pas des autres. */
+  isDetail?: boolean;
 }) {
   const marque = filetEtat(etat);
   return (
-    <button type="button" data-nav className="flex w-full flex-col overflow-hidden rounded-[9px] border border-app-border text-left" onClick={onOpen}>
+    <button
+      type="button"
+      data-nav
+      data-testid={`tile-${r.id}`}
+      className={"flex w-full flex-col overflow-hidden rounded-[9px] border border-app-border text-left" + (isDetail ? " bg-app-sel" : "")}
+      onClick={onOpen}
+    >
       {marque && <div className={"coiffe " + marque} data-testid={`coiffe-${r.id}`} />}
       {/* Le lavis thématique est sous la vignette : il tient lieu d'image
           quand `cover` est absent, « jamais une case vide » (§4). */}

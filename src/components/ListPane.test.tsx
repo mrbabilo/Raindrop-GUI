@@ -254,3 +254,43 @@ describe("ListPane — la signalétique d'état borde la ligne", () => {
     expect(screen.getByTestId("row-1000").className).not.toContain("filet");
   });
 });
+
+// En vue MOSAÏQUE, ouvrir la fiche ne doit ni laisser la vignette sans
+// marque, ni la perdre de vue : le panneau du détail vole 320 px à la
+// grille, les colonnes re-flux et la vignette cliquée pouvait sortir du
+// champ (signalement du 2026-09-20). La vignette ouverte porte la surface
+// `sel` (§6, comme les lignes), et le conteneur la ramène en vue.
+describe("ListPane — la vignette de mosaïque ouverte", () => {
+  const scrollSpy = vi.fn();
+  beforeAll(() => {
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollSpy,
+    });
+  });
+
+  const PiloteMosaic = () => {
+    const { patchList } = useAppState();
+    return <button type="button" onClick={() => patchList({ viewMode: "mosaic" })}>vers-mosaic</button>;
+  };
+
+  it("la vignette ouverte porte la surface sel, et est ramenée en vue", async () => {
+    const { default: testing } = await import("@testing-library/react");
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AppStateProvider>
+          <Spy />
+          <PiloteMosaic />
+          <ListPane />
+        </AppStateProvider>
+      </QueryClientProvider>,
+    );
+    await userEvent.click(screen.getByText("vers-mosaic"));
+    scrollSpy.mockClear();
+    const tuile = screen.getByText("Article exemple").closest("button")!;
+    await userEvent.click(tuile);
+    await testing.waitFor(() => expect(screen.getByTestId("detail-id").textContent).toBe("1000"));
+    expect(tuile.className).toContain("bg-app-sel");
+    expect(scrollSpy).toHaveBeenCalledWith(expect.objectContaining({ block: "nearest" }));
+  });
+});
