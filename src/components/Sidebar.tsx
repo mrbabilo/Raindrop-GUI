@@ -4,9 +4,8 @@ import type { Collection } from "../../shared/types";
 import { useCollections, useTags } from "../hooks/useStaticData";
 import { useAppState } from "../state/appState";
 import { vueEtiquette } from "../hooks/filtreEtiquettes";
-import { useDrag } from "../state/drag";
+import { useDrag, laMemeCible, type CibleDepot } from "../state/drag";
 import { CarreCollection, teinteCollection } from "../design/Signaux";
-import { depotPermis } from "../hooks/useDragBookmark";
 import { GroupeCollection, type PliageClavier } from "./GroupeCollection";
 import { useRovingFocus } from "../hooks/useRovingFocus";
 
@@ -48,20 +47,21 @@ const Compteur = ({ n }: { n: number }) =>
 
 export function Sidebar() {
   const { view, go } = useAppState();
-  // Pendant un déplacement, chaque collection devient une cible. Le survol se
-  // signale au contexte : c'est lui que le relâchement interrogera.
-  const { ids: enDeplacement, cible, survoler } = useDrag();
-  // Handlers de cible, posés sur les seules entrées qui acceptent un dépôt —
-  // ni la corbeille, ni « Tous », ni les marqueurs d'état (depotPermis).
-  const accueil = (collectionId: number) =>
-    enDeplacement === null || !depotPermis(collectionId)
+  // Pendant un déplacement, TOUTE destination devient une cible — les
+  // collections, les entrées fixes et les étiquettes : chaque sorte a son
+  // verbe au relâchement (table des sortes de useDragBookmark). Seul
+  // Non-lus n'en est pas une : un filtre d'état n'est pas une destination.
+  const { ids: enDeplacement, cible: laCible, survoler } = useDrag();
+  // Handlers de cible, posés sur les seules entrées qui en portent une.
+  const accueil = (cible: CibleDepot | null) =>
+    enDeplacement === null || cible === null
       ? {}
       : {
-          onPointerEnter: () => survoler(collectionId),
+          onPointerEnter: () => survoler(cible),
           onPointerLeave: () => survoler(null),
         };
-  const survolee = (collectionId: number) =>
-    enDeplacement !== null && cible === collectionId ? cibleActive : "";
+  const survolee = (cible: CibleDepot | null) =>
+    enDeplacement !== null && laMemeCible(cible, laCible) ? cibleActive : "";
 
   // Une seule entrée au clavier pour toute la barre : sans roving tabindex,
   // atteindre la liste demande de traverser les collections ET les quelque
@@ -97,10 +97,13 @@ export function Sidebar() {
   return (
     <nav ref={zone} onKeyDown={roving.surTouche} className="flex h-full flex-col gap-3 overflow-y-auto p-2">
       <section className="flex flex-col gap-0.5">
-        <button data-nav className={item + (isList(0) ? selected : "")} onClick={() => go({ kind: "list", collectionId: 0, label: t("nav.all") })}>{t("nav.all")}</button>
+        {/* Déposer sur « Tous » sort le signet de sa collection ; sur
+            « Favoris », le marque favori ; sur la corbeille, le corbeille
+            (origines lues par le sidecar). Non-lus n'accueille rien. */}
+        <button data-nav className={item + (isList(0) ? selected : "") + survolee({ sorte: "tous" })} {...accueil({ sorte: "tous" })} onClick={() => go({ kind: "list", collectionId: 0, label: t("nav.all") })}>{t("nav.all")}</button>
         <button data-nav className={item + (isList(-2) ? selected : "")} onClick={() => go({ kind: "list", collectionId: -2, label: t("nav.unread") })}>{t("nav.unread")}</button>
-        <button data-nav className={item + (isList(-3) ? selected : "")} onClick={() => go({ kind: "list", collectionId: -3, label: t("nav.favorites") })}>{t("nav.favorites")}</button>
-        <button data-nav className={item + (isList(-99) ? selected : "")} onClick={() => go({ kind: "list", collectionId: -99, label: t("nav.trash") })}>{t("nav.trash")}</button>
+        <button data-nav className={item + (isList(-3) ? selected : "") + survolee({ sorte: "favoris" })} {...accueil({ sorte: "favoris" })} onClick={() => go({ kind: "list", collectionId: -3, label: t("nav.favorites") })}>{t("nav.favorites")}</button>
+        <button data-nav className={item + (isList(-99) ? selected : "") + survolee({ sorte: "corbeille" })} {...accueil({ sorte: "corbeille" })} onClick={() => go({ kind: "list", collectionId: -99, label: t("nav.trash") })}>{t("nav.trash")}</button>
       </section>
 
       <button data-nav className={item + (view.kind === "cleanup" ? selected : "")} onClick={() => go({ kind: "cleanup" })}>{t("nav.cleanup")}</button>
@@ -124,11 +127,11 @@ export function Sidebar() {
                       elle, le chevron raccourcissait le fond des parents et
                       les bandes n'étaient pas de même longueur. */}
                   <div
-                    className={"nav-ligne" + survolee(c.id)}
+                    className={"nav-ligne" + survolee({ sorte: "collection", id: c.id })}
                     data-niveau="0"
                     data-courante={vueCourante === c.id}
                     style={teinteCollection(arbre, c.id)}
-                    {...accueil(c.id)}
+                    {...accueil({ sorte: "collection", id: c.id })}
                   >
                     {chevron}
                     {/* Une collection QUI A des enfants ouvre la vue
@@ -169,7 +172,7 @@ export function Sidebar() {
                       // inline : la valeur exacte compte, pas une classe approximative.
                       <div
                         key={ch.id}
-                        className={"nav-ligne" + survolee(ch.id)}
+                        className={"nav-ligne" + survolee({ sorte: "collection", id: ch.id })}
                         data-niveau="1"
                         data-courante={vueCourante === ch.id}
                         style={teinteCollection(arbre, ch.id)}
@@ -179,7 +182,7 @@ export function Sidebar() {
                           reprendre le padding ordinaire. DESIGN.md §8 — le
                           retrait de 14 px par niveau est désormais porté par
                           le décrochement de la bande, non par un padding. */}
-                      <button data-nav className={itemColl} {...accueil(ch.id)} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
+                      <button data-nav className={itemColl} {...accueil({ sorte: "collection", id: ch.id })} onClick={() => go({ kind: "list", collectionId: ch.id, label: ch.title })}>
                         <Signe arbre={arbre} c={ch} />
                         <span className="min-w-0 flex-1 truncate">{ch.title}</span>
                         <Compteur n={ch.count} />
@@ -200,8 +203,16 @@ export function Sidebar() {
             R11P-1 : la vue porte search `#tag` — listQuery lit view.search,
             pas le label ; sans lui, cliquer un tag montre « Tous » non
             filtré. */}
+        {/* Une étiquette est une CIBLE : y déposer un signet le marque avec
+            elle (union côté sidecar — poser ne remplace jamais). */}
         {(tags.data ?? []).map((tg) => (
-          <button key={tg.name} data-nav className={item} onClick={() => go(vueEtiquette([tg.name]))}>
+          <button
+            key={tg.name}
+            data-nav
+            className={item + survolee({ sorte: "tag", nom: tg.name })}
+            {...accueil({ sorte: "tag", nom: tg.name })}
+            onClick={() => go(vueEtiquette([tg.name]))}
+          >
             {/* Le nom garde SON span : le # décoratif reste hors de lui, sinon
               une requête de test sur « typescript » ne trouve plus rien —
               elles ne lisent que les nœuds texte directs. L'enveloppe, elle,

@@ -285,21 +285,37 @@ describe("Sidebar", () => {
     expect(ligne.className).not.toContain("outline");
   });
 
-  // La corbeille n'accueille rien : y glisser un signet l'effacerait d'un
-  // geste, sans confirmation — la mise à la corbeille est un verbe (§10).
-  // « Tous » et les marqueurs d'état ne sont pas davantage des lieux.
-  it("corbeille, Tous, Non-lus et Favoris n'accueillent aucun dépôt", async () => {
+  // Demande du 2026-09-20 : chaque destination a SON verbe. La corbeille,
+  // les favoris et « Tous » (sortie de collection) ACCUEILLENT désormais un
+  // dépôt — seul Non-lus reste inerte : un filtre d'état n'est pas une
+  // destination.
+  it("corbeille, Favoris et Tous s'allument comme cibles — Non-lus, jamais", async () => {
     renderSidebar(true);
     await userEvent.click(screen.getByText("tirer"));
-    for (const nom of ["Corbeille", "Tous", "Non-lus", "Favoris"]) {
-      const entree = screen.getByText(nom).closest(".nav-ligne") ?? screen.getByText(nom).closest("button")!;
+    for (const nom of ["Corbeille", "Tous", "Favoris"]) {
+      const entree = screen.getByText(nom).closest("button")!;
       // Comparer l'avant et l'après : « Tous » est la vue COURANTE et porte
-      // déjà `bg-app-sel` de ce fait — c'est la même surface pour dire deux
-      // choses, seul son apparition au survol trahirait une cible.
+      // déjà `bg-app-sel` de ce fait — c'est l'apparition du contour au
+      // survol qui trahit la cible, pas la surface.
       const avant = entree.className;
       await userEvent.hover(entree);
+      expect(entree.className).toContain("outline");
+      await userEvent.unhover(entree);
       expect(entree.className).toBe(avant);
     }
+    const nonlus = screen.getByText("Non-lus").closest("button")!;
+    const avant = nonlus.className;
+    await userEvent.hover(nonlus);
+    expect(nonlus.className).toBe(avant);
+  });
+
+  // Une étiquette est une cible : y déposer un signet le marque avec elle.
+  it("une étiquette s'allume comme cible pendant un déplacement", async () => {
+    renderSidebar(true);
+    await userEvent.click(screen.getByText("tirer"));
+    const tag = screen.getByText("typescript").closest("button")!;
+    await userEvent.hover(tag);
+    expect(tag.className).toContain("outline");
   });
 
   // R11P-1 : cliquer un tag FILTRE la liste (filtre serveur prouvé en réel :

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n/fr";
 import { useAppState } from "../state/appState";
-import { useDrag } from "../state/drag";
+import { useDrag, type CibleDepot } from "../state/drag";
 import { useBulk } from "./useMutations";
+import { api } from "../lib/api";
 
 // Déplacer un signet en le tirant sur une collection de la sidebar.
 //
@@ -15,19 +16,10 @@ import { useBulk } from "./useMutations";
 /** En deçà, le geste reste un clic : la main tremble, elle ne déplace pas. */
 const SEUIL_PX = 5;
 
-/**
- * Une collection accepte-t-elle un dépôt ?
- *
- * Non pour la **corbeille** (-99) : y glisser un signet l'effacerait par un
- * geste, sans confirmation, là où la mise à la corbeille est un verbe nommé
- * (§10). Non pour « Tous » (0), qui n'est pas un lieu mais l'absence de
- * filtre, ni pour les marqueurs front Non-lus (-2) et Favoris (-3), qui
- * décrivent un état et ne sortent jamais du front (R3P). Oui pour les non
- * classés (-1), destination réelle côté API.
- */
-export function depotPermis(collectionId: number): boolean {
-  return collectionId === -1 || collectionId > 0;
-}
+// `depotPermis` a vécu : la garde n'est plus une interdiction de nombre mais
+// une TABLE DES SORTES — chaque entrée de la sidebar pose SA cible (ou pas,
+// pour Non-lus, un filtre d'état), et c'est ici que la sorte choisit le
+// verbe.
 
 export function useDragBookmark() {
   const { selectedIds } = useAppState();
@@ -48,16 +40,36 @@ export function useDragBookmark() {
   const etaitDrag = useRef(false);
 
   const deposer = useCallback(
-    (porte: { ids: number[] | null; cible: number | null }) => {
+    (porte: { ids: number[] | null; cible: CibleDepot | null }) => {
       const { ids: portes, cible } = porte;
-      if (portes === null || portes.length === 0) return;
-      if (cible === null || !depotPermis(cible)) return;
+      if (portes === null || portes.length === 0 || cible === null) return;
       setErreur(null);
-      // `collection_id: 0` comme la Revue : le contexte du bulk n'est jamais
-      // un marqueur front, qui ne doit pas atteindre le sidecar (R3P).
-      bulk
-        .mutateAsync({ operation: "move", collection_id: 0, ids: portes, to_collection_id: cible })
-        .catch((e: unknown) => setErreur(e instanceof Error ? e.message : String(e)));
+      // La table des sortes : une cible, un verbe. `collection_id: 0` comme
+      // la Revue : le contexte du bulk n'est jamais un marqueur front (R3P).
+      const verbe = (async () => {
+        switch (cible.sorte) {
+          case "collection":
+            return bulk.mutateAsync({ operation: "move", collection_id: 0, ids: portes, to_collection_id: cible.id });
+          case "tous":
+            // Y déposer SORT le signet de sa collection : non classés (-1),
+            // destination réelle côté API (demande du 2026-09-20).
+            return bulk.mutateAsync({ operation: "move", collection_id: 0, ids: portes, to_collection_id: -1 });
+          case "favoris":
+            // Non destructeur : `important` est un booléen, la route bulk
+            // l'accepte telle quelle.
+            return bulk.mutateAsync({ operation: "update", collection_id: 0, ids: portes, important: true });
+          case "corbeille":
+            // La sélection tirée ne transporte pas les origines : le sidecar
+            // les LIT, item par item, et les mémorise avant la corbeille
+            // (§4.2 — la restauration à l'origine ne se dégrade jamais).
+            return api.send("POST", "/api/raindrops/bulk-trash", { ids: portes });
+          case "tag":
+            // L'union se joue côté sidecar : le bulk update de Raindrop
+            // REMPLACE les étiquettes — poser ne doit jamais effacer.
+            return api.send("POST", "/api/raindrops/bulk-tag", { ids: portes, tag: cible.nom });
+        }
+      })();
+      verbe.catch((e: unknown) => setErreur(e instanceof Error ? e.message : String(e)));
     },
     [bulk],
   );

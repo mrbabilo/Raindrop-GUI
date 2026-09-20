@@ -3,7 +3,7 @@ import { render, screen, act } from "@testing-library/react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { useAppState, AppStateProvider } from "../state/appState";
 import { DragProvider, useDrag } from "../state/drag";
-import { useDragBookmark, depotPermis } from "./useDragBookmark";
+import { useDragBookmark } from "./useDragBookmark";
 
 const { sendApi } = vi.hoisted(() => ({ sendApi: vi.fn() }));
 vi.mock("../lib/api", () => ({ api: { get: vi.fn(), send: sendApi } }));
@@ -12,8 +12,9 @@ beforeEach(() => {
   sendApi.mockReset().mockResolvedValue({ moved: 1 });
 });
 
-// Harnais : un « signet » dragable et un compteur d'ouvertures du détail —
-// c'est par là qu'on vérifie qu'un drag n'ouvre pas la fiche au relâchement.
+// Harnais : un « signet » dragable, un compteur d'ouvertures du détail, et
+// une cible par SORTE de dépôt — la corbeille, les favoris, « Tous », une
+// étiquette ne déplacent plus : chaque sorte a son verbe.
 function Harness({ cocher = [] as number[] }) {
   const { toggleSelect, selectedRaindropId, selectRaindrop } = useAppState();
   const { survoler } = useDrag();
@@ -21,8 +22,11 @@ function Harness({ cocher = [] as number[] }) {
   return (
     <>
       <button type="button" onClick={() => cocher.forEach((id) => toggleSelect(id))}>cocher</button>
-      {/* Ce que fait la Sidebar au survol d'une collection pendant un drag. */}
-      <button type="button" onClick={() => survoler(101)}>survoler-101</button>
+      <button type="button" onClick={() => survoler({ sorte: "collection", id: 101 })}>survoler-coll</button>
+      <button type="button" onClick={() => survoler({ sorte: "tous" })}>survoler-tous</button>
+      <button type="button" onClick={() => survoler({ sorte: "favoris" })}>survoler-favoris</button>
+      <button type="button" onClick={() => survoler({ sorte: "corbeille" })}>survoler-corbeille</button>
+      <button type="button" onClick={() => survoler({ sorte: "tag", nom: "rust" })}>survoler-tag</button>
       <div
         data-testid="ligne-1000"
         {...poignee(1000, () => selectRaindrop(1000))}
@@ -62,23 +66,6 @@ const fenetre = (type: string, x: number, y: number) =>
     window.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX: x, clientY: y, button: 0 }));
   });
 
-describe("depotPermis", () => {
-  // La corbeille n'est pas une destination : y déposer effacerait un signet
-  // par un geste de glissement, sans confirmation — la mise à la corbeille
-  // passe par un verbe nommé (§10), jamais par un déplacement.
-  it("refuse la corbeille et les vues qui ne sont pas des collections", () => {
-    expect(depotPermis(-99)).toBe(false); // corbeille
-    expect(depotPermis(0)).toBe(false);   // « Tous » n'est pas un lieu
-    expect(depotPermis(-2)).toBe(false);  // marqueur front (Non-lus)
-    expect(depotPermis(-3)).toBe(false);  // marqueur front (Favoris)
-  });
-
-  it("accepte une vraie collection, classée ou non", () => {
-    expect(depotPermis(101)).toBe(true);
-    expect(depotPermis(-1)).toBe(true); // non classés : une destination réelle
-  });
-});
-
 describe("useDragBookmark", () => {
   it("ne commence rien sous le seuil de 5 px — un clic reste un clic", () => {
     rendu();
@@ -102,13 +89,69 @@ describe("useDragBookmark", () => {
     pointer(ligne, "click", 110, 100);
     expect(screen.getByTestId("detail").textContent).toBe("");
   });
+});
+
+// Les dépôts par cible : chaque sorte de `CibleDepot` a SON verbe.
+describe("les dépôts par cible", () => {
+  // Demande du 2026-09-20 : « Tout (sort le signet de sa collection) » —
+  // déposer sur « Tous » emmène le signet en NON CLASSÉS (-1), destination
+  // réelle côté API ; « Tous » lui-même n'est pas un lieu.
+  it("déposer sur « Tous » sort le signet de sa collection (non classés)", async () => {
+    rendu();
+    const ligne = screen.getByTestId("ligne-1000");
+    pointer(ligne, "pointerdown", 100, 100);
+    fenetre("pointermove", 110, 100);
+    act(() => { screen.getByText("survoler-tous").click(); });
+    fenetre("pointerup", 110, 100);
+    await act(async () => { await Promise.resolve(); });
+    expect(sendApi).toHaveBeenCalledWith("POST", "/api/raindrops/bulk", {
+      operation: "move", collection_id: 0, ids: [1000], to_collection_id: -1,
+    });
+  });
+
+  it("déposer sur « Favoris » marque les signets favoris (bulk update, non destructeur)", async () => {
+    rendu();
+    const ligne = screen.getByTestId("ligne-1000");
+    pointer(ligne, "pointerdown", 100, 100);
+    fenetre("pointermove", 110, 100);
+    act(() => { screen.getByText("survoler-favoris").click(); });
+    fenetre("pointerup", 110, 100);
+    await act(async () => { await Promise.resolve(); });
+    expect(sendApi).toHaveBeenCalledWith("POST", "/api/raindrops/bulk", {
+      operation: "update", collection_id: 0, ids: [1000], important: true,
+    });
+  });
+
+  // La sélection tirée ne transporte pas les origines : le sidecar les LIT
+  // (bulk-trash), la restauration à l'origine ne se dégrade jamais.
+  it("déposer sur la corbeille met à la corbeille via la route des origines", async () => {
+    rendu();
+    const ligne = screen.getByTestId("ligne-1000");
+    pointer(ligne, "pointerdown", 100, 100);
+    fenetre("pointermove", 110, 100);
+    act(() => { screen.getByText("survoler-corbeille").click(); });
+    fenetre("pointerup", 110, 100);
+    await act(async () => { await Promise.resolve(); });
+    expect(sendApi).toHaveBeenCalledWith("POST", "/api/raindrops/bulk-trash", { ids: [1000] });
+  });
+
+  it("déposer sur une étiquette marque les signets avec SON union", async () => {
+    rendu();
+    const ligne = screen.getByTestId("ligne-1000");
+    pointer(ligne, "pointerdown", 100, 100);
+    fenetre("pointermove", 110, 100);
+    act(() => { screen.getByText("survoler-tag").click(); });
+    fenetre("pointerup", 110, 100);
+    await act(async () => { await Promise.resolve(); });
+    expect(sendApi).toHaveBeenCalledWith("POST", "/api/raindrops/bulk-tag", { ids: [1000], tag: "rust" });
+  });
 
   it("déposer sur une collection déplace le signet tiré", async () => {
     rendu();
     const ligne = screen.getByTestId("ligne-1000");
     pointer(ligne, "pointerdown", 100, 100);
     fenetre("pointermove", 110, 100);
-    act(() => { screen.getByText("survoler-101").click(); });
+    act(() => { screen.getByText("survoler-coll").click(); });
     fenetre("pointerup", 110, 100);
     await act(async () => { await Promise.resolve(); });
     expect(sendApi).toHaveBeenCalledWith("POST", "/api/raindrops/bulk", {
@@ -133,7 +176,7 @@ describe("useDragBookmark", () => {
     const ligne = screen.getByTestId("ligne-1000");
     pointer(ligne, "pointerdown", 100, 100);
     fenetre("pointermove", 110, 100);
-    act(() => { screen.getByText("survoler-101").click(); });
+    act(() => { screen.getByText("survoler-coll").click(); });
     fenetre("pointerup", 110, 100);
     await act(async () => { await Promise.resolve(); });
     const [, , body] = sendApi.mock.calls[0]!;
@@ -148,7 +191,7 @@ describe("useDragBookmark", () => {
     const ligne = screen.getByTestId("ligne-1000");
     pointer(ligne, "pointerdown", 100, 100);
     fenetre("pointermove", 110, 100);
-    act(() => { screen.getByText("survoler-101").click(); });
+    act(() => { screen.getByText("survoler-coll").click(); });
     fenetre("pointerup", 110, 100);
     await act(async () => { await Promise.resolve(); });
     const [, , body] = sendApi.mock.calls[0]!;
@@ -162,7 +205,7 @@ describe("useDragBookmark", () => {
     const ligne = screen.getByTestId("ligne-1000");
     pointer(ligne, "pointerdown", 100, 100);
     fenetre("pointermove", 110, 100);
-    act(() => { screen.getByText("survoler-101").click(); });
+    act(() => { screen.getByText("survoler-coll").click(); });
     fenetre("pointerup", 110, 100);
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
     expect(screen.getByTestId("erreur").textContent).toBe("réseau perdu");
