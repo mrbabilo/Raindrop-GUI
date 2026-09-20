@@ -37,7 +37,12 @@ export function useDragBookmark() {
 
   // Origine du geste et signets embarqués, hors du rendu : ils changent à
   // chaque pixel parcouru, et un rendu par pixel ferait ramer la liste.
-  const geste = useRef<{ x: number; y: number; ids: number[]; libelle: string; franchi: boolean } | null>(null);
+  // `avant` : le user-select du document, à rendre au relâchement — la garde
+  // vit AU POINTERDOWN, pas au rendu du fantôme : posée quelques frames trop
+  // tard, WebKit avait déjà amorcé la sélection sur les zones traversées
+  // (barre latérale, fiche) même quand la ligne d'origine ne se sélectionnait
+  // pas (constat utilisateur du 2026-09-20).
+  const geste = useRef<{ x: number; y: number; ids: number[]; libelle: string; franchi: boolean; avant: string } | null>(null);
   // Vrai tant que le clic de fin appartient à un déplacement. Sans cette
   // garde, relâcher au-dessus d'une ligne ouvrirait la fiche en prime.
   const etaitDrag = useRef(false);
@@ -71,16 +76,45 @@ export function useDragBookmark() {
     const lache = () => {
       const g = geste.current;
       geste.current = null;
-      if (g === null || !g.franchi) return;
+      if (g === null) return;
+      document.body.style.userSelect = g.avant;
+      if (!g.franchi) return;
       deposer(terminer());
+    };
+    // Le système peut interrompre le geste (changement d'app, geste du
+    // trackpad avorté) : sans ce filet, la garde resterait posée et la
+    // sélection de texte serait morte jusqu'au prochain drag.
+    const interrompu = () => {
+      const g = geste.current;
+      geste.current = null;
+      if (g === null) return;
+      document.body.style.userSelect = g.avant;
     };
     window.addEventListener("pointermove", bouge);
     window.addEventListener("pointerup", lache);
+    window.addEventListener("pointercancel", interrompu);
     return () => {
       window.removeEventListener("pointermove", bouge);
       window.removeEventListener("pointerup", lache);
+      window.removeEventListener("pointercancel", interrompu);
     };
   }, [commencer, terminer, deposer]);
+
+  // Filet de DÉMONTAGE uniquement (deps vides) : un re-render qui re-court
+  // l'effet des listeners ne doit jamais tuer un geste en cours — le geste
+  // vit hors du rendu (ref), le re-rendu fait partie de sa vie normale
+  // (survoler() en pose un, au cœur du geste). Seul le démontage du
+  // composant rend la garde et le geste morts-nés.
+  useEffect(() => {
+    const notre = geste;
+    return () => {
+      const g = notre.current;
+      if (g !== null) {
+        notre.current = null;
+        document.body.style.userSelect = g.avant;
+      }
+    };
+  }, []);
 
   /**
    * Handlers à étaler sur une ligne. `ouvrir` est son action de clic : elle
@@ -90,6 +124,9 @@ export function useDragBookmark() {
     (id: number, ouvrir: () => void, titre = "") => ({
       onPointerDown: (e: { clientX: number; clientY: number; button?: number }) => {
         if (e.button !== undefined && e.button !== 0) return; // clic droit : pas un déplacement
+        // La garde AVANT tout pixel : voir le commentaire du ref `geste`.
+        const avant = document.body.style.userSelect;
+        document.body.style.userSelect = "none";
         // Sélection liée : tirer un signet COCHÉ emmène toute la sélection ;
         // un signet non coché ne s'agrège pas à elle — on tire ce qu'on
         // montre, pas ce qui est coché ailleurs.
@@ -97,7 +134,7 @@ export function useDragBookmark() {
         // Un fantôme qui annonce « 3 signets » vaut mieux que trois titres
         // empilés : on déplace un LOT, sa taille est la seule chose à savoir.
         const libelle = embarques.length > 1 ? t("drag.count", { n: embarques.length }) : titre;
-        geste.current = { x: e.clientX, y: e.clientY, ids: embarques, libelle, franchi: false };
+        geste.current = { x: e.clientX, y: e.clientY, ids: embarques, libelle, franchi: false, avant };
         etaitDrag.current = false;
       },
       onClick: () => {

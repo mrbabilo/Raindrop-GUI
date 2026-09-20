@@ -168,3 +168,42 @@ describe("useDragBookmark", () => {
     expect(screen.getByTestId("erreur").textContent).toBe("réseau perdu");
   });
 });
+
+describe("la garde de sélection pendant le geste", () => {
+  // Le correctif vivait dans FantomeDrag, au RENDU du fantôme — quelques
+  // frames après le franchissement du seuil : WebKit avait déjà amorcé la
+  // sélection sur les zones TRAVERSÉES (barre latérale, fiche), là où le
+  // texte reste sélectionnable. La garde vit donc AU POINTERDOWN, avant
+  // tout pixel, dans le geste lui-même.
+  it("le pointerdown pose user-select:none, le pointerup le rend", () => {
+    const { getByTestId } = rendu();
+    expect(document.body.style.userSelect).toBe("");
+    pointer(getByTestId("ligne-1000"), "pointerdown", 0, 0);
+    expect(document.body.style.userSelect).toBe("none");
+    fenetre("pointerup", 0, 0);
+    expect(document.body.style.userSelect).toBe("");
+  });
+
+  it("un clic simple (seuil non franchi) ne laisse RIEN posé", () => {
+    const { getByTestId } = rendu();
+    pointer(getByTestId("ligne-1000"), "pointerdown", 0, 0);
+    fenetre("pointerup", 2, 2); // sous les 5 px : c'est un clic
+    expect(document.body.style.userSelect).toBe("");
+  });
+
+  it("un drag complet restaure à la fin", () => {
+    const { getByTestId } = rendu();
+    pointer(getByTestId("ligne-1000"), "pointerdown", 0, 0);
+    fenetre("pointermove", 30, 0); // seuil franchi
+    expect(document.body.style.userSelect).toBe("none");
+    fenetre("pointerup", 30, 0);
+    expect(document.body.style.userSelect).toBe("");
+  });
+
+  it("un pointercancel restaure aussi (filet : geste interrompu par le système)", () => {
+    const { getByTestId } = rendu();
+    pointer(getByTestId("ligne-1000"), "pointerdown", 0, 0);
+    fenetre("pointercancel", 30, 0);
+    expect(document.body.style.userSelect).toBe("");
+  });
+});

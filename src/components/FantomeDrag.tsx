@@ -17,18 +17,9 @@ export function FantomeDrag() {
   const ref = useRef<HTMLDivElement>(null);
   const actif = ids !== null;
 
-  // Constaté au navigateur : sans cela, tirer avec le bouton enfoncé
-  // SÉLECTIONNE le texte traversé — la page entière vire au bleu et le geste
-  // se termine sur une sélection dont personne n'a voulu. jsdom ne calcule
-  // pas de sélection : seul un vrai navigateur pouvait le montrer.
-  useEffect(() => {
-    if (!actif) return;
-    const avant = document.body.style.userSelect;
-    document.body.style.userSelect = "none";
-    return () => {
-      document.body.style.userSelect = avant;
-    };
-  }, [actif]);
+  // NB : la garde `user-select: none` vit DANS le geste (useDragBookmark,
+  // au pointerdown) — posée ici, au rendu du fantôme, elle arrivait quelques
+  // frames trop tard et laissait les zones traversées s'amorcer.
 
   useEffect(() => {
     if (!actif) return;
