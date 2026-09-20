@@ -97,6 +97,17 @@ les décisions structurantes.
   `isError` — parser le premier bloc de contenu, ne jamais se fier au statut.
 - **Pagination : 50 items max par requête** (création en masse : **100**
   objets max) ; corbeille = collection `-99`, Tous = `0`, non classés = `-1`.
+- **`bulk_raindrops` delete : `collection_id` est la SOURCE, pas la
+  destination** (v1.3.1, lu dans le compilé) : le tool frappe
+  `DELETE /raindrops/{collection_id}` — « 0 » (Tous) met à la corbeille ;
+  **`-99` ne corbeille RIEN** : il chercherait les ids DANS la corbeille,
+  n'y trouve rien, et répond `result: true` quand même — un succès inventé
+  que l'aplatissement MCP rend indétectable. Défaut réel du 2026-09-20 :
+  deux doublons « corbeillés » restés intacts, sans la moindre erreur, et
+  le `ResultatDedupe` (`echecs`…) n'étant jamais rendu au front, rien ne
+  pouvait le dire. Le test affirmait `-99` : il verrouillait le défaut.
+  Règle : en écriture en masse, la source de suppression est `0` — la
+  corbeille n'est une collection que pour LIRE (-99) et RESTAURER (§4.2).
 - **Imports relatifs avec extension `.js`** (moduleResolution nodenext) —
   sinon le build `tsc` est cassé au runtime.
 - **Tags au format brut** : l'API renvoie `{_id, count}` → normaliser en
