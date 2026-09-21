@@ -24,6 +24,10 @@ libc = "0.2"
 # amendée) : un contrôle de sécurité ne se délègue pas à un binaire qui peut
 # être absent — /usr/bin/shasum dépend du CLT.
 sha2 = "0.10"
+# Validation des URL de la fenêtre page web (spec lecture §4) : schéma et
+# hôte se lisent sur une URL PARÉE, pas sur des sous-chaînes. Déjà dans
+# l'arbre en transitive via tauri.
+url = "2"
 # Dialogue natif de choix de dossier (spec sélection §2) — côté Rust
 # uniquement : le webview n'invoque que nos commandes, jamais le plugin.
 tauri-plugin-dialog = "2"

@@ -4,6 +4,7 @@ mod demarrage;
 mod etat_connexion;
 mod jeton;
 mod node;
+mod page_web;
 mod reglages;
 mod runtime;
 mod sidecar;
@@ -75,7 +76,8 @@ pub fn run() {
             commandes::progression_installation,
             commandes::etat_sauvegarde,
             commandes::choisir_dossier_sauvegarde,
-            commandes::retirer_dossier_sauvegarde
+            commandes::retirer_dossier_sauvegarde,
+            page_web::ouvrir_page_web
         ])
         .setup(|app| {
             let token_local = match jeton::engendrer() {
