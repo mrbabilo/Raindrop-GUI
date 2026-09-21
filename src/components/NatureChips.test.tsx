@@ -127,17 +127,26 @@ describe("NatureChips", () => {
     expect(names[2]).toBe("Images");
   });
 
-  it("clic = bascule le filtre de nature", async () => {
-    pagesRef.items = [raindrop({ type: "video" })];
-    renderChips(true);
+  // MESURÉ dans le vrai WebKit (2026-09-21) : un <button> n'y reçoit PAS le
+  // focus au clic — le mousedown de la puce blurait le champ (relatedTarget
+  // null), la rangée se retirait AVANT le mouseup, et le clic ne partait
+  // jamais : « ça ne filtre pas ». Le fix : mousedown preventDefault — le
+  // champ garde le focus, la rangée tient, le filtre part.
+  it("le clic sur une puce ne vole pas le focus du champ", async () => {
     const user = userEvent.setup();
-    const bouton = screen.getByRole("button", { name: "Vidéos" });
-    expect(bouton).toHaveAttribute("aria-pressed", "false");
-    await user.click(bouton);
-    expect(bouton).toHaveAttribute("aria-pressed", "true");
+    pagesRef.items = [raindrop({ type: "video" })];
+    renderChips();
+    await user.click(screen.getByLabelText("Rechercher…"));
+    expect(screen.getByRole("button", { name: "Vidéos" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Vidéos" }));
+    // Le champ garde le focus : sans lui, la rangée disparaît avant le
+    // mouseup et le filtre ne part jamais.
+    expect(screen.getByLabelText("Rechercher…")).toHaveFocus();
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ media: "video" });
-    await user.click(bouton);
-    expect(bouton).toHaveAttribute("aria-pressed", "false");
+    // Les puces restent posées (media actif), la bascule se défait au
+    // second clic.
+    expect(screen.getByRole("button", { name: "Vidéos" }).getAttribute("aria-pressed")).toBe("true");
+    await user.click(screen.getByRole("button", { name: "Vidéos" }));
     expect(JSON.parse(screen.getByTestId("view").textContent!).media).toBeUndefined();
   });
 });

@@ -59,6 +59,12 @@ export function NatureChips({ focused }: { focused: boolean }) {
             type="button"
             aria-pressed={active}
             className={chip + (active ? chipOn : "")}
+            // MESURÉ (2026-09-21) : sans lui, le mousedown de la puce blaire
+            // le champ de recherche (WebKit ne focus pas les boutons au
+            // clic, relatedTarget null) — la rangée se retirait avant le
+            // mouseup et le clic ne partait JAMAIS : les puces ne filtraient
+            // pas. preventDefault garde le focus au champ.
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => toggle(type)}
           >
             <Glyphe type={type} />
