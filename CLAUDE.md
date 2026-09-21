@@ -389,10 +389,15 @@ couverture, c'est une intention.
 - **`scripts/release.py` ne sait PAS faire de pre-release** : il lit la version
   de `tauri.conf.json` (`0.1.0`), poserait donc le tag **`v0.1.0`**, appelle
   `gh release create` **sans `--prerelease`**, et son prompt est interactif
-  (inutilisable depuis un agent). Les trois `v0.1.0-pre.N` ont été faites à la
+  (inutilisable depuis un agent). Les `v0.1.0-pre.N` ont été faites à la
   main. Republier : `git tag -f`, `git push -f origin <tag>`,
   `gh release upload --clobber`, **et le dire dans les notes** — remplacer des
   binaires en silence laisse une copie défectueuse circuler sous le même nom.
+  Procédure complète d'une pre : `scripts/build_app.py` (tests inclus) →
+  zip au `ditto -c -k --sequesterRsrc --keepParent` + copie du dmg →
+  **copier les DEUX dans `bundles/`** (archive locale ignorée de git —
+  raté pour pre.18 le 2026-09-22, publiée sans y passer) → tag + push du
+  tag → `gh release create <tag> <zip> <dmg> --prerelease --notes-file`.
 
 - **La sentinelle du défilement infini se réarme à chaque rendu.** Son
   observeur est recréé par le callback ref à chaque rendu — or
