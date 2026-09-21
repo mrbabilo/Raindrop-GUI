@@ -442,8 +442,11 @@ signet près, y compris croisé avec le filtre de domaine.
   source du bulk move est l'endroit d'où l'on tire — depuis la corbeille,
   elle vaut -99, et déposer sur une collection restaure vers elle.
 - **Les puces de nature (Liens / Articles / Images…) ne filtraient rien** :
-  le paramètre `media` du pont est un paramètre mort comme `domain` — le
-  filtre se compose en opérateur `type:` dans la recherche.
+  deux défauts superposés — le paramètre `media` du pont est un paramètre
+  mort comme `domain` (le filtre se compose en opérateur `type:` dans la
+  recherche), **et** le clic lui-même ne partait jamais : WebKit ne focus pas
+  les boutons, le mousedown de la puce retirait la rangée avant le mouseup
+  (mesuré dans le vrai webview ; le mousedown ne vole plus le focus).
 - **Le glisser-déposer sélectionnait le texte des zones traversées** (barre
   latérale, fiche) : WebKit ignore la forme standard de `user-select` posée
   en style inline — la garde est une feuille de style aux deux formes,
@@ -666,7 +669,7 @@ tests. C'est en soi l'enseignement de ces deux journées.
 
 ### Pré-versions publiées
 
-`v0.1.0-pre.1` (2026-09-17) à `v0.1.0-pre.15` (2026-09-21), macOS Apple
+`v0.1.0-pre.1` (2026-09-17) à `v0.1.0-pre.16` (2026-09-21), macOS Apple
 Silicon, signature ad-hoc. `pre.2` et `pre.3` ont vu leurs binaires
 **remplacés** après publication, un défaut ayant été trouvé à l'usage dans
 l'heure — les notes de chaque version le disent. `pre.13` embarquait un
