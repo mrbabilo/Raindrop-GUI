@@ -161,3 +161,79 @@ Leur valeur vient de trois choix : le contenu lu est la surface principale,
 le contenu archivé existe sous plusieurs formes visibles, et les listes
 peuvent être des requêtes vivantes — les trois parlent directement à notre
 roadmap, deux d'entre elles gratuitement.
+
+## 8. Sous le capot — implémentations notables (source : github.com/karakeep-app/karakeep)
+
+Monorepo TypeScript : `apps/web` (Next.js), `apps/workers` (files de jobs),
+`apps/mobile`, `packages/db` (SQLite/Drizzle), `packages/shared` (le langage
+de recherche y vit), `packages/shared-react` (composants).
+
+### La recherche est un moteur interne, pas un délégataire
+
+`packages/shared/searchQueryParser.ts` : un **vrai parser** (typescript-parsec)
+qui transforme la saisie en arbre de matchers typés, compilé en SQL
+(drizzle) côté serveur. Grammaire : `AND`/`OR` explicites, parenthèses,
+négation (`-`, `!`), qualifieurs `is:`, `url:`, `list:`, `after:`, `before:`,
+`age:`, `feed:`, `title:`, `tag:`, `source:`, `#tag`, dates relatives.
+**Contraste architectural avec nous** : Karakeep possède ses données et son
+moteur ; Raindrop-GUI délègue la recherche à Raindrop et **compose des
+opérateurs dans `search=`** (`#tag`, `domain:`, `type:` — sondés un par un,
+car non composables entre eux au-delà de l'intersection). Leur grammaire est
+plus riche parce qu'ils paient le moteur ; nous économisons le moteur au
+prix de l'intersection seule.
+
+### Smart lists : une requête stockée, réutilisant le MÊME parser
+
+`packages/db/schema.ts` : `lists.type: "manual" | "smart"` + `lists.query`
+(le texte de recherche brut — réinterprété à chaque lecture par le parser
+ci-dessus), + listes imbriquées (`parentId`), + `rssToken` (chaque liste a
+un flux RSS) + `public`. La smart list n'a AUCUNE logique propre : c'est une
+chaîne stockée et le parser partagé. **Transposition directe chez nous** :
+une vue ListPane sérialisée (`listQueryArgs`) dans la barre latérale —
+notre `listQueryArgs` joue le rôle de leur parser.
+
+### Highlights : offsets numériques dans le contenu extrait
+
+`packages/shared/types/highlights.ts` : `startOffset`/`endOffset` numériques
++ couleur (palette fixe) + note. Le rendu réapplique ces offsets au DOM du
+contenu extrait (`BookmarkHtmlHighlighter.tsx` : sélection → popover
+couleur/note). Le contenu lu étant **leur propre archive**, les offsets sont
+stables — c'est ce que Raindrop fait côté serveur (nos highlights sont
+normalisés par le mapper). Les offsets sont la raison pour laquelle leur
+phase « surligner » est simple et la nôtre dépendra de l'archive Raindrop.
+
+### L'évaluation de la qualité du lecteur
+
+`apps/workers/workers/utils/readerViewAssessment.ts` : avant de proposer le
+mode Reader, un **classifieur versionné** (`READER_VIEW_CLASSIFIER_VERSION`)
+note la page : `isProbablyReaderable` (Readability), schémas JSON-LD
+(Article vs Product/SearchResults), densité de phrases finies, avec un
+**score et des raisons** (`ZReaderViewReason`). Notre spec lecture nomme
+« extraction vide » et assume qu'une extraction pauvre n'est pas détectable
+« à peu de frais » — leur code montre que le frais existe et est borné
+(heuristiques sur le DOM). → candidat pour la phase 2 de notre spec
+lecture : classer les extractions (bonne/mauvaise) plutôt que binaire.
+
+### L'archivage : crawler headless + extraction en subprocess
+
+`apps/workers/workers/crawler/` : Playwright headless (`crawlPage`,
+`browser.ts`, `autoconsent.ts` — clic automatique des bannières de
+cookies), et **l'extraction tourne dans un subprocess isolé**
+(`parseSubprocess.ts`) : une page qui crashe le parseur ne tue pas le
+worker — le même motif que notre limite « CLI » et notre subprocess MCP.
+Les quatre formats (reader HTML, screenshot, PDF, full HTML) sortent de ce
+pipeline.
+
+### Un moteur de règles automatiques
+
+`ruleEngineWorker.ts` : des règles du type « si tag X, ajouter à la liste Y »
+évaluées à l'ajout. Phase 2 (Stella) pour nous — le canevas produit
+existe.
+
+### Leçon transversale
+
+Karakeep paie son indépendance (moteur de recherche, crawler, workers,
+bases) ; nous déléguons ces mécanismes à Raindrop Pro et gagnons la moitié
+du code — mais **leurs parsers et leurs schémas sont publics** : quand une
+de nos compositions d'opérateurs bute sur une limite, leur grammaire liste
+ce qui EST possible côté Raindrop, et leur code montre l'implémentation.
