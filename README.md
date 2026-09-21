@@ -7,6 +7,30 @@ API REST locale, moteur d'analyse). L'application se construit et
 s'empaquete depuis ce dépôt. Conventions et décisions structurantes :
 `CLAUDE.md` et la spec (`docs/superpowers/specs/2026-09-15-raindrop-gui-design.md`).
 
+## Ce que fait l'application
+
+- **Bibliothèque** — liste virtualisée (12 000+ signets) et grille de
+  vignettes, collections imbriquées, palette ⌘K, édition inline, filtres
+  (étiquettes, nature, domaine, dates), recherche composée
+  (`#tag`, `domain:`, `type:`), **drag & drop** vers les collections, la
+  corbeille, les favoris, « Non classés » et les étiquettes.
+- **Nettoyage** — liens morts, redirections, indéterminés, doublons (tri avec
+  consolidation des étiquettes dans le gardé), non-taggés, collections vides,
+  corbeille. **Restauration partout** : fiche, barre de sélection, drag
+  depuis la corbeille. Les actions de masse passent par une Revue à deux
+  niveaux de confirmation.
+- **Sauvegarde locale** — balayage complet et incrémental de la bibliothèque
+  (instantanés JSONL datés, reprise en vol après coupure), archivage des
+  copies permanentes Pro avec budget géré et éviction annoncée.
+- **Journal** — écritures, jobs et erreurs du jour, lisibles dans les
+  Réglages (⌘,), copiables pour un rapport.
+- **Version et changelog** — l'app affiche sa version et signale une
+  publication plus récente (API GitHub du dépôt), notes incluses.
+- **Sur le métier** : analyse locale (jamais de requête massive contre des
+  tiers sans geste explicite), suppression toujours réversible par la
+  corbeille, interface en français. Analyse d'inspiration produit :
+  `docs/KARAKEEP.md`. Ce qui reste : `docs/ROADMAP.md`.
+
 ## Construire l'application
 
 ```bash

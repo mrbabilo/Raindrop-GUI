@@ -711,6 +711,92 @@ Ce qui reste :
       appelant depuis la déconnexion (`commandes.rs:160`). Retiré le
       2026-09-20.
 
+## Lots d'usage et corrections (2026-09-20 → 2026-09-21)
+
+Recalés contre la démo de Karakeep (`docs/KARAKEEP.md`) et les remontées
+d'usage des pre.12 → pre.16. Tout est poussé et publié dans `pre.16`.
+
+- [x] **La corbeille des doublons ne faisait RIEN** — le bulk delete partait
+      avec la corbeille comme *source* au lieu de « Tous » (PUT
+      /raindrops/{collection_id} : la collection y est l'endroit d'où l'on
+      retire) ; Raindrop ne trouvait rien, répondait `result: true`, et ni le
+      sidecar ni le front ne pouvaient le contredire — le test affirmait la
+      valeur fautive. Réparé, **et la Revue dit désormais le terme** du tri
+      (`ResultatDedupe` arrivé à plat sur l'event `done`, rendu : corbeillées,
+      étiquettes récupérées, échecs nommés ; l'élagage ne retire que ce qui
+      est réellement parti).
+- [x] **Le journal lisible dans l'app** — les écritures (corbeille, bulk,
+      dedupe, restauration) loggent leur issue, `runJob` trace le cycle des
+      jobs en un point unique, `GET /api/journal` rend les 500 dernières
+      entrées du jour, et la section « Journal » des Réglages les affiche
+      (Rafraîchir, Copier). C'est le silence qui a laissé le défaut ci-dessus
+      invisible deux semaines.
+- [x] **Le drag ne sélectionne plus le texte** des zones traversées — la
+      garde `user-select` vit au pointerdown en feuille de style aux DEUX
+      formes (mesuré dans le vrai webview : la forme standard inline y est
+      ignorée), restauration au relâchement, au pointercancel, au démontage.
+- [x] **Le clic ouvre la fiche dans toutes les vues du Nettoyage** (doublons,
+      liens morts, redirections, corbeille) ; `ActionLigne` stopPropage —
+      cocher, restaurer, remplacer n'ouvrent rien en prime ; la ligne ouverte
+      porte la surface `sel`.
+- [x] **Le dépôt du drag s'étend par SORTES** (`CibleDepot`) : corbeille
+      (`bulk-trash`, origines LUES par le sidecar), favoris (bulk update),
+      « Tous » → sortie de collection, étiquette de la barre latérale
+      (`bulk-tag`, union jamais remplacement). Chaque destination s'allume ;
+      Non-taggés n'est pas une cible (un filtre d'état n'est pas une
+      destination).
+- [x] **Depuis la corbeille, déposer = restaurer** — la source du move vaut
+      -99 ; depuis 0, Raindrop ne trouvait rien à déplacer.
+- [x] **« Restaurer » dans la fiche et la barre de sélection** — origine
+      mémorisée, ou destination choisie (sélecteur dans la fiche) ; «
+      Corbeille » se masque en vue corbeille.
+- [x] **Les puces de nature filtrent** — deux défauts superposés : `media`
+      paramètre mort (composé en `type:` dans la recherche — sondé :
+      `type:article` → 3844, `type:link` → 8229) **et** vol de focus au clic
+      (WebKit ne focus pas les boutons ; mousedown preventDefault, test
+      reproduisant le mécanisme).
+- [x] **« Non-lus » cède à « Non classés » et « Non-taggés »** — la
+      bibliothèque n'a aucun non-lu ; Non classés (-1) est listable et
+      destination de dépôt ; Non-taggés pose `notag` (traversant de bout en
+      bout). Le marqueur -2 et sa branche partent.
+- [x] **La version et le changelog dans l'app** — version installée (du shell)
+      en pied de barre ; dernière publiée via l'API GitHub publique
+      (`releases?per_page=5` — `releases/latest` exclut les préreleases) ;
+      comparateur NUMÉRIQUE (lexical dirait pre.9 > pre.10, et une release
+      compte comme l'infini) ; badge et notes affichés quand une mise à jour
+      existe ; échec GitHub silencieux.
+- [x] **La vignette de mosaïque ouverte** porte la surface `sel` et est
+      ramenée en vue quand le panneau détail fait re-flux la grille.
+- [x] **`DetailPane.test` découpé** (la fiche corbeillée vit dans
+      `DetailPane.corbeille.test.tsx`) — le cliquet avait refusé le build
+      pre.15 à 435 lignes ; premier build public jamais bloqué par lui,
+      et archives pre.15 republiées avec l'avis dans les notes.
+
+## À venir (entrées ouvertes au 2026-09-21)
+
+- [ ] **Lecture du contenu archivé et page web réelle** — spec validée
+      (`docs/superpowers/specs/2026-09-19-lecture-et-page-web-design.md`),
+      **plan prêt, non exécuté**
+      (`docs/superpowers/plans/2026-09-20-lecture-et-page-web.md`, 8 tasks).
+      Arbitré avec l'analyse Karakeep (`docs/KARAKEEP.md`) : le clic
+      principal ouvrira le *contenu lu*, la fiche passera en onglet
+      secondaire.
+- [ ] **Vues sauvegardées (« smart lists »)** — une vue filtrée nommée dans
+      la barre latérale, qui vit : sérialiser `listQueryArgs` là où Karakeep
+      stocke une requête réinterprétée par son parser partagé
+      (`docs/KARAKEEP.md` §8).
+- [ ] **Drag & drop de fusion d'étiquettes** dans la vue Tags — le geste
+      attendu là où notre fusion est un formulaire.
+- [ ] **Classifieur de qualité d'extraction** du lecteur (bonne/mauvaise avec
+      raisons, à la Karakeep — leur `readerViewAssessment.ts` montre que le
+      frais existe) — au-delà du binaire « vide / pas vide » de notre spec
+      lecture §3.
+- [ ] **Afficher ce qui est archivé par fiche** (l'équivalent de leur menu
+      « Offline Copies ») : le marqueur archive existe (liste et fiche), il
+      manque l'ouverture du contenu archivé.
+- [ ] **Inversion fiche ↔ lecture** une fois la lecture livrée (voir
+      ci-dessus) — présentée séparément pour ne pas la couler dans le plan.
+
 ## Veille
 
 `python3 tools/check_sources.py` — 7 sources, aucune n'a bougé au 2026-09-16.

@@ -40,6 +40,12 @@ Developer ID.
   inconnu de Raindrop se rend tel quel.
 - **La vignette de mosaïque ouverte porte la surface `sel`** et est ramenée
   en vue quand le panneau détail fait re-flux la grille.
+- **La version et le changelog dans l'app** : la version installée en pied de
+  barre latérale ; dans les Réglages, la dernière publication (API GitHub
+  publique du dépôt, `releases?per_page=5` car `latest` exclut les
+  préreleases) et ses notes quand une mise à jour existe — comparaison
+  numérique des préreleases (une comparaison lexicale dirait pre.9 >
+  pre.10), échec GitHub silencieux.
 
 #### Sidecar — plan 1/3, 16 tasks (2026-09-15 → 2026-09-16)
 
