@@ -3,6 +3,7 @@ import { z } from "zod";
 import { apiError } from "../../../shared/errors.js";
 import type { SidecarDeps } from "../deps.js";
 import { runJob } from "../../jobs/store.js";
+import { lireContenu } from "../../backup/contenuArchive.js";
 
 /** Sans dossier configuré, la sauvegarde est INACTIVE — et le dit. Ce n'est
  *  pas une panne : le sélecteur de dossier relève du shell Tauri (§4.3), et
@@ -62,6 +63,33 @@ export function sauvegardeRoutes(deps: SidecarDeps): Hono {
     const archivage = deps.archivage;
     if (!archivage) return apiError(c, "INVALID_INPUT", INACTIVE);
     return c.json(await archivage.inventaire());
+  });
+
+  // Le contenu archivé pour le mode lecture (spec lecture §3) : HTML
+  // décompressé EN FLUX — la lecture ne passe par la file Raindrop à aucun
+  // moment, c'est un fichier local. La date de l'archive voyage dans
+  // `X-Archive-Date` (mtime du fichier) : lire sans montrer la fraîcheur de
+  // ce qu'on lit serait cacher la moitié du diagnostic.
+  app.get("/archives/:id/content", async (c) => {
+    // Validation AVANT la construction du nom de fichier : `Number` d'un
+    // segment d'URL ne produit qu'un nombre ou NaN — aucun chemin négociable.
+    const id = Number(c.req.param("id"));
+    if (!Number.isInteger(id)) return apiError(c, "INVALID_INPUT", "identifiant entier attendu");
+    const archivage = deps.archivage;
+    if (!archivage) return apiError(c, "INVALID_INPUT", INACTIVE);
+    const verdict = await lireContenu(archivage.dossierArchives, id);
+    if (!verdict.ok) {
+      const code =
+        verdict.raison === "introuvable"
+          ? "ARCHIVE_ABSENTE"
+          : verdict.raison === "trop-volumineuse"
+            ? "ARCHIVE_TROP_VOLUMINEUSE"
+            : "ARCHIVE_ILLISIBLE";
+      return apiError(c, code, verdict.detail);
+    }
+    c.header("Content-Type", "text/html; charset=utf-8");
+    c.header("X-Archive-Date", verdict.dateIso);
+    return c.body(verdict.flux);
   });
 
   return app;

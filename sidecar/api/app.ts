@@ -44,6 +44,9 @@ export function createApp(deps: SidecarDeps, opts: { localToken: string }): Hono
     c.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
     c.header("Access-Control-Allow-Headers", "Authorization, Content-Type");
     c.header("Access-Control-Max-Age", "86400");
+    // La date de l'archive (spec lecture §3) doit rester LISIBLE au JS du
+    // webview : CORS masque tout en-tête non exposé, même sur une 200.
+    c.header("Access-Control-Expose-Headers", "X-Archive-Date");
     if (c.req.method === "OPTIONS") return c.body(null, 204);
     return next();
   });

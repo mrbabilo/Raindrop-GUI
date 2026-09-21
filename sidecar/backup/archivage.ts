@@ -42,6 +42,10 @@ export interface Archivage {
   enCours(): boolean;
   /** Ce qui est archivé, pour le panneau et les marqueurs (spec sélection §4.1). */
   inventaire(): Promise<{ ids: number[]; octets: number }>;
+  /** Le dossier `archives/` réel — la route de lecture y sert le contenu
+   *  (spec lecture §3). Le chemin vit ICI (même dérivation que l'écriture,
+   *  `join(deps.dossier, "archives")`), jamais recalculé ailleurs. */
+  readonly dossierArchives: string;
 }
 
 export function makeArchivage(deps: {
@@ -147,5 +151,6 @@ export function makeArchivage(deps: {
       });
     },
     inventaire: () => inventorier(dossierArchives),
+    dossierArchives,
   };
 }
