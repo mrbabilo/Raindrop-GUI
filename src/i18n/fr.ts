@@ -75,6 +75,24 @@ export const fr = {
   "detail.highlights": "Surlignages",
   "detail.guest": "Sélectionnez un bookmark pour voir le détail.",
   "detail.breadcrumb": "Fil d'Ariane",
+  // Lecture du contenu archivé (spec lecture §3) — chaque état porte SA
+  // raison, jamais un « http 404 » nu (§5).
+  "lecture.fermer": "Fermer la lecture",
+  "lecture.rail": "Métadonnées",
+  "lecture.badgeLocale": "archive locale",
+  "lecture.badgeCopie": "copie permanente",
+  "lecture.date": "Archive du {date}",
+  "lecture.introuvable": "L'archive a disparu entre l'affichage de la fiche et votre clic.",
+  "lecture.tropVolumineuse": "Cette archive dépasse la taille maximale lisible (64 Mo décompressés).",
+  "lecture.illisible": "L'archive n'a pas pu être lue — elle est peut-être défectueuse.",
+  "lecture.extractionVide": "Aucun texte n'a pu être extrait de cette archive.",
+  // Le temps de lecture, CALCULÉ sur l'extraction (~220 mots/min) — jamais
+  // deviné, jamais en dur.
+  "lecture.temps": "≈ {n} min de lecture",
+  // L'issue de secours des états d'échec (§5) — posée ICI car la vue la
+  // rend dès cette tâche ; les autres gestes de la fiche viennent à la
+  // tâche suivante.
+  "detail.voirPage": "Voir la page",
   "bulk.selected": "{n} sélectionné(s)",
   "bulk.trash": "Corbeille",
   "bulk.move": "Déplacer",

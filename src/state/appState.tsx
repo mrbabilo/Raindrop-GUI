@@ -92,7 +92,13 @@ export type View =
       // le retour après exécution. Absente (vue construite à la main) :
       // repli « Tous ».
       returnView?: View;
-    };
+    }
+  // La LECTURE du contenu archivé (spec lecture §3) : vue pleine largeur,
+  // ouverte depuis la fiche. `sourceCopie` : le texte vient d'une copie
+  // permanente téléchargée À LA VOLÉE (badge du rail) ; absent = l'archive
+  // locale était déjà là. `returnView`, même règle que la Revue : l'aller ne
+  // prouve rien sans le retour.
+  | { kind: "lecture"; raindropId: number; label: string; sourceCopie?: boolean; returnView?: View };
 
 // Les filtres/tri/mode portés par la vue list — cible du merge de patchList.
 // Un patch ajuste les FILTRES de la liste courante — jamais `kind`,
@@ -133,6 +139,15 @@ function reducer(s: State, a: Action): State {
   if (a.type === "clearSelection") return { ...s, selectedIds: new Set<number>() };
   if (a.type === "selectRaindrop") return { ...s, selectedRaindropId: a.id };
   return s;
+}
+
+/** La vue de retour — Revue ET Lecture, une seule règle (spec lecture §3 :
+ *  « même règle que la Revue ») : la vue d'origine notée, sinon « Tous ».
+ *  Testée par le comportement des deux vues ; une seule définition. */
+export function vueDeRetour(v: View): View {
+  return (v.kind === "review" || v.kind === "lecture") && v.returnView
+    ? v.returnView
+    : { kind: "list", collectionId: 0, label: t("nav.all") };
 }
 
 // Hors provider, toutes les actions sont des no-op volontaires : les tests

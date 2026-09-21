@@ -3,7 +3,7 @@ import { t } from "./i18n/fr";
 import type { Amorce } from "./lib/amorce";
 import { useTheme } from "./lib/theme";
 import { useSidebarRepliee } from "./lib/panneaux";
-import { useAppState } from "./state/appState";
+import { useAppState, vueDeRetour } from "./state/appState";
 import { Sidebar } from "./components/Sidebar";
 import { Icone } from "./design/icones";
 import { TopBar } from "./components/TopBar";
@@ -14,6 +14,7 @@ import { ReviewPage } from "./components/ReviewPage";
 import { TagsView } from "./components/TagsView";
 import { CollectionView } from "./components/CollectionView";
 import { DetailPane } from "./components/DetailPane";
+import { LectureView } from "./components/LectureView";
 import { CommandPalette } from "./components/CommandPalette";
 import { Banners } from "./components/Banners";
 import { Reglages } from "./components/Reglages";
@@ -48,14 +49,10 @@ function MoonIcon() {
 export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
   const { resolved, setMode } = useTheme();
   const { view, go, selectedRaindropId, selectRaindrop } = useAppState();
-  // R15P-3 : le retour de la Revue revient à la vue d'origine qu'elle porte
-  // (posée par BulkBar/CleanupView) ; sans origine notée, repli sur « Tous ».
-  const goBack = () =>
-    go(
-      view.kind === "review" && view.returnView
-        ? view.returnView
-        : { kind: "list", collectionId: 0, label: t("nav.all") },
-    );
+  // R15P-3 : le retour revient à la vue d'origine portée par la vue (Revue
+  // ET Lecture — même règle, une seule définition : vueDeRetour) ; sans
+  // origine notée, repli sur « Tous ».
+  const goBack = () => go(vueDeRetour(view));
   const isDark = resolved === "dark";
   // Task 10 : ⌘E amène le focus dans le composer, quel que soit le champ
   // occupé — le data-testid="composer-input" est le contrat du focus (plan).
@@ -67,10 +64,11 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
   // ⌘, — le raccourci macOS des réglages, partout dans le système.
   const [reglagesOuvert, setReglagesOuvert] = useState(false);
   const { repliee, basculer } = useSidebarRepliee();
-  // Le volet détail ne s'affiche QUE sur un signet ouvert : une colonne de
-  // 320 px occupée par « Sélectionnez un bookmark » coûte le tiers de la
-  // largeur utile pour ne rien dire.
-  const detailOuvert = selectedRaindropId !== null;
+  // La fiche cède la place pendant la LECTURE (spec lecture §3 : vue pleine
+  // largeur, le rail porte les métadonnées — fiche + rail dupliqueraient
+  // tout). La sélection RESTE : en revenant de la lecture, la fiche est
+  // encore là, exactement comme on l'avait laissée.
+  const detailOuvert = selectedRaindropId !== null && view.kind !== "lecture";
   useEffect(() => {
     function surRaccourci(e: KeyboardEvent) {
       if (e.metaKey && e.key === "e") {
@@ -181,7 +179,11 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
             Task 14 : la vue tags (renommer, fusionner, supprimer).
             Task 15 : la Revue de l'action — deux niveaux de confirmation,
             exécution puis retour (goBack, R15P-3). */}
-        {view.kind === "review" ? (
+        {view.kind === "lecture" ? (
+          // Lecture du contenu archivé (spec lecture §3) — vue pleine
+          // largeur, le rail à droite, sortie par goBack.
+          <LectureView view={view} goBack={goBack} />
+        ) : view.kind === "review" ? (
           <ReviewPage review={view} goBack={goBack} />
         ) : view.kind === "cleanup" ? (
           <CleanupDashboard />

@@ -437,3 +437,25 @@ body {
   font-weight: 590;
   letter-spacing: -0.015em;
 }
+
+/* §12 (mode lecture) : la colonne serif et le rail. Police système serif —
+   zéro chargement, même parti que la police de l'interface (§7). La mesure
+   ~66 caractères est celle du texte long ; le rail porte les métadonnées
+   que la fiche porte quand elle est là. */
+.lecture-corps {
+  font-family: ui-serif, Georgia, serif;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.rail-titre {
+  font-size: 15px;
+  font-weight: 590;
+  letter-spacing: -0.015em;
+}
+
+.lecture-img {
+  border-radius: 7px;
+  max-width: 100%;
+}
+
