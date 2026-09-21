@@ -637,6 +637,20 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   (`async (_methode: string, _chemin: string, _corps?: unknown) => …`) une
   fois pour toutes.
 
+## Traps lecture et fenêtre — lot 2026-09-21
+
+- **`data-tauri-drag-region` ne traîne RIEN sans `core:window:allow-start-dragging`.**
+  Le script `drag.js` du plugin window est injecté inconditionnellement et
+  appelle `plugin:window|start_dragging` au mousedown — mais `core:default`
+  n'inclut PAS cette permission (lu dans les sources du crate 2.11.5 ;
+  `core:window:default` porte `allow-internal-toggle-maximize`, pas
+  `start-dragging` — le double-clic maximiserait, le simple clic ne traîne
+  pas). L'`invoke` refusé est une promesse sans lecteur : aucun message
+  nulle part. Ajouté à `capabilities/default.json` ; preuve runtime : sonde
+  dans `dist/index.html` qui invoque `plugin:window|start_dragging` et poste
+  le verdict à un récepteur local (app debug à l'origine réelle) —
+  `DRAG-OK` après ajout.
+
 ## Git
 
 Travailler sur `main`. **Pousser uniquement quand l'utilisateur le demande.**
