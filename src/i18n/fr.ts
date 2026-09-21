@@ -93,6 +93,21 @@ export const fr = {
   // rend dès cette tâche ; les autres gestes de la fiche viennent à la
   // tâche suivante.
   "detail.voirPage": "Voir la page",
+  // Les gestes de la fiche (spec lecture §1 et §5) : « Lire » nomme ce qui
+  // manque quand il est désactivé. « Voir la page » est DÉJÀ posé (Task 6 —
+  // la vue lecture l'utilise comme issue de secours).
+  "detail.lire": "Lire",
+  "detail.lireSansCopie": "Ni archive locale ni copie permanente : rien à lire hors ligne.",
+  "detail.lireCopieEchec": "Copie permanente en échec côté Raindrop ({raison}).",
+  "detail.lireAttente": "Un archivage est déjà en cours — la lecture sera possible une fois terminé.",
+  // Les six états de `cache.status`, TRADUITS (jamais un identifiant brut à
+  // l'écran — même motif que LABELS_PROGRESSION).
+  "copie.retry": "nouvel essai programmé",
+  "copie.failed": "échec",
+  "copie.invalidOrigin": "origine invalide",
+  "copie.invalidTimeout": "délai dépassé",
+  "copie.invalidSize": "taille invalide",
+  "copie.inconnue": "état inconnu",
   "bulk.selected": "{n} sélectionné(s)",
   "bulk.trash": "Corbeille",
   "bulk.move": "Déplacer",

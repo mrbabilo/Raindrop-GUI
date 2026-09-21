@@ -44,6 +44,10 @@ beforeEach(() => {
     // L'inventaire des archives (spec sélection §4.1) : 1000 est archivé,
     // 2000 ne l'est pas — deux états distincts à prouver.
     if (path === "/api/backup/archives") return Promise.resolve({ ids: [1000], octets: 42 });
+    // ActionsLecture sonde les jobs en vol — sans cette branche, le mock
+    // rend undefined et la requête reste éternellement en attente (pas un
+    // crash, mais un avertissement react-query à chaque test).
+    if (path === "/api/jobs") return Promise.resolve([]);
     return undefined; // tout autre path : aucun (la query morte /api/highlights ne doit plus être appelée)
   });
   sendApi.mockReset().mockImplementation(async (_m: string, _p: string, body?: { important?: boolean }) => {

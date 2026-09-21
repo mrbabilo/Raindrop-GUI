@@ -30,6 +30,12 @@ function mockApi(mcp: string) {
     // health et jetait sur `r.highlights.length` — l'arbre se démontait, et
     // l'absence du volet passait pour un défaut du composant.
     if (path.startsWith("/api/raindrops/")) return Promise.resolve(raindrop());
+    // ActionsLecture (montée dans la fiche) sonde les jobs en vol et
+    // l'inventaire des archives — sans ces branches, les deux tombaient
+    // dans la réponse de health : `jobs.some` jetait et l'arbre entier se
+    // démontait (troisième occurrence du piège « route absente du mock »).
+    if (path === "/api/jobs") return Promise.resolve([]);
+    if (path === "/api/backup/archives") return Promise.resolve({ ids: [], octets: 0 });
     if (path === "/api/collections") return Promise.resolve({ items: collections });
     if (path === "/api/tags") return Promise.resolve({ items: tags });
     return Promise.resolve({ status: "ok", mcp });

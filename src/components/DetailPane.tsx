@@ -6,6 +6,7 @@ import { api } from "../lib/api";
 import { useAppState } from "../state/appState";
 import { useFiltreEtiquettes } from "../hooks/filtreEtiquettes";
 import { useCollections } from "../hooks/useStaticData";
+import { ActionsLecture } from "./ActionsLecture";
 import { useArchives } from "../hooks/useBackup";
 import { useUpdateRaindrop, useTrashRaindrop, useUnrestore } from "../hooks/useMutations";
 import { Glyphe } from "../design/glyphes";
@@ -283,6 +284,10 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
           </button>
         )}
       </div>
+      {/* Les deux gestes de contenu (spec lecture §1) : « Lire » l'archive,
+          « Voir la page » la page réelle. Le marqueur ci-dessous dit l'ÉTAT
+          (« Archivé » / copiable), ces boutons disent le GESTE. */}
+      <ActionsLecture r={r} />
       {/* R8P-1 : l'échec d'une écriture s'affiche ici, inline — l'édition
           reste ouverte et le brouillon intact (Enregistrer), l'item reste
           affiché (Corbeille). --color-app-broken : couleur d'un diagnostic (§6). */}
