@@ -436,6 +436,23 @@ signet près, y compris croisé avec le filtre de domaine.
 
 ### Corrigé
 
+#### La fenêtre qui ne se traînait plus, et les images en plusieurs exemplaires (2026-09-21)
+
+- **La fenêtre ne se déplaçait plus** depuis l'en-tête plein-fond :
+  `data-tauri-drag-region` y était bien posé, mais la permission
+  `core:window:allow-start-dragging` manquait aux capabilities — l'`invoke`
+  du script injecté de Tauri était refusé par l'ACL et la promesse rejetée
+  n'avait aucun lecteur : aucun message, nulle part (le double-clic aurait
+  maximisé — cette permission-là est, elle, dans le défaut). Ajoutée, avec
+  preuve runtime par sonde (`DRAG-OK` à l'origine réelle).
+- **La lecture répétait les images** : `extraireBlocs` hissait les images
+  d'un conteneur (`querySelectorAll`) puis y redescendait — une image
+  sortait une fois par ancêtre conteneur, plus une comme enfant direct
+  (trois exemplaires à deux niveaux de `<div>`, la structure ordinaire des
+  archives). Extraction mono-passe, à la Karakeep ; les images internes à
+  un bloc sortent avant le texte de ce bloc et ne sont plus perdues quand
+  le bloc est enfant direct de la racine.
+
 #### La corbeille qui ne corbeillait pas, et le drag qui sélectionnait (2026-09-20 → 2026-09-21)
 
 - **La corbeille des doublons ne faisait RIEN** : le bulk delete partait avec
