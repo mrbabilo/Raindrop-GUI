@@ -650,6 +650,18 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   dans `dist/index.html` qui invoque `plugin:window|start_dragging` et poste
   le verdict à un récepteur local (app debug à l'origine réelle) —
   `DRAG-OK` après ajout.
+- **Hisser PUIS redescendre fait sortir chaque image une fois par ancêtre.**
+  `extraireBlocs` hissait les images d'un conteneur (`querySelectorAll`)
+  avant d'y descendre : une image à deux niveaux de `<div>` sortait trois
+  fois (« en plusieurs exemplaires » rapporté en réel). Le test existant
+  verrouillait le cas sans conteneur — aveugle, encore lui. Mono-passe à la
+  Karakeep (`parseHtmlSubprocess.ts` : Readability traite le document sur
+  place, une image ne peut sortir qu'une fois) ; les images internes à un
+  bloc sortent avant le texte de CE bloc. À considérer si des images
+  « cassées » apparaissent : Karakeep normalise AUSSI le lazy-load
+  (`data-src`/`data-actualsrc`… → `src`, seulement si `src` absent ou
+  placeholder data-URI ≤ 200 caractères) — jamais observé sur nos archives,
+  pas implémenté sans preuve.
 
 ## Git
 

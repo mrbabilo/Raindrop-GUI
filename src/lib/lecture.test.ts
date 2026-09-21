@@ -76,6 +76,26 @@ describe("extraireBlocs", () => {
     ]);
   });
 
+  it("une image imbriquée dans des conteneurs sort UNE fois — pas une par ancêtre", () => {
+    // Structure réelle des archives : des divs imbriqués autour du contenu.
+    // L'ancien code hissait les images du conteneur (querySelectorAll) PUIS
+    // y redescendait : chaque image ressortait une fois par ancêtre
+    // conteneur, plus une fois comme enfant direct — « en plusieurs
+    // exemplaires » à l'écran. L'ordre attendu est l'ordre du document,
+    // les images internes à un bloc sortant avant le texte de CE bloc.
+    const html = `<html><body><article>
+      <div class="habillage"><div class="corps">
+        <p>Avant. <img src="https://x.fr/dans-p.jpg" alt="Dans le paragraphe"></p>
+        <img src="https://x.fr/directe.jpg" alt="Directe">
+      </div></div>
+    </article></body></html>`;
+    expect(extraireBlocs(html)).toEqual([
+      { balise: "img", src: "https://x.fr/dans-p.jpg", alt: "Dans le paragraphe" },
+      { balise: "p", segments: [{ texte: "Avant." }] },
+      { balise: "img", src: "https://x.fr/directe.jpg", alt: "Directe" },
+    ]);
+  });
+
   it("<pre> garde son texte BRUT (espaces et sauts préservés, inline aplati)", () => {
     const html = `<html><body><article>
       <pre>const x = 1;

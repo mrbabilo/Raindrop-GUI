@@ -110,14 +110,22 @@ export function extraireBlocs(html: string): Bloc[] {
     doc.body;
   if (!racine) return [];
   const out: Bloc[] = [];
+  const pousserImg = (el: Element) => {
+    const src = el.getAttribute("src") ?? "";
+    if (SRC_PERMIS.test(src)) {
+      out.push({ balise: "img", src, alt: el.getAttribute("alt") ?? "" });
+    }
+  };
+  // MONO-PASSE (leçon Karakeep — Readability traite le document sur place) :
+  // chaque image est RENCONTRÉE une seule fois. L'ancien code hissait les
+  // images d'un conteneur (querySelectorAll) PUIS y redescendait — chaque
+  // image sortait une fois par ancêtre conteneur, plus une fois comme
+  // enfant direct : « en plusieurs exemplaires » à l'écran (2026-09-21).
   const marche = (parent: Element) => {
     for (const enfant of Array.from(parent.children)) {
       const balise = enfant.tagName.toLowerCase();
       if (balise === "img") {
-        const src = enfant.getAttribute("src") ?? "";
-        if (SRC_PERMIS.test(src)) {
-          out.push({ balise: "img", src, alt: enfant.getAttribute("alt") ?? "" });
-        }
+        pousserImg(enfant);
         continue;
       }
       if (BLOCS_NIVEAU.has(balise)) {
@@ -126,19 +134,18 @@ export function extraireBlocs(html: string): Bloc[] {
           if (texte.trim()) out.push({ balise: "pre", segments: [{ texte }] });
           continue;
         }
+        // Les images internes au bloc sortent d'abord — segmentsDe les
+        // ignore — chacune une fois, avant le texte de CE bloc.
+        for (const img of enfant.querySelectorAll("img")) pousserImg(img);
         const segments = segmentsDe(enfant);
         if (segments.length > 0) {
           out.push({ balise: balise as "p", segments });
         }
         continue;
       }
-      // Conteneur : les images internes sortent d'abord, puis on descend.
-      for (const img of enfant.querySelectorAll("img")) {
-        const src = img.getAttribute("src") ?? "";
-        if (SRC_PERMIS.test(src)) {
-          out.push({ balise: "img", src, alt: img.getAttribute("alt") ?? "" });
-        }
-      }
+      // Conteneur : la descente, un point c'est tout — les images internes
+      // seront rencontrées là où elles vivent (enfant direct, bloc ou
+      // conteneur plus profond), jamais deux fois.
       marche(enfant);
     }
   };
