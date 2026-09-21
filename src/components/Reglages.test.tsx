@@ -20,6 +20,10 @@ vi.mock("./SectionSauvegarde", () => ({ SectionSauvegarde: () => <div data-testi
 // de Reglages, rendus NU sans QueryClientProvider, casseraient tous
 // (« No QueryClient set » — le piège des providers).
 vi.mock("./SectionJournal", () => ({ SectionJournal: () => <div data-testid="section-journal" /> }));
+// SectionVersion pose un useQuery aussi : même isolation, même piège des
+// providers (le rendu nu de Reglages.test ne peut pas porter un
+// QueryClientProvider).
+vi.mock("./SectionVersion", () => ({ SectionVersion: () => <div data-testid="section-version" /> }));
 vi.mock("../lib/amorce", () => ({
   remplacerJeton: remplacerMock,
   deconnecter: deconnecterMock,

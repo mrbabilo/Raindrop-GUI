@@ -6,6 +6,7 @@ import { useAppState } from "../state/appState";
 import { vueEtiquette } from "../hooks/filtreEtiquettes";
 import { useDrag, laMemeCible, type CibleDepot } from "../state/drag";
 import { CarreCollection, teinteCollection } from "../design/Signaux";
+import { useVersionInstallee } from "../hooks/useReleases";
 import { GroupeCollection, type PliageClavier } from "./GroupeCollection";
 import { useRovingFocus } from "../hooks/useRovingFocus";
 
@@ -47,6 +48,7 @@ const Compteur = ({ n }: { n: number }) =>
 
 export function Sidebar() {
   const { view, go } = useAppState();
+  const version = useVersionInstallee();
   // Pendant un déplacement, TOUTE destination devient une cible — les
   // collections, les entrées fixes et les étiquettes : chaque sorte a son
   // verbe au relâchement (table des sortes de useDragBookmark). Seul
@@ -226,6 +228,10 @@ export function Sidebar() {
           </button>
         ))}
       </section>
+
+      {/* L'app dit sa version, en pied de barre — l'exemple de Karakeep.
+          Masquée si indéterminée (§9) : jamais un « — » qui ne dit rien. */}
+      {version.data && <p className="px-2 text-xs text-app-muted">v{version.data}</p>}
     </nav>
   );
 }

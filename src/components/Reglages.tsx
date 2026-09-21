@@ -7,6 +7,7 @@ import { useHealth } from "../hooks/useStaticData";
 import { remplacerJeton, deconnecter, type Amorce } from "../lib/amorce";
 import { SectionSauvegarde } from "./SectionSauvegarde";
 import { SectionJournal } from "./SectionJournal";
+import { SectionVersion } from "./SectionVersion";
 import type { UserInfo } from "../hooks/useStaticData";
 
 // Les cinq états de `sidecar/mcp/lifecycle.ts`, traduits — le front ne
@@ -132,6 +133,10 @@ export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (
         )}
 
         <SectionSauvegarde onEtat={onEtat} />
+
+        {/* La version installée vs la dernière publiée (l'API GitHub du
+            dépôt), et les notes quand une mise à jour existe. */}
+        <SectionVersion />
 
         {/* Le journal du jour (écritures, jobs, erreurs) : là où un geste
             « qui n'a rien fait » se vérifie sans quitter l'application. */}

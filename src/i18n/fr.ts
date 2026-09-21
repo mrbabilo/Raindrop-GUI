@@ -229,6 +229,11 @@ export const fr = {
   "reglages.deconnecter": "Déconnecter",
   "reglages.fermer": "Fermer",
   "reglages.refuse": "Ce jeton n'a pas été accepté par Raindrop.",
+  // La version et le suivi des publications (2026-09-21).
+  "reglages.version": "Version",
+  "reglages.version.installee": "Installée :",
+  "reglages.version.derniere": "Dernière :",
+  "reglages.version.dispo": "mise à jour disponible",
   // Le journal consultable (2026-09-20) : une action « qui n'a rien fait »
   // se vérifie là, sans quitter l'application.
   "reglages.journal": "Journal",

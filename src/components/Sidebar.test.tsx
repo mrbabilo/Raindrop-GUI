@@ -9,6 +9,11 @@ import { Sidebar } from "./Sidebar";
 import { AppStateProvider, useAppState } from "../state/appState";
 import { DragProvider, useDrag } from "../state/drag";
 
+// La version installée vient du shell (getVersion) : mockée à la source —
+// sans elle, la requête rejette en jsdom et le pied de barre reste vide.
+const { getVersionMock } = vi.hoisted(() => ({ getVersionMock: vi.fn(async () => "0.1.0-pre.16") }));
+vi.mock("@tauri-apps/api/app", () => ({ getVersion: getVersionMock }));
+
 // « Masqué si nul » (§9) : une collection racine et une étiquette à 0 item
 // s'ajoutent aux fixtures — elles n'existent que pour ce contrat.
 vi.mock("../hooks/useStaticData", () => ({
@@ -57,6 +62,12 @@ describe("Sidebar", () => {
     expect(screen.queryByText("Rust")).not.toBeInTheDocument();
     expect(screen.getByText("typescript")).toBeInTheDocument();
     expect(screen.getByText("8")).toBeInTheDocument();
+  });
+
+  // L'app dit sa version en pied de barre (l'exemple de Karakeep).
+  it("affiche la version installée en pied de barre", async () => {
+    renderSidebar();
+    expect(await screen.findByText("v0.1.0-pre.16")).toBeInTheDocument();
   });
 
   // Une collection QUI A des enfants ouvre la vue composite (ses signets
