@@ -64,10 +64,18 @@ construire le nom de fichier — aucun chemin négociable.
 
 **Extraction, côté front** (DOMParser, natif du webview, zéro dépendance) :
 `<article>`, puis `[role=main]`, puis `<main>`, puis le conteneur
-div/section dont le `textContent` est le plus long, puis le corps. On ne retient que `textContent` des blocs de texte
-(p, h1–h6, li, blockquote, pre) dans l'ordre du document — **aucun
-`innerHTML` nulle part** : l'injection de contenu archivé est exclue par
-construction, et aucune « sanitisation » n'a à être crue.
+div/section dont le `textContent` est le plus long, puis le corps. On retient les **blocs whitelistés** dans l'ordre du document
+(p, h1–h6, li, blockquote, pre), leurs **inlines typés** (gras, italique,
+liens `http(s)`) et les **images de l'archive** (`src` `http(s)` ou
+`data:image` seulement) — **aucun `innerHTML` nulle part** : le rendu est
+reconstruit en arbre DOM (createElement + textContent, whitelist fermée),
+l'injection de contenu archivé est exclue par construction, et aucune
+« sanitisation » n'a à être crue.
+**Amendé le 2026-09-21** (arbitré avec l'analyse Karakeep,
+`docs/KARAKEEP.md`) : la v1 initiale réduisait la lecture à du texte nu ;
+un texte est un extrait, pas une lecture — le rendu filtré donne la
+lecture vraie pour le même invariant de sécurité. Le **temps de lecture**
+(≈ 220 mots/min, calculé sur l'extraction) rejoint le rail.
 
 **Rendu** : vue pleine largeur de l'app (l'extension de la fiche que §12
 dessinait) — colonne serif ~66 caractères, rail droit de métadonnées (titre,
@@ -150,9 +158,16 @@ l'acceptation http/https.
 
 ## 8. Limites assumées en v1
 
-- Texte SEUL en lecture : les images de l'archive ne se rendent pas
-  (l'extraction ne garde que le texte) — §12 demande du texte ; les images
-  viendront si l'usage les demande.
+- Rendu FILTRÉ, pas fidèle : seuls les blocs et inlines whitelistés se
+  rendent (formulaires, tableaux, iframes, scripts… sont jetés) — l'archive
+  complète reste consultable par « Voir la page ». Les images de l'archive
+  se rendent (src web de la page d'origine : hors ligne, elles manquent —
+  la copie Pro ne stocke pas les assets).
+- **Les surlignages ne se repositionnent pas dans le contenu lu (phase 2,
+  blocant nommé)** : Karakeep y parvient parce qu'il possède l'archive ET
+  des offsets numériques ; Raindrop n'expose que le TEXTE du surlignage —
+  le repositionnement serait une recherche de chaîne, fragile (texte
+  coupé/reformaté par l'extraction). Ils restent dans la fiche.
 - Page réelle = web vivant : ce geste n'existe pas hors ligne, par
   définition.
 - 64 Mo décompressés : au-delà, refus nommé (voir §3).

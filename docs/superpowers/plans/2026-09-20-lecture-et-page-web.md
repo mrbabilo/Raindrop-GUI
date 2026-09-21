@@ -10,6 +10,16 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-19-lecture-et-page-web-design.md` — le plan argue de la spec ; les exécuteurs lisent les deux. Le périmètre verrouillé (spec principale §3) tient : pas d'IA, Raindrop seule source de vérité, suppression = corbeille.
 
+**Amendé le 2026-09-21** (relecture critique intégrant `docs/KARAKEEP.md`,
+l'analyse du gestionnaire voisin) : la lecture v1 rend des **blocs filtrés
+par whitelist** — titres, emphases, listes, citations, images de l'archive —
+reconstruits en arbre React (`createElement`, jamais d'`innerHTML`), plus du
+texte nu ; le rail porte le **temps de lecture** (calculé, ≈ 220 mots/min).
+La spec 2026-09-19 est amendée en conséquence (§3 et §8). Hors v1, nommés :
+repositionner les highlights dans le contenu lu (blocant : Raindrop n'expose
+pas d'offsets, seul le texte), classifieur de qualité d'extraction, plein
+écran sans sidebar.
+
 ## Global Constraints
 
 - **Taille des fichiers : cible ≤ 300 lignes, plafond dur 400** (CLAUDE.md). Tout fichier nouveau ci-dessous est compté ; `DetailPane.tsx` (271) ne grossit que de 3 lignes.
@@ -835,7 +845,7 @@ Co-Authored-By: GLM 5.3 <noreply@z.ai>"
 
 ---
 
-### Task 5: `lecture.ts` — charger le contenu, extraire le texte
+### Task 5: `lecture.ts` — charger le contenu, extraire les blocs de lecture
 
 **Files:**
 - Create: `src/lib/lecture.ts`
@@ -843,7 +853,23 @@ Co-Authored-By: GLM 5.3 <noreply@z.ai>"
 
 **Interfaces:**
 - Consumes: `getConnection()` (`src/lib/connection.ts`), `ApiError` et `ErrorCode` (`src/lib/api.ts`, `shared/errors.ts` — codes de la Task 2).
-- Produces: `chargerContenu(id: number): Promise<{ html: string; dateArchive: string | null }>` et `extraireTexte(html: string): string` ("" = extraction vide, état nommé par la vue). Consommés par la Task 6.
+- Produces: `chargerContenu(id: number): Promise<{ html: string; dateArchive: string | null }>` et `extraireBlocs(html: string): Bloc[]` (`[]` = extraction vide, état nommé par la vue) avec :
+
+```ts
+/** Un segment de texte courant, éventuellement enrichi. */
+type Segment = { texte: string; gras?: boolean; italique?: boolean; lien?: string };
+/** Un bloc de lecture : un élément de niveau, ou une image de l'archive. */
+type Bloc =
+  | { balise: "p" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "li" | "blockquote" | "pre"; segments: Segment[] }
+  | { balise: "img"; src: string; alt: string };
+```
+
+Consommés par la Task 6. **HTML FILTRÉ (amendé 2026-09-21, arbitré avec
+l'analyse Karakeep `docs/KARAKEEP.md` §6-§8)** : le rendu n'est plus du texte
+nu mais une whitelist de blocs et d'inlines, **construite en arbre DOM**
+(`createElement`/`textContent` côté vue, jamais d'`innerHTML`) — la sécurité
+reste exclue par construction, et la lecture garde titres, emphases, listes,
+citations et images.
 
 - [ ] **Step 1: Écrire le test qui échoue**
 
@@ -851,9 +877,9 @@ Co-Authored-By: GLM 5.3 <noreply@z.ai>"
 // src/lib/lecture.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ApiError } from "./api";
-import { chargerContenu, extraireTexte } from "./lecture";
+import { chargerContenu, extraireBlocs } from "./lecture";
 
-describe("extraireTexte", () => {
+describe("extraireBlocs", () => {
   // Priorités de la spec lecture §3, dans l'ordre : article > [role=main] >
   // main > div/section au textContent le plus long > corps.
   it("retient <article> en priorité", () => {
@@ -862,7 +888,9 @@ describe("extraireTexte", () => {
       <article><p>Le vrai texte de l'article.</p></article>
       <div><p>Un pied de page long — mais moins que le menu, peu importe.</p></div>
     </body></html>`;
-    expect(extraireTexte(html)).toBe("Le vrai texte de l'article.");
+    expect(extraireBlocs(html)).toEqual([
+      { balise: "p", segments: [{ texte: "Le vrai texte de l'article." }] },
+    ]);
   });
 
   // Sans article concurrent : le rôle gagne, puis le <main>, etc. L'ordre
@@ -874,59 +902,78 @@ describe("extraireTexte", () => {
       <main><p>Un main concurrent, sans rôle.</p></main>
       <div><p>Un conteneur banal.</p></div>
     </body></html>`;
-    expect(extraireTexte(html)).toBe("Le contenu principal.");
+    expect(extraireBlocs(html)).toEqual([
+      { balise: "p", segments: [{ texte: "Le contenu principal." }] },
+    ]);
   });
 
-  it("retient <main> à défaut de rôle", () => {
-    const html = `<html><body>
-      <main><p>Le main.</p></main>
-      <div><p>Un conteneur banal.</p></div>
-    </body></html>`;
-    expect(extraireTexte(html)).toBe("Le main.");
-  });
-
-  it("à défaut de structure : le div/section au textContent le plus long", () => {
-    const html = `<html><body>
-      <div><p>petit</p></div>
-      <div><p>Un long contenu ${"mot ".repeat(30)}qui l'emporte.</p></div>
-    </body></html>`;
-    expect(extraireTexte(html)).toContain("qui l'emporte");
-    expect(extraireTexte(html)).not.toContain("petit");
-  });
-
-  it("en dernier repli : le corps", () => {
-    const html = "<html><body><p>Seul paragraphe.</p></body></html>";
-    expect(extraireTexte(html)).toBe("Seul paragraphe.");
-  });
-
-  it("ne garde que le TEXTE des blocs — pas le script, pas le style, jamais d'innerHTML", () => {
-    const html = `<html><head><style>.x{color:red}</style></head><body>
-      <article><h1>Titre</h1><p>Premier.</p><script>evil()</script><blockquote>Cité.</blockquote></article>
-    </body></html>`;
-    const texte = extraireTexte(html);
-    expect(texte).toContain("Titre");
-    expect(texte).toContain("Premier.");
-    expect(texte).toContain("Cité.");
-    expect(texte).not.toContain("evil");
-    expect(texte).not.toContain("color:red");
-  });
-
-  it("un bloc ENVELOPPANT ne répète pas le texte de ses enfants (li > p)", () => {
+  it("les inlines deviennent des segments : gras, italique, lien", () => {
     const html = `<html><body><article>
-      <ul><li><p>Dans le p.</p></li><li>Texte nu de li.</li></ul>
+      <p>Texte <strong>gras</strong> et <em>italique</em> puis <a href="https://x.fr/a">un lien</a> fin.</p>
     </article></body></html>`;
-    const texte = extraireTexte(html);
-    expect(texte.match(/Dans le p\./g)).toHaveLength(1);
-    expect(texte).toContain("Texte nu de li.");
+    expect(extraireBlocs(html)).toEqual([
+      {
+        balise: "p",
+        segments: [
+          { texte: "Texte" },
+          { texte: "gras", gras: true },
+          { texte: "et" },
+          { texte: "italique", italique: true },
+          { texte: "puis" },
+          { texte: "un lien", lien: "https://x.fr/a" },
+          { texte: "fin." },
+        ],
+      },
+    ]);
   });
 
-  it("les blocs sortent DANS L'ORDRE du document, séparés d'un saut double", () => {
-    const html = "<html><body><article><p>Un.</p><h2>Deux.</h2><p>Trois.</p></article></body></html>";
-    expect(extraireTexte(html)).toBe("Un.\n\nDeux.\n\nTrois.");
+  it("un lien javascript: ne devient pas un lien — son texte reste", () => {
+    const html = `<html><body><article><p><a href="javascript:alert(1)">piège</a></p></article></body></html>`;
+    expect(extraireBlocs(html)).toEqual([
+      { balise: "p", segments: [{ texte: "piège" }] },
+    ]);
+  });
+
+  it("les images de l'archive deviennent des blocs propres — src http(s) et data:image seulement", () => {
+    const html = `<html><body><article>
+      <img src="https://x.fr/photo.jpg" alt="Une photo">
+      <img src="data:image/png;base64,AAAA" alt="En ligne">
+      <img src="file:///etc/passwd" alt="interdit">
+      <p>Texte.</p>
+    </article></body></html>`;
+    const blocs = extraireBlocs(html);
+    expect(blocs).toEqual([
+      { balise: "img", src: "https://x.fr/photo.jpg", alt: "Une photo" },
+      { balise: "img", src: "data:image/png;base64,AAAA", alt: "En ligne" },
+      { balise: "p", segments: [{ texte: "Texte." }] },
+    ]);
+  });
+
+  it("<pre> garde son texte BRUT (espaces et sauts préservés, inline aplati)", () => {
+    const html = `<html><body><article>
+      <pre>const x = 1;
+if   (x)   {   }
+
+
+  doSomething(<strong>1</strong>);</pre>
+    </article></body></html>`;
+    expect(extraireBlocs(html)).toEqual([
+      { balise: "pre", segments: [{ texte: "const x = 1;\nif   (x)   {   }\n\n\n  doSomething(1);" }] },
+    ]);
+  });
+
+  it("les listes produisent des blocs li, dans l'ordre du document", () => {
+    const html = `<html><body><article>
+      <p>Intro.</p>
+      <ul><li>Un.</li><li>Deux.</li></ul>
+      <p>Fin.</p>
+    </article></body></html>`;
+    const blocs = extraireBlocs(html);
+    expect(blocs.map((b) => b.balise)).toEqual(["p", "li", "li", "p"]);
   });
 
   it("extraction vide : chaîne vide — l'état est nommé par la vue", () => {
-    expect(extraireTexte("<html><body><div></div></body></html>")).toBe("");
+    expect(extraireBlocs("<html><body><div></div></body></html>")).toEqual([]);
   });
 });
 
@@ -978,10 +1025,10 @@ Expected: FAIL — « Cannot find module './lecture' ».
 
 ```ts
 // src/lib/lecture.ts
-// La chaîne de lecture côté front (spec lecture §3) : le HTML archivé est
-// servi par le sidecar (Task 2), le TEXTE est extrait ICI — DOMParser natif
-// du webview, zéro dépendance, et JAMAIS d'innerHTML : l'injection de
-// contenu archivé est exclue par construction.
+// La chaîne de lecture côté front (spec lecture §3, amendée 2026-09-21) :
+// le HTML archivé est servi par le sidecar, le CONTENU est extrait ICI —
+// DOMParser natif du webview, zéro dépendance, et JAMAIS d'innerHTML : la
+// whitelist ci-dessous est reconstruite en arbre par la vue (createElement).
 import { getConnection } from "./connection";
 import { ApiError } from "./api";
 import type { ErrorCode } from "../../shared/errors";
@@ -1018,40 +1065,45 @@ export async function chargerContenu(id: number): Promise<ContenuCharge> {
   return { html: await reponse.text(), dateArchive: reponse.headers.get("X-Archive-Date") };
 }
 
-/** Les blocs de texte retenus (spec lecture §3), dans l'ordre du document. */
-const BLOCS = "p, h1, h2, h3, h4, h5, h6, li, blockquote, pre";
+// ─── Extraction en blocs filtrés (whitelist, jamais d'innerHTML) ────────────
 
-/**
- * L'extraction (spec lecture §3) : `<article>`, puis `[role=main]`, puis
- * `<main>`, puis le div/section au `textContent` le plus long, puis le
- * corps. On ne garde que le `textContent` des blocs — jamais d'innerHTML.
- *
- * Un bloc ENVELOPPANT un autre bloc (un `li` qui contient des `p`) cède la
- * place à ses enfants : sinon le même texte se lirait deux fois, le `li`
- * l'embrassant et le `p` le répétant. Sans bloc du tout dans la racine, la
- * racine entière fait texte.
- *
- * Extraction vide → "" : l'état est NOMMÉ par la vue (spec §5), jamais un
- * blanc silencieux.
- */
-export function extraireTexte(html: string): string {
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  const racine =
-    doc.querySelector("article") ??
-    doc.querySelector('[role="main"]') ??
-    doc.querySelector("main") ??
-    plusLargeConteneur(doc) ??
-    doc.body;
-  if (!racine) return "";
-  const bruts = [...racine.querySelectorAll(BLOCS)];
-  // Feuille = bloc qui n'en contient aucun autre : le texte d'un parent qui
-  // embrasse des enfants est déjà porté par ces enfants.
-  const feuilles = bruts.filter((b) => !b.querySelector(BLOCS));
-  const morceaux = feuilles.length > 0 ? feuilles : [racine];
-  return morceaux
-    .map((b) => (b.textContent ?? "").trim())
-    .filter((t) => t !== "")
-    .join("\n\n");
+export type Segment = { texte: string; gras?: boolean; italique?: boolean; lien?: string };
+
+export type Bloc =
+  | { balise: "p" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "li" | "blockquote" | "pre"; segments: Segment[] }
+  | { balise: "img"; src: string; alt: string };
+
+const BLOCS_NIVEAU = new Set(["p", "h1", "h2", "h3", "h4", "h5", "h6", "li", "blockquote", "pre"]);
+const SRC_PERMIS = /^(https?:\/\/|data:image\/)/;
+
+/** Les inlines whitelistés d'un bloc, dans l'ordre du document. Les espaces
+ *  de source sont normalisés (hors `pre`, traité en texte brut avant). */
+function segmentsDe(el: Element): Segment[] {
+  const out: Segment[] = [];
+  const pousser = (texte: string, base: Partial<Segment>) => {
+    const net = texte.replace(/\s+/g, " ").trim();
+    if (net) out.push({ texte: net, ...base });
+  };
+  const marche = (noeud: Node, base: Partial<Segment>) => {
+    for (const enfant of noeud.childNodes) {
+      if (enfant.nodeType === 3) pousser(enfant.textContent ?? "", base);
+      else if (enfant.nodeType === 1) {
+        const e = enfant as Element;
+        const balise = e.tagName.toLowerCase();
+        if (balise === "strong" || balise === "b") marche(e, { ...base, gras: true });
+        else if (balise === "em" || balise === "i") marche(e, { ...base, italique: true });
+        else if (balise === "a") {
+          const href = e.getAttribute("href") ?? "";
+          if (/^https?:\/\//.test(href)) marche(e, { ...base, lien: href });
+          else marche(e, base);
+        } else if (balise === "br") pousser(" ", base);
+        else if (balise === "img") continue; // les images sortent en blocs propres, au niveau bloc
+        else marche(e, base);
+      }
+    }
+  };
+  marche(el, {});
+  return out;
 }
 
 function plusLargeConteneur(doc: Document): Element | null {
@@ -1066,6 +1118,60 @@ function plusLargeConteneur(doc: Document): Element | null {
   }
   return meilleur;
 }
+
+/**
+ * L'extraction (spec lecture §3, amendée) : `<article>`, puis
+ * `[role=main]`, puis `<main>`, puis le div/section au `textContent` le plus
+ * long, puis le corps. Production : les blocs whitelistés dans l'ordre du
+ * document, leurs inlines en segments typés, les images en blocs propres
+ * (src `http(s)` ou `data:image` seulement). `pre` garde son texte BRUT.
+ * Extraction vide → [] : l'état est NOMMÉ par la vue (spec §5).
+ */
+export function extraireBlocs(html: string): Bloc[] {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const racine =
+    doc.querySelector("article") ??
+    doc.querySelector('[role="main"]') ??
+    doc.querySelector("main") ??
+    plusLargeConteneur(doc) ??
+    doc.body;
+  if (!racine) return [];
+  const out: Bloc[] = [];
+  const marche = (parent: Element) => {
+    for (const enfant of Array.from(parent.children)) {
+      const balise = enfant.tagName.toLowerCase();
+      if (balise === "img") {
+        const src = enfant.getAttribute("src") ?? "";
+        if (SRC_PERMIS.test(src)) {
+          out.push({ balise: "img", src, alt: enfant.getAttribute("alt") ?? "" });
+        }
+        continue;
+      }
+      if (BLOCS_NIVEAU.has(balise)) {
+        if (balise === "pre") {
+          const texte = enfant.textContent ?? "";
+          if (texte.trim()) out.push({ balise: "pre", segments: [{ texte }] });
+          continue;
+        }
+        const segments = segmentsDe(enfant);
+        if (segments.length > 0) {
+          out.push({ balise: balise as "p", segments });
+        }
+        continue;
+      }
+      // Conteneur : les images internes sortent d'abord, puis on descend.
+      for (const img of enfant.querySelectorAll("img")) {
+        const src = img.getAttribute("src") ?? "";
+        if (SRC_PERMIS.test(src)) {
+          out.push({ balise: "img", src, alt: img.getAttribute("alt") ?? "" });
+        }
+      }
+      marche(enfant);
+    }
+  };
+  marche(racine);
+  return out;
+}
 ```
 
 - [ ] **Step 4: Vérifier que le test passe**
@@ -1077,7 +1183,7 @@ Expected: PASS (12 tests).
 
 Inverser l'ordre des deux premières lignes de `racine` (`[role="main"]` avant `article`).
 Run: `npx vitest run src/lib/lecture.test.ts`
-Expected: FAIL sur « retient `<article>` en priorité ». Remettre, PASS. (Un test de priorité qui passe sur un ordre inversé ne prouve rien — exactement la règle « l'aller ne prouve rien sans le retour », appliquée aux heuristiques.)
+Expected: FAIL sur « retient `<article>` en priorité ». Remettre, PASS.
 
 - [ ] **Step 6: Typecheck front**
 
@@ -1088,13 +1194,10 @@ Expected: PASS.
 
 ```bash
 git add src/lib/lecture.ts src/lib/lecture.test.ts
-git commit -m "feat(front): extraireTexte — les priorités de la spec, texte seul, jamais d'innerHTML
+git commit -m "feat(front): extraireBlocs — la lecture en fragments filtrés, jamais d'innerHTML
 
 Co-Authored-By: GLM 5.3 <noreply@z.ai>"
 ```
-
----
-
 ### Task 6: La vue lecture — `kind: "lecture"`, `LectureView`, le retour, le rail
 
 **Files:**
@@ -1106,7 +1209,7 @@ Co-Authored-By: GLM 5.3 <noreply@z.ai>"
 - Test: `src/components/LectureView.test.tsx`
 
 **Interfaces:**
-- Consumes: `chargerContenu`, `extraireTexte` (Task 5) ; `ApiError` ; `ouvrirPageWeb` (Task 3) ; `useCollections` ; `Icone` (nom `"croix"`) ; fixture `raindrop()` de `src/test/fixtures.ts`.
+- Consumes: `chargerContenu`, `extraireBlocs` + `type Bloc` (Task 5) ; `ApiError` ; `ouvrirPageWeb` (Task 3) ; `useCollections` ; `Icone` (nom `"croix"`) ; fixture `raindrop()` de `src/test/fixtures.ts`.
 - Produces: `View` gagne `{ kind: "lecture"; raindropId: number; label: string; sourceCopie?: boolean; returnView?: View }` ; `vueDeRetour(v: View): View` ; `<LectureView view={…} goBack={…} />` (props : la vue extraite + un callback de retour). Consommés par `App.tsx` (cette tâche) et la Task 7.
 
 - [ ] **Step 1: Étendre `View` et poser `vueDeRetour`**
@@ -1151,6 +1254,9 @@ Dans `src/i18n/fr.ts` (bloc après les clés `detail.*` existantes) :
   "lecture.tropVolumineuse": "Cette archive dépasse la taille maximale lisible (64 Mo décompressés).",
   "lecture.illisible": "L'archive n'a pas pu être lue — elle est peut-être défectueuse.",
   "lecture.extractionVide": "Aucun texte n'a pu être extrait de cette archive.",
+  // Le temps de lecture, CALCULÉ sur l'extraction (~220 mots/min) — jamais
+  // deviné, jamais en dur.
+  "lecture.temps": "≈ {n} min de lecture",
   // L'issue de secours des états d'échec (§5) — posée ICI car la vue la
   // rend dès cette tâche ; les autres gestes de la fiche viennent à la
   // tâche suivante.
@@ -1179,7 +1285,7 @@ const { chargerMock, extraireMock, ouvrirMock, getApi } = vi.hoisted(() => ({
   getApi: vi.fn(),
 }));
 
-vi.mock("../lib/lecture", () => ({ chargerContenu: chargerMock, extraireTexte: extraireMock }));
+vi.mock("../lib/lecture", () => ({ chargerContenu: chargerMock, extraireBlocs: extraireMock }));
 vi.mock("../lib/pageWeb", () => ({ ouvrirPageWeb: ouvrirMock }));
 vi.mock("../hooks/useStaticData", () => ({ useCollections: () => ({ data: collections }) }));
 // `ApiError` reste RÉELLE : la vue la teste avec `instanceof`, et un mock
@@ -1209,7 +1315,13 @@ beforeEach(() => {
     html: "<html></html>",
     dateArchive: "2026-09-18T10:00:00.000Z",
   });
-  extraireMock.mockReset().mockReturnValue("Paragraphe un.\n\nParagraphe deux.");
+  extraireMock.mockReset().mockReturnValue([
+    { balise: "h2", segments: [{ texte: "Un titre de lecture" }] },
+    {
+      balise: "p",
+      segments: [{ texte: "Paragraphe un." }, { texte: " en gras", gras: true }],
+    },
+  ]);
   ouvrirMock.mockReset().mockResolvedValue(undefined);
 });
 
@@ -1252,8 +1364,12 @@ describe("LectureView", () => {
   it("rend le texte en colonne serif, le rail, le badge et la date d'archive", async () => {
     injecterRegles(".lecture-corps");
     await ouvrir();
-    expect(await screen.findByText("Paragraphe un.")).toBeInTheDocument();
-    expect(screen.getByText("Paragraphe deux.")).toBeInTheDocument();
+    const titre = await screen.findByText("Un titre de lecture");
+    expect(titre.tagName).toBe("H2"); // la whitelist reconstruit de VRAIS éléments
+    expect(screen.getByText("Paragraphe un.")).toBeInTheDocument();
+    // Le segment gras rend un <strong> réel.
+    const gras = screen.getByText("en gras").closest("strong");
+    expect(gras).not.toBeNull();
     // DESIGN §12 (mode lecture) : la formule vit dans styles.css, lue dans le
     // VRAI css par injecterRegles — jamais recopiée dans le test.
     const article = document.querySelector(".lecture-corps");
@@ -1264,6 +1380,7 @@ describe("LectureView", () => {
     expect(screen.getByText("example.com")).toBeInTheDocument();
     expect(screen.getByText("archive locale")).toBeInTheDocument();
     expect(screen.getByText(/Archive du 18 septembre 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/≈ 1 min de lecture/)).toBeInTheDocument();
     // Les étiquettes du rail sont une ligne de TEXTE, pas des pilules
     // cliquables : une pilule inerte fait douter de l'autre, une pilule
     // cliquable NAVIGUERAIT hors de la lecture (comportement mesuré).
@@ -1335,7 +1452,7 @@ describe("LectureView", () => {
   });
 
   it("extraction vide : état nommé, jamais un blanc silencieux", async () => {
-    extraireMock.mockReturnValue("");
+    extraireMock.mockReturnValue([]);
     await ouvrir();
     expect(
       await screen.findByText("Aucun texte n'a pu être extrait de cette archive."),
@@ -1374,7 +1491,8 @@ import type { ReactNode } from "react";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { api, ApiError } from "../lib/api";
-import { chargerContenu, extraireTexte } from "../lib/lecture";
+import { createElement, type ReactNode } from "react";
+import { chargerContenu, extraireBlocs, type Bloc } from "../lib/lecture";
 import { ouvrirPageWeb } from "../lib/pageWeb";
 import { useCollections } from "../hooks/useStaticData";
 import type { RaindropItem } from "../../shared/types";
@@ -1417,6 +1535,30 @@ function IssuePageWeb({ url }: { url?: string }) {
   );
 }
 
+/** Le rendu d'un bloc : createElement sur l'union FERMÉE `Bloc.balise` —
+ *  une balise hors whitelist ne peut pas exister (le type la refuse). Les
+ *  segments deviennent texte, <strong>/<em>, et les liens s'ouvrent hors
+ *  webview. Jamais d'innerHTML : la sécurité est dans l'arbre. */
+function renduBloc(b: Bloc, cle: number): ReactNode {
+  if (b.balise === "img") {
+    return <img key={cle} src={b.src} alt={b.alt} className="lecture-img" loading="lazy" />;
+  }
+  return createElement(
+    b.balise,
+    { key: cle },
+    b.segments.map((s, j) => {
+      const texte = s.lien
+        ? (
+          <a key={j} href={s.lien} target="_blank" rel="noreferrer">
+            {s.texte}
+          </a>
+        )
+        : s.texte;
+      return s.gras ? <strong key={j}>{texte}</strong> : s.italique ? <em key={j}>{texte}</em> : texte;
+    }),
+  );
+}
+
 export function LectureView({
   view,
   goBack,
@@ -1437,6 +1579,14 @@ export function LectureView({
   });
   const arbre = useCollections().data ?? [];
   const r = detail.data;
+  // Le contenu extrait est AUSSI le compteur de mots du rail (temps de
+  // lecture ≈ 220 mots/min — l'exemple de Karakeep, calculé jamais deviné).
+  const blocs = contenu.data ? extraireBlocs(contenu.data.html) : [];
+  const mots = blocs.reduce(
+    (n, b) => n + (b.balise === "img" ? 0 : b.segments.reduce((m, s) => m + s.texte.split(/\s+/).filter(Boolean).length, 0)),
+    0,
+  );
+  const minutes = Math.max(1, Math.round(mots / 220));
   const collection = r ? arbre.find((c) => c.id === r.collectionId) : undefined;
   const dateLue = contenu.data ? dateArchive(contenu.data.dateArchive) : null;
 
@@ -1451,20 +1601,18 @@ export function LectureView({
       </div>
     );
   } else {
-    const texte = extraireTexte(contenu.data.html);
     interieur =
-      texte === "" ? (
+      blocs.length === 0 ? (
         <div className="flex flex-col items-start gap-3">
           <p role="alert">{t("lecture.extractionVide")}</p>
           <IssuePageWeb url={r?.url} />
         </div>
       ) : (
-        // Texte SEUL (spec §3) : les paragraphes viennent du textContent
-        // extrait — aucun innerHTML nulle part.
+        // Rendu FILTRÉ (spec §3 amendée) : les blocs viennent de
+        // extraireBlocs (whitelist, jamais d'innerHTML) et sont reconstruits
+        // en arbre React — createElement sur l'union fermée `Bloc.balise`.
         <article className="lecture-corps">
-          {texte.split("\n\n").map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
+          {blocs.map((b, i) => renduBloc(b, i))}
         </article>
       );
   }
@@ -1491,6 +1639,9 @@ export function LectureView({
             {sourceCopie ? t("lecture.badgeCopie") : t("lecture.badgeLocale")}
           </p>
           {dateLue && <p className="mt-1 text-xs text-app-muted">{t("lecture.date", { date: dateLue })}</p>}
+          {contenu.data && blocs.length > 0 && (
+            <p className="mt-1 text-xs text-app-muted">{t("lecture.temps", { n: minutes })}</p>
+          )}
           {r.tags.length > 0 && (
             // Une ligne de TEXTE, pas des pilules : une pilule inerte ferait
             // douter de la fiche, une pilule cliquable naviguerait hors de la
@@ -1559,6 +1710,11 @@ Dans `src/styles.css`, à la suite de `.titre-fiche` :
   font-size: 15px;
   font-weight: 590;
   letter-spacing: -0.015em;
+}
+
+.lecture-img {
+  border-radius: 7px;
+  max-width: 100%;
 }
 ```
 
@@ -2047,7 +2203,7 @@ Co-Authored-By: GLM 5.3 <noreply@z.ai>"
 
 1. **Couverture de la spec** : §3 chaîne de lecture (priorités locale → copie → désactivé : Task 7 pour l'ordre, Task 1-2 pour le contenu) ✔ ; route en flux + garde 64 Mo + validation d'identifiant (Tasks 1-2) ✔ ; extraction côté front, priorités, jamais d'innerHTML (Task 5) ✔ ; rendu serif/rail/badge/date/`X-Archive-Date`/retour (Tasks 2, 6) ✔ ; §4 fenêtre webview : validation au bord, empreinte, ZÉRO capability vérifiée (Task 4, test + sabotage), helper unique (Task 3) ✔ ; §5 états nommés : introuvable, garde, illisible, extraction vide, pas de copie, copie en échec (raisons traduites), budget plein (`nonTentes`/`raisonArret` portés par `ArchiveJob` existant, repris tel quel — Task 7), attente d'archivage en vol ✔ ; §6 tests : sidecar sabotés (Tasks 1-2), front (Tasks 5-7), Rust (Task 4), réel (Task 8) ✔ ; §7 documentation (Task 8) + i18n (Tasks 6-7) ✔ ; §8 limites assumées : rien à implémenter, rien d'ajouté au-delà.
 2. **Placeholders** : aucun « TBD » ; chaque pas de code est complet ; les seuls avertissements ⚠️ du plan sont des consignes de calque (forme de l'amendement spec §12) ou des pièges nommés pour l'exécuteur (fixtures de garde, mock d'`ApiError`), pas des contenus à compléter.
-3. **Cohérence des types** : `lireContenu`/`ContenuArchive` (Task 1) = ce que la route consomme (Task 2) ✔ ; `chargerContenu`/`extraireTexte` (Task 5) = ce que `LectureView` consomme (Task 6) ✔ ; `ouvrirPageWeb` (Task 3) = l'invocation `ouvrir_page_web` de la commande Rust (Task 4), argument `{ url }` ✔ ; `vueDeRetour` et le kind `lecture` (Task 6) = ce que `ActionsLecture` pose (Task 7) ✔ ; `ArchiveJob` consommé avec les props exactes de `RevueArchive.tsx` ✔ ; `dossierArchives` posé sur l'interface `Archivage` (Task 2) ✔.
+3. **Cohérence des types** : `lireContenu`/`ContenuArchive` (Task 1) = ce que la route consomme (Task 2) ✔ ; `chargerContenu`/`extraireBlocs` + `Bloc` (Task 5) = ce que `LectureView` consomme (Task 6) ✔ ; `ouvrirPageWeb` (Task 3) = l'invocation `ouvrir_page_web` de la commande Rust (Task 4), argument `{ url }` ✔ ; `vueDeRetour` et le kind `lecture` (Task 6) = ce que `ActionsLecture` pose (Task 7) ✔ ; `ArchiveJob` consommé avec les props exactes de `RevueArchive.tsx` ✔ ; `dossierArchives` posé sur l'interface `Archivage` (Task 2) ✔.
 4. **Taille des fichiers** : le fichier nouveau le plus lourd est `LectureView.tsx` (~190) ; `sauvegarde.ts` monte à ~95 ; `appState.tsx` à ~190 ; `DetailPane.tsx` à ~274. Rien ne dépasse la cible de 300.
 
 ## Exécution
