@@ -774,13 +774,17 @@ d'usage des pre.12 → pre.16. Tout est poussé et publié dans `pre.16`.
 
 ## À venir (entrées ouvertes au 2026-09-21)
 
-- [ ] **Lecture du contenu archivé et page web réelle** — spec validée
-      (`docs/superpowers/specs/2026-09-19-lecture-et-page-web-design.md`),
-      **plan prêt, non exécuté**
-      (`docs/superpowers/plans/2026-09-20-lecture-et-page-web.md`, 8 tasks).
-      Arbitré avec l'analyse Karakeep (`docs/KARAKEEP.md`) : le clic
-      principal ouvrira le *contenu lu*, la fiche passera en onglet
-      secondaire.
+- [x] **Lecture du contenu archivé et page web réelle** — **livré le
+      2026-09-21** (8 tasks exécutées, spec
+      `docs/superpowers/specs/2026-09-19-lecture-et-page-web-design.md`, plan
+      `docs/superpowers/plans/2026-09-20-lecture-et-page-web.md`) : « Lire »
+      dans la fiche (archive locale, ou copie permanente téléchargée à la
+      volée), vue lecture pleine largeur (HTML filtré en blocs, jamais
+      d'innerHTML), « Voir la page » dans une fenêtre du shell à zéro
+      capability. Reste au réel (spec §6) : 2-3 lectures sur vraies archives,
+      la concentration de la fenêtre à la réouverture, l'impuissance IPC du
+      site ouvert. Arbitré avec l'analyse Karakeep (`docs/KARAKEEP.md`) :
+      le clic principal ouvre le *contenu lu*, la fiche revient au retour.
 - [ ] **Vues sauvegardées (« smart lists »)** — une vue filtrée nommée dans
       la barre latérale, qui vit : sérialiser `listQueryArgs` là où Karakeep
       stocke une requête réinterprétée par son parser partagé
@@ -791,11 +795,17 @@ d'usage des pre.12 → pre.16. Tout est poussé et publié dans `pre.16`.
       raisons, à la Karakeep — leur `readerViewAssessment.ts` montre que le
       frais existe) — au-delà du binaire « vide / pas vide » de notre spec
       lecture §3.
-- [ ] **Afficher ce qui est archivé par fiche** (l'équivalent de leur menu
-      « Offline Copies ») : le marqueur archive existe (liste et fiche), il
-      manque l'ouverture du contenu archivé.
+- [x] **Afficher ce qui est archivé par fiche** (l'équivalent de leur menu
+      « Offline Copies ») — couvert par le lot lecture (2026-09-21) : la
+      fiche distingue archive locale / copie permanente / rien (§5 de la
+      spec lecture) et « Lire » ouvre le contenu archivé.
 - [ ] **Inversion fiche ↔ lecture** une fois la lecture livrée (voir
       ci-dessus) — présentée séparément pour ne pas la couler dans le plan.
+- [ ] **`DetailPane.tsx` à découper** — 317 lignes avant le lot lecture, 322
+      après : au-dessus de la cible de 300 (sous le plafond dur 400, le
+      cliquet passe). Frontière naturelle : le bloc corbeillé
+      (restauration + sélecteur de destination) vit déjà en test séparé
+      (`DetailPane.corbeille.test.tsx`), il peut porter son rendu avec lui.
 
 ## Veille
 

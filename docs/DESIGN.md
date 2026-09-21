@@ -445,3 +445,29 @@ et la bascule d'affichage (une icône).
 
 La nature est une propriété que Raindrop calcule et que nous ne corrigeons
 jamais : ces puces **filtrent**, elles n'éditent rien.
+
+## 12. Le mode lecture
+
+Le contenu archivé se lit DANS l'app, en texte extrait — pas le HTML de la
+page : ses CSS manquent, la fidélité n'y rendrait qu'une page cassée.
+
+- **Colonne serif** (`ui-serif, Georgia` — police système, zéro chargement,
+  même parti que §7), 17 px, `line-height: 1.6`, largeur ~66 caractères
+  (`max-w-[66ch]`), sur la surface `app`. Le texte est un TEXTE : ni images,
+  ni liens, ni mise en forme d'origine (v1, assumé spec §8).
+- **Rail droit** (260 px, filet `line`) : titre (15 px, 590, resserré — la
+  fiche §7), domaine en chasse fixe 11 px, collection, **provenance** —
+  badge « archive locale » ou « copie permanente » — et **date de
+  l'archive** : lire sans montrer la fraîcheur de ce qu'on lit cacherait la
+  moitié du diagnostic.
+- **Les étiquettes du rail sont une ligne de texte**, pas des pilules : une
+  pilule inerte ferait douter de celles de la fiche (§2), une pilule
+  cliquable ferait quitter la lecture.
+- **Les surlignages restent dans la fiche** — le mode lecture ne les
+  duplique pas (v1).
+- **La fiche cède la place** pendant la lecture : vue pleine largeur, le
+  rail porte les métadonnées. La sélection reste — en revenant, la fiche
+  est encore là.
+- Chaque échec de lecture porte SA raison (archive disparue, garde de
+  64 Mo, archive défectueuse, extraction vide), avec « Voir la page » en
+  issue de secours — jamais un zéro, jamais un blanc (§5 des états).
