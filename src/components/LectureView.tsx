@@ -143,7 +143,7 @@ export function LectureView({
                 .join(" · ")}
             </p>
           )}
-          <button type="button" className="btn btn-icone" aria-label={t("lecture.fermer")} onClick={goBack}>
+          <button type="button" className="btn btn-icone ml-auto" aria-label={t("lecture.fermer")} onClick={goBack}>
             <Icone nom="croix" />
           </button>
         </div>

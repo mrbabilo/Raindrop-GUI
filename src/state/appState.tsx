@@ -95,8 +95,8 @@ export type View =
     }
   // La LECTURE du contenu archivé (spec lecture §3) : vue pleine largeur,
   // ouverte depuis la fiche. `sourceCopie` : le texte vient d'une copie
-  // permanente téléchargée À LA VOLÉE (badge du rail) ; absent = l'archive
-  // locale était déjà là. `returnView`, même règle que la Revue : l'aller ne
+  // permanente téléchargée À LA VOLÉE (badge de la ligne de tête) ;
+  // absent = l'archive locale était déjà là. `returnView`, même règle que la Revue : l'aller ne
   // prouve rien sans le retour.
   | { kind: "lecture"; raindropId: number; label: string; sourceCopie?: boolean; returnView?: View };
 

@@ -179,8 +179,9 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
             Task 15 : la Revue de l'action — deux niveaux de confirmation,
             exécution puis retour (goBack, R15P-3). */}
         {view.kind === "lecture" ? (
-          // Lecture du contenu archivé (spec lecture §3) — vue pleine
-          // largeur, le rail à droite, sortie par goBack.
+          // Lecture du contenu archivé (spec lecture §3) — la fiche
+          // l'accompagne en colonne (inversion fiche ↔ lecture du
+          // 2026-09-22), sortie par goBack.
           <LectureView view={view} goBack={goBack} />
         ) : view.kind === "review" ? (
           <ReviewPage review={view} goBack={goBack} />

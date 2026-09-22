@@ -100,6 +100,11 @@ describe("LectureView", () => {
     const article = document.querySelector(".lecture-corps");
     expect(article).not.toBeNull();
     expect(getComputedStyle(article!).fontFamily).toContain("serif");
+    // Le rendu inline des marques reprend un porteur : un paragraphe du
+    // corps est là, et le segment gras est un VRAI élément <strong> —
+    // renduBloc reconstruit l'arbre, jamais du texte aplati.
+    expect(screen.getByText("Paragraphe un.")).toBeInTheDocument();
+    expect(screen.getByText("en gras").closest("strong")).not.toBeNull();
     // La ligne de tête (spec inversion §5) : la fraîcheur de ce qu'on lit,
     // en une ligne — le rail de 260 px est parti. L'heure de l'archive dépend
     // du fuseau de la machine de test : on assert le JOUR, jamais l'heure

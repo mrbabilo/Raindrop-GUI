@@ -14,14 +14,17 @@ export function RestaurationCorbeille({ r }: { r: RaindropItem }) {
   const arbre = useCollections().data ?? [];
   const [destInconnue, setDestInconnue] = useState(false);
   const [dest, setDest] = useState("");
-  // Changer d'item réarme le sélecteur — le même reset que la fiche portait
-  // avant l'extraction (son useEffect), restreint à ce qui appartient ici.
+  // Changer d'item réarme le sélecteur. L'extraction a repris le réarmement
+  // de dest/destInconnue que la fiche portait (son useEffect) ; le reset
+  // d'unrestore, lui, est NOUVEAU à l'extraction — amélioration : l'erreur
+  // d'unrestore suit désormais le changement d'item au lieu de fuiter sur
+  // le suivant.
   useEffect(() => {
     setDestInconnue(false);
     setDest("");
     unrestore.reset();
     // Dépendances volontairement limitées à r.id : le reset suit le CHANGEMENT
-    // d'item, pas chaque re-render (unreset est une instance neuve par rendu).
+    // d'item, pas chaque re-render (unrestore est une instance neuve par rendu).
   }, [r.id]);
 
   return (

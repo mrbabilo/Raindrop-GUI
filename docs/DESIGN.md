@@ -461,9 +461,12 @@ page : ses CSS manquent, la fidélité n'y rendrait qu'une page cassée.
   la moitié du diagnostic. Le titre, le domaine, la collection et les
   étiquettes vivent dans la fiche voisine : les dupliquer ferait deux
   sources de vérité.
-- **Les étiquettes du rail sont une ligne de texte**, pas des pilules : une
-  pilule inerte ferait douter de celles de la fiche (§2), une pilule
-  cliquable ferait quitter la lecture.
+- **Pendant la lecture, les étiquettes ne se lisent qu'en la fiche** (§2) :
+  la ligne de tête n'en porte aucune. (Le rail les rendait en une ligne de
+  texte, pas des pilules : une pilule inerte aurait fait douter de celles
+  de la fiche, une pilule cliquable aurait quitté la lecture — il a cédé
+  sa place à la ligne de tête, **amendé le 2026-09-22**, lot inversion
+  fiche ↔ lecture.)
 - **Les surlignages restent dans la fiche** — le mode lecture ne les
   duplique pas (v1).
 - **La fiche accompagne la lecture** (colonne de droite, 320 px) : le clic

@@ -3,7 +3,7 @@
 ⚠️ Les cases traînent derrière le code livré : vérifier `git log` avant de
 traiter une tâche « à faire ».
 
-*Dernier recalage : 2026-09-21 (élagage). L'historique détaillé vit dans
+*Dernier recalage : 2026-09-22 (lot inversion fiche ↔ lecture). L'historique détaillé vit dans
 `CHANGELOG.md` et `git log` — ici ne restent que les entrées ouvertes, avec
 leur raisonnement, et un renvoi par lot livré.*
 
