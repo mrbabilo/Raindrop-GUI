@@ -10,6 +10,7 @@ import {
 } from "../hooks/useBackup";
 import { useAppState } from "../state/appState";
 import { ArchiveJob } from "./RevueArchive";
+import { lisibilite } from "../lib/lisibilite";
 import type { RaindropItem } from "../../shared/types";
 
 // Les six états de `cache.status`, traduits — jamais un identifiant brut à
@@ -40,19 +41,21 @@ export function ActionsLecture({ r }: { r: RaindropItem }) {
   // ArchiveJob adopterait ce job-là, et son terme ferait croire à un
   // téléchargement qui n'a pas eu lieu. On nomme l'attente à la place.
   const archivageEnVol = jobs.data?.some((j) => j.type === "archive") === true;
-  const prete = r.cache?.status === "ready";
 
-  const raison = locale
+  // La règle de lisibilité n'existe QU'UNE FOIS (spec inversion §3) — la
+  // même que le clic des vues de bibliothèque. Ici, seuls les libellés
+  // traduisent les motifs.
+  const etat = lisibilite(r, locale, archivageEnVol);
+  const raison = etat.lisible
     ? null
-    : archivageEnVol
+    : etat.motif === "enVol"
       ? t("detail.lireAttente")
-      : prete
-        ? null
-        : r.cache != null
-          ? t("detail.lireCopieEchec", {
-              raison: t(LIBELLES_COPIE[r.cache.status] ?? "copie.inconnue"),
-            })
-          : t("detail.lireSansCopie");
+      : etat.motif === "copieEchec"
+        ? t("detail.lireCopieEchec", { raison: t(LIBELLES_COPIE[r.cache?.status ?? ""] ?? "copie.inconnue") })
+        : t("detail.lireSansCopie");
+  // §9 : un seul point d'entrée par geste — pendant la lecture de CE signet,
+  // le bouton redirait ce qui est déjà fait.
+  const dejaLue = view.kind === "lecture" && view.raindropId === r.id;
 
   const ouvrirLecture = (sourceCopie: boolean) =>
     go({
@@ -88,9 +91,11 @@ export function ActionsLecture({ r }: { r: RaindropItem }) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn" disabled={raison != null} onClick={lire}>
-          {t("detail.lire")}
-        </button>
+        {!dejaLue && (
+          <button type="button" className="btn" disabled={raison != null} onClick={lire}>
+            {t("detail.lire")}
+          </button>
+        )}
         <button
           type="button"
           className="btn"
@@ -100,8 +105,10 @@ export function ActionsLecture({ r }: { r: RaindropItem }) {
         </button>
       </div>
       {/* §10 : le bouton nomme ce qui manque — la raison est posée À L'ÉCRAN,
-          pas seulement en title. */}
-      {raison && <p className="text-xs text-app-muted">{raison}</p>}
+          pas seulement en title. `!dejaLue` est un filet : `dejaLue` implique
+          lisible (on n'ouvre jamais la lecture d'un signet non lisible), donc
+          `raison` est déjà null dans ce cas. */}
+      {raison && !dejaLue && <p className="text-xs text-app-muted">{raison}</p>}
       {telecharge && (
         <ArchiveJob ids={[r.id]} onTermine={auTerme} onErreur={(m) => { setTelecharge(false); setEchec(m); }} />
       )}

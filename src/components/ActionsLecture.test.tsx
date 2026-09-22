@@ -90,6 +90,26 @@ const vue = () => JSON.parse(screen.getByTestId("vue").textContent ?? "{}") as {
   kind: string; raindropId?: number; sourceCopie?: boolean;
 };
 
+// Pose la vue lecture DEPUIS l'arbre rendu — comme le ferait le clic réel,
+// via le même `go` du contexte (un mock du contexte testerait à vide).
+const PoseurLecture = ({ id }: { id: number }) => {
+  const { go } = useAppState();
+  return (
+    <button type="button" onClick={() => go({ kind: "lecture", raindropId: id, label: "T" })}>
+      poser-lecture-{id}
+    </button>
+  );
+};
+const renderActionsAvecVue = (r: RaindropItem, idLecture: number) =>
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <AppStateProvider>
+        <PoseurLecture id={idLecture} />
+        <Harnais r={r} />
+      </AppStateProvider>
+    </QueryClientProvider>,
+  );
+
 describe("ActionsLecture", () => {
   it("archive locale : « Lire » activé, ouvre la vue lecture sans sourceCopie", async () => {
     archivesMock.mockReturnValue({ data: { set: new Set([1000]), octets: 10 } });
@@ -155,5 +175,22 @@ describe("ActionsLecture", () => {
     expect(screen.getByText(/Un archivage est déjà en cours/)).toBeInTheDocument();
     await userEvent.click(lire); // désactivé : rien ne part
     expect(screen.queryByTestId("job-ids")).not.toBeInTheDocument();
+  });
+
+  // §9 : un seul point d'entrée par geste — le clic vient d'ouvrir cette
+  // lecture, le bouton redirait ce qui est déjà fait.
+  it("la lecture du MÊME signet masque « Lire » ; « Voir la page » reste", async () => {
+    archivesMock.mockReturnValue({ data: { set: new Set([1000]), octets: 10 } });
+    renderActionsAvecVue(raindrop({ id: 1000 }), 1000);
+    await userEvent.click(screen.getByText("poser-lecture-1000"));
+    expect(screen.queryByRole("button", { name: "Lire" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Voir la page" })).toBeInTheDocument();
+  });
+
+  it("la lecture d'un AUTRE signet laisse « Lire » — la fiche propose toujours le geste", async () => {
+    archivesMock.mockReturnValue({ data: { set: new Set([1000]), octets: 10 } });
+    renderActionsAvecVue(raindrop({ id: 1000 }), 9999);
+    await userEvent.click(screen.getByText("poser-lecture-9999"));
+    expect(screen.getByRole("button", { name: "Lire" })).toBeInTheDocument();
   });
 });
