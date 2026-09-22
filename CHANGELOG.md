@@ -523,7 +523,11 @@ signet près, y compris croisé avec le filtre de domaine.
   `result: true`, signet inchangé — un succès inventé, la classe du défaut
   `-99` du 2026-09-20. Le corps de la réponse est désormais vérifié
   (`result` ET `item.link` exact) ; tout écart est une erreur nommée, la
-  ligne reste et le dit.
+  ligne reste et le dit. Même durcissement pour la **restauration** : un
+  `result: false` explicite de l'API est désormais un échec — garde
+  volontairement tolérante (corps vide ou inconnu reste un succès), la
+  forme de réponse de `PUT /raindrops` n'étant pas documentée et la voie
+  étant vérifiée en réel ; le compte `restored`, lui, reste déclaré.
 - **Un échec transport n'est pas un lien mort** : DOMAINE.md limite le « mort »
   à 4xx/5xx, DNS inexistant, timeout et connexion refusée — le code classait
   `dead` tout autre échec réseau (reset, TLS, protocole : protections

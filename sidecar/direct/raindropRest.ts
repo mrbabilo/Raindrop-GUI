@@ -69,6 +69,21 @@ export function makeRestClient(
         if (!res.ok) {
           return { ok: false, code: "RAINDROP_API", message: `raindrop api http ${res.status}` };
         }
+        // Garde TOLÉRANTE : la doc de PUT /raindrops ne montre aucun corps
+        // d'exemple — durcir au niveau d'updateRaindropUrl (vérifier item
+        // relu) casserait une restauration vérifiée en réel si la forme
+        // réelle diffère. On refuse seulement un refus EXPLICITE ; le
+        // compte reste déclaré (ids.length), faute de forme mesurable —
+        // à trancher au premier sondage réel (corbeille non vide).
+        const brut = await res.text();
+        if (brut.trim() !== "") {
+          try {
+            const body = JSON.parse(brut) as { result?: unknown };
+            if (body.result === false) {
+              return { ok: false, code: "RAINDROP_API", message: "raindrop api a refusé la restauration (result false)" };
+            }
+          } catch { /* corps non JSON : forme inconnue, pas un refus documenté */ }
+        }
         return { ok: true, data: { restored: ids.length } };
       } catch (e) {
         return { ok: false, code: "RAINDROP_API", message: e instanceof Error ? e.message : String(e) };

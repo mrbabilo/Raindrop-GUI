@@ -64,6 +64,23 @@ describe("raindropRest (abstraction de secours)", () => {
     expect((out as { message: string }).message).toContain("413");
   });
 
+  // Le statut ne suffit pas ici non plus : la doc de PUT /raindrops ne
+  // montre même pas de corps d'exemple (routes voisines : result:true).
+  // Garde TOLÉRANTE — un result:false EXPLICITE est un échec ; tout le
+  // reste (corps vide, forme inconnue) reste un succès, car durcir sans
+  // connaître la forme réelle casserait une restauration vérifiée en réel.
+  it("unrestore : un 200 result:false explicite est un échec", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ result: false }), { status: 200 })));
+    const out = await makeRestClient({ token: "t" }).unrestore([1], 42);
+    expect(out).toMatchObject({ ok: false, code: "RAINDROP_API" });
+  });
+
+  it("unrestore : un 200 au corps vide reste un succès (forme non documentée)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 200 })));
+    const out = await makeRestClient({ token: "t" }).unrestore([1], 42);
+    expect(out).toEqual({ ok: true, data: { restored: 1 } });
+  });
+
   it("classe un 4xx/5xx en RAINDROP_API avec le code HTTP", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 429 })));
     const out = await makeRestClient({ token: "t" }).updateRaindropUrl(1, "https://x.example");
