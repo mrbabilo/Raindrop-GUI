@@ -48,6 +48,37 @@ Developer ID.
   corbeillé est extrait (`DetailPane.corbeille.tsx`), son test suit sans
   changer.
 
+#### La lecture et la page web (2026-09-21)
+
+- **« Lire » ouvre le contenu archivé dans l'app** : colonne serif à
+  ~66 caractères, sans la mise en page de la page d'origine (dont les CSS
+  manquent : la fidélité n'y rendrait qu'une page cassée). Titres,
+  emphases, listes, citations, code et images survivent — whitelist
+  stricte reconstruite en arbre, jamais d'`innerHTML`.
+- **Le rail de droite porte les métadonnées** : titre, domaine,
+  collection, étiquettes (en texte, pas des pilules cliquables), la
+  **provenance** (« archive locale » ou « copie permanente »), la **date
+  de l'archive** — lire sans montrer la fraîcheur de ce qu'on lit cacherait
+  la moitié du diagnostic — et le temps de lecture calculé.
+- **La copie permanente se télécharge à la volée** : un signet copiable
+  mais pas encore archivé localement se télécharge puis s'ouvre ; l'échec
+  est nommé inline, la vue ne bouge pas.
+- **« Lire » nomme ce qui manque** quand il est désactivé : ni archive ni
+  copie, copie en échec côté Raindrop (raison traduite), archivage déjà en
+  cours. **Chaque échec de lecture a sa raison** — archive disparue entre
+  la fiche et le clic, garde de 64 Mo dépassée, archive défectueuse,
+  extraction vide — avec « Voir la page » en issue de secours, partout.
+- **« Voir la page » ouvre l'URL dans une fenêtre de l'app**, distincte du
+  navigateur système : http/https seulement, jamais `file://` ni
+  `javascript:`, et **zéro capability** — le site ouvert ne peut rien
+  invoquer de l'application. Rouvrir la même URL concentre la fenêtre
+  existante au lieu d'en multiplier.
+- La lecture est **pleine largeur** (la fiche cède la place, la sélection
+  reste) ; « Fermer la lecture » revient à la vue d'origine.
+- Sous le capot : la route sert le `.html.gz` **décompressé en flux** avec
+  refus nommés à froid, la date d'archive transite par `X-Archive-Date`,
+  et l'extraction vit côté webview (DOMParser, zéro dépendance).
+
 #### Sortir de la corbeille, restaurer partout, le journal lisible (2026-09-20 → 2026-09-21)
 
 - **« Restaurer » dans la fiche** d'un signet corbeillé : à l'origine
@@ -742,12 +773,16 @@ tests. C'est en soi l'enseignement de ces deux journées.
 
 ### Pré-versions publiées
 
-`v0.1.0-pre.1` (2026-09-17) à `v0.1.0-pre.16` (2026-09-21), macOS Apple
+`v0.1.0-pre.1` (2026-09-17) à `v0.1.0-pre.20` (2026-09-22), macOS Apple
 Silicon, signature ad-hoc. `pre.2` et `pre.3` ont vu leurs binaires
 **remplacés** après publication, un défaut ayant été trouvé à l'usage dans
 l'heure — les notes de chaque version le disent. `pre.13` embarquait un
 correctif de sélection de drag **inopérant dans le vrai webview** :
-`pre.14` (publiée le jour même) le remplace.
+`pre.14` (publiée le jour même) le remplace. Les dernières :
+`pre.17` (2026-09-21) apporte la lecture et la page web, `pre.18` (le soir
+même) corrige deux défauts remontés à l'usage de `pre.17` — drag de
+fenêtre muet, images dupliquées —, `pre.19` et `pre.20` (2026-09-22)
+l'inversion clic → lecture puis les vues sauvegardées.
 
 ### Problèmes connus
 
