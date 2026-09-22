@@ -5,6 +5,7 @@ import { useAppState } from "../state/appState";
 import { useFiltreEtiquettes } from "../hooks/filtreEtiquettes";
 import { useEtatsAnalyse } from "../hooks/useAnalysis";
 import { useCollections } from "../hooks/useStaticData";
+import { useOuvrirSignet } from "../hooks/useOuvrirSignet";
 import { useDragBookmark } from "../hooks/useDragBookmark";
 import { useRovingFocus } from "../hooks/useRovingFocus";
 import { useRaindrops } from "../hooks/useRaindrops";
@@ -23,9 +24,12 @@ import { BulkBar } from "./BulkBar";
 // sens plein demanderait onze requêtes espacées de 550 ms sur une collection
 // à dix enfants, et garderait des milliers de lignes hors virtualiseur.
 export function CollectionView() {
-  const { view, go, selectedIds, toggleSelect, selectRaindrop } = useAppState();
+  const { view, go, selectedIds, toggleSelect } = useAppState();
   const arbre = useCollections().data ?? [];
   const drag = useDragBookmark();
+  // Le clic inverse (spec inversion §3) : même décision que la liste
+  // principale — lisible → lecture ouverte ET fiche, non lisible → fiche seule.
+  const ouvrir = useOuvrirSignet();
   // Les items de chaque section, pour la barre d'actions en masse : sans
   // eux, cocher une ligne d'une section n'aurait aucun effet.
   const [parSection, setParSection] = useState<Record<number, RaindropItem[]>>({});
@@ -59,7 +63,7 @@ export function CollectionView() {
   // Même signalétique que la liste principale : la vue Collection monte les
   // mêmes lignes, un lien mort doit s'y voir pareil.
   const etats = useEtatsAnalyse().data;
-  const poignee = (r: RaindropItem) => drag.poignee(r.id, () => selectRaindrop(r.id), r.title);
+  const poignee = (r: RaindropItem) => drag.poignee(r.id, () => ouvrir(r), r.title);
   const tous = [...itemsDirects, ...Object.values(parSection).flat()];
 
   if (parent === undefined)

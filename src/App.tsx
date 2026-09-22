@@ -64,11 +64,10 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
   // ⌘, — le raccourci macOS des réglages, partout dans le système.
   const [reglagesOuvert, setReglagesOuvert] = useState(false);
   const { repliee, basculer } = useSidebarRepliee();
-  // La fiche cède la place pendant la LECTURE (spec lecture §3 : vue pleine
-  // largeur, le rail porte les métadonnées — fiche + rail dupliqueraient
-  // tout). La sélection RESTE : en revenant de la lecture, la fiche est
-  // encore là, exactement comme on l'avait laissée.
-  const detailOuvert = selectedRaindropId !== null && view.kind !== "lecture";
+  // Spec inversion §4 : la fiche ACCOMPAGNE la lecture (colonne de droite) —
+  // l'exclusion de la vue lecture est retirée. La sélection reste posée par
+  // le clic (useOuvrirSignet pose view ET selectedRaindropId ensemble).
+  const detailOuvert = selectedRaindropId !== null;
   useEffect(() => {
     function surRaccourci(e: KeyboardEvent) {
       if (e.metaKey && e.key === "e") {

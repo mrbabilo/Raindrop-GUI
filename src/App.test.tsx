@@ -19,10 +19,18 @@ import type { View } from "./state/appState";
 // mocké pour les tests Revue (R15P-3 : execute() passe par useBulk).
 const getMock = vi.hoisted(() => vi.fn());
 const sendMock = vi.hoisted(() => vi.fn());
+const chargerMock = vi.hoisted(() => vi.fn());
 
 vi.mock("./lib/api", () => ({ api: { get: getMock, send: sendMock } }));
 
-function mockApi(mcp: string) {
+// La lecture : seul `chargerContenu` (le fetch du sidecar) est mocké —
+// `extraireBlocs` reste RÉEL (pur, marche en jsdom).
+vi.mock("./lib/lecture", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./lib/lecture")>()),
+  chargerContenu: chargerMock,
+}));
+
+function mockApi(mcp: string, archivesIds: number[] = []) {
   getMock.mockReset().mockImplementation((path: string) => {
     if (path === "/api/raindrops")
       return Promise.resolve({ items: [raindrop()], count: 1, page: 0, perPage: 50 });
@@ -35,7 +43,7 @@ function mockApi(mcp: string) {
     // dans la réponse de health : `jobs.some` jetait et l'arbre entier se
     // démontait (troisième occurrence du piège « route absente du mock »).
     if (path === "/api/jobs") return Promise.resolve([]);
-    if (path === "/api/backup/archives") return Promise.resolve({ ids: [], octets: 0 });
+    if (path === "/api/backup/archives") return Promise.resolve({ ids: archivesIds, octets: archivesIds.length * 5 });
     if (path === "/api/collections") return Promise.resolve({ items: collections });
     if (path === "/api/tags") return Promise.resolve({ items: tags });
     return Promise.resolve({ status: "ok", mcp });
@@ -87,6 +95,10 @@ describe("App", () => {
     localStorage.clear();
     document.documentElement.className = "";
     mockApi("connected");
+    chargerMock.mockReset().mockResolvedValue({
+      html: "<html><body><p>Lu.</p></body></html>",
+      dateArchive: "2026-09-20T08:00:00.000Z",
+    });
     sendMock.mockReset().mockResolvedValue({});
   });
 
@@ -302,5 +314,28 @@ describe("App", () => {
         label: "Tous",
       }),
     );
+  });
+
+  // Spec inversion §3/§4 : le clic ouvre la LECTURE et la fiche l'accompagne.
+  // Le clic passe par la VRAIE ligne (poignee → useDragBookmark → le futur
+  // useOuvrirSignet) — un pilote selectRaindrop court-circuiterait la décision.
+  it("clic sur une ligne archivée : lecture ouverte ET fiche toujours là", async () => {
+    mockApi("connected", [1000]); // l'archive locale existe → le clic lit
+    render(<App onEtat={vi.fn()} />, { wrapper });
+    await userEvent.click(await screen.findByTestId("row-1000"));
+    // La lecture est ouverte…
+    expect(await screen.findByRole("button", { name: "Fermer la lecture" })).toBeInTheDocument();
+    // …et la fiche l'accompagne (App ne l'exclut plus pendant la lecture).
+    expect(screen.getByRole("button", { name: "Fermer le détail" })).toBeInTheDocument();
+  });
+
+  // La garde du périmètre : non lisible → clic = fiche, la vue reste. Avant le
+  // lot c'était le SEUL comportement du clic ; il doit survivre à l'inversion.
+  it("clic sur une ligne non lisible : fiche seule, la liste reste", async () => {
+    render(<App onEtat={vi.fn()} />, { wrapper }); // archives [] par défaut
+    await userEvent.click(await screen.findByTestId("row-1000"));
+    expect(await screen.findByRole("button", { name: "Fermer le détail" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Fermer la lecture" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("row-1000")).toBeInTheDocument();
   });
 });

@@ -10,6 +10,7 @@ import { useFiltreEtiquettes } from "../hooks/filtreEtiquettes";
 import { useAppState } from "../state/appState";
 import { useArchives } from "../hooks/useBackup";
 import { useEtatsAnalyse } from "../hooks/useAnalysis";
+import { useOuvrirSignet } from "../hooks/useOuvrirSignet";
 import { useDragBookmark } from "../hooks/useDragBookmark";
 import { useIndexClavier } from "../hooks/useIndexClavier";
 import { useRovingFocus } from "../hooks/useRovingFocus";
@@ -23,7 +24,7 @@ import { Composer } from "./Composer";
 type ListView = Extract<View, { kind: "list" }>;
 
 export function ListPane() {
-  const { view, selectedIds, toggleSelect, selectedRaindropId, selectRaindrop } = useAppState();
+  const { view, selectedIds, toggleSelect, selectedRaindropId } = useAppState();
   // Ce qui est archivé EN LOCAL (spec sélection §4.1). Absent tant qu'aucun
   // dossier n'est configuré : la ligne ne porte alors aucun marqueur, ce qui
   // est exact — il n'y a rien d'archivé.
@@ -49,6 +50,10 @@ export function ListPane() {
   // la Sidebar les cibles (useDragBookmark). L'échec s'affiche sous la liste
   // plutôt que de disparaître (R8P-1).
   const drag = useDragBookmark();
+  // Le clic inverse (spec inversion §3) : lisible → la lecture s'ouvre, la
+  // fiche l'accompagne ; non lisible → la fiche seule. Une seule décision,
+  // partagée par le clavier, la mosaïque et la ligne.
+  const ouvrir = useOuvrirSignet();
   // Cliquer une étiquette AJOUTE ou RETIRE un filtre — les étiquettes
   // s'intersectent (recherche.ts) : deux clics valent « les deux à la fois »,
   // et recliquer la même la retire.
@@ -80,7 +85,8 @@ export function ListPane() {
     defilerVers: (i) => virtual.scrollToIndex(i),
     surEntree: (i) => {
       const r = items[i];
-      if (r !== undefined) selectRaindrop(r.id);
+      // Le clavier passe par la MÊME décision que le clic (spec inversion §3).
+      if (r !== undefined) ouvrir(r);
     },
     // La case à cocher d'une ligne n'est plus un arrêt de tabulation : la
     // barre d'espace la remplace depuis la ligne active.
@@ -150,7 +156,7 @@ export function ListPane() {
           // restait vide sur la droite — jusqu'à 220 px perdus. 221 px est le
           // PLANCHER de la colonne ; les tuiles s'étirent pour remplir.
           <div className="grid grid-cols-[repeat(auto-fill,minmax(221px,1fr))] gap-3 p-3">
-            {items.map((r) => <MosaicTile key={r.id} r={r} isDetail={selectedRaindropId === r.id} collectionRacine={titreRacine(r.collectionId)} etat={etats?.get(r.id) ?? null} onOpen={() => selectRaindrop(r.id)} />)}
+            {items.map((r) => <MosaicTile key={r.id} r={r} isDetail={selectedRaindropId === r.id} collectionRacine={titreRacine(r.collectionId)} etat={etats?.get(r.id) ?? null} onOpen={() => ouvrir(r)} />)}
           </div>
         ) : (
           <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
@@ -177,7 +183,7 @@ export function ListPane() {
                     collectionRacine={titreRacine(r.collectionId)}
                     archive={archives?.has(r.id) === true}
                     etat={etats?.get(r.id) ?? null}
-                    poignee={drag.poignee(r.id, () => selectRaindrop(r.id), r.title)}
+                    poignee={drag.poignee(r.id, () => ouvrir(r), r.title)}
                     onToggle={() => toggleSelect(r.id)} onTag={filtreTags.bascule} tagActif={filtreTags.estActive} />
                 </div>
               );
