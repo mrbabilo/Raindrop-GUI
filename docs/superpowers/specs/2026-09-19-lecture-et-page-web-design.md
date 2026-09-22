@@ -13,9 +13,11 @@ l'archivage. » Décomposé avec l'utilisateur, la demande tient en DEUX gestes
 distincts, tous deux retenus :
 
 1. **Lire** — le contenu archivé, confortablement, DANS l'app : le mode
-   lecture que §12 dessinait déjà (texte serif ~66 caractères, rail de
-   métadonnées à droite). Le contenu vient de l'archive locale, de la copie
-   permanente Pro, et seulement en repli du web.
+   lecture que §12 dessinait déjà (texte serif ~66 caractères ; le rail
+   de métadonnées à droite dessiné alors a cédé sa place à la ligne de
+   tête — **amendé le 2026-09-22**, spec inversion). Le contenu vient de
+   l'archive locale, de la copie permanente Pro, et seulement en repli
+   du web.
 2. **Voir la page réelle** — l'état du web AUJOURD'HUI, pour juger d'un lien
    avant de le corriger ou le supprimer. Rendu réel dans une fenêtre webview
    créée par le shell — pas le navigateur système, qui existe déjà sur l'URL.
