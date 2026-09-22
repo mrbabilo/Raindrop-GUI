@@ -1,6 +1,6 @@
 // src/components/LectureView.tsx
 import { useQuery } from "@tanstack/react-query";
-import { createElement, useState, type ReactNode } from "react";
+import { createElement, useRef, useState, type ReactNode } from "react";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { api, ApiError } from "../lib/api";
@@ -129,6 +129,19 @@ export function LectureView({
   };
 
   let interieur: ReactNode;
+
+  // La position de lecture (0..1) : calculée AU DÉFILEMENT, écrite par ref
+  // dans la barre — un setState par frame re-rendrait tout l'article.
+  const defileRef = useRef<HTMLDivElement>(null);
+  const remplirRef = useRef<HTMLDivElement>(null);
+  const surDefilement = () => {
+    const el = defileRef.current;
+    const remplir = remplirRef.current;
+    if (!el || !remplir) return;
+    const total = el.scrollHeight - el.clientHeight;
+    const part = total > 0 ? el.scrollTop / total : 0;
+    remplir.style.height = `${Math.min(100, Math.max(0, part * 100))}%`;
+  };
   if (contenu.isPending) {
     interieur = <p>{t("state.loading")}</p>;
   } else if (contenu.isError) {
@@ -177,31 +190,41 @@ export function LectureView({
   return (
     // La barre de tête vit HORS du conteneur défilant : l'issue (Fermer) et
     // la provenance restent sous la main pendant qu'on lit — le rebond
-    // macOS ne doit pas les emmener. Seul l'article défile.
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="mx-auto flex w-full max-w-[66ch] items-start justify-between gap-3 px-6 pt-8 pb-3">
-        {/* La ligne de tête (spec inversion §5) : provenance · date · temps —
-            la fraîcheur de ce qu'on lit, sans un rail qui dupliquerait la
-            fiche. Absente tant que le contenu n'est pas là. */}
-        {contenu.data && blocs.length > 0 && (
-          <p className="text-xs text-app-muted">
-            {[
-              t(sourceCopie ? "lecture.badgeCopie" : "lecture.badgeLocale"),
-              dateLue ? t("lecture.date", { date: dateLue }) : null,
-              t("lecture.temps", { n: minutes }),
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
-        )}
-        <button type="button" className="btn btn-icone ml-auto" aria-label={t("lecture.fermer")} onClick={goBack}>
-          <Icone nom="croix" />
-        </button>
+    // macOS ne doit pas les emmener. Seul l'article défile. L'ombrage
+    // léger (app-sel) la pose comme une bande de la fenêtre.
+    <div className="relative flex h-full min-h-0 flex-col">
+      <div className="bg-app-sel">
+        <div className="mx-auto flex w-full max-w-[66ch] items-start justify-between gap-3 px-6 pt-8 pb-3">
+          {/* La ligne de tête (spec inversion §5) : provenance · date · temps —
+              la fraîcheur de ce qu'on lit, sans un rail qui dupliquerait la
+              fiche. Absente tant que le contenu n'est pas là. */}
+          {contenu.data && blocs.length > 0 && (
+            <p className="text-xs text-app-muted">
+              {[
+                t(sourceCopie ? "lecture.badgeCopie" : "lecture.badgeLocale"),
+                dateLue ? t("lecture.date", { date: dateLue }) : null,
+                t("lecture.temps", { n: minutes }),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
+          <button type="button" className="btn btn-icone ml-auto" aria-label={t("lecture.fermer")} onClick={goBack}>
+            <Icone nom="croix" />
+          </button>
+        </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div ref={defileRef} onScroll={surDefilement} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-[66ch] flex-col gap-3 px-6 pb-8">
           {interieur}
         </div>
+      </div>
+      {/* La position de lecture : une présentation, pas une information
+          nouvelle (la barre native du système dit déjà où l'on est aux
+          lecteurs d'écran — aria-hidden). Mise à jour par ref au
+          défilement : aucun re-render par frame. */}
+      <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-[3px] bg-app-border">
+        <div ref={remplirRef} data-testid="position-lecture" className="w-full bg-app-muted" style={{ height: "0%" }} />
       </div>
     </div>
   );

@@ -461,12 +461,18 @@ page : ses CSS manquent, la fidélité n'y rendrait qu'une page cassée.
   filet `app-border`, code en chasse fixe sur `app-sel`, liens hérités de
   l'encre au soulignement discret qui se fonce au survol (pas d'accent :
   §7). Tout en jetons — le thème sombre est gratuit.
-- **Une ligne de tête discrète** : provenance (« archive locale » / « copie
+- **Une ligne de tête discrète** : provenance (« Archive locale » / « Copie
   permanente »), **date de l'archive** et temps de lecture, séparés par des
   points médians — lire sans montrer la fraîcheur de ce qu'on lit cacherait
-  la moitié du diagnostic. Le titre, le domaine, la collection et les
-  étiquettes vivent dans la fiche voisine : les dupliquer ferait deux
+  la moitié du diagnostic. La barre vit hors du défilement, posée comme une
+  bande ombrée de la fenêtre (`app-sel`) : l'issue « Fermer » reste sous la
+  main, le rebond macOS ne l'emmène pas. Le titre, le domaine, la collection
+  et les étiquettes vivent dans la fiche voisine : les dupliquer ferait deux
   sources de vérité.
+- **Une barre de position** (3 px, bord droit de la fenêtre) suit
+  l'avancement de la lecture — présentative (`aria-hidden`) : la barre
+  native du système dit déjà où l'on est ; celle-ci ne porte qu'un trait
+  calme (`app-muted` sur `app-border`), jamais une couleur de diagnostic.
 - **Pendant la lecture, les étiquettes ne se lisent qu'en la fiche** (§2) :
   la ligne de tête n'en porte aucune. (Le rail les rendait en une ligne de
   texte, pas des pilules : une pilule inerte aurait fait douter de celles

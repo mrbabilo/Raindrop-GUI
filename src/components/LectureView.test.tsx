@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { t } from "../i18n/fr";
@@ -136,7 +136,7 @@ describe("LectureView", () => {
     // en une ligne — le rail de 260 px est parti. L'heure de l'archive dépend
     // du fuseau de la machine de test : on assert le JOUR, jamais l'heure
     // (le vieux test faisait de même avec sa regex).
-    const ligne = screen.getByText(/archive locale · Archive du 18 septembre 2026/);
+    const ligne = screen.getByText(/Archive locale · Archive du 18 septembre 2026/);
     expect(ligne.textContent).toContain("≈ 1 min de lecture");
     // Le rail rendait titre, domaine et étiquettes : ABSENTS désormais — la
     // fiche voisine les porte (avant le lot, ce test les voyait ici).
@@ -177,8 +177,8 @@ describe("LectureView", () => {
       </QueryClientProvider>,
     );
     await userEvent.click(screen.getByText("ouvrir"));
-    expect(await screen.findByText(/copie permanente/)).toBeInTheDocument();
-    expect(screen.queryByText(/archive locale/)).not.toBeInTheDocument();
+    expect(await screen.findByText(/Copie permanente/)).toBeInTheDocument();
+    expect(screen.queryByText(/Archive locale/)).not.toBeInTheDocument();
   });
 
   // La règle du lot bascules : l'aller ne prouve rien sans le retour.
@@ -242,8 +242,23 @@ describe("LectureView", () => {
     ).not.toBeInTheDocument();
     // …le téléchargement aboutit, la lecture refetch et rend le contenu.
     await userEvent.click(screen.getByText("simuler-termine"));
-    expect(await screen.findByText(/copie permanente/)).toBeInTheDocument();
+    expect(await screen.findByText(/Copie permanente/)).toBeInTheDocument();
     expect(screen.queryByText(/Téléchargement de la copie/)).not.toBeInTheDocument();
+  });
+
+  // La barre de position (présentative) suit le défilement : jsdom ne
+  // calcule aucun layout, le test pose donc scrollHeight/clientHeight/
+  // scrollTop sur l'élément (defineProperty) et déclenche l'événement —
+  // c'est le CONTRACT du calcul, pas une mesure.
+  it("la barre de position suit le défilement de l'article", async () => {
+    await ouvrir();
+    await screen.findByText("Un titre de lecture");
+    const defile = document.querySelector(".lecture-corps")!.closest(".overflow-y-auto")! as HTMLElement;
+    Object.defineProperty(defile, "scrollHeight", { value: 1000, configurable: true });
+    Object.defineProperty(defile, "clientHeight", { value: 500, configurable: true });
+    Object.defineProperty(defile, "scrollTop", { value: 250, configurable: true, writable: true });
+    fireEvent.scroll(defile);
+    expect(screen.getByTestId("position-lecture").style.height).toBe("50%");
   });
 
   it("garde de 64 Mo : état nommé", async () => {

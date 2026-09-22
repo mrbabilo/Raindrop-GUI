@@ -78,8 +78,8 @@ export const fr = {
   // Lecture du contenu archivé (spec lecture §3) — chaque état porte SA
   // raison, jamais un « http 404 » nu (§5).
   "lecture.fermer": "Fermer la lecture",
-  "lecture.badgeLocale": "archive locale",
-  "lecture.badgeCopie": "copie permanente",
+  "lecture.badgeLocale": "Archive locale",
+  "lecture.badgeCopie": "Copie permanente",
   "lecture.date": "Archive du {date}",
   "lecture.introuvable": "L'archive a disparu entre l'affichage de la fiche et votre clic.",
   "lecture.tropVolumineuse": "Cette archive dépasse la taille maximale lisible (64 Mo décompressés).",
