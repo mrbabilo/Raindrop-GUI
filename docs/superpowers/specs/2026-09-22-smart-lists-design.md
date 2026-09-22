@@ -48,7 +48,13 @@ dépôt git) :
 c'est lui, notre parser. Routes sous `/api/smartlists` : GET (liste), POST
 (créer — le front envoie label + vue, le sidecar fixe id et date), PATCH
 (renommer), DELETE. Validation zod sur chaque route ; le nom est borné
-(non vide, longueur plafonnée) — une smart list n'est pas un dépotoir.
+(non vide, longueur plafonnée) — une smart list n'est pas un dépotoir. La
+vue reçue exige `collectionId` (nombre), le reste est optionnel avec ses
+défauts — une vue minimale « Tous » filtré est légale. Les
+**pseudo-collections** sont stockables comme les autres : sauvegarder la
+Corbeille ou les Favoris filtrés est un filtre sur un contenant, pas un
+cas spécial. Fichier JSON illisible → **liste vide** (le patron du dépôt) :
+l'app ne casse pas, la section barre latérale dit son état.
 
 ## 4. La création — depuis la vue
 
@@ -75,6 +81,15 @@ dans l'ordre de création. Chaque entrée :
   une smart list n'est pas la bibliothèque — elle se recrée en trois clics,
   la frappe SUPPRIMER reste aux gestes irréversibles (§8, collections).
 
+**La surlignage ne survit pas à la divergence.** Tout `patch` de filtre
+appliqué à la vue courante **efface `smartlistId`** : l'entrée reste
+surlignée tant que la vue est intacte — dès qu'un filtre bouge, la vue
+n'est plus « la » smart list, et la barre latérale doit le dire. De même,
+supprimer la smart list **ouverte** efface l'identifiant de la vue (la
+liste filtrée reste à l'écran — ce sont des filtres, pas un fichier) ;
+après un **renommage**, la vue ouverte garde son libellé d'origine jusqu'à
+la prochaine ouverture — assumé.
+
 ## 6. Cas aux bords
 
 - **La collection rattachée disparaît** (supprimée au Nettoyage) : la smart
@@ -87,6 +102,8 @@ dans l'ordre de création. Chaque entrée :
   d'écriture fantôme (v1 sans éditeur, §2).
 - **Nom en doublon** : permis — deux vues « Rust » divergentes sont deux
   smart lists ; l'identifiant les distingue.
+- **Filtres modifiés dans la vue ouverte** : la smart list stockée reste —
+  et le surlignage s'efface (§5). Pas d'écriture fantôme (v1 sans éditeur).
 - **Hors ligne / sidecar arrêté** : la section barre latérale rend son état
   d'échec nommé, comme les autres requêtes (§5 des états).
 
@@ -101,6 +118,9 @@ dans l'ordre de création. Chaque entrée :
 - **Front (Sidebar)** : la section rend les smart lists ; le clic rejoue la
   vue (les items de la liste en témoignent) ; l'entrée active est
   surlignée via `smartlistId` ; renommer et supprimer frappent les routes.
+- **Le surlignage ne ment pas** : changer un filtre dans la smart list
+  ouverte efface la marque active ; supprimer la smart list ouverte aussi
+  (la liste filtrée reste). Sabordés comme les autres.
 - **Sabordage** : le test du bouton filtré (actif/inactif) et celui de la
   navigation sont sabotés (réintroduire le défaut, voir le test échouer).
 
@@ -109,7 +129,9 @@ dans l'ordre de création. Chaque entrée :
 - Pas d'**édition** des filtres d'une smart list existante : on supprime et
   on recrée — trois clics, aucun état d'édition à maintenir.
 - Pas d'**imbrication** (`parentId` de Karakeep), pas de **partage**, pas de
-  **flux RSS**, pas d'**icônes** personnalisées.
+  **flux RSS**, pas d'**icônes** personnalisées, pas de **réordonnancement**
+  de la section (l'ordre est celui de la création — les collections se
+  réordonnent, pas encore les smart lists).
 - La smart list vit **dans cette installation** (app-data) : pas de synchro
   Raindrop — l'API n'en offre pas, et la bibliothèque reste la seule source
   de vérité.
