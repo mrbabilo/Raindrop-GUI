@@ -157,6 +157,37 @@ export type ScanEvent =
   // reproche que la spec faisait à une barre.
   | { kind: "progress"; done: number; total: number; label: string | null };
 
+// Le suivi SSE d'un job, partagé par le scan et la revérification : un seul
+// settle — l'event `error` (échec du job) rejette AVANT le onDone que le
+// parseur appelle pour tout kind terminal ; sans le garde, la promesse se
+// résoudrait comme une fin normale et l'échec serait silencieux.
+const suivreFin = (jobId: string, signal: AbortSignal, onEvent?: (e: ScanEvent) => void) =>
+  new Promise<void>((resolve, reject) => {
+    let settled = false;
+    void jobEvents(jobId, {
+      onEvent: (e) => {
+        if (e.kind === "error") {
+          settled = true;
+          reject(new Error(typeof e.message === "string" && e.message ? e.message : "event error sans message"));
+          return;
+        }
+        if (e.kind !== "progress") return;
+        // Forme réelle du flux (sidecar/api/sse.ts) : le data de progress
+        // est l'event sérialisé, la progression vit sous `progress`.
+        const p = e.progress as { done?: unknown; total?: unknown; label?: unknown } | undefined;
+        const done = typeof p?.done === "number" ? p.done : 0;
+        const total = typeof p?.total === "number" ? p.total : 0;
+        const label = typeof p?.label === "string" ? p.label : null;
+        onEvent?.({ kind: "progress", done, total, label });
+      },
+      onDone: () => {
+        if (!settled) resolve();
+      },
+    }, signal).catch((err: unknown) => {
+      if (!settled) reject(err);
+    });
+  });
+
 export const useStartScan = (type: AnalysisType, onEvent?: (e: ScanEvent) => void) => {
   const qc = useQueryClient();
   return useMutation({
@@ -164,39 +195,32 @@ export const useStartScan = (type: AnalysisType, onEvent?: (e: ScanEvent) => voi
       const { jobId } = await api.send<{ jobId: string }>("POST", "/api/analysis/scan", { type });
       const controller = new AbortController();
       onEvent?.({ kind: "start", jobId, controller });
-      await new Promise<void>((resolve, reject) => {
-        // R12P-1 : un seul settle — l'event `error` (échec du scan) rejette
-        // AVANT le onDone que le parseur appelle pour tout kind terminal ;
-        // sans le garde, la promesse se résoudrait comme une fin normale et
-        // l'échec serait silencieux.
-        let settled = false;
-        void jobEvents(jobId, {
-          onEvent: (e) => {
-            if (e.kind === "error") {
-              settled = true;
-              reject(new Error(typeof e.message === "string" && e.message ? e.message : "event error sans message"));
-              return;
-            }
-            if (e.kind !== "progress") return;
-            // Forme réelle du flux (sidecar/api/sse.ts) : le data de progress
-            // est l'event sérialisé, la progression vit sous `progress`.
-            const p = e.progress as { done?: unknown; total?: unknown; label?: unknown } | undefined;
-            const done = typeof p?.done === "number" ? p.done : 0;
-            const total = typeof p?.total === "number" ? p.total : 0;
-            const label = typeof p?.label === "string" ? p.label : null;
-            onEvent?.({ kind: "progress", done, total, label });
-          },
-          onDone: () => {
-            if (!settled) resolve();
-          },
-        }, controller.signal).catch((err: unknown) => {
-          if (!settled) reject(err);
-        });
-      }).then(() => {
+      await suivreFin(jobId, controller.signal, onEvent).then(() => {
         // Fin du suivi (done, error, cancelled ou flux clos) : fraîcheur et
         // compteurs repartent de ce que le sidecar a persisté.
         qc.invalidateQueries({ queryKey: ["analysis"] });
         qc.invalidateQueries({ queryKey: ["raindrops"] });
+      });
+    },
+  });
+};
+
+/**
+ * La revérification des indéterminés (ROADMAP 2026-09-22) : même mécanique
+ * que le scan — job SSE, progression, annulation — mais POST /recheck, et
+ * l'invalidation ne porte que `["analysis"]` : une revérification ne touche
+ * ni l'index des signets ni les compteurs Raindrop, seuls les verdicts
+ * changent (etats, results, status).
+ */
+export const useRecheckIndetermine = (onEvent?: (e: ScanEvent) => void) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { jobId } = await api.send<{ jobId: string }>("POST", "/api/analysis/recheck", { statut: "indeterminate" });
+      const controller = new AbortController();
+      onEvent?.({ kind: "start", jobId, controller });
+      await suivreFin(jobId, controller.signal, onEvent).then(() => {
+        qc.invalidateQueries({ queryKey: ["analysis"] });
       });
     },
   });

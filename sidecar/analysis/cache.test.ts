@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {readFileSync, writeFileSync, existsSync} from "node:fs";
 import { join } from "node:path";
 import { AnalysisCache } from "./cache.js";
+import type { LinkCheckResult } from "../../shared/types.js";
 
 let dir: string;
 beforeEach(() => { dir = repertoireTemporaire("cache-"); });
@@ -119,5 +120,42 @@ describe("setItemsIndex REMPLACE — un signet supprimé ne ressuscite pas", () 
     expect(cache.resultatsParSignet()).toHaveLength(2);
     cache.setItemsIndex([item(1, "https://mort.example")]);
     expect(cache.resultatsParSignet().map((r) => r.raindropId)).toEqual([1]);
+  });
+});
+
+describe("ciblesRecheck — les URLs d'un statut, distinctes, prêtes à re-checker", () => {
+  it("indeterminate : une cible par URL (un porteur), orpheline à 0, autres statuts exclues", async () => {
+    const cache = await AnalysisCache.load(join(dir, "analysis.json"));
+    cache.setItemsIndex(
+      [
+        { id: 11, url: "https://partagee.example", title: "a", collectionId: 0 },
+        { id: 12, url: "https://partagee.example", title: "b", collectionId: 0 },
+        { id: 13, url: "https://saine.example", title: "c", collectionId: 0 },
+      ].map((x) => ({ ...x, excerpt: "", note: "", domain: "", tags: [], created: "", lastUpdate: "", important: false, type: "link", cover: null, cache: null, broken: false, highlights: [] })),
+    );
+    const r = (url: string, status: LinkCheckResult["status"], reason: string | null = null) => ({
+      raindropId: 1, url, status, httpStatus: null,
+      redirectChain: null, finalUrl: null, redirectKind: null,
+      reason, checkedAt: new Date().toISOString(),
+    });
+    cache.setResult(r("https://partagee.example", "indeterminate", "http_403"));
+    cache.setResult(r("https://orpheline.example", "indeterminate", "net_ECONNRESET"));
+    cache.setResult(r("https://saine.example", "ok"));
+    cache.setResult(r("https://morte.example", "dead", "http_404"));
+    // Reclasé transport (cache ancien) : la vue le MONTRE indeterminate —
+    // la revérification cible ce que l'écran montre, pas le stockage brut.
+    cache.setResult(r("https://reclasse.example", "dead", "net_ECONNRESET"));
+    const cibles = cache.ciblesRecheck("indeterminate");
+    expect(cibles.map((c) => c.url).sort()).toEqual([
+      "https://orpheline.example",
+      "https://partagee.example",
+      "https://reclasse.example",
+    ]);
+    // Une URL partagée par deux signets est UNE cible : le verdict se
+    // redistribue à tous ses porteurs à la lecture, comme au scan.
+    expect(cibles.find((c) => c.url === "https://partagee.example")!.raindropId).toBe(11);
+    // Orpheline (plus de signet connu) : la revérification garde le droit de
+    // rafraîchir le verdict — l'index décide de l'affichage, pas du check.
+    expect(cibles.find((c) => c.url === "https://orpheline.example")!.raindropId).toBe(0);
   });
 });

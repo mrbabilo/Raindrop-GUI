@@ -164,4 +164,30 @@ export class AnalysisCache {
       })
       .map((i) => ({ id: i.id, url: i.url }));
   }
+
+  /**
+   * Les cibles d'une REVÉRIFICATION ciblée : toute URL DISTINCTE du statut
+   * demandé, quelle que soit sa fraîcheur — c'est le but du geste (re-regarder
+   * ce qu'on n'a pas su classer). Une URL partagée par plusieurs signets est
+   * UNE cible : le verdict se redistribue à tous à la lecture, comme au scan.
+   * Le `raindropId` porte un signet quelconque porteur (le premier venu de
+   * l'index — c'est une annotation, pas une désignation) ; 0 si orpheline —
+   * le check garde le droit de rafraîchir un verdict, l'index décide seul de
+   * l'affichage.
+   */
+  ciblesRecheck(statut: LinkCheckResult["status"]): { raindropId: number; url: string }[] {
+    const porteur = new Map<string, number>();
+    for (const [id, meta] of Object.entries(this.data.itemsIndex)) {
+      if (!porteur.has(meta.url)) porteur.set(meta.url, Number(id));
+    }
+    const out: { raindropId: number; url: string }[] = [];
+    for (const r of Object.values(this.data.links.results)) {
+      // La lecture reclasse (verdicts transport des caches anciens) : la
+      // revérification cible ce que l'ÉCRAN montre, pas le stockage brut —
+      // sinon « Revérifier » épargnerait une partie de ce qu'on voit.
+      if (reclasseTransport(r).status !== statut) continue;
+      out.push({ raindropId: porteur.get(r.url) ?? 0, url: r.url });
+    }
+    return out;
+  }
 }

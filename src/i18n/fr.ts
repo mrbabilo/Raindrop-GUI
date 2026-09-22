@@ -168,6 +168,8 @@ export const fr = {
   "cleanup.cancel": "Annuler le scan",
   "cleanup.scanRunning": "Analyse en cours",
   "cleanup.scanning": "Analyse en cours… {done}/{total}",
+  "cleanup.reverifier": "Revérifier ({n})",
+  "cleanup.rechecking": "Revérification… {done}/{total}",
   "cleanup.replace-url": "Remplacer par l'URL finale",
   "cleanup.restore": "Restaurer",
   "cleanup.unknown-origin": "Origine inconnue — choisir une destination",

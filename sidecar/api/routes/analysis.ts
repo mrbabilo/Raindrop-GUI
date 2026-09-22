@@ -24,6 +24,21 @@ export function analysisRoutes(deps: SidecarDeps): Hono {
     }
   });
 
+  // Revérification ciblée (ROADMAP 2026-09-22) : re-regarder les indéterminés
+  // — 401/403/429 et verdicts transport — sans balayer la bibliothèque. Le
+  // statut est un literal zod : le geste est borné à ce qu'il nomme, la porte
+  // reste ouverte à un futur statut sans redéfinir la route.
+  app.post("/recheck", async (c) => {
+    const body = z.object({ statut: z.literal("indeterminate") }).safeParse(await c.req.json().catch(() => null));
+    if (!body.success) return apiError(c, "INVALID_INPUT", "statut ∈ {indeterminate}");
+    try {
+      const jobId = deps.scanner.startRecheckIndetermine();
+      return c.json({ jobId }, 202);
+    } catch (e) {
+      return apiError(c, "SCAN_EN_COURS", e instanceof Error ? e.message : String(e));
+    }
+  });
+
   app.get("/status", (c) => {
     // L'avancement des liens vient du CACHE, pas d'une requête : il rend
     // visible une reprise qui, jusqu'ici, fonctionnait sans le dire. Après une

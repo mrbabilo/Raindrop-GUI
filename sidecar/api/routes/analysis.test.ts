@@ -113,6 +113,28 @@ describe("routes analyse", () => {
     expect(status.duplicates.running).toBe(false);
   });
 
+  // La revérification des indéterminés : un job ciblé (ROADMAP 2026-09-22),
+  // refusé pendant qu'un scan de liens occupe le domaine.
+  it("POST /recheck lance un job ; un corps invalide est refusé", async () => {
+    const res = await req(app, "/api/analysis/recheck", {
+      method: "POST",
+      body: JSON.stringify({ statut: "indeterminate" }),
+    });
+    expect(res.status).toBe(202);
+    const { jobId } = (await res.json()) as { jobId: string };
+    for (let i = 0; i < 200; i++) {
+      const s = (await (await req(app, `/api/jobs/${jobId}`)).json()) as { status: string };
+      if (s.status === "done") break;
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    expect(((await (await req(app, `/api/jobs/${jobId}`)).json()) as { status: string }).status).toBe("done");
+    const mauvais = await req(app, "/api/analysis/recheck", {
+      method: "POST",
+      body: JSON.stringify({ statut: "dead" }),
+    });
+    expect(mauvais.status).toBe(400);
+  });
+
   it("POST /scan refuse un type inconnu (400)", async () => {
     const res = await req(app, "/api/analysis/scan", { method: "POST", body: JSON.stringify({ type: "magie" }) });
     expect(res.status).toBe(400);

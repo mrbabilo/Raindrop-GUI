@@ -9,7 +9,7 @@ import { AppStateProvider, useAppState } from "../state/appState";
 // Hooks et api mockés (pattern CleanupDashboard.test.tsx) : les mocks sont
 // hisés (vi.hoisted) et rechargés par test via mockReturnValue — les branches
 // de CleanupView lisent des hooks différents selon `type`.
-const { resultsMock, groupsMock, raindropsMock, collectionsMock, getMock, sendMock, statutMock, scanMock } = vi.hoisted(() => ({
+const { resultsMock, groupsMock, raindropsMock, collectionsMock, getMock, sendMock, statutMock, scanMock, recheckMock, cancelMock } = vi.hoisted(() => ({
   resultsMock: vi.fn(),
   groupsMock: vi.fn(),
   raindropsMock: vi.fn(),
@@ -25,6 +25,8 @@ const { resultsMock, groupsMock, raindropsMock, collectionsMock, getMock, sendMo
     },
   })),
   scanMock: vi.fn(),
+  recheckMock: vi.fn(),
+  cancelMock: vi.fn(),
 }));
 
 vi.mock("../lib/api", () => ({ api: { get: getMock, send: sendMock } }));
@@ -33,8 +35,11 @@ vi.mock("../hooks/useAnalysis", () => ({
   useDuplicateGroups: groupsMock,
   useAnalysisStatus: statutMock,
   useStartScan: () => ({ mutate: scanMock }),
+  useRecheckIndetermine: () => ({ mutate: recheckMock, isPending: false, isError: false, error: null }),
+  useCancelJob: () => ({ mutate: cancelMock }),
 }));
 vi.mock("../hooks/useRaindrops", () => ({ useRaindrops: raindropsMock }));
+vi.mock("../hooks/useBackup", () => ({ useJobsEnVol: () => ({ data: undefined }) }));
 vi.mock("../hooks/useStaticData", () => ({
   useCollections: collectionsMock,
   useTags: () => ({ data: [] }),
@@ -85,6 +90,8 @@ beforeEach(() => {
   groupsMock.mockReset().mockReturnValue({ data: { exact: [], normalized: [], fuzzy: [] } });
   raindropsMock.mockReset().mockReturnValue({ data: undefined });
   collectionsMock.mockReset().mockReturnValue({ data: [] });
+  recheckMock.mockReset().mockResolvedValue({});
+  cancelMock.mockReset().mockResolvedValue({});
 });
 
 describe("ResultatsLiens — liens morts et redirections", () => {
@@ -368,5 +375,43 @@ describe("le patron « ligne activable »", () => {
     expect(remplacer.getAttribute("tabindex")).toBe("0");
     await user.click(screen.getByRole("heading", { name: /Redirections/i }));
     expect(remplacer.getAttribute("tabindex")).toBe("-1");
+  });
+});
+
+// La revérification des indéterminés (ROADMAP 2026-09-22) : LE bouton de la
+// vue « À vérifier à la main » — il POSTe au sidecar et n'existe nulle part
+// ailleurs. « L'aller ne prouve rien sans le retour » : on vérifie aussi son
+// ABSENCE sur les vues qui n'en ont pas.
+describe("la revérification des indéterminés", () => {
+  it("la vue indeterminate porte « Revérifier (n) » et le clic part au sidecar", async () => {
+    resultsMock.mockReturnValue({
+      data: {
+        items: [
+          {
+            raindropId: 2000, url: "https://bloque.example/", status: "indeterminate",
+            httpStatus: 403, redirectChain: [], finalUrl: null, redirectKind: null,
+            reason: "http_403", checkedAt: "2026-09-19T00:00:00Z",
+            title: "Bloqué", collectionId: 101,
+          },
+        ],
+        total: 3, page: 0, perPage: 50,
+      },
+    });
+    render(<CleanupView type="indeterminate" />, { wrapper });
+    const bouton = await screen.findByRole("button", { name: /Revérifier/ });
+    expect(bouton).toHaveTextContent("3");
+    await userEvent.click(bouton);
+    expect(recheckMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("mort et redirection ne portent pas le bouton", async () => {
+    resultsMock.mockReturnValue({ data: redirectPage });
+    const { unmount } = render(<CleanupView type="dead" />, { wrapper });
+    await screen.findByText("Page déplacée");
+    expect(screen.queryByRole("button", { name: /Revérifier/ })).toBeNull();
+    unmount();
+    render(<CleanupView type="redirect" />, { wrapper });
+    await screen.findByText("Page déplacée");
+    expect(screen.queryByRole("button", { name: /Revérifier/ })).toBeNull();
   });
 });

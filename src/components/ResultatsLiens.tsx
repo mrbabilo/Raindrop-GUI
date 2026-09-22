@@ -15,6 +15,7 @@ import { useCollections } from "../hooks/useStaticData";
 import { racine } from "../lib/arbre";
 import { DeadRow, RedirectRow } from "./CleanupRows";
 import { Entete, LABELS } from "./EnteteCleanup";
+import { BlocRecheck } from "./BlocRecheck";
 
 // Pagination des vues de scan (dead/redirect) : page/total côté sidecar.
 // Une seule page = aucun paginateur — du bruit inutile sous une liste courte.
@@ -138,6 +139,11 @@ export function ResultatsLiens({ type, jamaisAnalyse, analyser }: {
                 {t("cleanup.corbeille", { n: selectionnes.length })}
               </button>
             </span>
+          ) : // Les indéterminés portent LEUR action : la revérification ciblée
+          // (ROADMAP 2026-09-22) — re-regarder ce qu'on n'a pas su classer,
+          // sans balayer la bibliothèque ni toucher au TTL du reste.
+          type === "indeterminate" ? (
+            <BlocRecheck total={q.data?.total ?? 0} />
           ) : undefined
         }
       />

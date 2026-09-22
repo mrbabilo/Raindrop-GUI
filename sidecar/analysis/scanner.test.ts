@@ -247,3 +247,87 @@ describe("Scanner — reprise après une analyse interrompue", () => {
     expect(cache.avancementLiens(30).verifies).toBe(frais - 1);
   });
 });
+
+describe("revérification des indéterminés", () => {
+  let conn: McpConnection;
+  let store: JobStore;
+  let cache: AnalysisCache;
+
+  beforeEach(async () => {
+    const fake = await connectFake({ raindropCount: 25 });
+    conn = McpConnection.fromClient(fake.client);
+    store = new JobStore();
+    cache = await AnalysisCache.load(join(repertoireTemporaire("recheck-"), "analysis.json"));
+  });
+  const mcpCaller = (tool: string, args: Record<string, unknown>) => conn.call(tool, args);
+
+  it("ne checke QUE les indéterminés du cache, rafraîchit leurs verdicts, ne pose PAS markScanDone", async () => {
+    cache.setItemsIndex(
+      [{ id: 1, url: "https://bloque.example", title: "b", collectionId: 0 }].map((x) => ({
+        ...x, excerpt: "", note: "", domain: "", tags: [], created: "", lastUpdate: "",
+        important: false, type: "link", cover: null, cache: null, broken: false, highlights: [],
+      })),
+    );
+    const r = (url: string, status: CheckOutcome["status"], reason: string | null = null) => ({
+      raindropId: 1, url, status, httpStatus: null,
+      redirectChain: null, finalUrl: null, redirectKind: null,
+      reason, checkedAt: new Date().toISOString(),
+    });
+    cache.setResult(r("https://bloque.example", "indeterminate", "http_403"));
+    cache.setResult(r("https://saine.example", "ok"));
+    cache.setResult(r("https://morte.example", "dead", "http_404"));
+    const scanner = new Scanner({
+      mcp: mcpCaller, jobs: store, cache,
+      check: makeCheck(new Map([["https://bloque.example", "ok" as const]])),
+      concurrency: 5, ttlDays: 30,
+    });
+    const jobId = scanner.startRecheckIndetermine();
+    const snap = await waitForStatus(store, jobId, ["done"]);
+    expect(snap.progress.total).toBe(1);
+    expect(cache.getResult("https://bloque.example")?.status).toBe("ok");
+    expect(cache.getResult("https://morte.example")?.status).toBe("dead");
+    // Une revérification n'est pas un scan complet : la fraîcheur du
+    // tableau de bord ne bouge pas — sinon « Relancer » croirait tout fait.
+    expect(cache.lastScan("links")).toBeNull();
+  });
+
+  it("garde commune avec le scan de liens, dans les DEUX sens", async () => {
+    // Tous les checks pendent jusqu'à la libération — une FILE, sinon chaque
+    // appel écrase le resolve précédent et le scan ne finit jamais.
+    const file = () => {
+      const resolvers: (() => void)[] = [];
+      let ouvert = false;
+      return {
+        lent: (url: string) =>
+          new Promise<CheckOutcome>((resolve) => {
+            const finir = () => resolve({ url, status: "ok", httpStatus: 200, redirectChain: null, finalUrl: null, redirectKind: null, reason: null });
+            if (ouvert) finir();
+            else resolvers.push(finir);
+          }),
+        taille: () => resolvers.length,
+        liberer: () => {
+          ouvert = true; // les arrivées TARDIVES des workers passent aussi
+          resolvers.forEach((r) => r());
+        },
+      };
+    };
+    const essai = file();
+    const scanner = new Scanner({ mcp: mcpCaller, jobs: store, cache, check: essai.lent, concurrency: 5, ttlDays: 30 });
+    const scanId = scanner.startScan("links");
+    for (let i = 0; i < 200 && essai.taille() === 0; i++) await new Promise((r) => setTimeout(r, 5));
+    expect(() => scanner.startRecheckIndetermine()).toThrow(/en cours/);
+    essai.liberer();
+    await waitForStatus(store, scanId, ["done"]);
+
+    // Sens inverse — et ménage : la revérification ne doit pas rester en vol.
+    // Une cible, sinon le job (cache vide) finit avant l'assertion de garde.
+    cache.setResult({ raindropId: 1, url: "https://a-revoir.example", status: "indeterminate", httpStatus: null, redirectChain: null, finalUrl: null, redirectKind: null, reason: "http_403", checkedAt: new Date().toISOString() });
+    const essai2 = file();
+    const scanner2 = new Scanner({ mcp: mcpCaller, jobs: store, cache, check: essai2.lent, concurrency: 5, ttlDays: 30 });
+    const recheckId = scanner2.startRecheckIndetermine();
+    for (let i = 0; i < 200 && essai2.taille() === 0; i++) await new Promise((r) => setTimeout(r, 5));
+    expect(() => scanner2.startScan("links")).toThrow(/en cours/);
+    essai2.liberer();
+    await waitForStatus(store, recheckId, ["done"]);
+  });
+});

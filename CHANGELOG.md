@@ -13,6 +13,23 @@ Developer ID.
 
 ### Ajouté
 
+#### La revérification des indéterminés (2026-09-22)
+
+- **« Revérifier (n) » dans la vue « À vérifier à la main »** : re-regarder
+  ce qu'on n'a pas su classer — 401/403/429 et verdicts transport — sans
+  balayer la bibliothèque ni toucher au TTL du reste. Le scan TTL ne
+  refera pas ces URLs derrière la revérification : elles redeviennent
+  fraîches, lui épargnant autant de requêtes.
+- **La revérification cible ce que l'écran montre**, pas le stockage brut :
+  les caches anciens reclassés transport se font re-regarder aussi — la
+  cohérence écran/action est verrouillée par un test.
+- **Un job comme les autres** : progression et annulation dans la vue,
+  adoption en vol par /api/jobs (quitter la vue pendant le job ne le rend
+  ni insuivable ni inannulable). La garde est celle du domaine liens — pas
+  de scan et de revérification en même temps, dans les deux sens. Et une
+  revérification n'est pas un scan : « Dernier scan » ne bouge pas,
+  sinon « Relancer » croirait tout fait.
+
 #### Les vues sauvegardées — smart lists (2026-09-22)
 
 - **« Sauvegarder la vue » dans la barre d'outils**, visible seulement

@@ -64,12 +64,18 @@ leur raisonnement, et un renvoi par lot livré.*
 
 ### Nettoyage / analyse
 
-- [ ] **Revérifier les indéterminés** — re-scan ciblé des URLs de la vue
-      (contourne le TTL) ; différé volontairement du lot précédent : nouveau
-      chemin scanner + job + fusion cache.
+- [x] **Revérifier les indéterminés** (2026-09-22) — `POST /api/analysis/recheck`
+      → job `recheck-indeterminate` : les URLs distinctes que la vue montre
+      (reclassement transport compris), sans balayage ni TTL, garde commune
+      avec le scan de liens, `markScanDone` non posé. Bouton dans la vue,
+      progression et annulation comme un scan, adoption en vol.
 - [ ] **Redirections en masse** — remplacement de l'URL finale par lot via
       une op de Revue (`replace-url`, boucle REST directe en job) ;
       différé volontairement : écritures multiples d'un coup.
+- [ ] **Dette : découper `CleanupRows.tsx`** (310 lignes, cible 300) —
+      `TrashRow` en est la frontière naturelle (`CleanupRows.corbeille.tsx`,
+      son test suit) ; franchi par la ligne de redirection à trois lignes
+      du 2026-09-22.
 - [ ] **Reprise après REDÉMARRAGE du processus** — différée, et pour une
       raison plutôt que par oubli (spec §1ter n°1b). `ouvrirJsonl` tronque
       toujours. Reprendre à la page N suppose une pagination inchangée depuis :

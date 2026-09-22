@@ -1,6 +1,6 @@
 import type { AnalysisType } from "../../shared/types.js";
 import type { CallOutcome } from "../../shared/errors.js";
-import type { JobStore } from "../jobs/store.js";
+import type { JobHandle, JobStore } from "../jobs/store.js";
 import { runJob } from "../jobs/store.js";
 import type { AnalysisCache } from "./cache.js";
 import { fetchLibrarySnapshot } from "./snapshot.js";
@@ -82,46 +82,10 @@ export class Scanner {
       }
       j.progress(0, targets.length, "vérification des liens");
 
-      // Les saves sont SÉRIALISÉS : save() passe par un .tmp unique, deux saves
-      // entrelacés (périodique fire-and-forget vs final) feraient planter le
-      // rename (ENOENT). La chaîne se répare d'elle-même après un échec.
-      let saving: Promise<void> = Promise.resolve();
-      const requestSave = (): Promise<void> => {
-        const next = saving.then(() => this.deps.cache.save());
-        saving = next.catch(() => undefined);
-        return next;
-      };
-
-      // aborted : après l'échec d'un job, les workers survivants du pool
-      // (fail() ne pose pas cancelled) ne doivent plus rien empiler.
-      let aborted = false;
-      let done = 0;
-      let sinceSave = 0;
-      const out = await checkAll(targets, {
-        timeoutMs,
-        concurrency,
-        retry: 1,
-        checkImpl: (url) => check(url), // seam de test — défaut : checkUrl prod
-        onUpdate: (r) => {
-          if (aborted) return;
-          this.deps.cache.setResult(r);
-          done++;
-          sinceSave++;
-          j.progress(done, targets.length, r.url);
-          if (sinceSave >= SAVE_EVERY) {
-            sinceSave = 0;
-            void requestSave(); // persistance périodique (résultats partiels)
-          }
-        },
-        isCancelled: () => j.isCancelled(),
-      }).catch((e) => {
-        aborted = true;
-        throw e;
-      });
-
       // un scan annulé ne rafraîchit pas la fraîcheur affichée du dashboard
+      const out = await this.verifierTargets(j, targets, check, concurrency, timeoutMs);
       if (!j.isCancelled()) this.deps.cache.markScanDone("links");
-      await requestSave(); // attend aussi les saves périodiques déjà en file
+      await this.deps.cache.save(); // attend aussi les saves périodiques déjà en file
       return out.stats;
     });
 
@@ -131,5 +95,88 @@ export class Scanner {
       if (s.status !== "running") this.running.delete(type);
     });
     return job.id;
+  }
+
+  /**
+   * REVÉRIFICATION ciblée des indéterminés (ROADMAP 2026-09-22) : re-regarder
+   * ce qu'on n'a pas su classer — 401/403/429 et les verdicts transport —
+   * SANS balayer la bibliothèque et SANS rafraîchir la fraîcheur du
+   * tableau de bord (une revérification n'est pas un scan : `markScanDone`
+   * ne se pose pas, sinon « Relancer » croirait tout fait). Les URLs
+   * revérifiées, elles, redeviennent fraîches : le scan TTL ne les refera
+   * pas derrière nous. La garde est celle du domaine liens — même file
+   * réseau, un seul geste de vérification à la fois, dans les deux sens.
+   */
+  startRecheckIndetermine(): string {
+    if (this.running.has("links")) throw new Error("scan links déjà en cours");
+    this.running.add("links");
+    const concurrency = this.deps.concurrency ?? 6;
+    const timeoutMs = this.deps.timeoutMs ?? TIMEOUT_MS;
+    const check = this.deps.check ?? ((url: string) => checkUrl(url, { timeoutMs, retry: 1 }));
+
+    const job = runJob(this.deps.jobs, "recheck-indeterminate", 0, async (j) => {
+      const targets = this.deps.cache.ciblesRecheck("indeterminate");
+      j.progress(0, targets.length, "revérification des indéterminés");
+      const out = await this.verifierTargets(j, targets, check, concurrency, timeoutMs);
+      await this.deps.cache.save();
+      return out.stats;
+    });
+
+    const handle = job;
+    handle.subscribe(() => {
+      const s = handle.snapshot();
+      if (s.status !== "running") this.running.delete("links");
+    });
+    return job.id;
+  }
+
+  /**
+   * Le bloc réseau commun au scan et à la revérification : checkAll sur les
+   * cibles, persistance sérialisée toutes les SAVE_EVERY (deux saves
+   * entrelacés feraient planter le rename du .tmp unique — la chaîne se
+   * répare d'elle-même après un échec), progression portant l'URL en cours.
+   */
+  private async verifierTargets(
+    j: JobHandle,
+    targets: { raindropId: number; url: string }[],
+    check: (url: string) => Promise<CheckOutcome>,
+    concurrency: number,
+    timeoutMs: number,
+  ) {
+    let saving: Promise<void> = Promise.resolve();
+    const requestSave = (): Promise<void> => {
+      const next = saving.then(() => this.deps.cache.save());
+      saving = next.catch(() => undefined);
+      return next;
+    };
+
+    // aborted : après l'échec d'un job, les workers survivants du pool
+    // (fail() ne pose pas cancelled) ne doivent plus rien empiler.
+    let aborted = false;
+    let done = 0;
+    let sinceSave = 0;
+    const out = await checkAll(targets, {
+      timeoutMs,
+      concurrency,
+      retry: 1,
+      checkImpl: (url) => check(url), // seam de test — défaut : checkUrl prod
+      onUpdate: (r) => {
+        if (aborted) return;
+        this.deps.cache.setResult(r);
+        done++;
+        sinceSave++;
+        j.progress(done, targets.length, r.url);
+        if (sinceSave >= SAVE_EVERY) {
+          sinceSave = 0;
+          void requestSave(); // persistance périodique (résultats partiels)
+        }
+      },
+      isCancelled: () => j.isCancelled(),
+    }).catch((e) => {
+      aborted = true;
+      throw e;
+    });
+    await requestSave(); // attend aussi les saves périodiques déjà en file
+    return out;
   }
 }
