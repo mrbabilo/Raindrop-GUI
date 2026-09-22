@@ -54,6 +54,7 @@ beforeEach(async () => {
       forget: async () => undefined,
       flush: async () => undefined,
     } as unknown as SidecarDeps["origins"],
+    smartlists: {} as SidecarDeps["smartlists"],
     journal: { info: () => undefined, warn: () => undefined, error: () => undefined },
     logsDir: "/non-existant",
   };

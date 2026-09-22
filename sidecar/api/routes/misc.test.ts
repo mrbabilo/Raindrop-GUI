@@ -29,6 +29,7 @@ const deps = (c: McpConnection, origins = makeOriginsFake()): SidecarDeps => ({
   restart: async () => undefined,
   jobs: { get: () => undefined, list: () => [] } as unknown as SidecarDeps["jobs"],
   cache: {} as SidecarDeps["cache"],
+  smartlists: {} as SidecarDeps["smartlists"],
   scanner: {} as SidecarDeps["scanner"],
   origins,
   journal: { info: () => undefined, warn: () => undefined, error: () => undefined },

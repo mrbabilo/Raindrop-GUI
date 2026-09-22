@@ -17,6 +17,7 @@ const deps = (logsDir: string): SidecarDeps => ({
   cache: {} as SidecarDeps["cache"],
   scanner: {} as SidecarDeps["scanner"],
   origins: {} as SidecarDeps["origins"],
+  smartlists: {} as SidecarDeps["smartlists"],
   direct: {} as SidecarDeps["direct"],
   journal: { info: () => undefined, warn: () => undefined, error: () => undefined },
   logsDir,

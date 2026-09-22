@@ -13,6 +13,7 @@ import { AnalysisCache } from "./analysis/cache.js";
 import { Scanner } from "./analysis/scanner.js";
 import { makeRestClient } from "./direct/raindropRest.js";
 import { makeOriginStore } from "./trash/origins.js";
+import { makeSmartListStore } from "./smartlists/store.js";
 import { makeLecture } from "./backup/lecture.js";
 import { makeSauvegarde } from "./backup/sauvegarde.js";
 import { makeArchivage } from "./backup/archivage.js";
@@ -76,6 +77,10 @@ const origins = makeOriginStore({
   warn: (msg, fields) => logger.warn(msg, fields),
 });
 
+// Vues sauvegardées (spec 2026-09-22) : même patron de dépôt local que les
+// origines de corbeille — fichier en app-data, hors du dépôt git.
+const smartlists = makeSmartListStore({ file: join(dataDir, "smartlists.json") });
+
 // Sauvegarde locale (§4.1) : sans BACKUP_DIR elle reste INACTIVE, et la route
 // le dit — le sélecteur de dossier relève du shell Tauri (§4.3). Le sous-dossier
 // `Raindrop-GUI` est celui de l'arborescence §4.2 : le dossier choisi par
@@ -113,6 +118,7 @@ const deps: SidecarDeps = {
   cache,
   scanner,
   origins,
+  smartlists,
   // Le journal consultable depuis l'app (Réglages) : les routes d'écriture
   // l'alimentent, GET /api/journal lit le fichier du jour.
   journal: logger,

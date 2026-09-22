@@ -34,6 +34,7 @@ beforeEach(async () => {
     restart: async () => undefined,
     jobs: { get: () => undefined, list: () => [] } as unknown as SidecarDeps["jobs"],
     cache: {} as SidecarDeps["cache"],
+    smartlists: {} as SidecarDeps["smartlists"],
     scanner: { startScan: () => "", isRunning: () => false } as unknown as SidecarDeps["scanner"],
     direct: {} as SidecarDeps["direct"],
     origins: {} as SidecarDeps["origins"],

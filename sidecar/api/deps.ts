@@ -5,6 +5,7 @@ import type { JobStore } from "../jobs/store.js"; // Task 10
 import type { AnalysisCache } from "../analysis/cache.js"; // Task 13
 import type { Scanner } from "../analysis/scanner.js"; // Task 14
 import type { OriginStore } from "../trash/origins.js"; // Task 0b
+import type { SmartListStore } from "../smartlists/store.js"; // spec 2026-09-22
 import type { Sauvegarde } from "../backup/contrat-sauvegarde.js";
 import type { Archivage } from "../backup/archivage.js";
 
@@ -32,6 +33,9 @@ export interface SidecarDeps {
   scanner: Scanner;
   /** Mémoire des origines de corbeille (Task 0b, décision spec §4.2). */
   origins: OriginStore;
+  /** Dépôt des vues sauvegardées (spec 2026-09-22) — toujours présent :
+   *  le JSON en app-data n'a pas de condition d'activation. */
+  smartlists: SmartListStore;
   /** Sauvegarde locale — ABSENTE tant que `BACKUP_DIR` n'est pas
    *  configuré : la sauvegarde est alors inactive, et la route le dit. */
   sauvegarde?: Sauvegarde;

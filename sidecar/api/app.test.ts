@@ -23,6 +23,7 @@ function makeDeps(overrides?: Partial<SidecarDeps>): SidecarDeps {
     restart: async () => undefined,
     jobs: { get: () => undefined, list: () => [] } as unknown as SidecarDeps["jobs"],
     cache: {} as SidecarDeps["cache"],
+    smartlists: {} as SidecarDeps["smartlists"],
     scanner: { startScan: () => "", isRunning: () => false } as unknown as SidecarDeps["scanner"],
     direct: {
       updateRaindropUrl: async () => ({ ok: true as const, data: { id: 1 } }),

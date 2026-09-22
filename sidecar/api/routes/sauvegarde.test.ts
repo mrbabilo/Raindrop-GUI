@@ -15,6 +15,7 @@ const deps = (jobs: JobStore, sauvegarde?: Sauvegarde, archivage?: Archivage): S
   cache: {} as SidecarDeps["cache"],
   scanner: {} as SidecarDeps["scanner"],
   origins: {} as SidecarDeps["origins"],
+  smartlists: {} as SidecarDeps["smartlists"],
   journal: { info: () => undefined, warn: () => undefined, error: () => undefined },
   logsDir: "/non-existant",
   direct: {} as SidecarDeps["direct"],
