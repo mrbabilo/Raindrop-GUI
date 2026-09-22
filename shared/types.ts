@@ -137,3 +137,28 @@ export interface JobSnapshot {
   createdAt: string;
   finishedAt: string | null;
 }
+
+// ─── Smart lists (vues sauvegardées, spec 2026-09-22) ────────────────────────
+
+/** La forme sérialisable d'une vue « list ». SEULS les champs définis sont
+ *  stockés (JSON n'a pas de `undefined`) : une vue minimale « Tous » filtré
+ *  est légale (collectionId seul). `viewMode` n'y figure PAS — un affichage
+ *  n'est pas un filtre. */
+export interface SmartListView {
+  collectionId: number;
+  notag?: boolean;
+  search?: string;
+  tags?: string[];
+  sort?: string;
+  domain?: string;
+  media?: string;
+  createdStart?: string;
+  createdEnd?: string;
+}
+
+export interface SmartList {
+  id: string; // `sl-…`, généré par le sidecar — stable à vie
+  label: string; // 1-80 signes (zod des routes)
+  vue: SmartListView;
+  cree: string; // ISO 8601, posée par le sidecar
+}

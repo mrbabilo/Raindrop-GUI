@@ -8,5 +8,7 @@ describe("errorStatus", () => {
     expect(errorStatus("RAINDROP_API")).toBe(502);
     expect(errorStatus("MCP_CRASHED")).toBe(503);
     expect(errorStatus("MCP_TIMEOUT")).toBe(504);
+    expect(errorStatus("NOT_FOUND")).toBe(404);
+    expect(errorStatus("STOCKAGE")).toBe(500);
   });
 });
