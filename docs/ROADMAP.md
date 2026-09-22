@@ -120,16 +120,13 @@ leur raisonnement, et un renvoi par lot livré.*
       raisons, à la Karakeep — leur `readerViewAssessment.ts` montre que le
       frais existe) — au-delà du binaire « vide / pas vide » de notre spec
       lecture §3.
-- [ ] **Restes des revues du lot inversion + lecture (2026-09-22)** :
-      ~~amendements datés des specs encore au rail~~ **soldé le
-      2026-09-22** (lecture §3/§8/§10 ; spec principale §12) ;
-      tests retour-de-lecture (« fiche encore là », « Lire réapparaît ») ;
-      course au chargement du clic (`useOuvrirSignet` lu sur un inventaire
-      pas encore résolu → fiche au lieu de lecture ; repli sûr, comportement
-      pré-lot) ; garde Nettoyage limitée à `trash` (élargissable) ;
-      commentaires résiduels (`appState.tsx:96,99`), ligne dense
-      (`ActionsLecture.tsx:54`), warning React `act` préexistant
-      (`ListPane.test`).
+- [ ] **Restes des revues du lot inversion + lecture (2026-09-22)** —
+      ~~amendements de specs~~, ~~tests retour-de-lecture~~,
+      ~~course au chargement du clic~~ (décision asynchrone : appel direct
+      à `chargerInventaire` au clic, repli sûr), ~~garde Nettoyage
+      élargie~~ (corbeille + Non-taggés), ~~cosmétiques~~ — **soldé le
+      2026-09-22**. Reste : warning React `act` préexistant
+      (`ListPane.test`, bruit de sortie à solder un jour).
 
 ## Veille
 
