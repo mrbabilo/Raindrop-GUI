@@ -25,6 +25,11 @@ export type View =
       media?: string;
       createdStart?: string;
       createdEnd?: string;
+      // Smart list ouverte (spec 2026-09-22) : l'identifiant PORTE la
+      // surlignage de la barre latérale — jamais une heuristique de label.
+      // Le reducer l'efface à tout patch de filtre (la vue diverge, l'entrée
+      // n'est plus « la » smart list) et à forgetSmartList (vue supprimée).
+      smartlistId?: string;
     }
   // Vue d'une collection PARENTE : ses signets directs, puis une section par
   // sous-collection. Un `kind` à part et non un drapeau sur `list` : la forme
@@ -119,6 +124,7 @@ interface State {
 type Action =
   | { type: "go"; view: View }
   | { type: "patch"; patch: ListPatch }
+  | { type: "forgetSmartList"; id: string }
   | { type: "toggleSelect"; id: number }
   | { type: "clearSelection" }
   | { type: "selectRaindrop"; id: number | null };
@@ -130,7 +136,17 @@ const initial: State = {
 };
 function reducer(s: State, a: Action): State {
   if (a.type === "go") return { ...s, view: a.view };
-  if (a.type === "patch" && s.view.kind === "list") return { ...s, view: { ...s.view, ...a.patch } };
+  if (a.type === "patch" && s.view.kind === "list") {
+    // La bascule d'affichage n'est pas un filtre : la vue reste la smart
+    // list (spec §5 — la marque ne survit qu'à viewMode).
+    const filtreBouge = Object.keys(a.patch).some((k) => k !== "viewMode");
+    return { ...s, view: { ...s.view, ...a.patch, ...(filtreBouge ? { smartlistId: undefined } : {}) } };
+  }
+  if (a.type === "forgetSmartList" && s.view.kind === "list" && s.view.smartlistId === a.id) {
+    // La smart list ouverte a été supprimée : la liste filtrée reste —
+    // ce sont des filtres, pas un fichier (spec §5).
+    return { ...s, view: { ...s.view, smartlistId: undefined } };
+  }
   if (a.type === "toggleSelect") {
     const selectedIds = new Set(s.selectedIds); // copie : l'immutabilité fait le re-rendu
     if (selectedIds.has(a.id)) selectedIds.delete(a.id);
@@ -157,6 +173,9 @@ const Ctx = createContext<{
   view: View;
   go: (v: View) => void;
   patchList: (p: ListPatch) => void;
+  /** Efface la marque de smart list de la vue ouverte si c'est celle-ci —
+   *  appelé à la suppression de la vue (Task 7) ; no-op sinon. */
+  forgetSmartList: (id: string) => void;
   selectedIds: Set<number>;
   toggleSelect: (id: number) => void;
   clearSelection: () => void;
@@ -168,6 +187,7 @@ const Ctx = createContext<{
   view: initial.view,
   go: () => undefined,
   patchList: () => undefined,
+  forgetSmartList: () => undefined,
   selectedIds: new Set<number>(),
   toggleSelect: () => undefined,
   clearSelection: () => undefined,
@@ -183,6 +203,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         view: state.view,
         go: (view) => dispatch({ type: "go", view }),
         patchList: (patch) => dispatch({ type: "patch", patch }),
+        forgetSmartList: (id) => dispatch({ type: "forgetSmartList", id }),
         selectedIds: state.selectedIds,
         toggleSelect: (id) => dispatch({ type: "toggleSelect", id }),
         clearSelection: () => dispatch({ type: "clearSelection" }),
