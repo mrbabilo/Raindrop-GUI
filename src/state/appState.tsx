@@ -93,11 +93,12 @@ export type View =
       // repli « Tous ».
       returnView?: View;
     }
-  // La LECTURE du contenu archivé (spec lecture §3) : vue pleine largeur,
-  // ouverte depuis la fiche. `sourceCopie` : le texte vient d'une copie
-  // permanente téléchargée À LA VOLÉE (badge de la ligne de tête) ;
-  // absent = l'archive locale était déjà là. `returnView`, même règle que la Revue : l'aller ne
-  // prouve rien sans le retour.
+  // La LECTURE du contenu archivé (spec lecture §3, inversion 2026-09-22) :
+  // ouverte par le clic de bibliothèque ou par « Lire » de la fiche, la
+  // fiche l'accompagne en colonne. `sourceCopie` : le texte vient d'une
+  // copie permanente téléchargée À LA VOLÉE (badge de la ligne de tête) ;
+  // absent = l'archive locale était déjà là. `returnView`, même règle que
+  // la Revue : l'aller ne prouve rien sans le retour.
   | { kind: "lecture"; raindropId: number; label: string; sourceCopie?: boolean; returnView?: View };
 
 // Les filtres/tri/mode portés par la vue list — cible du merge de patchList.

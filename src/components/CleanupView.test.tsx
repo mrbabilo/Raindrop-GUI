@@ -149,6 +149,23 @@ describe("CleanupView", () => {
     expect(screen.queryByRole("button", { name: "Fermer la lecture" })).not.toBeInTheDocument();
   });
 
+  // La garde au second type DE LISTE RAINDROPS : Non-taggés (les types
+  // liens morts/redirections rendent depuis les résultats de scan, pas
+  // depuis la liste — leur clic vit dans un autre composant). Même
+  // contrat attendu : fiche, vue stable, jamais la lecture.
+  it("clic sur une ligne de Non-taggés : fiche, vue stable — jamais la lecture", async () => {
+    raindropsMock.mockReturnValue({
+      data: { pages: [{ items: [raindrop({ id: 1000 })], count: 1, page: 0, perPage: 50 }] },
+    });
+    render(<CleanupView type="untagged" />, { wrapper });
+    const titre = await screen.findByText("Article exemple");
+    const vueAvant = screen.getByTestId("view").textContent;
+    await userEvent.click(titre);
+    expect(screen.getByTestId("selection").textContent).toBe("1000");
+    expect(screen.getByTestId("view").textContent).toBe(vueAvant);
+    expect(screen.queryByRole("button", { name: "Fermer la lecture" })).not.toBeInTheDocument();
+  });
+
   // DOMAINE.md : supprimer des collections est IRRÉVERSIBLE (niveau 2 —
   // frappe SUPPRIMER). Le clic passait le DELETE en direct, sans aucun
   // garde : il part en Revue, qui porte la frappe.

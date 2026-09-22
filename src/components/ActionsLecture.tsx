@@ -46,12 +46,13 @@ export function ActionsLecture({ r }: { r: RaindropItem }) {
   // même que le clic des vues de bibliothèque. Ici, seuls les libellés
   // traduisent les motifs.
   const etat = lisibilite(r, locale, archivageEnVol);
+  const libelleCopie = t(LIBELLES_COPIE[r.cache?.status ?? ""] ?? "copie.inconnue");
   const raison = etat.lisible
     ? null
     : etat.motif === "enVol"
       ? t("detail.lireAttente")
       : etat.motif === "copieEchec"
-        ? t("detail.lireCopieEchec", { raison: t(LIBELLES_COPIE[r.cache?.status ?? ""] ?? "copie.inconnue") })
+        ? t("detail.lireCopieEchec", { raison: libelleCopie })
         : t("detail.lireSansCopie");
   // §9 : un seul point d'entrée par geste — pendant la lecture de CE signet,
   // le bouton redirait ce qui est déjà fait.
