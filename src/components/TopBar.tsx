@@ -5,6 +5,8 @@ import { NatureChips } from "./NatureChips";
 import { PanneauFiltres, actifs } from "./PanneauFiltres";
 import { EtiquettesRetenues } from "./EtiquettesRetenues";
 import { Icone } from "../design/icones";
+import { filtreActif, serialiserVue } from "../lib/smartlists";
+import { useCreerSmartList } from "../hooks/useSmartLists";
 
 // Champs : classe .input de styles.css (28 px, rayon 7, 13 px — DESIGN.md
 // §7-§8). Commandes en icône seule : .btn-icone, carrée — sa géométrie vit
@@ -24,7 +26,21 @@ export function TopBar() {
   // §9 : le panneau des filtres rares est replié par défaut — PanneauFiltres
   // décide seul de rester déplié tant qu'un de ses filtres est actif.
   const [reglages, setReglages] = useState(false);
+  // Le formulaire inline de sauvegarde (spec §4) : ouvert par le bouton,
+  // prérempli au CLIC (la vue peut changer entre le rendu et le geste).
+  // Hooks AVANT le early return `!isList` — les appels conditionnels sont
+  // interdits.
+  const creerVue = useCreerSmartList();
+  const [sauvegarde, setSauvegarde] = useState(false);
+  const [nomVue, setNomVue] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const poserVue = () => {
+    if (view.kind !== "list" || nomVue.trim() === "") return;
+    creerVue.mutate(
+      { label: nomVue.trim(), vue: serialiserVue(view) },
+      { onSuccess: () => { setSauvegarde(false); setNomVue(""); } },
+    );
+  };
   useEffect(() => { if (isList) setDraft(view.search ?? ""); }, [isList, view.kind === "list" ? view.search : ""]);
 
   // Recherche debouncée (300 ms) : chaque frappe réarme le timer — la requête
@@ -87,6 +103,48 @@ export function TopBar() {
             bascule, et son nom accessible le dit — pas d'aria-pressed, ce
             n'est plus un état à deux boutons mais une action nommée. */}
         <div className="ml-auto flex gap-1">
+          {/* Sauvegarder la vue (spec §4) : le bouton n'existe qu'avec un
+              filtre actif ; le tri seul ne suffit pas — filtreActif le dit. */}
+          {!sauvegarde && filtreActif(view) && (
+            <button
+              type="button"
+              aria-label={t("smartlist.saveView")}
+              className={commande}
+              onClick={() => {
+                setNomVue((view.search?.trim() || view.tags?.[0] || "").trim());
+                setSauvegarde(true);
+              }}
+            >
+              <Icone nom="marquePage" />
+            </button>
+          )}
+          {sauvegarde && (
+            <>
+              <input
+                aria-label={t("smartlist.nameAria")}
+                className="input w-40"
+                autoFocus
+                value={nomVue}
+                onChange={(e) => setNomVue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") poserVue();
+                  if (e.key === "Escape") {
+                    setSauvegarde(false);
+                    setNomVue("");
+                  }
+                }}
+              />
+              <button
+                type="button"
+                aria-label={t("smartlist.pose")}
+                className={commande}
+                disabled={creerVue.isPending || nomVue.trim() === ""}
+                onClick={poserVue}
+              >
+                <Icone nom="coche" />
+              </button>
+            </>
+          )}
           <button
             type="button"
             aria-label={enMosaique ? t("view.showList") : t("view.showMosaic")}

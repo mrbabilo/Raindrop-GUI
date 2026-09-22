@@ -1,10 +1,20 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { raindrop } from "../test/fixtures";
 import { injecterRegles } from "../test/injectStyles";
 import { TopBar } from "./TopBar";
 import { AppStateProvider, useAppState } from "../state/appState";
+
+// Le bouton « Sauvegarder la vue » porte une mutation (useCreerSmartList) :
+// elle exige un QueryClientProvider — sans lui, TOUT le fichier casse au
+// rendu (piège « mêmes providers que main.tsx »). Le send est espionné pour
+// les tests de pose.
+const sendMock = vi.hoisted(() => vi.fn());
+vi.mock("../lib/api", () => ({ api: { get: vi.fn(), send: sendMock } }));
+
+beforeEach(() => sendMock.mockReset().mockResolvedValue({}));
 
 // TopBar rend désormais NatureChips (Task 6b), qui appelle useRaindrops —
 // mocké ici comme dans ListPane.test.tsx pour ne dépendre d'aucun
@@ -21,8 +31,30 @@ const Spy = () => {
   return <span data-testid="view">{view.kind === "list" ? JSON.stringify(view) : view.kind}</span>;
 };
 
+// Pose une vue filtrée SANS passer par la saisie (le debounce de 300 ms de
+// la recherche serait lourd) : le harnais navigue, comme le ferait un clic
+// d'étiquette.
+const Ouvre = () => {
+  const { go } = useAppState();
+  return (
+    <>
+      <button type="button" onClick={() => go({ kind: "list", collectionId: 0, label: "Tous", tags: ["rust"] })}>vue-étiquette</button>
+      <button type="button" onClick={() => go({ kind: "list", collectionId: 0, label: "Tous", search: "affiche" })}>vue-recherche</button>
+      <button type="button" onClick={() => go({ kind: "list", collectionId: 0, label: "Tous", sort: "title" })}>vue-tri-seul</button>
+    </>
+  );
+};
+
 const renderTop = () =>
-  render(<AppStateProvider><Spy /><TopBar /></AppStateProvider>);
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <AppStateProvider>
+        <Spy />
+        <Ouvre />
+        <TopBar />
+      </AppStateProvider>
+    </QueryClientProvider>,
+  );
 
 describe("TopBar", () => {
   it("la recherche (debounce 300 ms) met à jour la vue", async () => {
@@ -154,5 +186,49 @@ describe("TopBar", () => {
     await user.click(screen.getByRole("button", { name: "Effacer les filtres" }));
     expect(JSON.parse(screen.getByTestId("view").textContent!).domain).toBeUndefined();
     expect(screen.queryByLabelText("Domaine")).not.toBeInTheDocument();
+  });
+
+  // Spec §4 : le geste naît là où la vue existe, et seulement quand un
+  // filtre est actif — le tri seul ne compte pas.
+  it("le bouton n'existe pas sans filtre actif, ni avec le tri seul", async () => {
+    renderTop();
+    expect(screen.queryByRole("button", { name: "Sauvegarder la vue" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByText("vue-tri-seul"));
+    expect(screen.queryByRole("button", { name: "Sauvegarder la vue" })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["étiquette retenue", "vue-étiquette", "rust"],
+    ["recherche", "vue-recherche", "affiche"],
+  ])("le bouton existe avec %s, le clic ouvre le formulaire prérempli", async (_nom, declencheur, attendu) => {
+    renderTop();
+    await userEvent.click(screen.getByText(declencheur));
+    await userEvent.click(screen.getByRole("button", { name: "Sauvegarder la vue" }));
+    const champ = screen.getByLabelText("Nom de la vue sauvegardée") as HTMLInputElement;
+    expect(champ.value).toBe(attendu);
+  });
+
+  it("Enter pose : POST portant le label et la vue sérialisée, le formulaire se referme", async () => {
+    sendMock.mockResolvedValue({});
+    renderTop();
+    await userEvent.click(screen.getByText("vue-étiquette"));
+    await userEvent.click(screen.getByRole("button", { name: "Sauvegarder la vue" }));
+    const champ = screen.getByLabelText("Nom de la vue sauvegardée");
+    await userEvent.clear(champ);
+    await userEvent.type(champ, "Rust{Enter}");
+    expect(sendMock).toHaveBeenCalledWith("POST", "/api/smartlists", {
+      label: "Rust",
+      vue: { collectionId: 0, tags: ["rust"] }, // sérialisée : seuls les champs définis
+    });
+    expect(screen.queryByLabelText("Nom de la vue sauvegardée")).not.toBeInTheDocument();
+  });
+
+  it("Échap annule : rien n'est envoyé", async () => {
+    renderTop();
+    await userEvent.click(screen.getByText("vue-étiquette"));
+    await userEvent.click(screen.getByRole("button", { name: "Sauvegarder la vue" }));
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByLabelText("Nom de la vue sauvegardée")).not.toBeInTheDocument();
+    expect(sendMock).not.toHaveBeenCalled();
   });
 });
