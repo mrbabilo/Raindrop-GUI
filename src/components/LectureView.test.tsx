@@ -18,6 +18,21 @@ const { chargerMock, extraireMock, ouvrirMock, getApi } = vi.hoisted(() => ({
 
 vi.mock("../lib/lecture", () => ({ chargerContenu: chargerMock, extraireBlocs: extraireMock }));
 vi.mock("../lib/pageWeb", () => ({ ouvrirPageWeb: ouvrirMock }));
+// ArchiveJob est mocké : le composant réel poste et suit un job SSE — le
+// contrat testé ici est CE QUE FAIT LA VUE au terme (refetch du contenu),
+// pas le vol lui-même (couvert par les tests de RevueArchive).
+vi.mock("./RevueArchive", () => ({
+  ArchiveJob: ({ ids, onTermine }: { ids: number[]; onTermine: (r: unknown) => void }) => (
+    <button
+      type="button"
+      onClick={() =>
+        onTermine({ demandes: ids.length, faits: ids.length, echecs: [], annule: false, nonTentes: 0 })
+      }
+    >
+      simuler-termine
+    </button>
+  ),
+}));
 // `ApiError` reste RÉELLE : la vue la teste avec `instanceof`, et un mock
 // ici testerait notre propre supposition. On n'écrase que `api.get` — le
 // reste du module traverse via importOriginal (sinon `ApiError` serait
@@ -170,6 +185,53 @@ describe("LectureView", () => {
       await screen.findByText("L'archive a disparu entre l'affichage de la fiche et votre clic."),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Voir la page" })).toBeInTheDocument();
+  });
+
+  // Spec inversion §7 : le clic ouvre la lecture d'une copie permanente pas
+  // encore téléchargée — la lecture CONDUIT le téléchargement (progression
+  // nommée, jamais « l'archive a disparu » qui serait un mensonge : elle
+  // n'a jamais existé ici). Défaut trouvé en vérification réelle le
+  // 2026-09-22 : la requête de contenu partait seule, l'écran nommait une
+  // disparition pour 12 210 signets à copie prête et 5 archives locales.
+  it("copie permanente absente : la lecture télécharge à la demande, puis rend le contenu", async () => {
+    chargerMock
+      .mockRejectedValueOnce(new ApiError("ARCHIVE_ABSENTE", 404, "aucune archive"))
+      .mockResolvedValue({ html: "<html></html>", dateArchive: "2026-09-18T10:00:00.000Z" });
+    const HarnaisCopie = () => {
+      const { view, go } = useAppState();
+      return view.kind === "lecture" ? (
+        <LectureView view={view} goBack={() => go(vueDeRetour(view))} />
+      ) : null;
+    };
+    const Poseur = () => {
+      const { go } = useAppState();
+      return (
+        <button
+          type="button"
+          onClick={() => go({ kind: "lecture", raindropId: 1000, label: "T", sourceCopie: true })}
+        >
+          ouvrir
+        </button>
+      );
+    };
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <AppStateProvider>
+          <Poseur />
+          <HarnaisCopie />
+        </AppStateProvider>
+      </QueryClientProvider>,
+    );
+    await userEvent.click(screen.getByText("ouvrir"));
+    // La progression nommée remplace l'erreur mensongère…
+    expect(await screen.findByText("Téléchargement de la copie permanente…")).toBeInTheDocument();
+    expect(
+      screen.queryByText("L'archive a disparu entre l'affichage de la fiche et votre clic."),
+    ).not.toBeInTheDocument();
+    // …le téléchargement aboutit, la lecture refetch et rend le contenu.
+    await userEvent.click(screen.getByText("simuler-termine"));
+    expect(await screen.findByText(/copie permanente/)).toBeInTheDocument();
+    expect(screen.queryByText(/Téléchargement de la copie/)).not.toBeInTheDocument();
   });
 
   it("garde de 64 Mo : état nommé", async () => {

@@ -88,6 +88,7 @@ export const fr = {
   // Le temps de lecture, CALCULÉ sur l'extraction (~220 mots/min) — jamais
   // deviné, jamais en dur.
   "lecture.temps": "≈ {n} min de lecture",
+  "lecture.telecharge": "Téléchargement de la copie permanente…",
   // L'issue de secours des états d'échec (§5) — posée ICI car la vue la
   // rend dès cette tâche ; les autres gestes de la fiche viennent à la
   // tâche suivante.

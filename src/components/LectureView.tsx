@@ -1,11 +1,13 @@
 // src/components/LectureView.tsx
 import { useQuery } from "@tanstack/react-query";
-import { createElement, type ReactNode } from "react";
+import { createElement, useState, type ReactNode } from "react";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { api, ApiError } from "../lib/api";
 import { chargerContenu, extraireBlocs, type Bloc } from "../lib/lecture";
 import { ouvrirPageWeb } from "../lib/pageWeb";
+import { ArchiveJob } from "./RevueArchive";
+import { useInvalidateSauvegarde, type ResultatArchivage } from "../hooks/useBackup";
 import type { RaindropItem } from "../../shared/types";
 import type { View } from "../state/appState";
 
@@ -98,16 +100,63 @@ export function LectureView({
   const minutes = Math.max(1, Math.round(mots / 220));
   const dateLue = contenu.data ? dateArchive(contenu.data.dateArchive) : null;
 
+  // Le téléchargement à la demande (spec inversion §7) : le clic ouvre la
+  // lecture d'une copie permanente pas encore téléchargée — la lecture
+  // CONDUIT le téléchargement. Sans ce flux, la requête de contenu rendait
+  // ARCHIVE_ABSENTE et l'écran nommait une « disparition » mensongère :
+  // l'archive n'a jamais existé ici (défaut trouvé en vérification réelle
+  // le 2026-09-22). Le flux vivait dans la fiche (ActionsLecture) ; le clic
+  // inversé l'a court-circuité.
+  const invalider = useInvalidateSauvegarde();
+  const [echecTelecharge, setEchecTelecharge] = useState<string | null>(null);
+  const archiveAbsente =
+    contenu.isError && contenu.error instanceof ApiError && contenu.error.code === "ARCHIVE_ABSENTE";
+
+  const auTerme = (res: ResultatArchivage) => {
+    invalider();
+    const notre = res.echecs.find((e) => e.id === raindropId);
+    if (notre) {
+      setEchecTelecharge(notre.raison); // nommé inline, comme dans la fiche
+      return;
+    }
+    if (res.faits === 0) {
+      // Ni fait ni échec pour nous : budget atteint (nonTentes) ou arrêt —
+      // refetch rebouclerait sur un nouveau job, on nomme l'arrêt.
+      setEchecTelecharge(res.raisonArret ?? res.echecs.map((e) => e.raison).join(", ") ?? "échec");
+      return;
+    }
+    void contenu.refetch(); // le fichier existe maintenant
+  };
+
   let interieur: ReactNode;
   if (contenu.isPending) {
     interieur = <p>{t("state.loading")}</p>;
   } else if (contenu.isError) {
-    interieur = (
-      <div className="flex flex-col items-start gap-3">
-        <p role="alert">{nommerErreur(contenu.error)}</p>
-        <IssuePageWeb url={r?.url} />
-      </div>
-    );
+    if (sourceCopie === true && archiveAbsente && echecTelecharge === null) {
+      interieur = (
+        <div className="flex flex-col items-start gap-3">
+          <p>{t("lecture.telecharge")}</p>
+          <ArchiveJob ids={[raindropId]} onTermine={auTerme} onErreur={(m) => setEchecTelecharge(m)} />
+          <IssuePageWeb url={r?.url} />
+        </div>
+      );
+    } else if (sourceCopie === true && echecTelecharge !== null) {
+      interieur = (
+        <div className="flex flex-col items-start gap-3">
+          <p role="alert" className="text-sm text-app-broken">
+            {t("state.error", { message: echecTelecharge })}
+          </p>
+          <IssuePageWeb url={r?.url} />
+        </div>
+      );
+    } else {
+      interieur = (
+        <div className="flex flex-col items-start gap-3">
+          <p role="alert">{nommerErreur(contenu.error)}</p>
+          <IssuePageWeb url={r?.url} />
+        </div>
+      );
+    }
   } else {
     interieur =
       blocs.length === 0 ? (
