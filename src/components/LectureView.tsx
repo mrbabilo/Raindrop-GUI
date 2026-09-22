@@ -140,7 +140,7 @@ export function LectureView({
     if (!el || !remplir) return;
     const total = el.scrollHeight - el.clientHeight;
     const part = total > 0 ? el.scrollTop / total : 0;
-    remplir.style.height = `${Math.min(100, Math.max(0, part * 100))}%`;
+    remplir.style.width = `${Math.min(100, Math.max(0, part * 100))}%`;
   };
   if (contenu.isPending) {
     interieur = <p>{t("state.loading")}</p>;
@@ -190,10 +190,17 @@ export function LectureView({
   return (
     // La barre de tête vit HORS du conteneur défilant : l'issue (Fermer) et
     // la provenance restent sous la main pendant qu'on lit — le rebond
-    // macOS ne doit pas les emmener. Seul l'article défile. L'ombrage
-    // léger (app-sel) la pose comme une bande de la fenêtre.
+    // macOS ne doit pas les emmener. Seul l'article défile. Une ombre
+    // légère la porte au-dessus du contenu (z-10 : elle peint par-dessus).
     <div className="relative flex h-full min-h-0 flex-col">
-      <div className="bg-app-sel">
+      {/* La position de lecture, horizontale en tête de fenêtre : une
+          présentation, pas une information nouvelle (la barre native du
+          système dit déjà où l'on est aux lecteurs d'écran — aria-hidden).
+          Mise à jour par ref au défilement : aucun re-render par frame. */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-20 h-[3px] bg-app-border">
+        <div ref={remplirRef} data-testid="position-lecture" className="h-full bg-app-muted" style={{ width: "0%" }} />
+      </div>
+      <div className="relative z-10 shadow-sm">
         <div className="mx-auto flex w-full max-w-[66ch] items-start justify-between gap-3 px-6 pt-8 pb-3">
           {/* La ligne de tête (spec inversion §5) : provenance · date · temps —
               la fraîcheur de ce qu'on lit, sans un rail qui dupliquerait la
@@ -218,13 +225,6 @@ export function LectureView({
         <div className="mx-auto flex w-full max-w-[66ch] flex-col gap-3 px-6 pb-8">
           {interieur}
         </div>
-      </div>
-      {/* La position de lecture : une présentation, pas une information
-          nouvelle (la barre native du système dit déjà où l'on est aux
-          lecteurs d'écran — aria-hidden). Mise à jour par ref au
-          défilement : aucun re-render par frame. */}
-      <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-[3px] bg-app-border">
-        <div ref={remplirRef} data-testid="position-lecture" className="w-full bg-app-muted" style={{ height: "0%" }} />
       </div>
     </div>
   );

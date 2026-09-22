@@ -246,10 +246,10 @@ describe("LectureView", () => {
     expect(screen.queryByText(/Téléchargement de la copie/)).not.toBeInTheDocument();
   });
 
-  // La barre de position (présentative) suit le défilement : jsdom ne
-  // calcule aucun layout, le test pose donc scrollHeight/clientHeight/
-  // scrollTop sur l'élément (defineProperty) et déclenche l'événement —
-  // c'est le CONTRACT du calcul, pas une mesure.
+  // La barre de position HORIZONTALE (présentative) suit le défilement :
+  // jsdom ne calcule aucun layout, le test pose donc scrollHeight/
+  // clientHeight/scrollTop sur l'élément (defineProperty) et déclenche
+  // l'événement — c'est le CONTRAT du calcul, pas une mesure.
   it("la barre de position suit le défilement de l'article", async () => {
     await ouvrir();
     await screen.findByText("Un titre de lecture");
@@ -258,7 +258,7 @@ describe("LectureView", () => {
     Object.defineProperty(defile, "clientHeight", { value: 500, configurable: true });
     Object.defineProperty(defile, "scrollTop", { value: 250, configurable: true, writable: true });
     fireEvent.scroll(defile);
-    expect(screen.getByTestId("position-lecture").style.height).toBe("50%");
+    expect(screen.getByTestId("position-lecture").style.width).toBe("50%");
   });
 
   it("garde de 64 Mo : état nommé", async () => {

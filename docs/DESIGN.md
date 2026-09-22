@@ -469,7 +469,7 @@ page : ses CSS manquent, la fidélité n'y rendrait qu'une page cassée.
   main, le rebond macOS ne l'emmène pas. Le titre, le domaine, la collection
   et les étiquettes vivent dans la fiche voisine : les dupliquer ferait deux
   sources de vérité.
-- **Une barre de position** (3 px, bord droit de la fenêtre) suit
+- **Une barre de position** (3 px, en tête de la fenêtre) suit
   l'avancement de la lecture — présentative (`aria-hidden`) : la barre
   native du système dit déjà où l'on est ; celle-ci ne porte qu'un trait
   calme (`app-muted` sur `app-border`), jamais une couleur de diagnostic.
