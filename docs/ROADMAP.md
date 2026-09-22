@@ -46,6 +46,12 @@ leur raisonnement, et un renvoi par lot livré.*
   `docs/superpowers/specs/2026-09-19-lecture-et-page-web-design.md`.
   Reste au réel : 2-3 lectures sur vraies archives, concentration de la
   fenêtre, impuissance IPC du site ouvert (spec lecture §6).
+- **Inversion fiche ↔ lecture** (livré le 2026-09-22) : le clic de
+  bibliothèque ouvre la lecture (lisibilité partagée clic/bouton,
+  « lecture sinon fiche »), la fiche accompagne en colonne, la ligne de
+  tête remplace le rail ; DetailPane découpé (bloc corbeillé). Spec
+  `docs/superpowers/specs/2026-09-22-inversion-fiche-lecture-design.md`.
+  Détail : CHANGELOG.
 
 ## Ouvert
 
@@ -94,9 +100,6 @@ leur raisonnement, et un renvoi par lot livré.*
 - [ ] **Divergence des deux étoiles** — la fix wave a livré `Etoile`
       partagé (la divergence de fond est réglée) ; reste à vérifier
       visuellement la grille 13 px héritée. Micro-tâche.
-- [ ] **Inversion fiche ↔ lecture** — le clic principal ouvre le *contenu
-      lu*, la fiche passe en onglet secondaire (arbitrage Karakeep,
-      `docs/KARAKEEP.md`).
 - [ ] **Vues sauvegardées (« smart lists »)** — une vue filtrée nommée dans
       la barre latérale, qui vit : sérialiser `listQueryArgs` là où Karakeep
       stocke une requête réinterprétée par son parser partagé
@@ -116,11 +119,6 @@ leur raisonnement, et un renvoi par lot livré.*
       raisons, à la Karakeep — leur `readerViewAssessment.ts` montre que le
       frais existe) — au-delà du binaire « vide / pas vide » de notre spec
       lecture §3.
-- [ ] **`DetailPane.tsx` à découper** — 317 lignes avant le lot lecture, 322
-      après : au-dessus de la cible de 300 (sous le plafond dur 400, le
-      cliquet passe). Frontière naturelle : le bloc corbeillé
-      (restauration + sélecteur de destination) vit déjà en test séparé
-      (`DetailPane.corbeille.test.tsx`), il peut porter son rendu avec lui.
 
 ## Veille
 

@@ -20,8 +20,11 @@ distincts, tous deux retenus :
    avant de le corriger ou le supprimer. Rendu réel dans une fenêtre webview
    créée par le shell — pas le navigateur système, qui existe déjà sur l'URL.
 
-Un seul point d'entrée en v1 : la **fiche** (panneau détail). Les lignes de
-liste, la mosaïque et les vues de Nettoyage n'y viennent qu'à la demande.
+Un seul point d'entrée en v1 : la **fiche** (panneau détail). **Amendé le
+2026-09-22 (spec inversion)** : le clic principal des vues de bibliothèque
+(liste, mosaïque, vue collection) ouvre directement la lecture — « lecture
+sinon fiche », jamais un écran d'échec d'un clic ; la fiche accompagne la
+lecture en colonne. Les vues de Nettoyage gardent clic → fiche.
 
 ## 2. Décisions tranchées avec l'utilisateur
 
@@ -171,8 +174,9 @@ l'acceptation http/https.
 - Page réelle = web vivant : ce geste n'existe pas hors ligne, par
   définition.
 - 64 Mo décompressés : au-delà, refus nommé (voir §3).
-- Un seul point d'entrée (la fiche) ; les lignes et tuiles n'y viennent pas
-  en v1.
+- **Un seul point d'entrée (la fiche) ; les lignes et tuiles n'y viennent
+  pas en v1** — amendé le 2026-09-22 : le clic inversé les y amène
+  (`docs/superpowers/specs/2026-09-22-inversion-fiche-lecture-design.md`).
 - **Une fenêtre par URL consultée** : l'étiquetage par empreinte concentre
   les réouvertures d'une MÊME URL, mais deux pages différentes ouvrent deux
   fenêtres — assumé en v1, où l'usage attendu est « consulter puis fermer ».
