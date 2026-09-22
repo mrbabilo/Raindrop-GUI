@@ -88,10 +88,11 @@ leur raisonnement, et un renvoi par lot livré.*
       `fetch failed` brut — jeton `broken` mal employé pour l'interruption
       MCP, voir polissage).
 - [ ] **La Revue hérite de la colonne détail (320 px) si une fiche est
-      ouverte** (`App.tsx` : `detailOuvert` n'exclut que la vue `lecture`
-      depuis le lot lecture — en Revue, la fiche reste montée) — DESIGN §9
-      fait de la Revue « le seul écran aéré ». À arbitrer : fermer la fiche
-      à l'entrée en Revue, au coût de rouvrir au retour.
+      ouverte** — depuis l'inversion (2026-09-22), `detailOuvert =
+      selectedRaindropId !== null` : la fiche accompagne TOUTES les vues,
+      la Revue comprise — DESIGN §9 en fait « le seul écran aéré ». À
+      arbitrer : fermer la fiche à l'entrée en Revue, au coût de rouvrir
+      au retour.
 - [ ] **Mosaïque : non virtualisée** (`ListPane.tsx:141`) — qui traverse
       « Tous » en mosaïque finit à 12 210 tuiles DOM. **Patch immédiat
       posé le 2026-09-20** (`loading="lazy"` + `decoding="async"` sur le
@@ -119,6 +120,16 @@ leur raisonnement, et un renvoi par lot livré.*
       raisons, à la Karakeep — leur `readerViewAssessment.ts` montre que le
       frais existe) — au-delà du binaire « vide / pas vide » de notre spec
       lecture §3.
+- [ ] **Restes des revues du lot inversion + lecture (2026-09-22)** :
+      amendements datés des specs encore au rail (lecture §3 ; spec
+      principale §12, vers la ligne 303) — **avant prochaine release** ;
+      tests retour-de-lecture (« fiche encore là », « Lire réapparaît ») ;
+      course au chargement du clic (`useOuvrirSignet` lu sur un inventaire
+      pas encore résolu → fiche au lieu de lecture ; repli sûr, comportement
+      pré-lot) ; garde Nettoyage limitée à `trash` (élargissable) ;
+      commentaires résiduels (`appState.tsx:96,99`), ligne dense
+      (`ActionsLecture.tsx:54`), warning React `act` préexistant
+      (`ListPane.test`).
 
 ## Veille
 

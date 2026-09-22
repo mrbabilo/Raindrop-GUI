@@ -13,6 +13,27 @@ Developer ID.
 
 ### Ajouté
 
+#### L'inversion fiche ↔ lecture (2026-09-22)
+
+- **Le clic principal de la bibliothèque (liste, mosaïque, vue collection)
+  ouvre la lecture** du contenu archivé ; la fiche l'accompagne en colonne
+  de droite. Non lisible → le clic ouvre la fiche, où la raison est nommée
+  — jamais un écran d'échec. Les vues de Nettoyage gardent clic → fiche
+  (garde de test).
+- **La lecture perd son rail** : une ligne de tête porte provenance · date
+  · temps. La barre (avec « Fermer ») vit hors du défilement, portée par
+  une ombre légère, et une barre de position horizontale suit l'avancement
+  de la lecture (présentative — la barre native dit déjà le reste).
+- **La feuille de lecture** : titres serif à leur taille, respirations
+  entre blocs, citations au filet, code en chasse fixe, liens hérités au
+  soulignement discret — le preflight de Tailwind aplatissait tout en mur
+  de texte. Tout en jetons, dark mode gratuit, aucune dépendance nouvelle.
+- **« Lire » se masque** quand c'est déjà ce signet qu'on lit — un seul
+  point d'entrée par geste.
+- **`DetailPane` repasse sous la cible** (322 → 282 lignes) : le bloc
+  corbeillé est extrait (`DetailPane.corbeille.tsx`), son test suit sans
+  changer.
+
 #### Sortir de la corbeille, restaurer partout, le journal lisible (2026-09-20 → 2026-09-21)
 
 - **« Restaurer » dans la fiche** d'un signet corbeillé : à l'origine
@@ -435,6 +456,21 @@ signet près, y compris croisé avec le filtre de domaine.
   ne déplace pas sa dette vers l'accessibilité.
 
 ### Corrigé
+
+#### La lecture qui télécharge (2026-09-22)
+
+- **Cliquer un signet à copie permanente nommait une « disparition »
+  mensongère** : le clic inversé ouvrait la lecture sans lancer le
+  téléchargement — le flux vivait dans la fiche (`ActionsLecture`) — et la
+  requête de contenu rendait `ARCHIVE_ABSENTE` : « L'archive a disparu
+  entre l'affichage de la fiche et votre clic », pour une archive qui
+  n'avait jamais existé localement (5 archives pour 12 210 signets à
+  copie prête). La lecture conduit désormais le téléchargement elle-même :
+  progression nommée, échec nommé, refetch au terme, arrêt budget nommé
+  sans reboucler. Trouvé en vérification réelle de l'app.
+- **Le bouton « Fermer la lecture » se calait à gauche** pendant le
+  chargement et sur les états d'échec : il reste à droite dans tous les
+  états.
 
 #### La fenêtre qui ne se traînait plus, et les images en plusieurs exemplaires (2026-09-21)
 
