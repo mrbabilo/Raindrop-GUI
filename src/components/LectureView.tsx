@@ -175,28 +175,33 @@ export function LectureView({
   }
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-[66ch] flex-col gap-3 px-6 py-8">
+    // La barre de tête vit HORS du conteneur défilant : l'issue (Fermer) et
+    // la provenance restent sous la main pendant qu'on lit — le rebond
+    // macOS ne doit pas les emmener. Seul l'article défile.
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="mx-auto flex w-full max-w-[66ch] items-start justify-between gap-3 px-6 pt-8 pb-3">
         {/* La ligne de tête (spec inversion §5) : provenance · date · temps —
             la fraîcheur de ce qu'on lit, sans un rail qui dupliquerait la
             fiche. Absente tant que le contenu n'est pas là. */}
-        <div className="flex items-start justify-between gap-3">
-          {contenu.data && blocs.length > 0 && (
-            <p className="text-xs text-app-muted">
-              {[
-                t(sourceCopie ? "lecture.badgeCopie" : "lecture.badgeLocale"),
-                dateLue ? t("lecture.date", { date: dateLue }) : null,
-                t("lecture.temps", { n: minutes }),
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          )}
-          <button type="button" className="btn btn-icone ml-auto" aria-label={t("lecture.fermer")} onClick={goBack}>
-            <Icone nom="croix" />
-          </button>
+        {contenu.data && blocs.length > 0 && (
+          <p className="text-xs text-app-muted">
+            {[
+              t(sourceCopie ? "lecture.badgeCopie" : "lecture.badgeLocale"),
+              dateLue ? t("lecture.date", { date: dateLue }) : null,
+              t("lecture.temps", { n: minutes }),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        )}
+        <button type="button" className="btn btn-icone ml-auto" aria-label={t("lecture.fermer")} onClick={goBack}>
+          <Icone nom="croix" />
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex w-full max-w-[66ch] flex-col gap-3 px-6 pb-8">
+          {interieur}
         </div>
-        {interieur}
       </div>
     </div>
   );

@@ -120,6 +120,13 @@ describe("LectureView", () => {
     // dans le VRAI styles.css (injecterRegles), jamais recopiés ici.
     expect(getComputedStyle(titre).fontSize).not.toBe("17px");
     expect(getComputedStyle(screen.getByText("Paragraphe un.")).marginBottom).not.toBe("0px");
+    // La barre de tête reste fixe dans la fenêtre : le bouton Fermer ne vit
+    // dans AUCUN conteneur défilant (le rebond macOS l'emmènerait), là où
+    // l'article défile. L'aller ne prouve rien sans le retour : les deux
+    // moitiés du contrat sont assertées.
+    const fermer = screen.getByRole("button", { name: "Fermer la lecture" });
+    expect(fermer.closest(".overflow-y-auto")).toBeNull();
+    expect(article!.closest(".overflow-y-auto")).not.toBeNull();
     // Le rendu inline des marques reprend un porteur : un paragraphe du
     // corps est là, et le segment gras est un VRAI élément <strong> —
     // renduBloc reconstruit l'arbre, jamais du texte aplati.
