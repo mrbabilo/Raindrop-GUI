@@ -692,7 +692,7 @@ Expected: FAIL — le module n'existe pas.
 `src/lib/smartlists.ts` :
 
 ```ts
-import { canoniser } from "./filtreEtiquettes";
+import { canoniser } from "../hooks/filtreEtiquettes";
 import type { SmartList, SmartListView } from "../../shared/types";
 import type { View } from "../state/appState";
 
@@ -1756,3 +1756,22 @@ git commit -m "docs: vues sauvegardées — DESIGN §8ter, ROADMAP soldée, chan
 **Écarts volontaires assumés** : pas de `flush()` au store (chaque route attend son écriture — contrairement aux origines de corbeille écrites en masse en vol) ; le surlignage des vues fixes ne teste pas `smartlistId === undefined` (le comportement existant de « Tous » surligné sous filtre d'étiquette n'est pas du périmètre — la smart list, elle, se surligne juste via son propre identifiant).
 
 **Cohérence des noms** : `SmartListView`/`SmartList` (Task 1) utilisés tels quels partout ; `SmartListStore`/`makeSmartListStore` (Task 2) consommés par Task 3 ; `filtreActif`/`serialiserVue`/`vueVersView` (Task 4) par 5 (non — 5 n'en dépend pas), 7 et 8 ; `forgetSmartList` (Task 5) par 7 ; les quatre hooks (Task 6) par 7 et 8 ; icône `marquePage` (Task 7) par 8. Vérifié.
+
+---
+
+## Amendement d'exécution (2026-09-22, lot livré)
+
+Trois écarts entre le plan et l'exécution, tous corrigés au fil — le code
+livré fait foi, ce paragraphe garde le plan fidèle :
+
+1. **Task 3, harnais de test** : le premier jet recréait l'app (donc le
+   dépôt) à CHAQUE requête — les POST d'un même test partaient dans des
+   dépôts différents. Une app par TEST, toutes ses requêtes la partagent
+   (commit `cf0f585`).
+2. **Task 4, import** : `canoniser` vit dans `src/hooks/filtreEtiquettes.ts`,
+   pas `src/lib/` — le chemin du plan était faux (corrigé ci-dessus).
+3. **Task 7-8, tests** : le titre de section s'asserte APRÈS résolution de
+   la requête (la section se masque pendant le premier chargement) ; et
+   `sendMock` doit être réinitialisé entre tests, sinon « Échap n'a rien
+   envoyé » voit les appels du test précédent (commits `d0a3444`,
+   `5bf210f`).
