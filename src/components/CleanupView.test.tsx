@@ -128,6 +128,27 @@ describe("CleanupView", () => {
     });
   });
 
+  // Garde de la spec inversion §2 : l'inversion ne touche que la bibliothèque.
+  // Le clic d'une ligne de Nettoyage ouvre la FICHE et laisse la vue — le
+  // branchement de useOuvrirSignet sur ces lignes serait un défaut. (Adapté
+  // au harnais : pages[] pour useRaindrops, et la vue se lit AVANT le clic —
+  // le provider démarre sur « list », la garde porte sur l'ABSENCE de
+  // navigation au clic, pas sur la vue cleanupView elle-même.)
+  it("clic sur une ligne : la fiche s'ouvre, la vue reste — jamais la lecture", async () => {
+    raindropsMock.mockReturnValue({
+      data: { pages: [{ items: [raindrop({ id: 1000, collectionId: -99 })], count: 1, page: 0, perPage: 50 }] },
+    });
+    render(<CleanupView type="trash" />, { wrapper });
+    const titre = await screen.findByText("Article exemple");
+    const vueAvant = screen.getByTestId("view").textContent;
+    await userEvent.click(titre);
+    expect(screen.getByTestId("selection").textContent).toBe("1000");
+    // Aucun go() au clic : la vue ne change pas d'un octet — un branchement
+    // lecture ferait go({kind:"lecture", …}) et se lirait ici.
+    expect(screen.getByTestId("view").textContent).toBe(vueAvant);
+    expect(screen.queryByRole("button", { name: "Fermer la lecture" })).not.toBeInTheDocument();
+  });
+
   // DOMAINE.md : supprimer des collections est IRRÉVERSIBLE (niveau 2 —
   // frappe SUPPRIMER). Le clic passait le DELETE en direct, sans aucun
   // garde : il part en Revue, qui porte la frappe.
