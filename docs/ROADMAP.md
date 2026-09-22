@@ -52,6 +52,13 @@ leur raisonnement, et un renvoi par lot livré.*
   tête remplace le rail ; DetailPane découpé (bloc corbeillé). Spec
   `docs/superpowers/specs/2026-09-22-inversion-fiche-lecture-design.md`.
   Détail : CHANGELOG.
+- **Vues sauvegardées (« smart lists »)** (2026-09-22) : une vue filtrée
+  nommée dans la barre latérale, qui vit — dépôt JSON local, routes CRUD,
+  `smartlistId` sur la vue (effacé au patch de filtre), section barre
+  latérale, bouton TopBar. Aucune logique propre : `listQueryArgs` reste
+  le seul parser. Spec
+  `docs/superpowers/specs/2026-09-22-smart-lists-design.md`. Détail :
+  CHANGELOG.
 
 ## Ouvert
 
@@ -101,10 +108,6 @@ leur raisonnement, et un renvoi par lot livré.*
 - [ ] **Divergence des deux étoiles** — la fix wave a livré `Etoile`
       partagé (la divergence de fond est réglée) ; reste à vérifier
       visuellement la grille 13 px héritée. Micro-tâche.
-- [ ] **Vues sauvegardées (« smart lists »)** — une vue filtrée nommée dans
-      la barre latérale, qui vit : sérialiser `listQueryArgs` là où Karakeep
-      stocke une requête réinterprétée par son parser partagé
-      (`docs/KARAKEEP.md` §8).
 - [ ] **Drag & drop de fusion d'étiquettes** dans la vue Tags — le geste
       attendu là où notre fusion est un formulaire.
 

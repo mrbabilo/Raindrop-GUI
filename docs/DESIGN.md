@@ -338,6 +338,31 @@ de styles.css). L'interface étant volontairement pauvre en mouvement,
 l'arrêt global ne coûte rien — et ne rate rien, là où un bloc par classe
 en ratait.
 
+## 8ter. Vues sauvegardées
+
+Une vue filtrée peut être nommée : elle vit dans la barre latérale, entre
+les vues fixes et Collections, dans l'ordre de création. Elle se lit comme
+une vue fixe — même hauteur (28 px), même typographie, même surface de
+sélection (`--color-app-sel`) — la surface porte la sélection, jamais une
+teinte (§9). Pas de compteur : la vue rejoue ses filtres, elle n'affiche
+pas ce qu'elle contient. Le répertoire vide masque la section entière ;
+son échec de chargement se dit en une ligne discrète sous le titre.
+
+Les deux commandes — renommer (crayon), supprimer (croix) — sont
+**révélées au survol, jamais posées** : posées à demeure, elles mangeraient
+la largeur de chaque ligne pour un geste rare. Absolues à droite de la
+ligne, opacité nulle au repos, révélation au survol ET au focus
+(`focus-within`) — le clavier les atteint comme le pointeur.
+
+Le geste de création vit dans la **TopBar**, à côté de la bascule
+d'affichage : un marque-page (glyphe `marquePage`), présent **seulement
+quand un filtre est actif** — sauvegarder une vue non filtrée n'a pas de
+sens, et le tri seul n'est pas un filtre. Le clic déplie un champ inline,
+prérempli de la recherche ou de la première étiquette retenue ; Enter pose
+(coche), Échap annule. La suppression d'une vue ne frappe jamais : une
+smart list se recrée en trois clics — la frappe SUPPRIMER reste aux gestes
+irréversibles.
+
 ## 9. Règles
 
 - **L'écran ne surcharge jamais.** Seuls les icônes et éléments strictement

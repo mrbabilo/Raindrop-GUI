@@ -13,6 +13,20 @@ Developer ID.
 
 ### Ajouté
 
+#### Les vues sauvegardées — smart lists (2026-09-22)
+
+- **« Sauvegarder la vue » dans la barre d'outils**, visible seulement
+  quand un filtre est actif : champ inline prérempli (recherche ou première
+  étiquette retenue), Enter pose, Échap annule.
+- **La vue vit dans la barre latérale** (« Vues sauvegardées ») : le clic
+  rejoue collection, filtres ET tri stockés — aucune logique propre, le
+  parser des listes fait le reste. Renommage au survol, suppression sans
+  frappe (une vue se recrée en trois clics).
+- **La marque ne ment pas** : tout filtre posé sur la smart list ouverte
+  éteint sa marque (la liste filtrée reste) ; supprimer la vue ouverte
+  aussi. Un JSON local en dossier de données — absent ou corrompu, la
+  section se masque, l'app ne casse pas.
+
 #### L'inversion fiche ↔ lecture (2026-09-22)
 
 - **Le clic principal de la bibliothèque (liste, mosaïque, vue collection)
