@@ -6,14 +6,13 @@ import { Icone } from "../design/icones";
 import { api, ApiError } from "../lib/api";
 import { chargerContenu, extraireBlocs, type Bloc } from "../lib/lecture";
 import { ouvrirPageWeb } from "../lib/pageWeb";
-import { useCollections } from "../hooks/useStaticData";
 import type { RaindropItem } from "../../shared/types";
 import type { View } from "../state/appState";
 
 // DESIGN §12 (mode lecture) : colonne serif ~66 caractères sur la surface
-// `app`, rail droit de métadonnées. Les formules (.lecture-corps,
-// .rail-titre) vivent dans styles.css — pas recopiées ici, même raison que
-// .titre-fiche.
+// `app`, ligne de tête discrète (provenance · date · temps). Les formules
+// (.lecture-corps) vivent dans styles.css — pas recopiées ici, même raison
+// que .titre-fiche.
 
 /** La date de l'archive, lisible. Un ISO illisible se rend TEL QUEL plutôt
  *  que de devenir « Invalid Date » (même parti que formatterHorodatage). */
@@ -79,8 +78,9 @@ export function LectureView({
   goBack: () => void;
 }) {
   const { raindropId, sourceCopie } = view;
-  // Les métadonnées du rail : la fiche a DÉJÀ chargé ["raindrop", id] — le
-  // cache de react-query sert cette requête sans nouvelle requête réseau.
+  // La fiche a DÉJÀ chargé ["raindrop", id] : le cache de react-query sert
+  // cette requête sans nouvelle requête réseau. Elle porte l'URL de l'issue
+  // « Voir la page » — le rail des métadonnées vit désormais dans la fiche.
   const detail = useQuery<RaindropItem>({
     queryKey: ["raindrop", raindropId],
     queryFn: () => api.get<RaindropItem>(`/api/raindrops/${raindropId}`),
@@ -89,17 +89,13 @@ export function LectureView({
     queryKey: ["archive-content", raindropId],
     queryFn: () => chargerContenu(raindropId),
   });
-  const arbre = useCollections().data ?? [];
   const r = detail.data;
-  // Le contenu extrait est AUSSI le compteur de mots du rail (temps de
-  // lecture ≈ 220 mots/min — l'exemple de Karakeep, calculé jamais deviné).
   const blocs = contenu.data ? extraireBlocs(contenu.data.html) : [];
   const mots = blocs.reduce(
     (n, b) => n + (b.balise === "img" ? 0 : b.segments.reduce((m, s) => m + s.texte.split(/\s+/).filter(Boolean).length, 0)),
     0,
   );
   const minutes = Math.max(1, Math.round(mots / 220));
-  const collection = r ? arbre.find((c) => c.id === r.collectionId) : undefined;
   const dateLue = contenu.data ? dateArchive(contenu.data.dateArchive) : null;
 
   let interieur: ReactNode;
@@ -130,38 +126,29 @@ export function LectureView({
   }
 
   return (
-    <div className="flex h-full min-h-0">
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-[66ch] flex-col gap-3 px-6 py-8">
-          <button type="button" className="btn btn-icone self-end" aria-label={t("lecture.fermer")} onClick={goBack}>
+    <div className="h-full min-h-0 overflow-y-auto">
+      <div className="mx-auto flex w-full max-w-[66ch] flex-col gap-3 px-6 py-8">
+        {/* La ligne de tête (spec inversion §5) : provenance · date · temps —
+            la fraîcheur de ce qu'on lit, sans un rail qui dupliquerait la
+            fiche. Absente tant que le contenu n'est pas là. */}
+        <div className="flex items-start justify-between gap-3">
+          {contenu.data && blocs.length > 0 && (
+            <p className="text-xs text-app-muted">
+              {[
+                t(sourceCopie ? "lecture.badgeCopie" : "lecture.badgeLocale"),
+                dateLue ? t("lecture.date", { date: dateLue }) : null,
+                t("lecture.temps", { n: minutes }),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
+          <button type="button" className="btn btn-icone" aria-label={t("lecture.fermer")} onClick={goBack}>
             <Icone nom="croix" />
           </button>
-          {interieur}
         </div>
+        {interieur}
       </div>
-      {r && (
-        <aside
-          className="w-[260px] shrink-0 overflow-y-auto border-l border-app-border bg-app p-4"
-          aria-label={t("lecture.rail")}
-        >
-          <h2 className="rail-titre">{r.title}</h2>
-          <p className="url mt-2 truncate text-[11px]">{r.domain}</p>
-          {collection && <p className="mt-1 text-xs text-app-muted">{collection.title}</p>}
-          <p className="mt-3 text-xs text-app-muted">
-            {sourceCopie ? t("lecture.badgeCopie") : t("lecture.badgeLocale")}
-          </p>
-          {dateLue && <p className="mt-1 text-xs text-app-muted">{t("lecture.date", { date: dateLue })}</p>}
-          {contenu.data && blocs.length > 0 && (
-            <p className="mt-1 text-xs text-app-muted">{t("lecture.temps", { n: minutes })}</p>
-          )}
-          {r.tags.length > 0 && (
-            // Une ligne de TEXTE, pas des pilules : une pilule inerte ferait
-            // douter de la fiche, une pilule cliquable naviguerait hors de la
-            // lecture. Ici, l'étiquette se lit, elle ne se clique pas.
-            <p className="mt-3 text-xs text-app-muted">{r.tags.join(" · ")}</p>
-          )}
-        </aside>
-      )}
     </div>
   );
 }

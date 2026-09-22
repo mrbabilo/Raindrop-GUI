@@ -78,7 +78,6 @@ export const fr = {
   // Lecture du contenu archivé (spec lecture §3) — chaque état porte SA
   // raison, jamais un « http 404 » nu (§5).
   "lecture.fermer": "Fermer la lecture",
-  "lecture.rail": "Métadonnées",
   "lecture.badgeLocale": "archive locale",
   "lecture.badgeCopie": "copie permanente",
   "lecture.date": "Archive du {date}",

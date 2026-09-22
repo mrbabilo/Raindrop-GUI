@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { t } from "../i18n/fr";
-import { raindrop, collections } from "../test/fixtures";
+import { raindrop } from "../test/fixtures";
 import { injecterRegles } from "../test/injectStyles";
 import { LectureView } from "./LectureView";
 import { AppStateProvider, useAppState, vueDeRetour, type View } from "../state/appState";
@@ -18,7 +18,6 @@ const { chargerMock, extraireMock, ouvrirMock, getApi } = vi.hoisted(() => ({
 
 vi.mock("../lib/lecture", () => ({ chargerContenu: chargerMock, extraireBlocs: extraireMock }));
 vi.mock("../lib/pageWeb", () => ({ ouvrirPageWeb: ouvrirMock }));
-vi.mock("../hooks/useStaticData", () => ({ useCollections: () => ({ data: collections }) }));
 // `ApiError` reste RÉELLE : la vue la teste avec `instanceof`, et un mock
 // ici testerait notre propre supposition. On n'écrase que `api.get` — le
 // reste du module traverse via importOriginal (sinon `ApiError` serait
@@ -93,32 +92,26 @@ const ouvrir = async () => {
 };
 
 describe("LectureView", () => {
-  it("rend le texte en colonne serif, le rail, le badge et la date d'archive", async () => {
+  it("rend le texte en colonne serif ; la ligne de tête porte provenance · date · temps", async () => {
     injecterRegles(".lecture-corps");
     await ouvrir();
     const titre = await screen.findByText("Un titre de lecture");
     expect(titre.tagName).toBe("H2"); // la whitelist reconstruit de VRAIS éléments
-    expect(screen.getByText("Paragraphe un.")).toBeInTheDocument();
-    // Le segment gras rend un <strong> réel.
-    const gras = screen.getByText("en gras").closest("strong");
-    expect(gras).not.toBeNull();
-    // DESIGN §12 (mode lecture) : la formule vit dans styles.css, lue dans le
-    // VRAI css par injecterRegles — jamais recopiée dans le test.
     const article = document.querySelector(".lecture-corps");
     expect(article).not.toBeNull();
     expect(getComputedStyle(article!).fontFamily).toContain("serif");
-    // Le rail : titre, domaine, badge, date — la fraîcheur de ce qu'on lit.
-    expect(screen.getByText("Article exemple")).toBeInTheDocument();
-    expect(screen.getByText("example.com")).toBeInTheDocument();
-    expect(screen.getByText("archive locale")).toBeInTheDocument();
-    expect(screen.getByText(/Archive du 18 septembre 2026/)).toBeInTheDocument();
-    expect(screen.getByText(/≈ 1 min de lecture/)).toBeInTheDocument();
-    // Les étiquettes du rail sont une ligne de TEXTE, pas des pilules
-    // cliquables : une pilule inerte fait douter de l'autre, une pilule
-    // cliquable NAVIGUERAIT hors de la lecture (comportement mesuré).
-    expect(screen.getByText(/typescript/).tagName).toBe("P");
-    // Les surlignages restent dans la fiche — le mode lecture ne les
-    // duplique pas en v1 (spec §3). La fixture en a un : il n'est PAS ici.
+    // La ligne de tête (spec inversion §5) : la fraîcheur de ce qu'on lit,
+    // en une ligne — le rail de 260 px est parti. L'heure de l'archive dépend
+    // du fuseau de la machine de test : on assert le JOUR, jamais l'heure
+    // (le vieux test faisait de même avec sa regex).
+    const ligne = screen.getByText(/archive locale · Archive du 18 septembre 2026/);
+    expect(ligne.textContent).toContain("≈ 1 min de lecture");
+    // Le rail rendait titre, domaine et étiquettes : ABSENTS désormais — la
+    // fiche voisine les porte (avant le lot, ce test les voyait ici).
+    expect(screen.queryByText("Article exemple")).not.toBeInTheDocument();
+    expect(screen.queryByText("example.com")).not.toBeInTheDocument();
+    expect(screen.queryByText(/typescript/)).not.toBeInTheDocument();
+    // Les surlignages restent dans la fiche — jamais dupliqués en lecture.
     expect(screen.queryByText("Un passage")).not.toBeInTheDocument();
   });
 
@@ -152,14 +145,15 @@ describe("LectureView", () => {
       </QueryClientProvider>,
     );
     await userEvent.click(screen.getByText("ouvrir"));
-    expect(await screen.findByText("copie permanente")).toBeInTheDocument();
-    expect(screen.queryByText("archive locale")).not.toBeInTheDocument();
+    expect(await screen.findByText(/copie permanente/)).toBeInTheDocument();
+    expect(screen.queryByText(/archive locale/)).not.toBeInTheDocument();
   });
 
   // La règle du lot bascules : l'aller ne prouve rien sans le retour.
   it("« Fermer la lecture » ramène à la vue d'origine (retour, pas seulement l'aller)", async () => {
     await ouvrir();
-    await screen.findByText("Article exemple");
+    // Le contenu de l'article (le titre du rail a quitté la vue avec lui).
+    await screen.findByText("Un titre de lecture");
     await userEvent.click(screen.getByRole("button", { name: "Fermer la lecture" }));
     expect(screen.getByTestId("vue").textContent).toBe("cleanup");
   });
