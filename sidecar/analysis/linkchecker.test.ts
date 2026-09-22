@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi, afterEach } from "vitest";
 import { startTargetServer } from "../testing/targetServer.js";
 import { checkUrl, checkAll } from "./linkchecker.js";
 
@@ -95,6 +95,46 @@ describe("checkUrl", () => {
     const r = await checkUrl("http://domaine-qui-nexiste-pas-xyz.example/x", { ...fast, retry: 0 });
     expect(r.status).toBe("dead");
     expect(r.reason).toBe("dns");
+  });
+});
+
+// DOMAINE.md : « Lien mort : 4xx/5xx, DNS inexistant, timeout, connexion
+// refusée ». Tout AUTRE échec transport ne prouve pas la mort — un serveur
+// qui reset une connexion, répond avec un certificat douteux ou casse son
+// HTTP/2 EST VIVANT (ou du moins pas prouvé mort) : ce sont les protections
+// anti-bot et les TLS capricieux qui parlent. Mesuré en réel le 2026-09-22 :
+// 367 verdicts de cette famille, dont le faux « mort » signalé à l'usage
+// (net_ERR_HTTP2_STREAM_ERROR sur un site actif).
+const transportKo = (code: string) => {
+  const e = new Error("fetch failed") as Error & { cause: { code: string } };
+  e.cause = { code };
+  return e;
+};
+
+describe("erreurs transport — la définition DOMAINE du mort", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("ECONNRESET → indeterminate (net_ECONNRESET), jamais mort", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw transportKo("ECONNRESET"); }));
+    const r = await checkUrl("https://exemple.test/x", { ...fast, retry: 0 });
+    expect(r.status).toBe("indeterminate");
+    expect(r.reason).toBe("net_ECONNRESET");
+  });
+
+  it("erreur TLS/protocole → indeterminate (le verdict du faux mort signalé)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw transportKo("ERR_HTTP2_STREAM_ERROR"); }));
+    const r = await checkUrl("https://exemple.test/x", { ...fast, retry: 0 });
+    expect(r.status).toBe("indeterminate");
+  });
+
+  it("un verdict transport est RETENTÉ une fois — la 2e passe rend le verdict réel", async () => {
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(transportKo("ECONNRESET"))
+      .mockResolvedValueOnce(new Response("", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const r = await checkUrl("https://exemple.test/x", { ...fast });
+    expect(r.status).toBe("ok");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 

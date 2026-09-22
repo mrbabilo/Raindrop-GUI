@@ -1,6 +1,7 @@
 import { readFile, writeFile, rename } from "node:fs/promises";
 import type { DuplicateGroup, LinkCheckResult, AnalysisType } from "../../shared/types.js";
 import type { RaindropItem } from "../../shared/types.js";
+import { reclasseTransport } from "./linkchecker.js";
 
 interface CacheFile {
   version: 1;
@@ -74,13 +75,16 @@ export class AnalysisCache {
     }
     const out: LinkCheckResult[] = [];
     for (const r of Object.values(this.data.links.results)) {
-      const ids = parUrl.get(r.url);
+      // Verdicts transport des caches anciens (dead net_*) → indeterminate :
+      // la règle DOMAINE du mort se lit ici, pas seulement au check.
+      const lu = reclasseTransport(r);
+      const ids = parUrl.get(lu.url);
       // URL sans signet connu : l'index n'a pas encore été peuplé, ou le
       // signet a disparu depuis. On garde la ligne telle quelle plutôt que
       // de la perdre — un diagnostic orphelin se voit, un diagnostic effacé
       // ne se voit pas.
-      if (!ids || ids.length === 0) out.push(r);
-      else for (const raindropId of ids) out.push({ ...r, raindropId });
+      if (!ids || ids.length === 0) out.push(lu);
+      else for (const raindropId of ids) out.push({ ...lu, raindropId });
     }
     return out;
   }

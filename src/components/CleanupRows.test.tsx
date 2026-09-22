@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { DeadRow, DuplicateGroupCard, RedirectRow, TrashRow } from "./CleanupRows";
+import { DeadRow, DuplicateGroupCard, EmptyCollectionRow, RedirectRow, TrashRow } from "./CleanupRows";
 import { AppStateProvider, useAppState } from "../state/appState";
 import type { LinkEnrichi } from "./CleanupRows";
 import type { RaindropItem } from "../../shared/types";
@@ -140,5 +140,61 @@ describe("les lignes de Nettoyage ouvrent la fiche", () => {
     expect(detail()).toBe("12");
     await userEvent.click(screen.getByRole("button", { name: /Restaurer/ }));
     expect(detail()).toBe("12");
+  });
+});
+
+// Le preflight Tailwind rend un <button> SANS classe en texte nu : fond
+// transparent, bordure 0, cursor default. « Remplacer par l'URL finale »,
+// « Restaurer » et « Supprimer la collection » vivaient ainsi INVISIBLES —
+// sans affordance, et rognés par l'overflow-hidden de la ligne dès qu'une
+// URL longue poussait leur position hors du cadre (constaté en réel le
+// 2026-09-22 : « le bouton est invisible ou coupé »). Le précédent de la
+// ligne Wayback (`btn shrink-0`) est la règle.
+describe("les contrôles des lignes se voient", () => {
+  it("« Remplacer par l'URL finale » porte la surface btn", () => {
+    rendu(<RedirectRow r={lien({ status: "redirect", redirectKind: "permanent", finalUrl: "https://exemple.fr/b" })} />);
+    expect(screen.getByRole("button", { name: /Remplacer/ })).toHaveClass("btn");
+  });
+
+  it("« Restaurer » porte la surface btn", () => {
+    rendu(<TrashRow r={item()} />);
+    expect(screen.getByRole("button", { name: /Restaurer/ })).toHaveClass("btn");
+  });
+
+  it("« Supprimer la collection » porte la surface btn", () => {
+    rendu(
+      <EmptyCollectionRow
+        c={{ id: 3, title: "Vide", parentId: null, count: 0, public: false, view: "grid", cover: null, color: null }}
+        ids={[3]}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /Supprimer la collection/ })).toHaveClass("btn");
+  });
+
+  // Le geste de la vue : comparer les deux URLs caractère par caractère
+  // (§7) SANS que la seconde pousse la première ni le bouton hors de la
+  // ligne — chaque URL sur SA ligne, tronquée chez elle.
+  it("redirection : les deux urls vivent sur deux lignes distinctes et tronquées", () => {
+    rendu(<RedirectRow r={lien({ status: "redirect", redirectKind: "temporary", finalUrl: "https://exemple.fr/tres-longue/b" })} />);
+    const lignes = screen.getAllByText(/exemple\.fr/);
+    expect(lignes).toHaveLength(2);
+    for (const l of lignes) expect(l).toHaveClass("truncate");
+    // le bouton vit HORS de la colonne tronquée : il ne peut plus être rogné
+    const bouton = screen.getByRole("button", { name: /Remplacer/ });
+    expect(bouton.closest(".truncate")).toBeNull();
+  });
+
+  // Verdict transport reclassé : pas d'URL finale → rien à remplacer, et
+  // surtout plus de bouton qui ne ferait rien (le clic sortait en silence).
+  it("redirection sans URL finale : ni flèche, ni bouton Remplacer", () => {
+    rendu(<RedirectRow r={lien({ status: "redirect", redirectKind: null, finalUrl: null })} />);
+    expect(screen.queryByRole("button", { name: /Remplacer/ })).toBeNull();
+    expect(screen.queryByText("→")).toBeNull();
+  });
+
+  it("lien mort : l'URL se tronque — le lien Wayback reste dans la ligne", () => {
+    rendu(<DeadRow r={lien({ url: "https://exemple.fr/une-tres-tres-longue-adresse/qui-debordait/la-ligne" })} />);
+    const url = screen.getByText(/tres-tres-longue/);
+    expect(url).toHaveClass("truncate");
   });
 });

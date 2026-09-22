@@ -122,6 +122,27 @@ les décisions structurantes.
   en corbeille `collectionId` → `-99`, `removed` → `true`, rien d'autre) :
   restaurer « à l'origine » suppose que **nous** ayons noté la collection
   d'avant (spec §4.2).
+- **Un 200 n'est pas un succès d'écriture Raindrop** (sondé en réel le
+  2026-09-22) : `PUT /raindrop/{id}` documente `link`, pas `url` — envoyer
+  `{url}` répond `result: true` en IGNORANT le champ, signet inchangé (le
+  bouton « Remplacer par l'URL finale » « fonctionnait » : la ligne
+  disparaissait, l'URL n'était jamais corrigée). Toute écriture REST directe
+  vérifie le CORPS (`result === true` + champ relu égal à ce qu'on a envoyé),
+  jamais le seul statut HTTP. Même classe que le succès inventé du `-99`.
+- **Le preflight Tailwind rend un `<button>` SANS classe en TEXTE** : fond
+  transparent, bordure 0, `cursor: default`. « Remplacer », « Restaurer » et
+  « Supprimer la collection » vivaient ainsi invisibles (constaté en réel le
+  2026-09-22). Tout bouton d'action porte la surface `btn` (ou `btn-icone`) ;
+  et un bouton ne vit jamais en fin de ligne flex derrière des `shrink-0` —
+  l'`overflow-hidden` de la ligne le rogne dès que le contenu est long. Il vit
+  HORS de la colonne tronquée.
+- **Un échec transport n'est pas un lien mort** : mort = 4xx/5xx, DNS
+  inexistant, timeout, connexion refusée (DOMAINE.md). Tout autre échec réseau
+  (reset, TLS, protocole — anti-bot, certificats, HTTP/2) part en
+  `indeterminate`, au check (`verdictTransport`) ET à la lecture des caches
+  anciens (`reclasseTransport`, précédent `filtrerGeneriques`). 367 verdicts
+  réels changeaient de catégorie le jour du correctif — dont un site actif
+  signalé à l'usage.
 - **Le paramètre `domain` du MCP ne filtre RIEN** — ne jamais le lui passer
   (vérifié en réel le 2026-09-17) : `searchRaindrops` l'envoie en paramètre
   d'URL (`/raindrops/0?domain=…`), or l'API Raindrop n'a pas ce paramètre,

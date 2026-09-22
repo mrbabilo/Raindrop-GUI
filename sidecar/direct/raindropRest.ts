@@ -24,11 +24,30 @@ export function makeRestClient(
             Authorization: `Bearer ${opts.token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ url }),
+          // `link`, pas `url` : c'est le nom DOCUMENTÉ du champ (PUT
+          // /raindrop/{id}, developer.raindrop.io). Sondé en réel le
+          // 2026-09-22 : `{url}` répond 200 result:true en IGNORANT le
+          // champ — le signet restait inchangé, succès inventé.
+          body: JSON.stringify({ link: url }),
           signal: AbortSignal.timeout(opts.timeoutMs ?? 30_000),
         });
         if (!res.ok) {
           return { ok: false, code: "RAINDROP_API", message: `raindrop api http ${res.status}` };
+        }
+        // Le statut ne suffit pas : l'API ignore en silence ce qu'elle ne
+        // connaît pas. Le seul verdict honnête est ce que le CORPS dit avoir
+        // appliqué — item.link doit être exactement l'URL demandée.
+        let body: { result?: unknown; item?: { link?: unknown } | null };
+        try {
+          body = (await res.json()) as typeof body;
+        } catch {
+          return { ok: false, code: "RAINDROP_API", message: "réponse illisible de l'api raindrop" };
+        }
+        if (body.result !== true) {
+          return { ok: false, code: "RAINDROP_API", message: `raindrop api a refusé la modification (result ${String(body.result)})` };
+        }
+        if (body.item?.link !== url) {
+          return { ok: false, code: "RAINDROP_API", message: `URL non appliquée par l'api raindrop (demandé ${url}, lu ${String(body.item?.link)})` };
         }
         return { ok: true, data: { id } };
       } catch (e) {

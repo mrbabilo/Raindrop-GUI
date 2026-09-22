@@ -63,6 +63,33 @@ beforeEach(async () => {
 afterEach(async () => conn.close());
 
 describe("routes analyse", () => {
+  // Les caches ANTÉRIEURS à la règle du 2026-09-22 portent des « dead »
+  // transport (net_*) — jamais la preuve d'une mort (DOMAINE.md). La
+  // reclassification se lit À LA LECTURE, sans re-scan — même précédent
+  // que `filtrerGeneriques` pour les groupes génériques.
+  it("un dead net_* en cache se lit indeterminate — /results et /etats", async () => {
+    cache.setItemsIndex([
+      { id: 5, title: "Bloqué", collectionId: 0, url: "https://bloque.example/" } as unknown as RaindropItem,
+    ]);
+    cache.setResult({
+      url: "https://bloque.example/", status: "dead", httpStatus: null,
+      redirectChain: null, finalUrl: null, redirectKind: null,
+      reason: "net_ECONNRESET", raindropId: 5, checkedAt: new Date().toISOString(),
+    });
+    const res = await req(app, "/api/analysis/results/links?filter=all");
+    const body = (await res.json()) as { items: { status: string; reason: string }[] };
+    expect(body.items[0]!.status).toBe("indeterminate");
+    expect(body.items[0]!.reason).toBe("net_ECONNRESET");
+    const res2 = await req(app, "/api/analysis/etats");
+    const etats = (await res2.json()) as { etats: Record<string, string> };
+    expect(etats.etats["5"]).toBe("indeterminate");
+    // Le compteur suit la même lecture (le dashboard annonce la même chose
+    // que la vue) : le filtre indeterminate capte le reclassé.
+    const res3 = await req(app, "/api/analysis/results/links?filter=indeterminate&per_page=1");
+    const total = (await res3.json()) as { total: number };
+    expect(total.total).toBe(1);
+  });
+
   it("POST /scan lançe un job, GET /status le reflète une fois terminé", async () => {
     const res = await req(app, "/api/analysis/scan", {
       method: "POST",

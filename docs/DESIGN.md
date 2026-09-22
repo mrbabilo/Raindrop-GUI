@@ -309,6 +309,13 @@ Corps de texte : `line-height: 1.5–1.6`, `text-wrap: pretty`, largeur limitée
 Rayons : pastille ronde (collection), 7 px (ligne, champ), 9–11 px (panneau,
 tuile, bande de navigation).
 
+**L'exception des lignes de redirection** (2026-09-22) : elles portent trois
+lignes — titre et verdict en tête (36 px), l'URL d'origine dessous, l'URL
+finale sous sa flèche — chacune tronquée chez elle, en mono 11 px. Les deux
+adresses côte à côte en une ligne de 36 px poussaient le bouton d'action hors
+du cadre dès qu'une adresse était longue : le comparé caractère par caractère
+demande de la place, il l'a. Le bouton vit hors de la colonne tronquée.
+
 **Pas d'ombre portée, sauf une** : la hiérarchie vient du niveau de surface.
 L'exception est la **bande de collection**, qui porte une ombre très basse —
 elle n'imite pas un relief, elle détache la bande du fond et de ses voisines,

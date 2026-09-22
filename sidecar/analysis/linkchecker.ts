@@ -54,8 +54,36 @@ function networkReason(e: unknown): string {
   return `net_${code || "error"}`;
 }
 
-export async function checkUrl(url: string, opts: Partial<CheckerOptions> = {}): Promise<CheckOutcome> {
-  const timeoutMs = opts.timeoutMs ?? 10_000;
+/**
+ * DOMAINE.md — « Lien mort : 4xx/5xx, DNS inexistant, timeout, connexion
+ * refusée ». Tout AUTRE échec transport (reset, TLS, protocole, route) n'est
+ * pas la preuve d'une mort : le serveur a parlé, ou c'est notre route qui a
+ * faibli — protections anti-bot, certificats expirés ou auto-signés, HTTP/2
+ * capricieux. Mesuré en réel le 2026-09-22 : 367 verdicts de cette famille
+ * étaient classés « morts », dont un site actif signalé à l'usage
+ * (net_ERR_HTTP2_STREAM_ERROR). Ces cas partent en `indeterminate` —
+ * vérification manuelle — jamais en mort.
+ */
+export function verdictTransport(reason: string): "dead" | "indeterminate" {
+  return reason === "dns" || reason === "conn_refused" || reason === "timeout"
+    ? "dead"
+    : "indeterminate";
+}
+
+/**
+ * Reclassifie les verdicts des CACHES ANTÉRIEURS à la règle ci-dessus, à la
+ * lecture — sans re-scan, même précédent que `filtrerGeneriques` pour les
+ * groupes génériques (corriger l'algorithme ne suffit pas : l'écran devait
+ * dire vrai tout de suite). Le stockage, lui, reste tel quel : un résultat
+ * se récrit au prochain check de son URL (TTL).
+ */
+export function reclasseTransport(r: LinkCheckResult): LinkCheckResult {
+  return r.status === "dead" && r.reason != null && r.reason.startsWith("net_")
+    ? { ...r, status: "indeterminate" }
+    : r;
+}
+
+export async function checkUrl(url: string, opts: Partial<CheckerOptions> = {}): Promise<CheckOutcome> {  const timeoutMs = opts.timeoutMs ?? 10_000;
   const maxRedirects = opts.maxRedirects ?? MAX_REDIRECTS;
   const retry = opts.retry ?? 1;
 
@@ -68,7 +96,7 @@ export async function checkUrl(url: string, opts: Partial<CheckerOptions> = {}):
       const res = await request(current, method, timeoutMs);
       if (res.kind === "network") {
         return {
-          url, status: "dead", httpStatus: null,
+          url, status: verdictTransport(res.reason), httpStatus: null,
           redirectChain: chain.length > 1 ? chain.slice(0, -1) : null,
           finalUrl: null, redirectKind: null, reason: res.reason,
         };
@@ -104,10 +132,13 @@ export async function checkUrl(url: string, opts: Partial<CheckerOptions> = {}):
   let result = await attempt();
   // 1 retry réseau (contrainte spec §5.1) : DNS, connexion refusée, erreurs
   // transport — PAS les timeouts (coût 2× timeout) ni les statuts HTTP.
-  const retriable =
+  // Le verdict transport pouvant être indeterminate (règle DOMAINE), le
+  // retry s'applique aux DEUX statuts — jamais aux 401/403/429, qui sont
+  // indeterminate pour une tout autre raison (http_*).
+  const retentable =
     result.reason != null &&
     (result.reason === "dns" || result.reason === "conn_refused" || result.reason.startsWith("net_"));
-  if (result.status === "dead" && retriable && retry > 0) {
+  if ((result.status === "dead" || result.status === "indeterminate") && retentable && retry > 0) {
     result = await attempt();
   }
   return result;

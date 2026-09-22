@@ -65,8 +65,8 @@ export function DeadRow({
         />
       )}
       <CarreCollection collectionId={r.collectionId} titre={collectionRacine} />
-      <span className="min-w-[8rem] flex-1 truncate font-medium">{r.title}</span>
-      <span className="url shrink-0 text-[11px] text-app-muted">{r.url}</span>
+      <span className="min-w-[8rem] max-w-[40%] flex-1 truncate font-medium">{r.title}</span>
+      <span className="url min-w-0 flex-1 truncate text-[11px] text-app-muted">{r.url}</span>
       {r.orphelin && <span className="shrink-0 text-xs text-app-muted">{t("cleanup.orphelin")}</span>}
       {r.reason && <span className="shrink-0 text-xs text-app-broken">{r.reason}</span>}
       <ActionLigne el="a" className="btn shrink-0" href={`https://web.archive.org/web/*/${r.url}`} target="_blank" rel="noreferrer">
@@ -76,11 +76,14 @@ export function DeadRow({
   );
 }
 
-// Redirection : ancienne et nouvelle URL côte à côte en chasse fixe (§7 —
-// les comparer caractère par caractère est le travail). « Remplacer par
-// l'URL finale » PATCH {url} seul (le sidecar refuse url + autres champs et
-// le route en REST direct — trap `update_raindrop` v1.3.1) ; la ligne
-// remplacée quitte la vue, le scan la rattrapera.
+// Redirection : les DEUX URLs pleine largeur, chacune sur SA ligne tronquée
+// (le comparé caractère par caractère est le travail, §7) — en ligne, deux
+// `shrink-0` poussaient le bouton hors du cadre dès qu'une adresse était
+// longue : « invisible ou coupé » (constaté en réel le 2026-09-22). Le
+// bouton vit HORS de la colonne tronquée : il ne peut plus en sortir.
+// « Remplacer » n'existe que s'il y a UNE URL finale à mettre : un verdict
+// transport reclassé (pas de finale) n'offrait un bouton dont le clic
+// sortait en silence.
 export function RedirectRow({ r, collectionRacine, onRemplace }: {
   r: LinkEnrichi;
   collectionRacine?: string;
@@ -93,6 +96,7 @@ export function RedirectRow({ r, collectionRacine, onRemplace }: {
   const [remplace, setRemplace] = useState(false);
   const { selectRaindrop, selectedRaindropId } = useAppState();
   if (remplace) return null;
+  const finale = r.finalUrl;
   return (
     <Ligne
       etat="redirect"
@@ -100,29 +104,41 @@ export function RedirectRow({ r, collectionRacine, onRemplace }: {
       onClick={() => selectRaindrop(r.raindropId)}
     >
       <CarreCollection collectionId={r.collectionId} titre={collectionRacine} />
-      <span className="min-w-[6rem] flex-1 truncate font-medium">{r.title}</span>
-      <span className="url shrink-0 text-[11px] text-app-muted">{r.url}</span>
-      <span aria-hidden="true" className="shrink-0 text-app-muted">→</span>
-      <span className="url shrink-0 text-[11px]">{r.finalUrl}</span>
-      <span className="shrink-0 text-xs text-app-muted">
-        {t(r.redirectKind === "temporary" ? "cleanup.redirect-temporary" : "cleanup.redirect-permanent")}
-      </span>
-      {r.orphelin && <span className="shrink-0 text-xs text-app-muted">{t("cleanup.orphelin")}</span>}
-      <ActionLigne
-        disabled={update.isPending}
-        onClick={() => {
-          if (r.finalUrl)
-            update.mutate({ url: r.finalUrl }, {
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5 py-1">
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="min-w-0 flex-1 truncate font-medium">{r.title}</span>
+          {r.redirectKind !== null && (
+            <span className="shrink-0 text-xs text-app-muted">
+              {t(r.redirectKind === "temporary" ? "cleanup.redirect-temporary" : "cleanup.redirect-permanent")}
+            </span>
+          )}
+          {r.orphelin && <span className="shrink-0 text-xs text-app-muted">{t("cleanup.orphelin")}</span>}
+        </span>
+        <span className="url min-w-0 truncate text-[11px] text-app-muted">{r.url}</span>
+        {finale && (
+          <span className="flex min-w-0 items-center gap-1">
+            <span aria-hidden="true" className="shrink-0 text-app-muted">→</span>
+            <span className="url min-w-0 truncate text-[11px]">{finale}</span>
+          </span>
+        )}
+        {update.isError && <ErreurLigne message={String(update.error?.message ?? "")} />}
+      </div>
+      {finale && (
+        <ActionLigne
+          className="btn shrink-0"
+          disabled={update.isPending}
+          onClick={() =>
+            update.mutate({ url: finale }, {
               onSuccess: () => {
                 setRemplace(true);
                 onRemplace?.(r.raindropId);
               },
-            });
-        }}
-      >
-        {t("cleanup.replace-url")}
-      </ActionLigne>
-      {update.isError && <ErreurLigne message={String(update.error?.message ?? "")} />}
+            })
+          }
+        >
+          {t("cleanup.replace-url")}
+        </ActionLigne>
+      )}
     </Ligne>
   );
 }
@@ -238,7 +254,7 @@ export function TrashRow({ r }: { r: RaindropItem }) {
       <CarreCollection collectionId={r.collectionId} />
       <span className="min-w-[8rem] flex-1 truncate font-medium">{r.title}</span>
       <span className="url shrink-0 text-[11px] text-app-muted">{r.url}</span>
-      <ActionLigne disabled={unrestore.isPending} onClick={restaurer}>
+      <ActionLigne className="btn shrink-0" disabled={unrestore.isPending} onClick={restaurer}>
         <Icone nom="restaurer" className="inline align-[-2px] mr-1" />
         {t("cleanup.restore")}
       </ActionLigne>
@@ -273,6 +289,7 @@ export function EmptyCollectionRow({ c, ids }: { c: Collection; ids: number[] })
       <CarreCollection collectionId={c.id} titre={c.title} />
       <span className="min-w-[8rem] flex-1 truncate font-medium">{c.title}</span>
       <ActionLigne
+        className="btn shrink-0"
         onClick={() =>
           go({
             kind: "review",

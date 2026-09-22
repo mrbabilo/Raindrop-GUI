@@ -502,6 +502,38 @@ signet près, y compris croisé avec le filtre de domaine.
 
 ### Corrigé
 
+#### Le bouton invisible, le remplacement qui ne remplaçait pas, les morts qui respirent (2026-09-22)
+
+- **« Remplacer par l'URL finale », « Restaurer » et « Supprimer la
+  collection » n'étaient pas des boutons** : un `<button>` sans classe, le
+  preflight de Tailwind le rend en texte nu — sans affordance, et rogné par
+  l'overflow de la ligne dès qu'une adresse était longue (« le bouton est
+  invisible ou coupé », constaté en réel). La surface `btn` (le précédent de
+  la ligne Wayback) sur les trois ; l'URL des liens morts se tronque
+  désormais au lieu de pousser le lien hors du cadre.
+- **La ligne de redirection montre les deux URLs pleine largeur, chacune sur
+  sa ligne** (demande de l'utilisateur) : titre et verdict en tête, l'origine
+  dessous, la finale sous sa flèche — comparer caractère par caractère est le
+  travail (DESIGN §7, §8 documente l'exception). Le bouton vit hors de la
+  colonne tronquée ; sans URL finale (verdict transport reclassé), plus de
+  bouton dont le clic sortait en silence.
+- **« Remplacer par l'URL finale » ne remplaçait RIEN** : le client REST
+  direct envoyait `{url}` — le champ documenté de l'API est `link` — et
+  jugeait au seul statut HTTP. Sondé en réel le 2026-09-22 : 200,
+  `result: true`, signet inchangé — un succès inventé, la classe du défaut
+  `-99` du 2026-09-20. Le corps de la réponse est désormais vérifié
+  (`result` ET `item.link` exact) ; tout écart est une erreur nommée, la
+  ligne reste et le dit.
+- **Un échec transport n'est pas un lien mort** : DOMAINE.md limite le « mort »
+  à 4xx/5xx, DNS inexistant, timeout et connexion refusée — le code classait
+  `dead` tout autre échec réseau (reset, TLS, protocole : protections
+  anti-bot, certificats expirés ou auto-signés, HTTP/2 capricieux). 367
+  verdicts réels changeaient de catégorie — un site actif y était « mort »,
+  signalé à l'usage. Reclassés `indeterminate` au check ET à la lecture des
+  caches existants (même précédent que le filtre des groupes génériques),
+  sans re-scan : liens morts 1899 → 1532, « à vérifier à la main »
+  1061 → 1428.
+
 #### La lecture qui télécharge (2026-09-22)
 
 - **Cliquer un signet à copie permanente nommait une « disparition »
