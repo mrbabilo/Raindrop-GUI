@@ -438,24 +438,114 @@ body {
   letter-spacing: -0.015em;
 }
 
-/* §12 (mode lecture) : la colonne serif et le rail. Police système serif —
-   zéro chargement, même parti que la police de l'interface (§7). La mesure
-   ~66 caractères est celle du texte long ; le rail porte les métadonnées
-   que la fiche porte quand elle est là. */
+/* §12 (mode lecture) : la colonne serif. Police système serif — zéro
+   chargement, même parti que la police de l'interface (§7). La mesure
+   ~66 caractères est celle du texte long. La feuille habille les VRAIS
+   éléments que renduBloc reconstruit (whitelist, jamais d'innerHTML) :
+   le preflight de Tailwind aplatit titres et marges — la lecture les
+   redresse, en jetons seulement (thème sombre gratuit). Règles à
+   sélecteur unique : injecterRegles les lit une à une pour les tests. */
 .lecture-corps {
   font-family: ui-serif, Georgia, serif;
   font-size: 17px;
   line-height: 1.6;
 }
 
-.rail-titre {
-  font-size: 15px;
-  font-weight: 590;
-  letter-spacing: -0.015em;
+/* Hiérarchie : titres serif à leur taille, grandes respirations au-dessus,
+   resserrées dessous. */
+.lecture-corps h1 {
+  font-size: 1.55em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin: 1.6em 0 0.4em;
+}
+
+.lecture-corps h2 {
+  font-size: 1.3em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin: 1.6em 0 0.4em;
+}
+
+.lecture-corps h3 {
+  font-size: 1.12em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin: 1.6em 0 0.4em;
+}
+
+.lecture-corps h4 {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 1.6em 0 0.4em;
+}
+
+.lecture-corps h5 {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 1.6em 0 0.4em;
+}
+
+.lecture-corps h6 {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 1.6em 0 0.4em;
+}
+
+.lecture-corps > :first-child {
+  margin-top: 0;
+}
+
+.lecture-corps > :last-child {
+  margin-bottom: 0;
+}
+
+/* Rythme : le preflight met les blocs à zéro marge — le mur de texte. */
+.lecture-corps p {
+  margin: 0 0 1em;
+}
+
+.lecture-corps blockquote {
+  border-left: 2px solid var(--color-app-border);
+  padding-left: 1em;
+  margin: 0 0 1em;
+}
+
+.lecture-corps pre {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.85em;
+  background: var(--color-app-sel);
+  border-radius: 7px;
+  padding: 0.9em 1.1em;
+  overflow-x: auto;
+  margin: 0 0 1em;
+}
+
+/* Les listes arrivent à plat (extraireBlocs n'émet pas de ul/ol) : l'indent
+   vit sur le li lui-même, la puce native signale l'appartenance. */
+.lecture-corps li {
+  margin: 0 0 0.25em 1.5em;
+}
+
+/* Lien de lecture : sobre, hérité de l'encre — le soulignement discret se
+   fonce au survol. Pas d'accent : la couleur ne décore pas (§7). */
+.lecture-corps a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--color-app-border);
+  text-underline-offset: 3px;
+}
+
+.lecture-corps a:hover {
+  text-decoration-color: var(--color-app-ink);
 }
 
 .lecture-img {
   border-radius: 7px;
   max-width: 100%;
+  margin: 0 0 1em;
 }
 

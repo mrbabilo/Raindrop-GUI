@@ -454,7 +454,13 @@ page : ses CSS manquent, la fidélité n'y rendrait qu'une page cassée.
 - **Colonne serif** (`ui-serif, Georgia` — police système, zéro chargement,
   même parti que §7), 17 px, `line-height: 1.6`, largeur ~66 caractères
   (`max-w-[66ch]`), sur la surface `app`. Le texte est un TEXTE : ni images,
-  ni liens, ni mise en forme d'origine (v1, assumé spec §8).
+  ni liens, ni mise en forme d'origine (v1, assumé spec §8). La feuille
+  `.lecture-corps` habille les vrais éléments reconstruits : titres serif à
+  leur taille (1,55/1,3/1,12em, poids 600), respirations entre blocs — le
+  preflight de Tailwind les avait aplatis en mur de texte —, citations au
+  filet `app-border`, code en chasse fixe sur `app-sel`, liens hérités de
+  l'encre au soulignement discret qui se fonce au survol (pas d'accent :
+  §7). Tout en jetons — le thème sombre est gratuit.
 - **Une ligne de tête discrète** : provenance (« archive locale » / « copie
   permanente »), **date de l'archive** et temps de lecture, séparés par des
   points médians — lire sans montrer la fraîcheur de ce qu'on lit cacherait

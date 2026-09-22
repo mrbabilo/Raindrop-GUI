@@ -108,13 +108,18 @@ const ouvrir = async () => {
 
 describe("LectureView", () => {
   it("rend le texte en colonne serif ; la ligne de tête porte provenance · date · temps", async () => {
-    injecterRegles(".lecture-corps");
+    injecterRegles(".lecture-corps", ".lecture-corps h2", ".lecture-corps p");
     await ouvrir();
     const titre = await screen.findByText("Un titre de lecture");
     expect(titre.tagName).toBe("H2"); // la whitelist reconstruit de VRAIS éléments
     const article = document.querySelector(".lecture-corps");
     expect(article).not.toBeNull();
     expect(getComputedStyle(article!).fontFamily).toContain("serif");
+    // La feuille de lecture (DESIGN §12) : le preflight de Tailwind aplatit
+    // titres et marges — le mur de texte. Hiérarchie et rythme sont lus
+    // dans le VRAI styles.css (injecterRegles), jamais recopiés ici.
+    expect(getComputedStyle(titre).fontSize).not.toBe("17px");
+    expect(getComputedStyle(screen.getByText("Paragraphe un.")).marginBottom).not.toBe("0px");
     // Le rendu inline des marques reprend un porteur : un paragraphe du
     // corps est là, et le segment gras est un VRAI élément <strong> —
     // renduBloc reconstruit l'arbre, jamais du texte aplati.
