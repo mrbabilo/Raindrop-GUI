@@ -121,8 +121,8 @@ leur raisonnement, et un renvoi par lot livré.*
       frais existe) — au-delà du binaire « vide / pas vide » de notre spec
       lecture §3.
 - [ ] **Restes des revues du lot inversion + lecture (2026-09-22)** :
-      amendements datés des specs encore au rail (lecture §3 ; spec
-      principale §12, vers la ligne 303) — **avant prochaine release** ;
+      ~~amendements datés des specs encore au rail~~ **soldé le
+      2026-09-22** (lecture §3/§8/§10 ; spec principale §12) ;
       tests retour-de-lecture (« fiche encore là », « Lire réapparaît ») ;
       course au chargement du clic (`useOuvrirSignet` lu sur un inventaire
       pas encore résolu → fiche au lieu de lecture ; repli sûr, comportement

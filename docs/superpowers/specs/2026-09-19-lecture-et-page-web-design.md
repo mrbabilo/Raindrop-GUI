@@ -80,7 +80,9 @@ l'injection de contenu archivé est exclue par construction, et aucune
 `docs/KARAKEEP.md`) : la v1 initiale réduisait la lecture à du texte nu ;
 un texte est un extrait, pas une lecture — le rendu filtré donne la
 lecture vraie pour le même invariant de sécurité. Le **temps de lecture**
-(≈ 220 mots/min, calculé sur l'extraction) rejoint le rail.
+(≈ 220 mots/min, calculé sur l'extraction) rejoint le rail — **amendé le
+2026-09-22 (spec inversion)** : la ligne de tête désormais ; le rail de
+ce paragraphe a cédé sa place.
 
 **Rendu** : vue pleine largeur de l'app (l'extension de la fiche que §12
 dessinait) — colonne serif ~66 caractères, rail droit de métadonnées (titre,
@@ -88,6 +90,13 @@ domaine, collection, étiquettes, badge « archive locale » ou « copie
 permanente », **date de l'archive** — la route la porte dans un en-tête
 `X-Archive-Date`, mtime du fichier : lire sans montrer la fraîcheur de ce
 qu'on lit serait cacher la moitié du diagnostic), bouton de fermeture qui revient à la vue d'origine
+
+**Amendé le 2026-09-22 (spec inversion)** : la vue n'est plus « pleine
+largeur » — la fiche accompagne la lecture en colonne de droite ; le rail
+droit de métadonnées a cédé sa place à une **ligne de tête** (provenance ·
+date · temps, DESIGN §12) : le titre, le domaine, la collection et les
+étiquettes vivent dans la fiche voisine. La date et le badge de provenance
+restent dans la vue ; le bouton de fermeture est fixe, hors du défilement.
 (`returnView`, même règle que la Revue : **l'aller ne prouve rien sans le
 retour**). Les surlignages restent dans la fiche — le mode lecture les ne
 duplique pas en v1.
@@ -139,9 +148,10 @@ réelle) ; 404 nommé sur identifiant sans archive ; identifiant non entier
 refusé ; la garde de 64 Mo coupe avec sa raison ; un gz corrompu est un
 refus, pas un plantage. Sabordés.
 **Front** : les heuristiques d'extraction (priorités, repli corps, extraction
-vide) ; le mode lecture (rendu du texte, rail, badge, **fermer ramène bien à
-la vue d'origine**) ; « Lire » désactivé avec raison ; le déclenchement du
-téléchargement quand seule la copie Pro existe.
+vide) ; le mode lecture (rendu du texte, ligne de tête — le rail des
+origines, **amendé le 2026-09-22**, spec inversion —, badge, **fermer
+ramène bien à la vue d'origine**) ; « Lire » désactivé avec raison ; le
+déclenchement du téléchargement quand seule la copie Pro existe.
 **Rust** : le refus de schéma (file://, javascript:, origine de l'app) ;
 l'acceptation http/https.
 **Réel** : la lecture sur de vraies archives, la fenêtre sur de vrais sites —
@@ -153,8 +163,9 @@ l'acceptation http/https.
   le 2026-09-19 » (comme le fut `cache` avant lui) ; la fenêtre webview y
   est ajoutée comme geste distinct.
 - **DESIGN.md** : section pour la forme du mode lecture (serif, 66
-  caractères, rail, badge) — la direction visuelle fait foi, elle doit dire
-  cette surface.
+  caractères, rail, badge — **aujourd'hui ligne de tête et barre fixe,
+  amendé le 2026-09-22**, spec inversion) — la direction visuelle fait
+  foi, elle doit dire cette surface.
 - **ROADMAP** : l'entrée « Hors ligne » garde ce qui lui appartient (les
   écritures refusées proprement, le thème system à chaud) ; la consultation
   hors ligne des archives est CE lot, il en sort.
