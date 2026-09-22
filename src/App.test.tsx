@@ -46,6 +46,10 @@ function mockApi(mcp: string, archivesIds: number[] = []) {
     if (path === "/api/backup/archives") return Promise.resolve({ ids: archivesIds, octets: archivesIds.length * 5 });
     if (path === "/api/collections") return Promise.resolve({ items: collections });
     if (path === "/api/tags") return Promise.resolve({ items: tags });
+    // Vues sauvegardées (smart lists) : la Sidebar les rend — sans cette
+    // branche, la section recevrait la réponse de health (piège documenté
+    // « route absente du mock »).
+    if (path === "/api/smartlists") return Promise.resolve({ items: [] });
     return Promise.resolve({ status: "ok", mcp });
   });
 }

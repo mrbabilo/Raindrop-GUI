@@ -24,6 +24,17 @@ vi.mock("../hooks/useStaticData", () => ({
   useTags: () => ({ data: [{ name: "typescript", count: 8 }, { name: "orphelin", count: 0 }], isLoading: false }),
 }));
 
+// Le label n'est PAS un hasard : la fixture collections porte déjà un
+// enfant « Rust », que le test « Rust est un enfant : replié par défaut »
+// asserte ABSENT — une smart list homonyme ferait échouer ce test.
+vi.mock("../hooks/useSmartLists", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../hooks/useSmartLists")>()),
+  useSmartLists: () => ({
+    data: [{ id: "sl-1", label: "Vue sauvegardée", vue: { collectionId: 0, tags: ["rust"] }, cree: "2026-09-22T10:00:00Z" }],
+    isLoading: false,
+  }),
+}));
+
 const Spy = () => {
   const { view } = useAppState();
   return <span data-testid="view">{JSON.stringify(view)}</span>;
@@ -62,6 +73,12 @@ describe("Sidebar", () => {
     expect(screen.queryByText("Rust")).not.toBeInTheDocument();
     expect(screen.getByText("typescript")).toBeInTheDocument();
     expect(screen.getByText("8")).toBeInTheDocument();
+  });
+
+  it("la section des vues sauvegardées se rend entre Nettoyage et Collections", () => {
+    renderSidebar();
+    expect(screen.getByText("Vues sauvegardées")).toBeInTheDocument();
+    expect(screen.getByText("Vue sauvegardée")).toBeInTheDocument();
   });
 
   // L'app dit sa version en pied de barre (l'exemple de Karakeep).

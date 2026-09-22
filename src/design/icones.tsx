@@ -91,6 +91,9 @@ const paths: Record<string, ReactNode> = {
   // chevrons d'arbre : l'état d'un groupe plié ou déplié
   chevronBas: <path d="M4.5 6.5L8 10l3.5-3.5" />,
   chevronDroit: <path d="M6.5 4.5L10 8l-3.5 3.5" />,
+  // marque-page : sauvegarder la vue courante — le ruban dit « je retiens
+  // cette vue », la barre latérale en est le recueil.
+  marquePage: <path d="M4.5 3.5h7v10L8 11l-3.5 2.5z" />,
 };
 
 export type NomIcone = keyof typeof paths;

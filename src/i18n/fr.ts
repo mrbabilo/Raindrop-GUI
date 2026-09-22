@@ -344,6 +344,21 @@ export const fr = {
   "sauvegarde.termine": "Sauvegarde terminée.",
   "sauvegarde.bascule": "Balayage complet : {raison}",
   "sauvegarde.annulee": "Sauvegarde annulée — elle n'est pas comptée comme valide.",
+
+  // ─── Vues sauvegardées (smart lists, spec 2026-09-22) ────────────────────
+  // La section de la barre latérale : les entrées, leurs commandes au
+  // survol, et l'état d'échec du chargement (comme les autres requêtes).
+  "smartlist.section": "Vues sauvegardées",
+  "smartlist.renameAria": "Renommer la vue {name}",
+  "smartlist.deleteAria": "Supprimer la vue {name}",
+  "smartlist.renameField": "Nouveau nom de la vue",
+  "smartlist.indisponible": "Vues sauvegardées indisponibles",
+  // Le geste de création (TopBar, spec §4) : visible seulement quand un
+  // filtre est actif ; le champ est prérempli de la recherche ou de la
+  // première étiquette retenue.
+  "smartlist.saveView": "Sauvegarder la vue",
+  "smartlist.nameAria": "Nom de la vue sauvegardée",
+  "smartlist.pose": "Enregistrer cette vue",
 } as const;
 
 export type FrKey = keyof typeof fr;

@@ -8,6 +8,7 @@ import { useDrag, laMemeCible, type CibleDepot } from "../state/drag";
 import { CarreCollection, teinteCollection } from "../design/Signaux";
 import { useVersionInstallee } from "../hooks/useReleases";
 import { GroupeCollection, type PliageClavier } from "./GroupeCollection";
+import { SectionSmartLists } from "./SectionSmartLists";
 import { useRovingFocus } from "../hooks/useRovingFocus";
 
 // Entrée de navigation : 28 px de haut (DESIGN.md §8 — leading-5 + py-1),
@@ -113,6 +114,11 @@ export function Sidebar() {
       </section>
 
       <button data-nav className={item + (view.kind === "cleanup" ? selected : "")} onClick={() => go({ kind: "cleanup" })}>{t("nav.cleanup")}</button>
+
+      {/* Vues sauvegardées (smart lists, 2026-09-22) : entre les vues fixes
+          et Collections (spec §5) — la section se masque seule si le
+          répertoire est vide. */}
+      <SectionSmartLists />
 
       <section>
         <h2 className="px-2 text-xs font-medium text-app-muted">{t("nav.collections")}</h2>
