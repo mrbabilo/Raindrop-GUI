@@ -88,8 +88,14 @@ durable du signet (marqueur « Archivé » et copie, §6).
 ## 7. Cas aux bords
 
 - **Copie permanente à télécharger** : le clic ouvre la lecture, qui conduit
-  le téléchargement à la demande (comportement existant : progression
-  nommée inline, échec nommé, « Voir la page » en issue).
+  le téléchargement à la demande — progression nommée inline, échec nommé,
+  « Voir la page » en issue. **Amendé le 2026-09-22, en vérification
+  réelle** : la parenthèse « comportement existant » était fausse — le flux
+  de téléchargement vivait dans la fiche (`ActionsLecture`), pas dans la
+  lecture ; le clic inversé l'a court-circuité et l'écran nommait une
+  « disparition » mensongère. La lecture conduit désormais le
+  téléchargement elle-même (l'archive locale reste lue directement ;
+  `ARCHIVE_ABSENTE` hors `sourceCopie` reste le cas nommé d'origine).
 - **Archivage en vol, copie en échec, rien du tout** : clic → fiche, où la
   raison est posée à l'écran (comportement existant du bouton).
 - **Clavier** : Enter sur une ligne passe par le même `ouvrirSignet` que le
