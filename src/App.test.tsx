@@ -329,6 +329,23 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Fermer le détail" })).toBeInTheDocument();
   });
 
+  // Le retour de lecture (revue finale : l'aller ne prouve rien sans le
+  // retour) — fermer la lecture rend la vue d'origine, la fiche est encore
+  // là, et « Lire » est revenu : `dejaLue` ne survit pas à la fermeture.
+  it("fermer la lecture : vue d'origine, fiche encore là, « Lire » revenu", async () => {
+    mockApi("connected", [1000]);
+    render(<App onEtat={vi.fn()} />, { wrapper });
+    await userEvent.click(await screen.findByTestId("row-1000"));
+    await screen.findByRole("button", { name: "Fermer la lecture" });
+    await userEvent.click(screen.getByRole("button", { name: "Fermer la lecture" }));
+    // La vue d'origine (la liste) est rendue…
+    expect(screen.getByTestId("row-1000")).toBeInTheDocument();
+    // …la fiche accompagne toujours…
+    expect(screen.getByRole("button", { name: "Fermer le détail" })).toBeInTheDocument();
+    // …et « Lire » est revenu.
+    expect(screen.getByRole("button", { name: "Lire" })).toBeInTheDocument();
+  });
+
   // La garde du périmètre : non lisible → clic = fiche, la vue reste. Avant le
   // lot c'était le SEUL comportement du clic ; il doit survivre à l'inversion.
   it("clic sur une ligne non lisible : fiche seule, la liste reste", async () => {
@@ -337,5 +354,26 @@ describe("App", () => {
     expect(await screen.findByRole("button", { name: "Fermer le détail" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Fermer la lecture" })).not.toBeInTheDocument();
     expect(screen.getByTestId("row-1000")).toBeInTheDocument();
+  });
+
+  // La course au chargement (revue Task 2, mineur a) : au clic, l'inventaire
+  // d'archives peut ne pas être résolu — la décision l'ATTEND au lieu de
+  // lire `undefined` comme « pas d'archive » (fiche au lieu de lecture).
+  it("clic pendant le chargement de l'inventaire : la décision attend, la lecture s'ouvre", async () => {
+    let liberer!: (v: unknown) => void;
+    const enAttente = new Promise((resolve) => {
+      liberer = resolve;
+    });
+    mockApi("connected", [1000]);
+    // La branche archives seule devient la promesse différée ; le reste du
+    // mock passe par l'implémentation d'origine.
+    const anterieure = getMock.getMockImplementation()!;
+    getMock.mockImplementation((path: string) =>
+      path === "/api/backup/archives" ? enAttente : anterieure(path),
+    );
+    render(<App onEtat={vi.fn()} />, { wrapper });
+    await userEvent.click(await screen.findByTestId("row-1000"));
+    liberer({ ids: [1000], octets: 5 });
+    expect(await screen.findByRole("button", { name: "Fermer la lecture" })).toBeInTheDocument();
   });
 });

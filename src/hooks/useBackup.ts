@@ -61,6 +61,14 @@ export const useBackupStatus = () =>
     refetchInterval: 15_000,
   });
 
+/** La lecture de l'inventaire, en UN endroit : la requête du hook ET la
+ *  décision du clic (`useOuvrirSignet`, qui attend l'inventaire au lieu de
+ *  lire `undefined`) la partagent — même route. */
+export const chargerInventaire = async () => {
+  const inv = await api.get<InventaireArchives>("/api/backup/archives");
+  return { octets: inv.octets, set: new Set(inv.ids) };
+};
+
 /** L'inventaire en `Set` : le marqueur « Archivé » le teste par identifiant,
  *  à chaque ligne de la liste — un tableau y serait quadratique.
  *
@@ -70,10 +78,7 @@ export const useBackupStatus = () =>
 export const useArchives = (options?: { enabled?: boolean }) =>
   useQuery({
     queryKey: ["backup", "archives"],
-    queryFn: async () => {
-      const inv = await api.get<InventaireArchives>("/api/backup/archives");
-      return { octets: inv.octets, set: new Set(inv.ids) };
-    },
+    queryFn: chargerInventaire,
     staleTime: 60_000,
     enabled: options?.enabled ?? true,
   });
