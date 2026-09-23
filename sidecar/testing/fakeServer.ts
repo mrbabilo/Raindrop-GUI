@@ -31,15 +31,25 @@ export function buildFakeRaindropServer(opts?: {
         per_page: z.number().default(25),
         important: z.boolean().optional(),
         notag: z.boolean().optional(),
+        // Le tri, que le vrai tool TRANSMET à l'API : absent du schéma, zod le
+        // retirait en silence — un appelant qui en dépend (le snapshot trie
+        // par `created` depuis le 2026-09-23) aurait été testé contre un
+        // ordre qu'il n'a pas demandé (trap « faux infidèle »). Sans `sort`,
+        // l'ordre d'insertion reste celui des tests existants.
+        sort: z.string().optional(),
       },
     },
-    async ({ collection_id, page, per_page, important, notag }) => {
+    async ({ collection_id, page, per_page, important, notag, sort }) => {
       const g = guard("search_raindrops");
       if (g) return g;
       let items = fx.raindrops.filter((r) => (collection_id === -99 ? r.removed : !r.removed));
       if (collection_id > 0) items = items.filter((r) => r.collectionId === collection_id);
       if (important) items = items.filter((r) => r.important);
       if (notag) items = items.filter((r) => r.tags.length === 0);
+      if (sort === "created" || sort === "-created") {
+        const sens = sort === "created" ? 1 : -1;
+        items = [...items].sort((a, b) => sens * (a.created.localeCompare(b.created) || a.id - b.id));
+      }
       const start = page * per_page;
       return ok({ count: items.length, items: items.slice(start, start + per_page).map(toRaw) });
     },
