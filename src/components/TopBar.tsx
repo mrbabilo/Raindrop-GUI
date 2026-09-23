@@ -46,11 +46,16 @@ export function TopBar() {
   // Recherche debouncée (300 ms) : chaque frappe réarme le timer — la requête
   // ne part qu'après une pause de la saisie. Le reset de page est implicite :
   // patchList change la queryKey de useRaindrops.
+  // Une saisie ÉGALE à la vue n'est pas une saisie : sans ce garde, la
+  // resynchronisation d'après navigation re-patchait la recherche courante,
+  // et le patch efface `smartlistId` — la vue sauvegardée perdait son
+  // surlignage 300 ms après son ouverture (audit du 2026-09-23).
+  const rechercheVue = view.kind === "list" ? view.search : undefined;
   useEffect(() => {
-    if (!isList) return;
+    if (!isList || (draft || undefined) === (rechercheVue || undefined)) return;
     const id = setTimeout(() => patchList({ search: draft || undefined }), 300);
     return () => clearTimeout(id);
-  }, [draft, isList]);
+  }, [draft, isList, rechercheVue]);
 
   if (!isList) return <div />;
 
