@@ -49,7 +49,7 @@ export function ListPane() {
   // Déplacement d'un signet vers une collection : la ligne porte la poignée,
   // la Sidebar les cibles (useDragBookmark). L'échec s'affiche sous la liste
   // plutôt que de disparaître (R8P-1).
-  const drag = useDragBookmark();
+  const drag = useDragBookmark(items.map((r) => r.id));
   // Le clic inverse (spec inversion §3) : lisible → la lecture s'ouvre, la
   // fiche l'accompagne ; non lisible → la fiche seule. Une seule décision,
   // partagée par le clavier, la mosaïque et la ligne.

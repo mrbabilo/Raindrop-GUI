@@ -26,7 +26,6 @@ import { BulkBar } from "./BulkBar";
 export function CollectionView() {
   const { view, go, selectedIds, toggleSelect } = useAppState();
   const arbre = useCollections().data ?? [];
-  const drag = useDragBookmark();
   // Le clic inverse (spec inversion §3) : même décision que la liste
   // principale — lisible → lecture ouverte ET fiche, non lisible → fiche seule.
   const ouvrir = useOuvrirSignet();
@@ -63,8 +62,10 @@ export function CollectionView() {
   // Même signalétique que la liste principale : la vue Collection monte les
   // mêmes lignes, un lien mort doit s'y voir pareil.
   const etats = useEtatsAnalyse().data;
-  const poignee = (r: RaindropItem) => drag.poignee(r.id, () => ouvrir(r), r.title);
   const tous = [...itemsDirects, ...Object.values(parSection).flat()];
+  // Après `tous` : la poignée n'embarque que les cochés MONTRÉS ici.
+  const drag = useDragBookmark(tous.map((r) => r.id));
+  const poignee = (r: RaindropItem) => drag.poignee(r.id, () => ouvrir(r), r.title);
 
   if (parent === undefined)
     return <main className="grid h-full place-items-center text-app-muted">{t("state.loading")}</main>;

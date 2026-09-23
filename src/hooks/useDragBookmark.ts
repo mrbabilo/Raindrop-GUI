@@ -41,8 +41,16 @@ const rendreSelection = (garde: HTMLStyleElement | null): void => {
 // pour Non-taggés, un filtre d'état), et c'est dans `deposer` que la sorte
 // choisit le verbe.
 
-export function useDragBookmark() {
+/** `visibles` : les signets que la vue MONTRE. La sélection est globale et
+ *  survit à la navigation (R9P-1) : tirer un coché n'emmène que les cochés
+ *  VISIBLES — comme la BulkBar, qui n'agit que sur l'intersection. Sans
+ *  cette borne, le dépôt déplaçait (ou corbeillait) des signets cochés dans
+ *  une autre vue, que rien à l'écran ne montrait (audit du 2026-09-23). */
+export function useDragBookmark(visibles: readonly number[]) {
   const { selectedIds, view } = useAppState();
+  // Hors du rendu, comme le geste : lue au pointerdown, jamais une dépendance.
+  const vus = useRef(visibles);
+  vus.current = visibles;
   const { ids, commencer, terminer } = useDrag();
   const bulk = useBulk();
   const [erreur, setErreur] = useState<string | null>(null);
@@ -171,10 +179,11 @@ export function useDragBookmark() {
         if (e.button !== undefined && e.button !== 0) return; // clic droit : pas un déplacement
         // La garde AVANT tout pixel (les deux formes — voir plus haut).
         const garde = couperSelection();
-        // Sélection liée : tirer un signet COCHÉ emmène toute la sélection ;
+        // Sélection liée : tirer un signet COCHÉ emmène les cochés VISIBLES ;
         // un signet non coché ne s'agrège pas à elle — on tire ce qu'on
         // montre, pas ce qui est coché ailleurs.
-        const embarques = selectedIds.has(id) ? [...selectedIds] : [id];
+        const montres = new Set(vus.current);
+        const embarques = selectedIds.has(id) ? [...selectedIds].filter((v) => v === id || montres.has(v)) : [id];
         // Un fantôme qui annonce « 3 signets » vaut mieux que trois titres
         // empilés : on déplace un LOT, sa taille est la seule chose à savoir.
         const libelle = embarques.length > 1 ? t("drag.count", { n: embarques.length }) : titre;

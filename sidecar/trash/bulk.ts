@@ -38,12 +38,19 @@ export interface EchecItem {
 }
 
 /** Met à la corbeille les identifiants donnés, un par un. Ce qui est écrit
- *  reste acquis : un échec n'annule jamais les précédents. */
+ *  reste acquis : un échec n'annule jamais les précédents.
+ *
+ *  Un item DÉJÀ en corbeille (-99) est écarté et compté (`deja`), jamais
+ *  supprimé (audit du 2026-09-23) : chez Raindrop, supprimer depuis la
+ *  corbeille est DÉFINITIF (SOURCES.md) — le seul geste irréversible de
+ *  l'app contournait la frappe SUPPRIMER par un simple dépôt, depuis la vue
+ *  Corbeille ou via une sélection globale portant des corbeillés. Et son
+ *  origine mémorisée n'est pas écrasée par -99 : elle sert à le restaurer. */
 export async function corbeilleEnMasse(
   deps: DepsBulk,
   ids: number[],
-): Promise<{ corbeille: number; echecs: EchecItem[] }> {
-  const r = { corbeille: 0, echecs: [] as EchecItem[] };
+): Promise<{ corbeille: number; deja: number; echecs: EchecItem[] }> {
+  const r = { corbeille: 0, deja: 0, echecs: [] as EchecItem[] };
   for (const id of ids) {
     const lu = await deps.mcp("get_raindrop", { id });
     if (!lu.ok) {
@@ -51,12 +58,16 @@ export async function corbeilleEnMasse(
       continue;
     }
     const cid = (lu.data as { collection?: { $id?: number } }).collection?.$id ?? -1;
+    if (cid === -99) {
+      r.deja++;
+      continue;
+    }
     await deps.origins.remember(id, cid);
     const supprime = await deps.mcp("delete_raindrop", { id });
     if (supprime.ok) r.corbeille++;
     else r.echecs.push({ id, raison: supprime.message });
   }
-  deps.journal.info("corbeille en masse", { corbeille: r.corbeille, echecs: r.echecs.length });
+  deps.journal.info("corbeille en masse", { corbeille: r.corbeille, deja: r.deja, echecs: r.echecs.length });
   return r;
 }
 

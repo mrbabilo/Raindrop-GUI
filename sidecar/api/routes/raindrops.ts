@@ -183,6 +183,10 @@ export function raindropsRoutes(deps: SidecarDeps): Hono {
     const brut = c.req.query("from") ?? undefined;
     const from = fromQuery.safeParse(brut === "" ? undefined : brut);
     if (!from.success) return apiError(c, "INVALID_INPUT", z.prettifyError(from.error));
+    // Un appelant qui se dit DANS la corbeille demande une suppression
+    // définitive (SOURCES.md) : ce geste appartient au vidage de niveau 2,
+    // jamais à ce DELETE (audit du 2026-09-23 — même garde que la fiche).
+    if (from.data === -99) return apiError(c, "INVALID_INPUT", "déjà en corbeille : la suppression y serait définitive");
     // §4.2 : la corbeille ne garde pas l'origine → notée AVANT la suppression.
     // Le store ne remonte jamais d'erreur (contrat origins.ts) : un échec de
     // mémorisation dégrade en « destination demandée au front », pas en 500.
