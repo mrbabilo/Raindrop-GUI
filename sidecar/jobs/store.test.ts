@@ -48,6 +48,17 @@ describe("JobStore", () => {
     for (let i = 0; i < 60; i++) store.create("x", 1).finish();
     expect(store.list().length).toBe(50);
   });
+
+  // L'éviction portait sur les snapshots, pas sur les handles : chacun
+  // retient état, émetteur et résultat, et la table grossissait sans borne.
+  it("un job évincé perd aussi son handle", () => {
+    const store = new JobStore();
+    const premier = store.create("x", 0);
+    expect(store.getHandle(premier.id)).toBeDefined(); // présent avant l'éviction
+    for (let i = 0; i < 50; i++) store.create("x", 0);
+    expect(store.get(premier.id)).toBeUndefined();
+    expect(store.getHandle(premier.id)).toBeUndefined();
+  });
 });
 
 describe("runJob — le journal du job", () => {

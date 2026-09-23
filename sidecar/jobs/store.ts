@@ -48,6 +48,9 @@ export class JobStore {
       const oldest = this.jobs.keys().next().value;
       if (!oldest) break;
       this.jobs.delete(oldest);
+      // Le handle aussi (audit du 2026-09-23) : il retient l'état, l'émetteur
+      // et le RÉSULTAT — sans lui, la table grossissait sans borne.
+      this.handles.delete(oldest);
     }
     const handle: JobHandle = {
       id,

@@ -161,6 +161,9 @@ export type ScanEvent =
 // settle — l'event `error` (échec du job) rejette AVANT le onDone que le
 // parseur appelle pour tout kind terminal ; sans le garde, la promesse se
 // résoudrait comme une fin normale et l'échec serait silencieux.
+// Flux CLOS sans terme (audit du 2026-09-23) : la promesse ne se réglait
+// jamais — mutation `pending` à perpétuité, « Analyse en cours » figé. Elle
+// se résout : l'invalidation qui suit relit l'état vrai (status, running).
 const suivreFin = (jobId: string, signal: AbortSignal, onEvent?: (e: ScanEvent) => void) =>
   new Promise<void>((resolve, reject) => {
     let settled = false;
@@ -183,9 +186,14 @@ const suivreFin = (jobId: string, signal: AbortSignal, onEvent?: (e: ScanEvent) 
       onDone: () => {
         if (!settled) resolve();
       },
-    }, signal).catch((err: unknown) => {
-      if (!settled) reject(err);
-    });
+    }, signal).then(
+      () => {
+        if (!settled) resolve();
+      },
+      (err: unknown) => {
+        if (!settled) reject(err);
+      },
+    );
   });
 
 export const useStartScan = (type: AnalysisType, onEvent?: (e: ScanEvent) => void) => {
