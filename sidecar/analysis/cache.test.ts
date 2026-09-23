@@ -27,6 +27,23 @@ describe("AnalysisCache", () => {
     expect(cache.lastScan("links")).toBeTruthy();
   });
 
+  // Deux scans de types différents tournent en même temps : leurs `save()`
+  // se chevauchaient sur le même `.tmp` — mesuré, 2 sur 3 échouaient en
+  // ENOENT (audit du 2026-09-23). Sérialisés, tous aboutissent, et le
+  // DERNIER état demandé est celui qui reste sur disque.
+  it("des save() concurrents aboutissent tous, le dernier état demandé gagne", async () => {
+    const file = join(dir, "analysis.json");
+    const cache = await AnalysisCache.load(file);
+    for (let i = 0; i < 5000; i++) cache.setResult(result(`https://x.example/${i}`, "ok"));
+    const premier = cache.save();
+    cache.setResult(result("https://dernier.example", "dead"));
+    const verdicts = await Promise.allSettled([premier, cache.save(), cache.save()]);
+    expect(verdicts.map((v) => v.status)).toEqual(["fulfilled", "fulfilled", "fulfilled"]);
+    const relu = await AnalysisCache.load(file);
+    expect(relu.getResult("https://dernier.example")?.status).toBe("dead");
+    expect(existsSync(`${file}.tmp`)).toBe(false);
+  });
+
   it("fichier corrompu → cache vide, pas de throw", async () => {
     const file = join(dir, "analysis.json");
     writeFileSync(file, "{corrompu");

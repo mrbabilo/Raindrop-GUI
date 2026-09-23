@@ -33,10 +33,22 @@ export class AnalysisCache {
     return cache;
   }
 
-  async save(): Promise<void> {
-    const tmp = `${this.file}.tmp`;
-    await writeFile(tmp, JSON.stringify(this.data), "utf8");
-    await rename(tmp, this.file);
+  /** Écritures SÉRIALISÉES (audit du 2026-09-23), comme `origins` et
+   *  `smartlists` : un scan de doublons et un scan de liens tournent en même
+   *  temps (le verrou est par type), et deux tmp+rename entrelacés sur le
+   *  même `.tmp` faisaient échouer l'un en ENOENT — mesuré : 2 sur 3 — et
+   *  pouvaient publier un mélange d'états. Chaque écriture fige l'état AU
+   *  MOMENT où elle part : la dernière demandée reste la dernière écrite. */
+  private ecriture: Promise<void> = Promise.resolve();
+
+  save(): Promise<void> {
+    const suite = this.ecriture.then(async () => {
+      const tmp = `${this.file}.tmp`;
+      await writeFile(tmp, JSON.stringify(this.data), "utf8");
+      await rename(tmp, this.file);
+    });
+    this.ecriture = suite.catch(() => undefined);
+    return suite;
   }
 
   getResult(url: string): LinkCheckResult | undefined {
