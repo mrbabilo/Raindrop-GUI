@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import { useElaguerDoublons } from "./useAnalysis";
 import type { RaindropItem } from "../../shared/types";
 
 // Toutes les écritures du front passent ici : une mutation = un endpoint
@@ -31,12 +32,19 @@ export const useUpdateRaindrop = (id: number) => {
 
 export const useTrashRaindrop = () => {
   const invalidate = useInvalidate();
+  // Les groupes de doublons ne se recalculent qu'au scan : la fiche, ouverte
+  // au clic dans la vue Doublons, corbeillait une copie qui y RESTAIT jusqu'au
+  // re-scan — la Revue, elle, élaguait déjà (audit du 2026-09-23).
+  const elaguerDoublons = useElaguerDoublons();
   return useMutation({
     // `from` = collection courante de l'item : le sidecar la mémorise pour
     // pouvoir restaurer à l'origine (spec §4.2, Task 0b). Omis = origine inconnue.
     mutationFn: (v: { id: number; from?: number }) =>
       api.send("DELETE", `/api/raindrops/${v.id}${v.from != null ? `?from=${v.from}` : ""}`),
-    onSuccess: () => invalidate("raindrops", "collections", "tags"),
+    onSuccess: (_r, v) => {
+      elaguerDoublons([v.id]);
+      invalidate("raindrops", "collections", "tags");
+    },
   });
 };
 

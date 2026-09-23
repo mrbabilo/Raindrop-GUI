@@ -28,6 +28,11 @@ export function useIndexClavier({
   // pointeur » — mais il ne doit PAS voler le focus ni faire défiler la
   // liste : passer la souris au-dessus est un geste sans intention.
   const clavier = useRef(false);
+  // La liste peut rétrécir SOUS l'index (ListPane reste monté d'une
+  // collection à l'autre ; la Revue filtre par recherche) : un index hors
+  // liste ne désigne plus rien — sans cette borne, aucune ligne ne portait
+  // l'arrêt de tabulation et la liste sortait du parcours clavier.
+  const valide = actif !== null && actif < nombre ? actif : null;
 
   useEffect(() => {
     if (actif === null) return;
@@ -50,19 +55,19 @@ export function useIndexClavier({
     }
     if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActif((i) => Math.max((i ?? 1) - 1, 0));
+      setActif((i) => Math.max(Math.min(i ?? 1, nombre) - 1, 0));
       return;
     }
     if (e.key === "Home") { e.preventDefault(); setActif(0); return; }
     if (e.key === "End") { e.preventDefault(); setActif(nombre - 1); return; }
-    if (e.key === " " && actif !== null && surEspace !== undefined) {
+    if (e.key === " " && valide !== null && surEspace !== undefined) {
       e.preventDefault();
-      surEspace(actif);
+      surEspace(valide);
       return;
     }
-    if (e.key === "Enter" && actif !== null && surEntree !== undefined) {
+    if (e.key === "Enter" && valide !== null && surEntree !== undefined) {
       e.preventDefault();
-      surEntree(actif);
+      surEntree(valide);
       return;
     }
     // « Échap remonte d'un niveau et rend le focus » : la liste rend la main
@@ -76,7 +81,7 @@ export function useIndexClavier({
   /** À étaler sur la ligne d'index `i` — un seul arrêt de tabulation. */
   const ligne = (i: number) => ({
     "data-index": i,
-    tabIndex: (actif ?? 0) === i ? 0 : -1,
+    tabIndex: (valide ?? 0) === i ? 0 : -1,
     // L'index suit le focus RÉEL : tabuler dans la liste, ou cliquer une
     // ligne, pose le point de départ des flèches. Sans cela, la première
     // flèche vers le bas rejoue l'entrée au lieu d'avancer.
