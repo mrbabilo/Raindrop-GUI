@@ -27,6 +27,7 @@ describe("incrémental", () => {
     // vaut mieux le réécrire que le sauter.
     expect(ids).toEqual([2, 3]);
     expect(r.nouveauWatermark).toBe("2026-03-01T00:00:00.000Z");
+    expect(r.complet).toBe(true); // le watermark a été atteint
   });
 
   // Correction §1bis n°4 : plusieurs éléments à la même seconde.
@@ -73,6 +74,8 @@ describe("incrémental", () => {
     // Deux pages exactement, donc 100 éléments et non 150 : le garde-fou a
     // tranché au lieu de laisser filer.
     expect(r.modifies).toHaveLength(100);
+    // Arrêté AU MILIEU du neuf : l'appelant doit le savoir, et balayer.
+    expect(r.complet).toBe(false);
   });
 });
 
