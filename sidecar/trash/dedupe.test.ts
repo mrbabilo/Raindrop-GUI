@@ -11,11 +11,21 @@ const ok = <T>(data: T): CallOutcome<T> => ({ ok: true, data });
 const ko = (message: string): CallOutcome<never> => ({ ok: false, code: "RAINDROP_API", message });
 
 /** Un mcp factice : get_raindrop sert des étiquettes, tout est journalisé. */
-const fakeMcp = (journal: string[], etiquettes: Record<number, string[]>, ratechec?: (tool: string, args: Record<string, unknown>) => boolean) => {
+const fakeMcp = (
+  journal: string[],
+  etiquettes: Record<number, string[]>,
+  ratechec?: (tool: string, args: Record<string, unknown>) => boolean,
+  enCorbeille: number[] = [],
+) => {
   const mcp = async (tool: string, args: Record<string, unknown>): Promise<CallOutcome<unknown>> => {
     journal.push(`${tool}:${JSON.stringify(args)}`);
     if (ratechec?.(tool, args)) return ko("hoquet simulé");
-    if (tool === "get_raindrop") return ok({ _id: args.id, tags: etiquettes[args.id as number] ?? [] });
+    if (tool === "get_raindrop")
+      return ok({
+        _id: args.id,
+        tags: etiquettes[args.id as number] ?? [],
+        collection: { $id: enCorbeille.includes(args.id as number) ? -99 : 7 },
+      });
     if (tool === "update_raindrop") return ok({ _id: args.id });
     if (tool === "bulk_raindrops") return ok({ ids: args.ids });
     return ok({});
@@ -115,3 +125,29 @@ describe("deduper — la consolidation avant la corbeille", () => {
     expect(journal.filter((j) => j.startsWith("bulk_raindrops"))).toHaveLength(1);
   });
 });
+
+// Les groupes sortent d'un cache calculé AU SCAN : un signet a pu être
+// corbeillé ailleurs depuis (audit du 2026-09-23). La lecture qui sert
+// l'union dit où il vit — sans requête de plus.
+describe("deduper — ce qui a été corbeillé depuis le scan", () => {
+  it("gardé déjà en corbeille : la paire reste INTACTE, et le dit", async () => {
+    const journal: string[] = [];
+    const mcp = fakeMcp(journal, { 100: ["a"], 1: ["b"] }, undefined, [100]);
+    const r = await makeDedupe({ mcp, origins: fakeOrigins(journal) })([paire(100, [1])], job());
+    expect(journal.some((j) => j.startsWith("bulk_raindrops"))).toBe(false);
+    expect(journal.some((j) => j.startsWith("update_raindrop"))).toBe(false);
+    expect(r.corbeille).toBe(0);
+    expect(r.echecs).toEqual([{ id: 1, raison: "gardé déjà en corbeille — paire laissée intacte" }]);
+  });
+
+  it("copie déjà en corbeille : ni supprimée, ni comptée — la vivante part", async () => {
+    const journal: string[] = [];
+    const mcp = fakeMcp(journal, { 100: [], 1: ["x"], 2: ["y"] }, undefined, [1]);
+    const r = await makeDedupe({ mcp, origins: fakeOrigins(journal) })([paire(100, [1, 2])], job());
+    const bulk = journal.find((j) => j.startsWith("bulk_raindrops"))!;
+    expect(bulk).toContain('"ids":[2]');
+    expect(r).toMatchObject({ corbeille: 1, deja: 1, echecs: [] });
+    expect(journal).not.toContain("origines:1:7");
+  });
+});
+

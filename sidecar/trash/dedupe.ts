@@ -38,6 +38,9 @@ export interface ResultatDedupe {
   nonFusionnees: { id: number; raison: string }[];
   /** Copies non corbeillées. */
   echecs: { id: number; raison: string }[];
+  /** Copies DÉJÀ en corbeille à l'exécution (corbeillées ailleurs depuis le
+   *  scan) : ni supprimées, ni comptées dans `corbeille`. */
+  deja?: number;
   annule: boolean;
 }
 
@@ -56,10 +59,14 @@ export function unionEtiquettes(garde: string[], autres: string[]): string[] {
 }
 
 export function makeDedupe(deps: { mcp: Mcp; origins: OriginStore }) {
-  const etiquettesDe = async (id: number): Promise<string[]> => {
+  // La lecture qui sert l'union dit AUSSI où vit le signet — sans requête de
+  // plus. Les groupes sortent d'un cache calculé AU SCAN : un signet a pu
+  // être corbeillé ailleurs depuis (audit du 2026-09-23).
+  const lire = async (id: number): Promise<{ tags: string[]; enCorbeille: boolean }> => {
     const out = await deps.mcp("get_raindrop", { id });
     if (!out.ok) throw new Error(out.message);
-    return ((out.data as { tags?: string[] }).tags ?? []) as string[];
+    const d = out.data as { tags?: string[]; collection?: { $id?: number } };
+    return { tags: d.tags ?? [], enCorbeille: d.collection?.$id === -99 };
   };
 
   return async function deduper(
@@ -88,21 +95,43 @@ export function makeDedupe(deps: { mcp: Mcp; origins: OriginStore }) {
       // lecture ratée ici dégrade TOUTE la paire en non-fusionnée — nommé.
       let base: string[] = [];
       try {
-        base = await etiquettesDe(paire.garde);
+        const garde = await lire(paire.garde);
+        // Le gardé corbeillé depuis le scan : corbeiller ses copies mettrait
+        // le groupe ENTIER en corbeille — le contraire de ce que la Revue a
+        // promis (« on en garde un »). La paire reste intacte, et le dit.
+        if (garde.enCorbeille) {
+          for (const copie of paire.copies) {
+            r.echecs.push({ id: copie.id, raison: "gardé déjà en corbeille — paire laissée intacte" });
+            avance();
+          }
+          avance();
+          continue;
+        }
+        base = garde.tags;
       } catch (e) {
         for (const copie of paire.copies) {
           r.nonFusionnees.push({ id: copie.id, raison: `gardé illisible : ${e instanceof Error ? e.message : e}` });
         }
       }
       const nouvelles: string[] = [];
+      // Une copie déjà corbeillée n'a rien à faire : `DELETE /raindrops/0`
+      // l'ignorerait en répondant `result: true` — un succès inventé (même
+      // classe que le -99). Écartée, comptée à part.
+      const aCorbeiller: PaireDedupe["copies"] = [];
       for (const copie of paire.copies) {
         try {
-          const t = await etiquettesDe(copie.id);
-          nouvelles.push(...t);
+          const c = await lire(copie.id);
+          if (c.enCorbeille) {
+            r.deja = (r.deja ?? 0) + 1;
+            avance();
+            continue;
+          }
+          nouvelles.push(...c.tags);
           r.fusionnees++;
         } catch (e) {
           r.nonFusionnees.push({ id: copie.id, raison: e instanceof Error ? e.message : String(e) });
         }
+        aCorbeiller.push(copie);
         avance();
       }
       // Une seule écriture par gardé, et SEULEMENT si l'union apporte quelque
@@ -117,7 +146,11 @@ export function makeDedupe(deps: { mcp: Mcp; origins: OriginStore }) {
             r.nonFusionnees.push({ id: copie.id, raison: `gardé non mis à jour : ${ajout.message}` });
       }
       // Origines AVANT la corbeille (§4.2 — la corbeille ne les garde pas).
-      await Promise.all(paire.copies.map((c) => deps.origins.remember(c.id, c.collectionId)));
+      if (aCorbeiller.length === 0) {
+        avance();
+        continue;
+      }
+      await Promise.all(aCorbeiller.map((c) => deps.origins.remember(c.id, c.collectionId)));
       const out = await deps.mcp("bulk_raindrops", {
         operation: "delete",
         // ⚠️ SÉMANTIQUE RÉELLE (code compilé MCP 1.3.1) : le bulk delete
@@ -129,12 +162,12 @@ export function makeDedupe(deps: { mcp: Mcp; origins: OriginStore }) {
         // 2026-09-20 : deux doublons « corbeillés » restaient intacts sans
         // la moindre erreur.
         collection_id: 0,
-        ids: paire.copies.map((c) => c.id),
+        ids: aCorbeiller.map((c) => c.id),
       });
       if (out.ok) {
-        r.corbeille += paire.copies.length;
+        r.corbeille += aCorbeiller.length;
       } else {
-        for (const copie of paire.copies)
+        for (const copie of aCorbeiller)
           r.echecs.push({ id: copie.id, raison: out.message });
       }
       avance();

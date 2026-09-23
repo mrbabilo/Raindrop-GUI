@@ -50,6 +50,34 @@ describe("archiver", () => {
   });
 });
 
+// Le téléchargement S3 n'est PAS un appel Raindrop : tenu dans le créneau de
+// la file séquentielle, une copie de 160 Mo gelait toute l'interface pendant
+// sa durée (audit du 2026-09-23).
+describe("archiver — la file ne sert que l'appel Raindrop", () => {
+  it("le /cache passe par la file, le téléchargement S3 HORS d'elle", async () => {
+    let dansLaFile = false;
+    const vus: { url: string; dansLaFile: boolean }[] = [];
+    const file = {
+      run: async <T>(fn: () => Promise<T>) => {
+        dansLaFile = true;
+        try { return await fn(); } finally { dansLaFile = false; }
+      },
+    };
+    const fetchImpl = (async (url: string | URL) => {
+      vus.push({ url: String(url), dansLaFile });
+      return String(url).includes("/cache")
+        ? new Response(null, { status: 303, headers: { location: "http://s3.invalide/objet" } })
+        : new Response("<html>copie</html>", { status: 200 });
+    }) as unknown as typeof fetch;
+    const r = await archiver({ token: "j", fetchImpl, file, dossierArchives: join(dir(), "f"), raindropId: 9 });
+    expect(r.ok).toBe(true);
+    expect(vus).toEqual([
+      { url: "https://api.raindrop.io/rest/v1/raindrop/9/cache", dansLaFile: true },
+      { url: "http://s3.invalide/objet", dansLaFile: false },
+    ]);
+  });
+});
+
 describe("inventorier", () => {
   it("répertoire absent → inventaire vide", async () => {
     expect(await inventorier(join(dir(), "inexistant"))).toEqual({ ids: [], octets: 0 });

@@ -123,6 +123,8 @@ export interface ResultatDedupe {
   nonFusionnees: { id: number; raison: string }[];
   /** Copies non corbeillées — encore vivantes chez Raindrop. */
   echecs: { id: number; raison: string }[];
+  /** Copies déjà en corbeille à l'exécution : ni supprimées, ni comptées. */
+  deja?: number;
   annule: boolean;
 }
 
