@@ -15,6 +15,7 @@
 //! de runtime). Bindé 127.0.0.1, auth Bearer avec le token LOCAL : le
 //! token Raindrop ne traverse jamais HTTP (spec §3.7).
 
+use std::io::Write;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
@@ -40,17 +41,41 @@ pub fn connecte(corps: &str) -> bool {
 }
 
 /// La ligne de sondage, pure pour que le test prouve où passe le token :
-/// dans l'en-tête Authorization (et jamais dans l'URL, qui reste sans
-/// secret), avec sa borne par tentative.
-fn arguments(port: u16, token: &str) -> Vec<String> {
+/// NULLE PART dans la ligne de commande (audit du 2026-09-23). L'en-tête
+/// `Authorization` était un argument de `curl` — visible par `ps` à tout
+/// compte de la machine, à chaque tentative, pendant jusqu'à 20 s : un autre
+/// utilisateur d'un Mac partagé lisait le jeton et pilotait l'API locale.
+/// `-H @-` fait lire l'en-tête sur l'entrée standard (curl ≥ 7.55).
+fn arguments(port: u16) -> Vec<String> {
     vec![
         "-s".into(),                  // silencieux : on décide sur le corps
         "-m".into(),                  // borne de la tentative
         MAX_TENTATIVE.into(),
         "-H".into(),
-        format!("Authorization: Bearer {token}"),
+        "@-".into(),                  // l'en-tête arrive par l'entrée standard
         format!("http://127.0.0.1:{port}/api/health"),
     ]
+}
+
+/// L'en-tête d'authentification, écrit sur l'entrée standard de `curl`.
+fn entete(token: &str) -> String {
+    format!("Authorization: Bearer {token}\n")
+}
+
+/// Une tentative : `curl` lit l'en-tête sur son entrée, le jeton ne paraît
+/// dans aucun argument.
+fn tenter(args: &[String], entete: &str) -> Option<std::process::Output> {
+    let mut enfant = Command::new("curl")
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok()?;
+    if let Some(mut entree) = enfant.stdin.take() {
+        let _ = entree.write_all(entete.as_bytes());
+    } // `entree` tombe ici : curl lit la fin de flux
+    enfant.wait_with_output().ok()
 }
 
 /// Sonde jusqu'à `mcp: "connected"`, au plus `delai` (constat : ~20 s).
@@ -58,15 +83,11 @@ fn arguments(port: u16, token: &str) -> Vec<String> {
 /// uniquement, comme `sidecar::attendre_port`. Rend sans garantie au-delà
 /// du délai : l'appelant rend alors `Pret` quand même (décision du constat).
 pub fn attendre_connexion(port: u16, token: &str, delai: Duration) {
-    let args = arguments(port, token);
+    let args = arguments(port);
+    let entete = entete(token);
     let debut = Instant::now();
     while debut.elapsed() < delai {
-        if let Ok(sortie) = Command::new("curl")
-            .args(&args)
-            .stdin(Stdio::null())
-            .stderr(Stdio::null())
-            .output()
-        {
+        if let Some(sortie) = tenter(&args, &entete) {
             if sortie.status.success()
                 && connecte(&String::from_utf8_lossy(&sortie.stdout))
             {
@@ -118,17 +139,16 @@ mod tests {
     }
 
     #[test]
-    fn le_curl_porte_le_token_en_en_tete_jamais_dans_l_url() {
-        let args = arguments(51234, "jeton-local-secret");
-        let entetes: Vec<&String> =
-            args.iter().filter(|a| a.starts_with("Authorization")).collect();
-        assert_eq!(entetes.len(), 1, "un seul en-tête Authorization : {args:?}");
-        assert_eq!(entetes[0].as_str(), "Authorization: Bearer jeton-local-secret");
+    fn le_token_ne_parait_dans_aucun_argument_de_curl() {
+        let args = arguments(51234);
+        // Le jeton n'est pas un paramètre de la ligne de commande : `ps` ne
+        // peut rien en montrer, quel que soit le compte qui regarde.
+        assert!(args.iter().all(|a| !a.contains("Bearer")), "en-tête dans l'argv : {args:?}");
+        assert!(args.windows(2).any(|w| w[0] == "-H" && w[1] == "@-"), "en-tête lu sur stdin : {args:?}");
+        assert_eq!(entete("jeton-local-secret"), "Authorization: Bearer jeton-local-secret\n");
         let url = args.last().expect("l'URL en dernier argument");
         assert_eq!(url, "http://127.0.0.1:51234/api/health");
-        assert!(!url.contains("jeton-local-secret"), "le token a fui dans l'URL");
         // La borne par tentative est bien passée à curl : sans elle, un curl
         // suspendu ferait déborder l'échéance totale de la sonde.
         assert!(args.windows(2).any(|w| w[0] == "-m" && w[1] == MAX_TENTATIVE));
-    }
-}
+    }}
