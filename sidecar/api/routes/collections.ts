@@ -113,19 +113,20 @@ export function collectionsRoutes(deps: SidecarDeps): Hono {
   });
 
   app.delete("/:id", async (c) => {
-    const out = await deps.mcp("delete_collection", { id: Number(c.req.param("id")) });
+    // Un id illisible partait en NaN vers le pont ; 0, -1 et -99 (Tous, Non
+    // classés, Corbeille) ne sont pas des collections qu'on supprime.
+    const id = Number(c.req.param("id"));
+    if (!Number.isInteger(id) || id <= 0) return apiError(c, "INVALID_INPUT", "id de collection invalide");
+    const out = await deps.mcp("delete_collection", { id });
     if (!out.ok) return apiError(c, out.code, out.message, out.tool);
     return c.json({ deleted: true });
   });
 
-  // cleanup_collections : mapping du confirm MCP sur la gravité niveau 2 (spec §4.2)
-  app.post("/cleanup", async (c) => {
-    const body = z.object({ confirm: z.boolean() }).safeParse(await c.req.json().catch(() => null));
-    if (!body.success) return apiError(c, "INVALID_INPUT", "confirm: boolean requis");
-    const out = await deps.mcp("cleanup_collections", { confirm: body.data.confirm });
-    if (!out.ok) return apiError(c, out.code, out.message, out.tool);
-    return c.json(out.data);
-  });
+  // PAS de route vers `cleanup_collections` (le nettoyage GLOBAL de
+  // Raindrop, `PUT /collections/clean`) : sa définition du « vide » n'est
+  // pas la nôtre, et le geste est IRRÉVERSIBLE. La suppression passe id par
+  // id, en Revue niveau 2 (`triPourSuppression`). La route survivait sans
+  // appelant, `confirm` en simple booléen (audit du 2026-09-23).
 
   return app;
 }
