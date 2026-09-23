@@ -34,7 +34,12 @@ const DUP_LABELS: Record<DuplicateGroup["kind"], string> = {
 const signetsDe = (gs: DuplicateGroup[]) => gs.reduce((n, g) => n + g.items.length, 0);
 const retirablesDe = (gs: DuplicateGroup[]) => signetsDe(gs) - gs.length;
 
-export function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean; analyser?: () => void }) {
+// `jamaisAnalyse` à `null` : statut non reçu — même contrat que ResultatsLiens.
+export function Doublons({ jamaisAnalyse, analyser, analyseEnCours }: {
+  jamaisAnalyse?: boolean | null;
+  analyser?: () => void;
+  analyseEnCours?: boolean;
+}) {
   const q = useDuplicateGroups();
   const { go } = useAppState();
   const retourTableau = { label: t("cleanup.retour"), onClick: () => go({ kind: "cleanup" }) };
@@ -106,7 +111,7 @@ export function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean;
       <Entete
         label={LABELS.duplicates}
         retour={retourTableau}
-        count={jamaisAnalyse === true ? undefined : groupes.length}
+        count={jamaisAnalyse === true || jamaisAnalyse === null ? undefined : groupes.length}
         action={
           <span className="flex items-center gap-2">
             {selectionGlobale.length > 0 && (
@@ -124,11 +129,12 @@ export function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean;
         }
       />
       <EtatListe
-        chargement={!!q.isLoading}
+        chargement={!!q.isLoading || (jamaisAnalyse === null && groupes.length === 0)}
         erreur={q.isError ? q.error?.message : null}
         vide={groupes.length === 0 && !q.isLoading}
         reessayer={() => void q.refetch()}
         jamaisAnalyse={jamaisAnalyse === true && groupes.length === 0}
+        analyseEnCours={analyseEnCours === true}
         {...(analyser ? { analyser } : {})}
       />
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">

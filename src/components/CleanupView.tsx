@@ -15,12 +15,10 @@ import { Entete, LABELS, type CleanupType } from "./EnteteCleanup";
 import { ResultatsLiens } from "./ResultatsLiens";
 import { Doublons } from "./ResultatsDoublons";
 
-// Task 13 — les vues de traitement joignables depuis le dashboard (T12) :
-// un composant à branch par `type`. Les jetons et classes viennent de
-// styles.css ; DESIGN.md §8-§10 fait foi. Les branches lourdes vivent chez
-// elles (`ResultatsLiens`, `ResultatsDoublons` — même frontière que le
-// plafond de 400 a imposée au 2026-09-20) ; ici ne restent que les trois
-// listes raindrops et l'agencement.
+// Task 13 — les vues de traitement joignables depuis le dashboard (T12), une
+// branche par `type` ; DESIGN.md §8-§10 fait foi. Les branches lourdes vivent
+// chez elles (`ResultatsLiens`, `ResultatsDoublons`, plafond de 400 du
+// 2026-09-20) ; ici restent les trois listes raindrops et l'agencement.
 
 // Non-taggés : liste raindrops standard (notag=true), au PATRON « ligne
 // activable » comme toutes les vues — un arrêt de tabulation par CASE de
@@ -213,7 +211,7 @@ function CollectionsVides() {
       <Entete
         label={LABELS["empty-collections"]}
         retour={retourTableau}
-        count={vides.length}
+        count={cols.data ? vides.length : undefined} // arbre absent : pas de « (0) » inventé
         action={
           <button
             type="button"
@@ -259,16 +257,20 @@ function CollectionsVides() {
 }
 
 export function CleanupView({ type }: { type: CleanupType }) {
-  // « Jamais analysé » ≠ « rien à nettoyer ». La vue le sait par le statut, et
-  // porte l'action qui corrige le manque — arriver ici depuis un compteur
-  // vide sans pouvoir lancer l'analyse obligerait à repartir en arrière.
+  // « Jamais analysé » ≠ « rien à nettoyer » : la vue porte l'action qui le
+  // corrige. Statut ou entrée absents → `null` (inconnu), ni `false` ni
+  // TypeError (sans ErrorBoundary : écran blanc). `lastScan` ne se pose qu'à
+  // l'ACHÈVEMENT : sans `running`, on relançait un scan en cours, refusé muet.
   const statut = useAnalysisStatus();
-  const jamais = (quoi: "links" | "duplicates") =>
-    statut.data !== undefined && statut.data[quoi].lastScan === null;
   const lienScan = useStartScan("links");
   const dupScan = useStartScan("duplicates");
-  const lancerLiens = () => lienScan.mutate(undefined);
-  const lancerDoublons = () => dupScan.mutate(undefined);
+  const etat = (quoi: "links" | "duplicates", scan: typeof lienScan) => {
+    const e = statut.data?.[quoi];
+    return { jamaisAnalyse: e ? e.lastScan === null : null, analyseEnCours: e?.running === true || scan.isPending,
+      analyser: () => scan.mutate(undefined) };
+  };
+  const liens = etat("links", lienScan);
+  const doublons = etat("duplicates", dupScan);
   // Lot a11y : la vue n'est qu'UN arrêt de tabulation. Les lignes portent
   // `data-nav` (CleanupRows.Ligne) ; Enter/F2 y entrent — leurs contrôles ne
   // sont tabulables qu'ensuite (pattern « ligne activée »). Le maillage ARIA
@@ -286,12 +288,10 @@ export function CleanupView({ type }: { type: CleanupType }) {
       onKeyDown={roving.surTouche}
       className="flex h-full min-h-0 flex-col"
     >
-      {type === "dead" && <ResultatsLiens type="dead" jamaisAnalyse={jamais("links")} analyser={lancerLiens} />}
-      {type === "redirect" && <ResultatsLiens type="redirect" jamaisAnalyse={jamais("links")} analyser={lancerLiens} />}
-      {type === "indeterminate" && (
-        <ResultatsLiens type="indeterminate" jamaisAnalyse={jamais("links")} analyser={lancerLiens} />
-      )}
-      {type === "duplicates" && <Doublons jamaisAnalyse={jamais("duplicates")} analyser={lancerDoublons} />}
+      {type === "dead" && <ResultatsLiens type="dead" {...liens} />}
+      {type === "redirect" && <ResultatsLiens type="redirect" {...liens} />}
+      {type === "indeterminate" && <ResultatsLiens type="indeterminate" {...liens} />}
+      {type === "duplicates" && <Doublons {...doublons} />}
       {type === "untagged" && <NonTaggues />}
       {type === "empty-collections" && <CollectionsVides />}
       {type === "trash" && <Corbeille />}

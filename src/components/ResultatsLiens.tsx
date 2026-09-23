@@ -40,11 +40,14 @@ function Paginateur({ page, total, perPage, onPage }: { page: number; total: num
 // avant d'en créer un, sinon N rendus = N observateurs).
 // dead / redirect : la même page de résultats filtrée — useAnalysisResults
 // (résolution contrôleur 2 : enum filter réel du sidecar, page qui va bien).
-export function ResultatsLiens({ type, jamaisAnalyse, analyser }: {
+export function ResultatsLiens({ type, jamaisAnalyse, analyser, analyseEnCours }: {
   type: "dead" | "redirect" | "indeterminate";
-  /** Aucune analyse de liens n'a jamais tourné : « rien ici » mentirait. */
-  jamaisAnalyse?: boolean;
+  /** Aucune analyse de liens n'a jamais tourné : « rien ici » mentirait.
+   *  `null` : on ne le SAIT pas encore (statut non reçu) — ni « jamais » ni
+   *  « rien ici », la vue attend. */
+  jamaisAnalyse?: boolean | null;
   analyser?: () => void;
+  analyseEnCours?: boolean;
 }) {
   const [page, setPage] = useState(0);
   const q = useAnalysisResults("links", type, page);
@@ -124,7 +127,7 @@ export function ResultatsLiens({ type, jamaisAnalyse, analyser }: {
       <Entete
         label={LABELS[type]}
         retour={{ label: t("cleanup.retour"), onClick: () => go({ kind: "cleanup" }) }}
-        count={jamaisAnalyse === true ? undefined : q.data?.total}
+        count={jamaisAnalyse === true || jamaisAnalyse === null ? undefined : q.data?.total}
         action={
           archivable ? (
             <span className="flex items-center gap-2">
@@ -148,11 +151,12 @@ export function ResultatsLiens({ type, jamaisAnalyse, analyser }: {
         }
       />
       <EtatListe
-        chargement={!!q.isLoading}
+        chargement={!!q.isLoading || (jamaisAnalyse === null && items.length === 0)}
         erreur={q.isError ? q.error?.message : null}
         vide={items.length === 0 && !q.isLoading}
         reessayer={() => void q.refetch()}
         jamaisAnalyse={jamaisAnalyse === true && items.length === 0}
+        analyseEnCours={analyseEnCours === true}
         {...(analyser ? { analyser } : {})}
       />
       <div className="min-h-0 flex-1 overflow-y-auto">{items.map(ligne)}</div>

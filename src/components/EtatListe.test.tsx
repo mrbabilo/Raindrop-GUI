@@ -41,6 +41,16 @@ describe("EtatListe", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  // `lastScan` ne se pose qu'à l'achèvement : pendant l'analyse, « aucune
+  // analyse lancée » mentait, et le bouton relançait ce qui tourne.
+  it("jamais analysé mais EN COURS : l'état se dit, sans bouton pour relancer", () => {
+    const { rerender } = render(<EtatListe chargement={false} vide jamaisAnalyse analyser={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Lancer l'analyse" })).toBeInTheDocument();
+    rerender(<EtatListe chargement={false} vide jamaisAnalyse analyser={vi.fn()} analyseEnCours />);
+    expect(screen.getByText("Analyse en cours")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
   // Une chaîne vide n'est pas une erreur : certaines couches rendent "" au
   // lieu de null, et un bandeau « Erreur :  » ne dirait rien.
   it("une erreur vide n'en est pas une", () => {

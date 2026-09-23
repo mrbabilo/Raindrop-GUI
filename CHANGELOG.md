@@ -519,6 +519,21 @@ signet près, y compris croisé avec le filtre de domaine.
 
 ### Corrigé
 
+#### Les états mensongers des vues de Nettoyage (audit du 2026-09-23)
+
+- **« Collections vides (0) » pendant le chargement ou à côté de l'échec** :
+  le compteur de l'en-tête se calculait sur un arbre absent — un zéro
+  inventé. Il n'apparaît plus tant que l'arbre n'est pas là.
+- **« Aucune analyse n'a encore été lancée » pendant l'analyse** : `lastScan`
+  ne se pose qu'à l'achèvement, donc la vue le disait tout au long d'un scan
+  de liens, bouton actif — et un second clic était refusé par le sidecar
+  (`SCAN_EN_COURS`) sans que rien ne s'affiche. La vue dit désormais
+  « Analyse en cours » (statut `running` ou lancement en vol), sans bouton.
+- **« Rien ici » avant d'avoir reçu le statut d'analyse** : un statut
+  inconnu valait « déjà analysé ». Il vaut désormais « inconnu » (chargement),
+  y compris quand une entrée manque — jamais un TypeError, l'app n'ayant pas
+  d'ErrorBoundary.
+
 #### Le bouton invisible, le remplacement qui ne remplaçait pas, les morts qui respirent (2026-09-22)
 
 - **« Remplacer par l'URL finale », « Restaurer » et « Supprimer la
