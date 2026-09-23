@@ -21,6 +21,8 @@ describe("comparerVersion", () => {
 
   it("égalité", () => {
     expect(comparerVersion("0.1.0-pre.16", "v0.1.0-pre.16")).toBe(0);
+    // Deux RELEASES égales : l'infini des deux côtés faisait NaN.
+    expect(comparerVersion("v0.1.0", "0.1.0")).toBe(0);
   });
 
   it("une version indécomparable n'est ni plus récente ni plus ancienne", () => {

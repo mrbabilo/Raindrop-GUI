@@ -28,6 +28,8 @@ export function comparerVersion(a: string, b: string): number {
   }
   // Une RELEASE est plus récente que n'importe quelle prérelease : sans
   // suffixe = l'infini, pas -1 (qui la mettrait au-dessous de pre.1).
+  // Deux releases : ∞ − ∞ vaudrait NaN, pas 0 (audit du 2026-09-23).
+  if (pa.pre === pb.pre) return 0;
   const rang = (p: number | null) => p ?? Number.POSITIVE_INFINITY;
   return rang(pa.pre) - rang(pb.pre);
 }
