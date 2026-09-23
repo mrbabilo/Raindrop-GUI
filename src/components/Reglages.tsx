@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import type { FrKey } from "../i18n/fr";
@@ -41,6 +42,7 @@ const ETAT_MCP = {
 export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (a: Amorce) => void }) {
   const { data } = useHealth();
   const [saisie, setSaisie] = useState(false);
+  const queryClient = useQueryClient();
   const [jeton, setJeton] = useState("");
   const [occupe, setOccupe] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -85,6 +87,10 @@ export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (
     // le refuser : même contrôle que le premier lancement.
     try {
       await api.get<UserInfo>("/api/user");
+      // Le jeton peut être celui d'un AUTRE compte : sans cette remise à zéro,
+      // la bibliothèque de l'ancien restait affichée (et actionnable, ses ids
+      // partant vers le nouveau) jusqu'aux prochains remontages (audit 09-23).
+      void queryClient.resetQueries();
       onFermer();
     } catch {
       setOccupe(false);
