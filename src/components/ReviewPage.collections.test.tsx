@@ -109,6 +109,24 @@ describe("ReviewPage — delete-empty-collections : DELETE séquentiels dans l'o
     expect(sendMock).not.toHaveBeenCalledWith("POST", "/api/collections/cleanup", expect.anything());
   });
 
+  // Audit du 2026-09-23 : `pending` ignorait la boucle des DELETE —
+  // Exécuter et Retour restaient actifs sur un geste IRRÉVERSIBLE en vol.
+  it("pendant la chaîne, Exécuter et Retour sont désactivés", async () => {
+    let libere!: () => void;
+    const premier = new Promise<void>((r) => { libere = r; });
+    sendMock.mockImplementationOnce(() => premier.then(() => ({}))).mockResolvedValue({});
+    renderReview(revue);
+    await userEvent.type(screen.getByPlaceholderText(/SUPPRIMER/), "SUPPRIMER");
+    const executer = screen.getByRole("button", { name: "Exécuter" });
+    expect(executer).toBeEnabled(); // témoin : prêt avant le clic
+    await userEvent.click(executer);
+    await vi.waitFor(() => expect(sendMock).toHaveBeenCalledTimes(1));
+    expect(executer).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Retour" })).toBeDisabled();
+    libere();
+    await vi.waitFor(() => expect(goBack).toHaveBeenCalled());
+  });
+
   it("un échec en cours de chaîne se dit inline, les suivants tentent quand même, pas de retour", async () => {
     // 312 (feuille) rejette : 311 et 310 tentent quand même — un id déjà
     // parti (404) ne doit pas bloquer le reste de la chaîne. Le premier

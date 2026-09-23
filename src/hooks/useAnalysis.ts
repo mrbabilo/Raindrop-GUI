@@ -203,9 +203,12 @@ export const useStartScan = (type: AnalysisType, onEvent?: (e: ScanEvent) => voi
       const { jobId } = await api.send<{ jobId: string }>("POST", "/api/analysis/scan", { type });
       const controller = new AbortController();
       onEvent?.({ kind: "start", jobId, controller });
-      await suivreFin(jobId, controller.signal, onEvent).then(() => {
-        // Fin du suivi (done, error, cancelled ou flux clos) : fraîcheur et
-        // compteurs repartent de ce que le sidecar a persisté.
+      // Fin du suivi (done, error, cancelled ou flux clos) : fraîcheur et
+      // compteurs repartent de ce que le sidecar a persisté. `finally`, pas
+      // `then` (audit du 2026-09-23) : une annulation (flux SSE coupé) ou un
+      // échec sautaient l'invalidation — les résultats partiels persistés
+      // restaient invisibles jusqu'au prochain montage.
+      await suivreFin(jobId, controller.signal, onEvent).finally(() => {
         qc.invalidateQueries({ queryKey: ["analysis"] });
         qc.invalidateQueries({ queryKey: ["raindrops"] });
       });
@@ -227,7 +230,7 @@ export const useRecheckIndetermine = (onEvent?: (e: ScanEvent) => void) => {
       const { jobId } = await api.send<{ jobId: string }>("POST", "/api/analysis/recheck", { statut: "indeterminate" });
       const controller = new AbortController();
       onEvent?.({ kind: "start", jobId, controller });
-      await suivreFin(jobId, controller.signal, onEvent).then(() => {
+      await suivreFin(jobId, controller.signal, onEvent).finally(() => {
         qc.invalidateQueries({ queryKey: ["analysis"] });
       });
     },

@@ -55,4 +55,16 @@ describe("useStartScan — la fin du suivi", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.message).toBe("MCP déconnecté");
   });
+
+  // Annuler coupe le flux SSE (AbortError) : ce que le scan a persisté avant
+  // l'arrêt doit se relire — l'invalidation ne dépend pas de l'issue.
+  it("un suivi interrompu (annulation, échec) invalide quand même", async () => {
+    jobEventsMock.mockRejectedValue(Object.assign(new Error("aborted"), { name: "AbortError" }));
+    const qc = client();
+    const invalider = vi.spyOn(qc, "invalidateQueries");
+    const { result } = renderHook(() => useStartScan("links"), { wrapper: avec(qc) });
+    result.current.mutate(undefined);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(invalider).toHaveBeenCalledWith({ queryKey: ["analysis"] });
+  });
 });

@@ -99,16 +99,16 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
     : estArchive
       ? confirmed && portee.ids.length > 0 && portee.ids.length <= BORNE_ARCHIVE
       : confirmed && remaining.length > 0;
-  // Revue finale : Exécuter se désactive PENDANT le vol — un double-clic ne
-  // doit pas émettre deux bulk (empty-trash est la seule écriture définitive
-  // de l'app, spec §3).
   // Le suivi du job dedupe : N lectures + M écritures dans la file à 550 ms —
   // le tri global des doublons se compte en minutes, la barre le dit.
   const [dedupeProgress, setDedupeProgress] = useState<{ done: number; total: number } | null>(null);
   // Le terme du job, retenu quand il porte un DÉFICIT : la Revue tient pour
   // le dire (le silence a déjà caché une corbeille entière — 2026-09-20).
   const [dedupeFin, setDedupeFin] = useState<ResultatDedupe | null>(null);
-  const pending = bulk.isPending || emptyTrash.isPending || dedupeProgress !== null;
+  // Exécuter ET Retour se désactivent pendant TOUTE l'exécution (spec §3 :
+  // pas de double émission) — boucle des DELETE de collections comprise.
+  const [enVol, setEnVol] = useState(false);
+  const pending = enVol || bulk.isPending || emptyTrash.isPending || dedupeProgress !== null;
 
   // Un DELETE PAR collection, SÉQUENTIELLEMENT dans l'ordre reçu (les ids de
   // delete-empty-collections arrivent déjà triés feuilles d'abord —
@@ -130,7 +130,8 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
     if (premierEchec !== null) throw premierEchec;
   };
 
-  const execute = async () => {
+  const execute = () => { setEnVol(true); void executer().finally(() => setEnVol(false)); };
+  const executer = async () => {
     // L'archivage est un JOB (202 + SSE), pas une mutation : on bascule le
     // pied de page sur son suivi, ArchiveJob poste et s'abonne.
     if (review.action.op === "archive") {
@@ -275,7 +276,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
         <button
           type="button"
           className="btn"
-          disabled={dedupeProgress !== null}
+          disabled={pending}
           onClick={() => {
             clearSelection();
             goBack();
@@ -385,7 +386,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
           type="button"
           className="btn ml-auto h-[38px] bg-app-sel px-4 disabled:opacity-40"
           disabled={!canRun || pending}
-          onClick={() => void execute()}
+          onClick={execute}
         >
           {t("review.execute")}
         </button>
