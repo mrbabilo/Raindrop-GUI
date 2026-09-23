@@ -6,6 +6,8 @@
   // que cette cécité cachait étaient toutes réelles.
   "extends": "./tsconfig.json",
   "compilerOptions": { "noEmit": true },
-  "include": ["shared/**/*.ts", "sidecar/**/*.ts"],
+  // vite.config.ts n'était couvert par AUCUN tsconfig (2026-09-23) : c'est
+  // lui qui porte la config vitest, qu'une faute de clé désarme en silence.
+  "include": ["shared/**/*.ts", "sidecar/**/*.ts", "vite.config.ts"],
   "exclude": ["src", "index.html"]
 }

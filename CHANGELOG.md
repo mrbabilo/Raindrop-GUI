@@ -534,6 +534,16 @@ signet près, y compris croisé avec le filtre de domaine.
   y compris quand une entrée manque — jamais un TypeError, l'app n'ayant pas
   d'ErrorBoundary.
 
+#### La config vitest, hors de tout typecheck (audit du 2026-09-23)
+
+- **`vite.config.ts` n'était couvert par aucun tsconfig**, et ses options de
+  test partagées (`sharedTest`, un objet étalé) échappaient même à un
+  typecheck dédié. Or vitest ignore une clé inconnue sans un mot : mesuré,
+  `testTimout` ramène le délai de 15 s à 5 s — des tests « sensibles à la
+  charge » fabriqués par une faute de frappe. `satisfies InlineConfig` et
+  inclusion dans `tsconfig.check.json` : `npm run typecheck` (donc
+  `build:app`) la refuse désormais.
+
 #### Le bouton invisible, le remplacement qui ne remplaçait pas, les morts qui respirent (2026-09-22)
 
 - **« Remplacer par l'URL finale », « Restaurer » et « Supprimer la

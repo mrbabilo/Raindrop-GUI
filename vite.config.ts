@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import type { InlineConfig } from "vitest/node";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { readFileSync } from "node:fs";
@@ -30,13 +31,17 @@ function sidecarPort(): number {
 // Options de test communes aux deux projets (ruling R1P : l'ancien
 // vitest.config.ts est supprimé, tout vitest vit ici ; timeouts 15000
 // repris de l'ancien fichier — scans SSE et jobs lents).
+// `satisfies` : un objet ÉTALÉ échappe au contrôle des propriétés en trop,
+// et vitest ignore une clé inconnue sans un mot — `testTimout` ramenait le
+// délai à 5 s (mesuré le 2026-09-23) : des tests « sensibles à la charge »
+// fabriqués par une faute de frappe. Typé par tsconfig.check.json.
 const sharedTest = {
   globals: true,
   setupFiles: ["src/test/setup.ts"],
   css: false,
   testTimeout: 15000,
   hookTimeout: 15000,
-} as const;
+} as const satisfies InlineConfig;
 
 export default defineConfig(({ command, isPreview }) => ({
   // tailwindcss() manquait ici (relevé pendant Task 2) : sans lui,
