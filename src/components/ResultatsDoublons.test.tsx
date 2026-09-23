@@ -239,6 +239,36 @@ describe("doublons — la corbeille globale de la sélection, et le retour", () 
     expect(screen.getByRole("button", { name: "Corbeille de la sélection (1)" })).toBeInTheDocument();
   });
 
+  // Clé EXACTE = l'URL brute, clé NORMALISÉE = normalizeUrl(url) : une URL
+  // déjà normalisée donne la même chaîne dans les deux catégories. Indexés
+  // par la seule clé, les cochés d'un groupe se perdaient dans l'autre
+  // (audit du 2026-09-23).
+  it("deux groupes de catégories différentes à la MÊME clé : chacun garde ses cochés", async () => {
+    const it2 = (id: number, url: string, titre: string, created: string) => ({ id, url, title: titre, collectionId: 101, created });
+    groupsMock.mockReturnValue({
+      data: {
+        exact: [{ key: "https://a.example/x", kind: "exact", items: [
+          it2(1, "https://a.example/x", "Exact vieux", "2020-01-01T00:00:00Z"),
+          it2(2, "https://a.example/x", "Exact récent", "2024-01-01T00:00:00Z"),
+        ] }],
+        normalized: [{ key: "https://a.example/x", kind: "normalized", items: [
+          it2(3, "http://a.example/x/", "Norm vieux", "2020-01-01T00:00:00Z"),
+          it2(4, "https://a.example/x?utm_source=z", "Norm récent", "2024-01-01T00:00:00Z"),
+        ] }],
+        fuzzy: [],
+      },
+    });
+    render(<Doublons />, { wrapper });
+    await screen.findByText("Exact vieux");
+    await userEvent.click(screen.getByRole("checkbox", { name: /Exact récent/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /Norm récent/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Corbeille de la sélection (2)" }));
+    const vue = JSON.parse(screen.getByTestId("view").textContent ?? "{}") as {
+      items: { id: number; dedupeGarde: { id: number } }[];
+    };
+    expect(vue.items.map((i) => [i.id, i.dedupeGarde.id])).toEqual([[2, 1], [4, 3]]);
+  });
+
   it("la vue a son retour vers le tableau de bord", async () => {
     groupsMock.mockReturnValue({ data: deux });
     render(<Doublons />, { wrapper });

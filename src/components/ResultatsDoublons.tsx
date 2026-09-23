@@ -53,20 +53,25 @@ export function Doublons({ jamaisAnalyse, analyser, analyseEnCours }: {
   // VIVANT — sinon des cochés fantômes gonflent `cochees.size`, la carte
   // verrouille des cases libres, et le gardé disparu laisse un groupe
   // entièrement coché sans exemplaire à garder.
+  // Index = catégorie + clé : la clé EXACTE (URL brute) et la clé NORMALISÉE
+  // (normalizeUrl) coïncident pour une URL déjà normalisée — indexés par la
+  // seule clé, les cochés d'un groupe se perdaient dans l'autre, et la
+  // corbeille globale ne voyait que le premier (audit du 2026-09-23).
+  const cleDe = (g: DuplicateGroup) => `${g.kind}:${g.key}`;
   const cocheesDe = (g: DuplicateGroup) => {
-    const retenues = coches[g.key];
+    const retenues = coches[cleDe(g)];
     if (!retenues) return new Set<number>();
     return new Set([...retenues].filter((id) => g.items.some((i) => i.id === id)));
   };
   const basculer = (g: DuplicateGroup, id: number) =>
     setCoches((c) => {
-      const courantes = new Set(c[g.key] ?? []);
+      const courantes = new Set(c[cleDe(g)] ?? []);
       if (courantes.has(id)) courantes.delete(id);
       else courantes.add(id);
-      return { ...c, [g.key]: courantes };
+      return { ...c, [cleDe(g)]: courantes };
     });
   const definir = (g: DuplicateGroup, ids: number[]) =>
-    setCoches((c) => ({ ...c, [g.key]: new Set(ids) }));
+    setCoches((c) => ({ ...c, [cleDe(g)]: new Set(ids) }));
   const surRevue = (copies: { id: number; url: string; title: string; collectionId: number; dedupeGarde: { id: number; title: string } }[]) => {
     go({
       kind: "review",
@@ -91,7 +96,7 @@ export function Doublons({ jamaisAnalyse, analyser, analyseEnCours }: {
   // exemplaire non coché par groupe — est structurelle : c'est elle qui
   // désigne le gardé au moment du geste.
   const selectionGlobale = Object.entries(coches).flatMap(([cle]) => {
-    const g = groupes.find((x) => x.key === cle);
+    const g = groupes.find((x) => cleDe(x) === cle);
     if (!g) return [];
     const cochees = cocheesDe(g);
     if (cochees.size === 0) return [];

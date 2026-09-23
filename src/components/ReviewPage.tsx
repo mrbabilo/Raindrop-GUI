@@ -328,12 +328,12 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
           <ArchiveJob
             ids={portee.ids}
             onErreur={setErreur}
-            onTermine={() => {
-              // L'inventaire a changé — et lui seul : l'archivage ne touche
-              // à aucun signet chez Raindrop.
+            onTermine={(r) => {
+              // Seul l'inventaire change. Un DÉFICIT (échecs, non tentés) TIENT
+              // la Revue pour se lire — R8P-1, comme le dedupe (audit 09-23).
               invaliderSauvegarde();
               clearSelection();
-              goBack();
+              if (r.echecs.length === 0 && r.nonTentes === 0) goBack();
             }}
           />
         </footer>
