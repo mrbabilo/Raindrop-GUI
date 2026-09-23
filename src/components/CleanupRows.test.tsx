@@ -198,3 +198,19 @@ describe("les contrôles des lignes se voient", () => {
     expect(url).toHaveClass("truncate");
   });
 });
+
+// Un indéterminé peut porter une `finalUrl` (redirection vers un 401/403 —
+// page de connexion, mur payant) : « Remplacer » y écrirait l'URL du login
+// dans le signet. La finale reste affichée, le geste non (audit 2026-09-23).
+describe("RedirectRow — un indéterminé ne se remplace pas", () => {
+  it("témoin : une vraie redirection propose Remplacer", () => {
+    rendu(<RedirectRow r={lien({ status: "redirect", redirectKind: "temporary", finalUrl: "https://exemple.fr/b" })} />);
+    expect(screen.getByRole("button", { name: "Remplacer par l'URL finale" })).toBeInTheDocument();
+  });
+
+  it("indéterminé redirigé vers un 403 : la finale se lit, sans Remplacer", () => {
+    rendu(<RedirectRow r={lien({ status: "indeterminate", redirectKind: "temporary", finalUrl: "https://exemple.fr/login?next=/b" })} />);
+    expect(screen.getByText("https://exemple.fr/login?next=/b")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Remplacer par l'URL finale" })).not.toBeInTheDocument();
+  });
+});

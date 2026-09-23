@@ -71,6 +71,19 @@ describe("routes jobs", () => {
     await reader.cancel();
   });
 
+  // Le CÂBLAGE du rejeu (audit du 2026-09-23) : un job fini avant
+  // l'abonnement rend son terme, résultat compris — la route doit passer le
+  // lecteur du store, que la fonction pure ne peut pas vérifier.
+  it("GET /:id/events d'un job DÉJÀ fini rejoue done avec son résultat", async () => {
+    const store = new JobStore();
+    const job = store.create("scan-duplicates", 0);
+    job.finish({ groupes: 3 });
+    const app = createApp(deps(store), { localToken: TOKEN });
+    const texte = await (await req(app, `/api/jobs/${job.id}/events`)).text();
+    expect(texte).toContain("event: done");
+    expect(texte).toContain('data: {"groupes":3}');
+  });
+
   it("POST /:id/cancel annule", async () => {
     const store = new JobStore();
     const job = store.create("x", 10);

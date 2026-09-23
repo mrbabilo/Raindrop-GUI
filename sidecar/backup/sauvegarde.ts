@@ -24,7 +24,7 @@ import {
 } from "./decision.js";
 import { lireModifies } from "./incremental.js";
 import { horodatage, verifierJsonl } from "./instantane.js";
-import { makeEnregistreur, type Menage } from "./enregistrement.js";
+import { makeEnregistreur } from "./enregistrement.js";
 import { dernierValide, lireManifeste, type Manifeste } from "./manifeste.js";
 import type { Lecture } from "./lecture.js";
 import { avecReprise } from "./resilience.js";
@@ -148,11 +148,21 @@ export function makeSauvegarde(deps: DepsSauvegarde): Sauvegarde {
     const base = dernierValide(m)!;
     const lecture = lectureDe(job);
     const annule = () => job?.isCancelled() ?? false;
-    const { modifies, nouveauWatermark } = await lireModifies({
+    const { modifies, nouveauWatermark, complet } = await lireModifies({
       lecture,
       collectionId: 0,
       watermark: base.watermark,
     });
+    // Plus de modifications que l'incrémental n'en lit (un renommage
+    // d'étiquette très portée en fait des milliers) : fusionner le lu et
+    // avancer le watermark déclarerait VALIDE un instantané dont le reste est
+    // dans son état d'avant — et plus aucun incrémental ne le relirait. Le
+    // contrôle de compte ne le voit pas (rien n'est ajouté ni supprimé).
+    if (!complet && !annule()) {
+      const raison = `${modifies.length} signets modifiés lus sans atteindre la dernière sauvegarde — balayage complet`;
+      avertir("sauvegarde : bascule en balayage complet", { cause: raison });
+      return balayerTout(m, job, raison);
+    }
     job?.progress(modifies.length, modifies.length, "modifies");
     const h = await horodatageLibre(maintenant());
     const cible = join(deps.dossier, h);

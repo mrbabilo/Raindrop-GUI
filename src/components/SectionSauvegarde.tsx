@@ -38,7 +38,12 @@ export function SectionSauvegarde({ onEtat }: { onEtat: (a: Amorce) => void }) {
   const statut = useBackupStatus();
   const archives = useArchives();
   const invalider = useInvalidateSauvegarde();
-  const vol = suivreJob("backup");
+  // Le job lancé ICI est suivi par son id (le contrat de `suivreJob`) : sans
+  // lui, le suivi attendait l'adoption par /api/jobs (5 s) — bouton rendu
+  // entre-temps, et un incrémental fini avant n'était JAMAIS vu, son bilan
+  // (bascule, ménage) perdu (audit du 2026-09-23).
+  const [jobLocal, setJobLocal] = useState<string | undefined>(undefined);
+  const vol = suivreJob("backup", jobLocal);
 
   useEffect(() => {
     void etatSauvegarde().then(setDossier);
@@ -74,7 +79,8 @@ export function SectionSauvegarde({ onEtat }: { onEtat: (a: Amorce) => void }) {
       // balayage complet (aucun instantané valide, sept jours passés,
       // empreinte qui ne se vérifie plus) et qui dit pourquoi. Faire choisir
       // l'utilisateur serait lui confier une décision que le code prend mieux.
-      await api.send<{ jobId: string }>("POST", "/api/backup/run", { mode: "incremental" });
+      const { jobId } = await api.send<{ jobId: string }>("POST", "/api/backup/run", { mode: "incremental" });
+      setJobLocal(jobId);
     } catch (e) {
       setErreur(e instanceof Error ? e.message : String(e));
     } finally {

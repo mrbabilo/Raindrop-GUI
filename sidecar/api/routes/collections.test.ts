@@ -64,12 +64,29 @@ describe("routes collections", () => {
     expect(((await res.json()) as Collection).parentId).toBe(101);
   });
 
-  it("POST /cleanup passe le confirm au tool", async () => {
-    const res = await req(app, "/api/collections/cleanup", {
-      method: "POST",
-      body: JSON.stringify({ confirm: true }),
-    });
-    expect(res.status).toBe(200);
+  // Le nettoyage GLOBAL de Raindrop n'est plus un chemin (audit du
+  // 2026-09-23) : irréversible, et sa définition du « vide » n'est pas la
+  // nôtre — la suppression passe id par id, en Revue niveau 2.
+  it.each(["abc", "0", "-99"])("DELETE /%s refusé (400) — rien ne part vers le pont", async (id) => {
+    const appels: string[] = [];
+    const espion = createApp(
+      { ...deps(conn), mcp: async (tool) => { appels.push(tool); return { ok: true as const, data: {} }; } },
+      { localToken: "test-token" },
+    );
+    const res = await req(espion, `/api/collections/${id}`, { method: "DELETE" });
+    expect(res.status).toBe(400);
+    expect(appels).toEqual([]);
+  });
+
+  it("POST /cleanup n'existe plus — le nettoyage global n'est jamais appelé", async () => {
+    const appels: string[] = [];
+    const espion = createApp(
+      { ...deps(conn), mcp: async (tool) => { appels.push(tool); return { ok: true as const, data: {} }; } },
+      { localToken: "test-token" },
+    );
+    const res = await req(espion, "/api/collections/cleanup", { method: "POST", body: JSON.stringify({ confirm: true }) });
+    expect(res.status).toBe(404);
+    expect(appels).not.toContain("cleanup_collections");
   });
 
   // Régression : sur le compte réel, get_collections et get_child_collections

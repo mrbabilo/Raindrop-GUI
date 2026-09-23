@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { Reglages } from "./Reglages";
 
 const { healthMock, getMock, remplacerMock, deconnecterMock } = vi.hoisted(() => ({
@@ -16,18 +18,24 @@ vi.mock("../lib/api", () => ({ api: { get: getMock, send: vi.fn() } }));
 // lisibles seuls.
 vi.mock("./SectionSauvegarde", () => ({ SectionSauvegarde: () => <div data-testid="section-sauvegarde" /> }));
 // La section Journal a ses propres contrats et son propre fichier de test
-// (SectionJournal.test) — et elle pose un useQuery : sans ce mock, les tests
-// de Reglages, rendus NU sans QueryClientProvider, casseraient tous
-// (« No QueryClient set » — le piège des providers).
+// (SectionJournal.test) — isolée, comme Sauvegarde : ses requêtes n'ont
+// rien à faire dans les contrats de Reglages.
 vi.mock("./SectionJournal", () => ({ SectionJournal: () => <div data-testid="section-journal" /> }));
-// SectionVersion pose un useQuery aussi : même isolation, même piège des
-// providers (le rendu nu de Reglages.test ne peut pas porter un
-// QueryClientProvider).
+// SectionVersion : même isolation (elle interroge GitHub).
 vi.mock("./SectionVersion", () => ({ SectionVersion: () => <div data-testid="section-version" /> }));
 vi.mock("../lib/amorce", () => ({
   remplacerJeton: remplacerMock,
   deconnecter: deconnecterMock,
 }));
+
+// Reglages remet le cache à zéro après un changement de jeton : il lui
+// faut le client, comme dans main.tsx (piège des providers). Un client neuf
+// par rendu ; `dernierClient` expose celui du test pour l'espionner.
+let dernierClient: QueryClient;
+const wrapper = ({ children }: { children: ReactNode }) => {
+  dernierClient = new QueryClient();
+  return <QueryClientProvider client={dernierClient}>{children}</QueryClientProvider>;
+};
 
 beforeEach(() => {
   healthMock.mockReset().mockReturnValue({ data: { status: "ok", mcp: "connected" } });
@@ -40,21 +48,21 @@ describe("Reglages", () => {
   // Le front ne montre jamais les identifiants internes du lifecycle :
   // « connected » à l'écran serait une fuite de jargon.
   it("montre l'état du pont en français, pas l'identifiant interne", () => {
-    render(<Reglages onFermer={vi.fn()} onEtat={vi.fn()} />);
+    render(<Reglages onFermer={vi.fn()} onEtat={vi.fn()} />, { wrapper });
     expect(screen.getByText("Connecté")).toBeInTheDocument();
     expect(screen.queryByText("connected")).not.toBeInTheDocument();
   });
 
   it("un état inconnu ne casse rien — il se tait", () => {
     healthMock.mockReturnValue({ data: undefined });
-    render(<Reglages onFermer={vi.fn()} onEtat={vi.fn()} />);
+    render(<Reglages onFermer={vi.fn()} onEtat={vi.fn()} />, { wrapper });
     expect(screen.getByText("—")).toBeInTheDocument();
   });
 
   it("« Remplacer le jeton » révèle la saisie et l'envoie", async () => {
     const onFermer = vi.fn();
     const user = userEvent.setup();
-    render(<Reglages onFermer={onFermer} onEtat={vi.fn()} />);
+    render(<Reglages onFermer={onFermer} onEtat={vi.fn()} />, { wrapper });
     await user.click(screen.getByRole("button", { name: "Remplacer le jeton" }));
     await user.type(screen.getByLabelText("Jeton d'API Raindrop"), "neuf");
     await user.click(screen.getByRole("button", { name: "Valider" }));
@@ -63,13 +71,27 @@ describe("Reglages", () => {
     await waitFor(() => expect(onFermer).toHaveBeenCalled());
   });
 
+  // Le jeton peut ouvrir un AUTRE compte : les listes de l'ancien ne doivent
+  // pas rester à l'écran, ni leurs ids partir vers le nouveau (audit 09-23).
+  it("un jeton accepté remet le cache à zéro — aucun reste de l'ancien compte", async () => {
+    const user = userEvent.setup();
+    const onFermer = vi.fn();
+    render(<Reglages onFermer={onFermer} onEtat={vi.fn()} />, { wrapper });
+    const remise = vi.spyOn(dernierClient, "resetQueries");
+    await user.click(screen.getByRole("button", { name: "Remplacer le jeton" }));
+    await user.type(screen.getByLabelText("Jeton d'API Raindrop"), "autre-compte");
+    await user.click(screen.getByRole("button", { name: "Valider" }));
+    await waitFor(() => expect(onFermer).toHaveBeenCalled());
+    expect(remise).toHaveBeenCalled();
+  });
+
   // Le grief à éviter : un jeton que le sidecar accepte mais que Raindrop
   // refuse fermerait les réglages sur une application incapable de lire.
   it("un jeton refusé par Raindrop se dit, et l'écran reste ouvert", async () => {
     const onFermer = vi.fn();
     const user = userEvent.setup();
     getMock.mockRejectedValue(new Error("http 401"));
-    render(<Reglages onFermer={onFermer} onEtat={vi.fn()} />);
+    render(<Reglages onFermer={onFermer} onEtat={vi.fn()} />, { wrapper });
     await user.click(screen.getByRole("button", { name: "Remplacer le jeton" }));
     await user.type(screen.getByLabelText("Jeton d'API Raindrop"), "faux");
     await user.click(screen.getByRole("button", { name: "Valider" }));
@@ -84,7 +106,7 @@ describe("Reglages", () => {
     const onEtat = vi.fn();
     const user = userEvent.setup();
     remplacerMock.mockResolvedValue({ ecran: "panne", detail: "sidecar mort" });
-    render(<Reglages onFermer={vi.fn()} onEtat={onEtat} />);
+    render(<Reglages onFermer={vi.fn()} onEtat={onEtat} />, { wrapper });
     await user.click(screen.getByRole("button", { name: "Remplacer le jeton" }));
     await user.type(screen.getByLabelText("Jeton d'API Raindrop"), "x");
     await user.click(screen.getByRole("button", { name: "Valider" }));
@@ -94,7 +116,7 @@ describe("Reglages", () => {
   it("« Déconnecter » ramène au premier lancement", async () => {
     const onEtat = vi.fn();
     const user = userEvent.setup();
-    render(<Reglages onFermer={vi.fn()} onEtat={onEtat} />);
+    render(<Reglages onFermer={vi.fn()} onEtat={onEtat} />, { wrapper });
     await user.click(screen.getByRole("button", { name: "Déconnecter" }));
     expect(deconnecterMock).toHaveBeenCalled();
     await waitFor(() => expect(onEtat).toHaveBeenCalledWith({ ecran: "premier-lancement" }));
@@ -108,7 +130,7 @@ describe("Reglages", () => {
     const user = userEvent.setup();
     let resoudre: (a: { ecran: string }) => void = () => undefined;
     remplacerMock.mockReturnValue(new Promise((r) => { resoudre = r; }));
-    render(<Reglages onFermer={vi.fn()} onEtat={vi.fn()} />);
+    render(<Reglages onFermer={vi.fn()} onEtat={vi.fn()} />, { wrapper });
     await user.click(screen.getByRole("button", { name: "Remplacer le jeton" }));
     await user.type(screen.getByLabelText("Jeton d'API Raindrop"), "x");
     await user.click(screen.getByRole("button", { name: "Valider" }));
@@ -124,7 +146,7 @@ describe("Reglages", () => {
     const onEtat = vi.fn();
     const user = userEvent.setup();
     getMock.mockRejectedValue(new Error("http 401"));
-    render(<Reglages onFermer={onFermer} onEtat={onEtat} />);
+    render(<Reglages onFermer={onFermer} onEtat={onEtat} />, { wrapper });
     await user.click(screen.getByRole("button", { name: "Remplacer le jeton" }));
     await user.type(screen.getByLabelText("Jeton d'API Raindrop"), "faux");
     await user.click(screen.getByRole("button", { name: "Valider" }));
@@ -139,7 +161,7 @@ describe("Reglages", () => {
 
   it("Échap ferme", async () => {
     const onFermer = vi.fn();
-    render(<Reglages onFermer={onFermer} onEtat={vi.fn()} />);
+    render(<Reglages onFermer={onFermer} onEtat={vi.fn()} />, { wrapper });
     await userEvent.setup().keyboard("{Escape}");
     expect(onFermer).toHaveBeenCalled();
   });

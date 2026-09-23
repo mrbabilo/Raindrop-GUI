@@ -6,6 +6,7 @@ import {
   useBulk, useCreateRaindrop, useDeleteCollection,
   useEmptyTrash, useTagManage, useTrashRaindrop, useUnrestore, useUpdateRaindrop,
 } from "./useMutations";
+import { CLE_GROUPES } from "./useAnalysis";
 
 // Ces neuf hooks sont le SEUL chemin d'écriture du front. Ce qu'ils portent
 // tient en trois choses, et chacune casse en silence : la route appelée, le
@@ -90,6 +91,27 @@ describe("useTrashRaindrop", () => {
   });
 });
 
+// La fiche s'ouvre au clic dans la vue Doublons : sa corbeille doit élaguer
+// les groupes en cache comme le fait la Revue (audit du 2026-09-23).
+describe("useTrashRaindrop × doublons", () => {
+  it("la copie corbeillée sort de son groupe, réduit à un exemplaire il disparaît", async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const item = (id: number) => ({ id, url: "https://a.example/", title: "A", collectionId: 1, created: "2020-01-01T00:00:00.000Z" });
+    qc.setQueryData(CLE_GROUPES, {
+      exact: [{ key: "a", kind: "exact", items: [item(1), item(2)] }],
+      normalized: [],
+      fuzzy: [{ key: "b", kind: "fuzzy", items: [item(3), item(4), item(5)] }],
+    });
+    const enveloppe = ({ children }: { children: ReactNode }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+    const { result } = renderHook(() => useTrashRaindrop(), { wrapper: enveloppe });
+    await result.current.mutateAsync({ id: 2 });
+    await result.current.mutateAsync({ id: 5 });
+    const apres = qc.getQueryData<{ exact: unknown[]; fuzzy: { items: { id: number }[] }[] }>(CLE_GROUPES)!;
+    expect(apres.exact).toEqual([]);
+    expect(apres.fuzzy[0]!.items.map((i) => i.id)).toEqual([3, 4]);
+  });
+});
+
 describe("useCreateRaindrop", () => {
   it("POST le corps tel quel et invalide listes et collections", async () => {
     const appel = await jouer(() => useCreateRaindrop(), { link: "https://x.test", title: "T" });
@@ -127,7 +149,8 @@ describe("useUnrestore", () => {
     const appel = await jouer(() => useUnrestore(), { ids: [1, 2], toCollectionId: 101 });
     expect(appel?.slice(0, 2)).toEqual(["POST", "/api/raindrops/unrestore"]);
     expect(appel?.[2]).toEqual({ ids: [1, 2], toCollectionId: 101 });
-    expect(invalidees).toEqual(["raindrops", "collections", "tags"]);
+    // Le détail aussi : une fiche restaurée ne se dit plus « en corbeille ».
+    expect(invalidees).toEqual(["raindrops", "raindrop", "collections", "tags"]);
   });
 });
 

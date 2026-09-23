@@ -143,6 +143,16 @@ les décisions structurantes.
   anciens (`reclasseTransport`, précédent `filtrerGeneriques`). 367 verdicts
   réels changeaient de catégorie le jour du correctif — dont un site actif
   signalé à l'usage.
+- **`PUT /raindrops/{c}` (bulk) AJOUTE les étiquettes, `PUT /raindrop/{id}`
+  les REMPLACE** — doc officielle relue le 2026-09-23 (`raindropio/
+  developer-site`, `v1/raindrops/multiple.md`). Le dépôt affirmait l'inverse
+  pour le bulk ; la route d'union du glisser-déposer reste juste (elle passe
+  par l'update par item). Trois pièges du bulk, refusés par le zod de
+  `/api/raindrops/bulk` : **sans `ids`**, il vise TOUTE la collection (0 = la
+  bibliothèque) ; **`tags: []`** y retire toutes les étiquettes ; un
+  **DELETE en `-99`** supprime DÉFINITIVEMENT (« permanently removed »).
+  Même règle pour un `delete_raindrop` sur un signet DÉJÀ corbeillé :
+  définitif — `corbeilleEnMasse` et `DELETE ?from=-99` le refusent.
 - **Le paramètre `domain` du MCP ne filtre RIEN** — ne jamais le lui passer
   (vérifié en réel le 2026-09-17) : `searchRaindrops` l'envoie en paramètre
   d'URL (`/raindrops/0?domain=…`), or l'API Raindrop n'a pas ce paramètre,
@@ -219,9 +229,9 @@ les décisions structurantes.
   la fenêtre. Un test réel du trousseau doit sauver le token en mémoire
   avec restauration par `trap`, et l'absence de token rend `Ok(None)`
   (état normal du premier lancement), jamais une erreur.
-- **Cliquets et écrans** : le cliquet de `scripts/build_app.py` exclut les
-  tests front du compte (dette : `raindrops.test.ts` 430 lignes, à
-  découper — entrée ROADMAP) ; tout écran d'amorçage doit avoir une ISSUE
+- **Cliquets et écrans** : le cliquet de `scripts/build_app.py` COMPTE les
+  tests depuis son ré-armement (voir la trap du lot multi-étiquettes, mise à
+  jour le 2026-09-23) ; tout écran d'amorçage doit avoir une ISSUE
   (« Réessayer » passe par une commande qui REJOUE la séquence — relire
   l'état mémorisé rendrait la même panne à jamais ; « Saisir un autre
   jeton » sinon un jeton refusé enferme, il est déjà au trousseau).
@@ -319,10 +329,13 @@ couverture, c'est une intention.
   `npx tsc` ad hoc sur un test front, privé des `types` du projet
   (`@testing-library/jest-dom`), produit des **faux positifs** — ne pas le
   faire, lancer le script.
-- **Le dépôt n'a pas d'ESLint** : les imports morts ne sont signalés par rien.
-  Après un découpage de fichier, passer
-  `npx tsc -p tsconfig.front.json --noEmit --noUnusedLocals` — le typecheck
-  ordinaire les laisse passer.
+- ~~**Le dépôt n'a pas d'ESLint** : les imports morts ne sont signalés par rien.~~
+  **GUÉRI le 2026-09-23** : la passe manuelle laissait dériver (4 morts le
+  2026-09-20, 5 de plus côté sidecar le 2026-09-23). `noUnusedLocals` vit
+  désormais dans `tsconfig.front.json` et `tsconfig.check.json` — donc dans
+  `npm run typecheck`/`typecheck:front` et `build:app` — mais PAS dans
+  `tsconfig.json` (config de build du sidecar). ⚠️ Un nom préfixé `_` en est
+  exempté : ne pas s'en servir pour saboter un test du drapeau.
 - **`tauri build` échoue au DMG si un volume DMG est resté monté** d'un build
   précédent interrompu (`bundle_dmg.sh` → « failed to run »). Le `.app`, lui,
   est déjà produit : ce n'est pas une régression du code. `hdiutil info`,
@@ -489,12 +502,15 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   retenue, rendue comme les autres, invite à refaire ce qui est fait — et son
   clic surprend en défaisant. `aria-pressed` + inversion des teintes (la
   TEINTE ne bouge pas : c'est le rôle qui change, pas l'identité).
-- **Le cliquet de `scripts/build_app.py` EXCLUT les tests**, mais pas
-  CLAUDE.md (« tests compris »). `sidecar/api/routes/raindrops.test.ts` vivait
-  à 430 lignes sans que rien ne le signale ; il est découpé (lecture /
-  écriture). Corollaire : **soldé le même jour** — les erreurs étaient
-  réelles, toutes corrigées, et le typecheck couvre désormais les tests en
-  permanence (`tsconfig.check.json`, trap sauvegarde).
+- ~~**Le cliquet de `scripts/build_app.py` EXCLUT les tests**~~ — il les
+  COMPTE depuis son ré-armement (« tests compris », comme CLAUDE.md ; seuls
+  les harnais `src/test/` et `sidecar/testing/` restent hors compte).
+  `sidecar/api/routes/raindrops.test.ts` vivait à 430 lignes sans que rien
+  ne le signale ; il fut découpé. **Et le gate a été ROUGE sans que personne
+  ne le voie** (audit du 2026-09-23) : à `6f155db`,
+  `ResultatsLiens.test.tsx` faisait 417 lignes — `build:app` s'arrêtait au
+  cliquet, avant même les tests. Un lot commité sans `build:app` n'a pas
+  passé le gate ; `npm test` vert ne le remplace pas.
 
 ## Traps garde de sélection — lot 2026-09-20
 

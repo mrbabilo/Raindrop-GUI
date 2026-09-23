@@ -18,6 +18,9 @@ vi.mock("../lib/api", () => ({ api: { send: sendMock, get: vi.fn() } }));
 // L'inventaire des archives : injecté par test. Le reste du module (les
 // formateurs, la borne) reste le VRAI — c'est sa sortie que l'écran montre.
 const archivesMock = vi.hoisted(() => vi.fn());
+// Le suivi du job : piloté par test pour jouer son TERME (null = en attente).
+const suivreMock = vi.hoisted(() => vi.fn((): unknown => null));
+vi.mock("../lib/suiviSauvegarde", () => ({ suivreJob: suivreMock, annuler: vi.fn() }));
 vi.mock("../hooks/useBackup", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../hooks/useBackup")>()),
   useArchives: archivesMock,
@@ -37,6 +40,7 @@ beforeEach(() => {
   sendMock.mockClear();
   goBack.mockClear();
   archivesMock.mockReset().mockReturnValue({ data: undefined });
+  suivreMock.mockReset().mockReturnValue(null);
 });
 
 // jsdom ne fait pas de layout : sans hauteur, le virtualizer rend une plage
@@ -123,5 +127,32 @@ describe("ReviewPage — archivage des copies permanentes", () => {
     renderReview(revueArchive([avecCache(1, null)]));
     await userEvent.click(screen.getByRole("checkbox", { name: /Je confirme/ }));
     expect(screen.getByRole("button", { name: "Exécuter" })).toBeDisabled();
+  });
+
+  // R8P-1 : un terme portant un DÉFICIT tient la Revue pour se lire. Le
+  // retour immédiat rendait le bilan (échecs, non tentés) invisible — il
+  // n'existait qu'une frame (audit du 2026-09-23).
+  const terme = (echecs: { id: number; raison: string }[], nonTentes = 0) => ({
+    jobId: "j1", type: "archive", done: 1, total: 1, label: null,
+    fin: { kind: "done", resultat: { demandes: 1, faits: 1, echecs, annule: false, nonTentes } },
+  });
+  const lancerArchive = async () => {
+    renderReview(revueArchive([avecCache(1, { status: "ready" })]));
+    await userEvent.click(screen.getByRole("checkbox", { name: /Je confirme/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Exécuter" }));
+  };
+
+  it("témoin : un terme sans déficit revient à la vue d'origine", async () => {
+    suivreMock.mockReturnValue(terme([]));
+    await lancerArchive();
+    await vi.waitFor(() => expect(goBack).toHaveBeenCalled());
+  });
+
+  it("des échecs : la Revue tient, le bilan se lit", async () => {
+    suivreMock.mockReturnValue(terme([{ id: 1, raison: "http 404" }]));
+    await lancerArchive();
+    expect(await screen.findByText(/1 en échec/)).toBeInTheDocument();
+    expect(screen.getByText("http 404")).toBeInTheDocument();
+    expect(goBack).not.toHaveBeenCalled();
   });
 });

@@ -177,7 +177,11 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
       )}
       {/* §2.1 + §7 : le glyphe précède l'URL dans le même filet secondaire ;
           chasse fixe pour l'URL seule. Quiet, jamais un accent (§6). */}
-      <a className="flex items-center gap-1 text-app-muted" href={r.url} target="_blank" rel="noreferrer">
+      {/* `href` en http(s) SEULEMENT : l'URL d'un signet est une donnée, et un
+          bookmarklet `javascript:` deviendrait du script DANS le webview qui
+          porte le jeton local (audit du 2026-09-23 — même borne que les liens
+          du mode lecture). Hors http(s), l'adresse se lit sans se suivre. */}
+      <a className="flex items-center gap-1 text-app-muted" href={/^https?:\/\//i.test(r.url) ? r.url : undefined} target="_blank" rel="noreferrer">
         <Glyphe type={r.type} />
         <span className="url truncate text-[11px]">{r.url}</span>
       </a>

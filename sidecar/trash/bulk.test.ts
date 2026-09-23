@@ -4,7 +4,7 @@ import { corbeilleEnMasse, marquerEtiquette } from "./bulk.js";
 
 // Les dépôts EN MASSE venus du glisser-déposer : la corbeille mémorise les
 // origines (§4.2 — sans elles, la restauration reviendrait « inconnue »),
-// l'étiquette pose SEULEMENT l'union (le bulk update de Raindrop remplace).
+// l'étiquette pose SEULEMENT l'union (l'update PAR ITEM de Raindrop remplace).
 
 const ok = <T>(data: T): CallOutcome<T> => ({ ok: true, data });
 const ko = (message: string): CallOutcome<never> => ({ ok: false, code: "RAINDROP_API", message });
@@ -50,12 +50,28 @@ const journalFictif = () => {
 };
 
 describe("corbeilleEnMasse", () => {
+  // Supprimer DEPUIS la corbeille est définitif chez Raindrop (SOURCES.md) :
+  // un dépôt sur « Corbeille » depuis la vue Corbeille, ou une sélection
+  // globale portant des corbeillés, détruisait sans la frappe SUPPRIMER.
+  it("un item DÉJÀ en corbeille n'est ni supprimé ni ré-origine — compté à part", async () => {
+    const journal: string[] = [];
+    const { journal: j } = journalFictif();
+    const mcp = fakeMcp(journal, { 1: { collectionId: -99 }, 2: { collectionId: 9 } });
+    const r = await corbeilleEnMasse({ mcp, origins: fakeOrigins(journal), journal: j }, [1, 2]);
+    expect(r).toEqual({ corbeille: 1, deja: 1, echecs: [] });
+    // Présence d'abord : le second item, lui, part bien — sans quoi l'absence
+    // ci-dessous célébrerait une fonction qui ne supprime plus rien.
+    expect(journal).toContain('delete_raindrop:{"id":2}');
+    expect(journal).not.toContain('delete_raindrop:{"id":1}');
+    expect(journal).not.toContain("origines:1:-99");
+  });
+
   it("mémorise l'origine AVANT la corbeille — item par item, dans l'ordre", async () => {
     const journal: string[] = [];
     const { journal: j, entrees } = journalFictif();
     const mcp = fakeMcp(journal, { 1: { collectionId: 7 }, 2: { collectionId: 9 } });
     const r = await corbeilleEnMasse({ mcp, origins: fakeOrigins(journal), journal: j }, [1, 2]);
-    expect(r).toEqual({ corbeille: 2, echecs: [] });
+    expect(r).toEqual({ corbeille: 2, deja: 0, echecs: [] });
     // Pour CHAQUE item : l'origine d'abord, puis la corbeille. La file à
     // 550 ms voit un ordre — for..await, jamais allSettled (trap 09-20).
     expect(journal.indexOf("origines:1:7")).toBeLessThan(journal.indexOf('delete_raindrop:{"id":1}'));

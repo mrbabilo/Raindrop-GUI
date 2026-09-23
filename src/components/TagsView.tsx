@@ -194,6 +194,10 @@ export function TagsView() {
   const bascule = (name: string) =>
     setCoches((c) => (c.includes(name) ? c.filter((n) => n !== name) : [...c, name]));
   const liste = q.data ?? [];
+  // Cochés ∩ VIVANT (trap garde de sélection, 2026-09-20) : une étiquette
+  // supprimée ou renommée depuis sa ligne restait cochée — le filtre visait
+  // un nom disparu (zéro résultat, sans explication), la fusion aussi.
+  const vivants = coches.filter((n) => liste.some((tg) => tg.name === n));
   return (
     <section aria-label={t("nav.tags")} className="flex h-full min-h-0 flex-col">
       <header className="flex items-center gap-3 px-4 pt-4">
@@ -227,14 +231,14 @@ export function TagsView() {
             n'y pas offrir le filtre reproduisait le grief des pilules à moitié
             cliquables. Dès UNE case cochée — filtrer sur une seule étiquette
             est une demande légitime, quand fusionner en exige deux. */}
-        {coches.length > 0 && (
+        {vivants.length > 0 && (
           <div>
-            <button type="button" className="btn" onClick={() => go(vueEtiquette(coches))}>
-              {t("tags.filterSelection", { n: coches.length })}
+            <button type="button" className="btn" onClick={() => go(vueEtiquette(vivants))}>
+              {t("tags.filterSelection", { n: vivants.length })}
             </button>
           </div>
         )}
-        <ZoneFusion coches={coches} vider={() => setCoches([])} />
+        <ZoneFusion coches={vivants} vider={() => setCoches([])} />
       </div>
     </section>
   );

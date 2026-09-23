@@ -80,4 +80,27 @@ describe("DetailPane — la fiche d'un signet corbeillé", () => {
     await userEvent.click(screen.getByRole("button", { name: "Restaurer" }));
     expect(sendApi).toHaveBeenLastCalledWith("POST", "/api/raindrops/unrestore", { ids: [3000], toCollectionId: 101 });
   });
+
+  // La restauration réussie doit se VOIR dans la fiche (audit du 2026-09-23) :
+  // sans invalider le détail, la fiche gardait le signet « en corbeille »
+  // et son bouton Restaurer, alors qu'il était déjà revenu.
+  it("après une restauration réussie, la fiche relit le signet — plus de « Restaurer »", async () => {
+    let enCorbeille = true;
+    getApi.mockImplementation((path: string) =>
+      path === "/api/raindrops/3000"
+        ? Promise.resolve(raindrop({ id: 3000, collectionId: enCorbeille ? -99 : 101 }))
+        : path === "/api/jobs" ? Promise.resolve([])
+        : path === "/api/backup/archives" ? Promise.resolve({ ids: [], octets: 0 })
+        : undefined,
+    );
+    sendApi.mockImplementation(async () => {
+      enCorbeille = false;
+      return { restored: 1, unknown: [] };
+    });
+    renderDetail();
+    await screen.findByText("Article exemple");
+    await userEvent.click(screen.getByRole("button", { name: "Restaurer" }));
+    expect(await screen.findByRole("button", { name: "Mettre à la corbeille" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Restaurer" })).not.toBeInTheDocument();
+  });
 });

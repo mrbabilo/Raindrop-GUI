@@ -123,6 +123,8 @@ export interface ResultatDedupe {
   nonFusionnees: { id: number; raison: string }[];
   /** Copies non corbeillées — encore vivantes chez Raindrop. */
   echecs: { id: number; raison: string }[];
+  /** Copies déjà en corbeille à l'exécution : ni supprimées, ni comptées. */
+  deja?: number;
   annule: boolean;
 }
 
@@ -161,6 +163,9 @@ export type ScanEvent =
 // settle — l'event `error` (échec du job) rejette AVANT le onDone que le
 // parseur appelle pour tout kind terminal ; sans le garde, la promesse se
 // résoudrait comme une fin normale et l'échec serait silencieux.
+// Flux CLOS sans terme (audit du 2026-09-23) : la promesse ne se réglait
+// jamais — mutation `pending` à perpétuité, « Analyse en cours » figé. Elle
+// se résout : l'invalidation qui suit relit l'état vrai (status, running).
 const suivreFin = (jobId: string, signal: AbortSignal, onEvent?: (e: ScanEvent) => void) =>
   new Promise<void>((resolve, reject) => {
     let settled = false;
@@ -183,9 +188,14 @@ const suivreFin = (jobId: string, signal: AbortSignal, onEvent?: (e: ScanEvent) 
       onDone: () => {
         if (!settled) resolve();
       },
-    }, signal).catch((err: unknown) => {
-      if (!settled) reject(err);
-    });
+    }, signal).then(
+      () => {
+        if (!settled) resolve();
+      },
+      (err: unknown) => {
+        if (!settled) reject(err);
+      },
+    );
   });
 
 export const useStartScan = (type: AnalysisType, onEvent?: (e: ScanEvent) => void) => {
@@ -195,9 +205,12 @@ export const useStartScan = (type: AnalysisType, onEvent?: (e: ScanEvent) => voi
       const { jobId } = await api.send<{ jobId: string }>("POST", "/api/analysis/scan", { type });
       const controller = new AbortController();
       onEvent?.({ kind: "start", jobId, controller });
-      await suivreFin(jobId, controller.signal, onEvent).then(() => {
-        // Fin du suivi (done, error, cancelled ou flux clos) : fraîcheur et
-        // compteurs repartent de ce que le sidecar a persisté.
+      // Fin du suivi (done, error, cancelled ou flux clos) : fraîcheur et
+      // compteurs repartent de ce que le sidecar a persisté. `finally`, pas
+      // `then` (audit du 2026-09-23) : une annulation (flux SSE coupé) ou un
+      // échec sautaient l'invalidation — les résultats partiels persistés
+      // restaient invisibles jusqu'au prochain montage.
+      await suivreFin(jobId, controller.signal, onEvent).finally(() => {
         qc.invalidateQueries({ queryKey: ["analysis"] });
         qc.invalidateQueries({ queryKey: ["raindrops"] });
       });
@@ -219,7 +232,7 @@ export const useRecheckIndetermine = (onEvent?: (e: ScanEvent) => void) => {
       const { jobId } = await api.send<{ jobId: string }>("POST", "/api/analysis/recheck", { statut: "indeterminate" });
       const controller = new AbortController();
       onEvent?.({ kind: "start", jobId, controller });
-      await suivreFin(jobId, controller.signal, onEvent).then(() => {
+      await suivreFin(jobId, controller.signal, onEvent).finally(() => {
         qc.invalidateQueries({ queryKey: ["analysis"] });
       });
     },

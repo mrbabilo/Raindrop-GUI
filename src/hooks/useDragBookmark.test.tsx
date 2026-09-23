@@ -15,10 +15,10 @@ beforeEach(() => {
 // Harnais : un « signet » dragable, un compteur d'ouvertures du détail, et
 // une cible par SORTE de dépôt — la corbeille, les favoris, « Tous », une
 // étiquette ne déplacent plus : chaque sorte a son verbe.
-function Harness({ cocher = [] as number[] }) {
+function Harness({ cocher = [] as number[], visibles = [1000, 1001, 1002] }) {
   const { toggleSelect, selectedRaindropId, selectRaindrop, go } = useAppState();
   const { survoler } = useDrag();
-  const { poignee, enCours, erreur } = useDragBookmark();
+  const { poignee, enCours, erreur } = useDragBookmark(visibles);
   return (
     <>
       <button type="button" onClick={() => cocher.forEach((id) => toggleSelect(id))}>cocher</button>
@@ -41,12 +41,12 @@ function Harness({ cocher = [] as number[] }) {
   );
 }
 
-const rendu = (cocher: number[] = []) =>
+const rendu = (cocher: number[] = [], visibles?: number[]) =>
   render(
     <QueryClientProvider client={new QueryClient()}>
       <AppStateProvider>
         <DragProvider>
-          <Harness cocher={cocher} />
+          <Harness cocher={cocher} {...(visibles ? { visibles } : {})} />
         </DragProvider>
       </AppStateProvider>
     </QueryClientProvider>,
@@ -231,6 +231,21 @@ describe("les dépôts par cible", () => {
     await act(async () => { await Promise.resolve(); });
     const [, , body] = sendApi.mock.calls[0]!;
     expect((body as { ids: number[] }).ids).toEqual([1000]);
+  });
+
+  // La sélection est GLOBALE (R9P-1) : des cochés d'une autre vue ne
+  // partent pas avec le geste — ils ne sont pas à l'écran (audit 2026-09-23).
+  it("tirer un coché n'emmène que les cochés VISIBLES", async () => {
+    rendu([1000, 1001, 5000], [1000, 1001]);
+    act(() => { screen.getByText("cocher").click(); });
+    const ligne = screen.getByTestId("ligne-1000");
+    pointer(ligne, "pointerdown", 100, 100);
+    fenetre("pointermove", 110, 100);
+    act(() => { screen.getByText("survoler-coll").click(); });
+    fenetre("pointerup", 110, 100);
+    await act(async () => { await Promise.resolve(); });
+    const [, , body] = sendApi.mock.calls[0]!;
+    expect((body as { ids: number[] }).ids.sort()).toEqual([1000, 1001]);
   });
 
   // R8P-1 : un échec d'écriture s'affiche, il ne disparaît pas en silence.

@@ -67,6 +67,16 @@ describe("CommandPalette", () => {
     expect(getMock).toHaveBeenCalledWith("/api/raindrops", { search: "rust", per_page: 8 });
   });
 
+  // La file du sidecar est SÉQUENTIELLE (550 ms) : une requête par frappe
+  // y occupait ~4 s pour « raindrop » (audit du 2026-09-23). La recherche
+  // attend une pause de saisie, comme la TopBar et le Composer.
+  it("la recherche serveur attend la pause de saisie — pas une requête par frappe", async () => {
+    renderPalette();
+    await userEvent.type(screen.getByRole("combobox"), "rustacean");
+    await waitFor(() => expect(getMock).toHaveBeenCalledWith("/api/raindrops", { search: "rustacean", per_page: 8 }));
+    expect(getMock.mock.calls.filter((c) => c[0] === "/api/raindrops")).toHaveLength(1);
+  });
+
   it("ne déclenche la recherche serveur qu'à partir de 2 caractères", () => {
     renderPalette("r");
     // Le filtre local travaille dès 1 caractère…

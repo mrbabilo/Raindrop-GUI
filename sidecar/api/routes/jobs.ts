@@ -23,7 +23,7 @@ export function jobsRoutes(deps: SidecarDeps): Hono {
     if (!snap) return apiError(c, "INVALID_INPUT", "job inconnu");
     const job = deps.jobs.getHandle(c.req.param("id"));
     if (!job) return apiError(c, "INVALID_INPUT", "job inconnu");
-    return jobSse(job, c);
+    return jobSse(job, c, () => deps.jobs.getResult(job.id));
   });
 
   app.post("/:id/cancel", (c) => {

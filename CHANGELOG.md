@@ -519,6 +519,70 @@ signet près, y compris croisé avec le filtre de domaine.
 
 ### Corrigé
 
+#### L'audit du 2026-09-23 — suppressions définitives, instantanés faux, pagination (détail : `docs/audit-2026-09-23.md`)
+
+- **Plus aucune suppression définitive hors de la frappe SUPPRIMER.**
+  Déposer un signet déjà en corbeille sur « Corbeille » le supprimait
+  DÉFINITIVEMENT (supprimer depuis la corbeille l'est, chez Raindrop), son
+  origine écrasée ; `DELETE ?from=-99` aussi. Le sidecar refuse désormais,
+  comme `/bulk` refuse un `update` sans ids (il viserait toute la
+  bibliothèque), `tags: []` (retirerait toutes les étiquettes) et un DELETE
+  en -99. La route du nettoyage GLOBAL de collections est retirée.
+- **« Remplacer par l'URL finale » n'est plus proposé sur un lien à
+  vérifier à la main** : la finale d'un 401/403 est souvent une page de
+  connexion — le clic l'écrivait dans le signet.
+- **Une sauvegarde incrémentale n'est plus déclarée valide avec des
+  signets dans leur état d'avant** : après plus de 1 000 modifications (un
+  renommage d'étiquette très portée), elle bascule en balayage complet et
+  le dit.
+- **L'analyse lit la bibliothèque juste** : ni signet lu deux fois (un faux
+  doublon avec lui-même), ni signet sauté pendant qu'on corbeille ; deux
+  scans simultanés ne font plus échouer l'écriture du cache.
+- **Les suivis de job ne restent plus figés** : un job fini avant
+  l'abonnement rejoue son terme ; l'analyse en cours se dit « en cours »,
+  les compteurs se relisent après une annulation.
+- Et une vingtaine de corrections d'interface : la vue sauvegardée garde
+  son surlignage, le composer ne donne plus à une URL le titre de la
+  précédente, la palette et le filtre de domaine n'envoient plus une
+  requête par frappe, la fiche restaurée se relit, changer de jeton vide
+  les données de l'ancien compte, l'export CSV neutralise les formules, le
+  jeton local ne paraît plus dans `ps`.
+
+#### Les états mensongers des vues de Nettoyage (audit du 2026-09-23)
+
+- **« Collections vides (0) » pendant le chargement ou à côté de l'échec** :
+  le compteur de l'en-tête se calculait sur un arbre absent — un zéro
+  inventé. Il n'apparaît plus tant que l'arbre n'est pas là.
+- **« Aucune analyse n'a encore été lancée » pendant l'analyse** : `lastScan`
+  ne se pose qu'à l'achèvement, donc la vue le disait tout au long d'un scan
+  de liens, bouton actif — et un second clic était refusé par le sidecar
+  (`SCAN_EN_COURS`) sans que rien ne s'affiche. La vue dit désormais
+  « Analyse en cours » (statut `running` ou lancement en vol), sans bouton.
+- **« Rien ici » avant d'avoir reçu le statut d'analyse** : un statut
+  inconnu valait « déjà analysé ». Il vaut désormais « inconnu » (chargement),
+  y compris quand une entrée manque — jamais un TypeError, l'app n'ayant pas
+  d'ErrorBoundary.
+
+#### La config vitest, hors de tout typecheck (audit du 2026-09-23)
+
+- **`vite.config.ts` n'était couvert par aucun tsconfig**, et ses options de
+  test partagées (`sharedTest`, un objet étalé) échappaient même à un
+  typecheck dédié. Or vitest ignore une clé inconnue sans un mot : mesuré,
+  `testTimout` ramène le délai de 15 s à 5 s — des tests « sensibles à la
+  charge » fabriqués par une faute de frappe. `satisfies InlineConfig` et
+  inclusion dans `tsconfig.check.json` : `npm run typecheck` (donc
+  `build:app`) la refuse désormais.
+
+#### Les imports morts, signalés en permanence (audit du 2026-09-23)
+
+- **`noUnusedLocals` n'était qu'une passe manuelle**, que les plans devaient
+  penser à lancer — et qui ne couvrait que le front. Côté sidecar, 5
+  déclarations mortes s'étaient accumulées (`caller` dans `deps.test.ts`,
+  `filtrerGeneriques` dans `analysis.test.ts`, le type `Menage` dans
+  `sauvegarde.ts`, deux `afterAll`) : retirées, aucune ne cachait un test
+  vidé de son objet. Le drapeau vit désormais dans `tsconfig.front.json` et
+  `tsconfig.check.json` : le typecheck, donc `build:app`, les refuse.
+
 #### Le bouton invisible, le remplacement qui ne remplaçait pas, les morts qui respirent (2026-09-22)
 
 - **« Remplacer par l'URL finale », « Restaurer » et « Supprimer la

@@ -11,7 +11,7 @@ import { t } from "../i18n/fr";
 // L'ordre compte : l'échec prime sur le vide, puisque c'est LUI qui explique
 // le vide.
 export function EtatListe({
-  chargement, erreur, vide, reessayer, jamaisAnalyse, analyser,
+  chargement, erreur, vide, reessayer, jamaisAnalyse, analyser, analyseEnCours,
 }: {
   chargement: boolean;
   /** Message d'échec, s'il y en a un. */
@@ -32,6 +32,10 @@ export function EtatListe({
   /** L'action qui corrige le vide — §10 : le bouton nomme ce qui va se
    *  produire. Absente, la mention reste informative. */
   analyser?: () => void;
+  /** L'analyse TOURNE sans avoir jamais abouti (`lastScan` ne se pose qu'à
+   *  l'achèvement) : « aucune analyse lancée » mentirait, et le bouton
+   *  relancerait ce qui tourne — le sidecar le refuse, en silence. */
+  analyseEnCours?: boolean;
 }) {
   if (erreur != null && erreur !== "") {
     return (
@@ -50,6 +54,7 @@ export function EtatListe({
   if (chargement) return <p className="p-4 text-app-muted">{t("state.loading")}</p>;
   // AVANT le vide : c'est lui qui explique le vide, comme l'échec plus haut.
   if (jamaisAnalyse === true) {
+    if (analyseEnCours === true) return <p className="p-4 text-sm text-app-muted">{t("cleanup.scanRunning")}</p>;
     return (
       <p className="flex items-center gap-3 p-4 text-sm text-app-muted">
         <span>{t("state.neverScanned")}</span>

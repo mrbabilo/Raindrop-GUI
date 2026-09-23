@@ -62,6 +62,25 @@ leur raisonnement, et un renvoi par lot livré.*
 
 ## Ouvert
 
+### Audit du 2026-09-23 — ce qui reste (détail : `docs/audit-2026-09-23.md`)
+
+- [ ] **À vérifier en réel (Mac)** : `cargo test` du shell après le passage
+      du jeton de la sonde sur stdin (`curl -H @-`) ; l'opérateur de dates
+      `created:>=` / `<=` (une requête de métadonnées) ; l'export CSV sous
+      WKWebView (aucun gestionnaire de téléchargement) ; le `modified` de la
+      réponse `PUT /raindrops/-99` (le compte de restaurés est `ids.length`).
+- [ ] **Liens morts sur la foi du HEAD seul** — seuls 405/501 déclenchent
+      le repli GET (spec §5.1 : « GET si 405/ambigu »). Mesurer d'abord :
+      revérifier en GET 10-20 morts réels, puis trancher.
+- [ ] **Écart de spécification : le 3e niveau de collections est
+      invisible** (barre latérale et `CollectionView` : deux niveaux ; DESIGN
+      §4 en compte trois). Chantier de design, pas un correctif local.
+- [ ] **CSP désactivée** (`"csp": null`) — proposition dans le rapport
+      d'audit, à éprouver en réel (port dynamique, GitHub, images `https:`).
+- [ ] **Dette de taille** : `ReviewPage.tsx` 397 (à découper AVANT tout
+      ajout — frontière : le pied d'exécution et `supprimerCollections`),
+      `i18n/fr.ts` 395, `raindrops.test.ts` 394.
+
 ### Nettoyage / analyse
 
 - [x] **Revérifier les indéterminés** (2026-09-22) — `POST /api/analysis/recheck`

@@ -21,9 +21,6 @@ const fakeThrottle = {
 const fail = (msg: string): CallOutcome<unknown> => ({ ok: false, code: "RAINDROP_API", message: msg });
 const okData = (): CallOutcome<unknown> => ({ ok: true, data: { value: 42 } });
 
-const caller = (seq: CallOutcome<unknown>[]) =>
-  makeMcpCaller(fakeLifecycle(seq).lifecycle, fakeThrottle, { retryDelayMs: 1 });
-
 describe("makeMcpCaller — retry des lectures MCP", () => {
   it("READ tool en échec RAINDROP_API → retry unique puis ok", async () => {
     const { call, lifecycle } = fakeLifecycle([fail("erreur raindrop"), okData()]);

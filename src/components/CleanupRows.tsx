@@ -123,7 +123,9 @@ export function RedirectRow({ r, collectionRacine, onRemplace }: {
         )}
         {update.isError && <ErreurLigne message={String(update.error?.message ?? "")} />}
       </div>
-      {finale && (
+      {/* Vraie redirection seulement (→ 2xx) : la finale d'un indéterminé
+          est souvent un login ou un mur payant (401/403) — audit 09-23. */}
+      {finale && r.status === "redirect" && (
         <ActionLigne
           className="btn shrink-0"
           disabled={update.isPending}

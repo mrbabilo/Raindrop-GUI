@@ -35,6 +35,11 @@ export interface ResultatIncremental {
   modifies: unknown[];
   nouveauWatermark: string;
   pages: number;
+  /** Vrai si la lecture a ATTEINT le watermark (croisé) ou la fin de la
+   *  liste. Faux : elle s'est arrêtée à `maxPages` au milieu du neuf — ce qui
+   *  n'a pas été lu reste dans son état d'avant, et le watermark avancé ne le
+   *  relirait jamais (audit du 2026-09-23). L'appelant doit alors balayer. */
+  complet: boolean;
 }
 
 export async function lireModifies(deps: {
@@ -50,6 +55,7 @@ export async function lireModifies(deps: {
   let nouveauWatermark = deps.watermark;
   let pages = 0;
   let recouvrementRestant = -1; // -1 = pas encore croisé
+  let complet = false;
 
   for (let page = 0; page < max; page++) {
     const p = await deps.lecture.page(deps.collectionId, {
@@ -84,7 +90,11 @@ export async function lireModifies(deps: {
         croiseSurCettePage = true;
       }
     }
-    if (p.items.length < PAR_PAGE) break;
+    if (croiseSurCettePage) complet = true;
+    if (p.items.length < PAR_PAGE) {
+      complet = true;
+      break;
+    }
     if (croiseSurCettePage && recouvrementRestant === -1) {
       // Une page de recouvrement : les éléments de même seconde peuvent
       // chevaucher la frontière de page.
@@ -96,5 +106,5 @@ export async function lireModifies(deps: {
       if (recouvrementRestant === 0) break;
     }
   }
-  return { modifies: [...parId.values(), ...sansId], nouveauWatermark, pages };
+  return { modifies: [...parId.values(), ...sansId], nouveauWatermark, pages, complet };
 }

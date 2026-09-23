@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { useAppState } from "../state/appState";
@@ -24,13 +25,33 @@ export function actifs(view: ReturnType<typeof useAppState>["view"]): boolean {
 
 export function PanneauFiltres({ ouvert }: { ouvert: boolean }) {
   const { view, patchList } = useAppState();
+  // Le DOMAINE se tape : appliqué à chaque frappe, il changeait la clé de
+  // requête à chaque caractère — une requête par frappe dans la file à
+  // 550 ms, et « Rien ici » à chaque préfixe (`domain:youtube` → 0 sans
+  // erreur, CLAUDE.md). Brouillon local, posé après une pause de 300 ms
+  // comme la recherche — jamais re-posé s'il égale la vue (le patch efface
+  // `smartlistId`, leçon de la TopBar). Un brouillon en attente compte comme
+  // un filtre actif : replier pendant la pause ne cache pas la saisie
+  // (audit du 2026-09-23). Les dates, elles, se posent d'un geste.
+  const domaineVue = view.kind === "list" ? view.domain : undefined;
+  const [domaine, setDomaine] = useState(domaineVue ?? "");
+  useEffect(() => setDomaine(domaineVue ?? ""), [domaineVue]);
+  useEffect(() => {
+    if ((domaine || undefined) === domaineVue) return;
+    const id = setTimeout(() => patchList({ domain: domaine || undefined }), 300);
+    return () => clearTimeout(id);
+  }, [domaine, domaineVue]);
   if (view.kind !== "list") return null;
   // Un filtre posé ne peut pas devenir invisible : sans cette persistance,
   // replier le panneau laisserait un filtre actif que plus rien ne retire
   // (même contrat qu'en §11 pour une puce de nature active).
-  if (!ouvert && !actifs(view)) return null;
+  const actif = actifs(view) || domaine !== "";
+  if (!ouvert && !actif) return null;
 
-  const effacer = () => patchList({ domain: undefined, createdStart: undefined, createdEnd: undefined });
+  const effacer = () => {
+    setDomaine("");
+    patchList({ domain: undefined, createdStart: undefined, createdEnd: undefined });
+  };
 
   return (
     <div id="panneau-filtres" className="flex items-center gap-2 px-3 pb-2">
@@ -38,8 +59,8 @@ export function PanneauFiltres({ ouvert }: { ouvert: boolean }) {
         aria-label={t("filter.domain")}
         className="input w-32"
         placeholder={t("filter.domainPlaceholder")}
-        value={view.domain ?? ""}
-        onChange={(e) => patchList({ domain: e.target.value || undefined })}
+        value={domaine}
+        onChange={(e) => setDomaine(e.target.value)}
       />
       <input
         aria-label={t("filter.from")}
@@ -57,7 +78,7 @@ export function PanneauFiltres({ ouvert }: { ouvert: boolean }) {
       />
       {/* §9 « masqué si nul » : rien à effacer, pas de commande — et c'est
           elle qui rend le repli possible quand un filtre est posé. */}
-      {actifs(view) && (
+      {actif && (
         <button type="button" className="btn btn-icone" aria-label={t("filter.clear")} onClick={effacer}>
           <Icone nom="croix" />
         </button>

@@ -209,6 +209,22 @@ describe("TagsView — filtrer sur les étiquettes cochées", () => {
     // DEUX, et non la dernière cochée : c'est tout l'objet de la demande.
     expect(vue.tags).toHaveLength(2);
   });
+
+  // Cochés ∩ vivant (trap garde de sélection) : une étiquette cochée puis
+  // supprimée/renommée restait cochée — filtrer intersectait une étiquette
+  // qui n'existe plus, soit zéro résultat sans explication (audit 09-23).
+  it("une étiquette cochée qui DISPARAÎT des données ne compte plus", async () => {
+    const { rerender } = render(<TagsView />, { wrapper });
+    const cases = await screen.findAllByRole("checkbox");
+    await userEvent.click(cases[0]!); // typescript
+    await userEvent.click(cases[1]!); // rust
+    expect(screen.getByText("Filtrer sur ces 2 étiquettes")).toBeInTheDocument(); // témoin
+    etatTags.valeur = { data: [{ name: "typescript", count: 8 }, { name: "design", count: 5 }] };
+    rerender(<TagsView />);
+    await userEvent.click(screen.getByText("Filtrer sur cette étiquette"));
+    const vue = JSON.parse(screen.getByTestId("vue").textContent ?? "{}") as { tags: string[] };
+    expect(vue.tags).toEqual(["typescript"]);
+  });
 });
 
 describe("TagsView — le nom mène à ce qu'il range", () => {

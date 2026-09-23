@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { raindrop } from "../test/fixtures";
@@ -126,8 +126,12 @@ describe("TopBar", () => {
     await user.click(screen.getByRole("button", { name: "Articles" }));
     await user.type(screen.getByLabelText("Depuis"), "2025-01-01");
     await user.type(screen.getByLabelText("Jusqu'à"), "2025-12-31");
-    const v = JSON.parse(screen.getByTestId("view").textContent!);
-    expect(v).toMatchObject({ domain: "example.com", media: "article", createdStart: "2025-01-01", createdEnd: "2025-12-31" });
+    // Le domaine se pose après une pause de saisie (300 ms, comme la recherche).
+    await waitFor(() =>
+      expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({
+        domain: "example.com", media: "article", createdStart: "2025-01-01", createdEnd: "2025-12-31",
+      }),
+    );
   });
 
   // Vérifié au navigateur le 2026-09-17 : avec `btn px-0`, le padding

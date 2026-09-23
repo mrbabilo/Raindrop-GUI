@@ -37,9 +37,11 @@ const queryClient = new QueryClient({
       // Or `onlineManager` se règle sur `navigator.onLine`, qui parle de
       // l'accès à INTERNET. Notre API, elle, est LOCALE : le sidecar écoute
       // sur 127.0.0.1, et sa joignabilité n'a rien à voir avec la connexion
-      // de la machine. Sous le schéma `tauri://localhost`, WebKit rend
-      // volontiers `navigator.onLine` faux — l'application se retrouvait
-      // alors gelée face à un serveur parfaitement vivant.
+      // de la machine. Réglage de PRINCIPE, pas un correctif : mesuré le
+      // 2026-09-19 par sonde, `navigator.onLine` vaut `true` sous
+      // `tauri://localhost` — ne jamais l'invoquer comme cause d'un
+      // « pending » éternel (CLAUDE.md). Hors ligne pour de bon (Wi-Fi
+      // coupé), il gèlerait pourtant une app dont le serveur est local.
       //
       // L'état réseau qui compte pour nous est déjà mesuré ailleurs, et
       // mieux : `useHealth` interroge le sidecar, et la bannière hors-ligne
