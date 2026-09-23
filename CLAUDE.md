@@ -229,9 +229,9 @@ les décisions structurantes.
   la fenêtre. Un test réel du trousseau doit sauver le token en mémoire
   avec restauration par `trap`, et l'absence de token rend `Ok(None)`
   (état normal du premier lancement), jamais une erreur.
-- **Cliquets et écrans** : le cliquet de `scripts/build_app.py` exclut les
-  tests front du compte (dette : `raindrops.test.ts` 430 lignes, à
-  découper — entrée ROADMAP) ; tout écran d'amorçage doit avoir une ISSUE
+- **Cliquets et écrans** : le cliquet de `scripts/build_app.py` COMPTE les
+  tests depuis son ré-armement (voir la trap du lot multi-étiquettes, mise à
+  jour le 2026-09-23) ; tout écran d'amorçage doit avoir une ISSUE
   (« Réessayer » passe par une commande qui REJOUE la séquence — relire
   l'état mémorisé rendrait la même panne à jamais ; « Saisir un autre
   jeton » sinon un jeton refusé enferme, il est déjà au trousseau).
@@ -502,12 +502,15 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   retenue, rendue comme les autres, invite à refaire ce qui est fait — et son
   clic surprend en défaisant. `aria-pressed` + inversion des teintes (la
   TEINTE ne bouge pas : c'est le rôle qui change, pas l'identité).
-- **Le cliquet de `scripts/build_app.py` EXCLUT les tests**, mais pas
-  CLAUDE.md (« tests compris »). `sidecar/api/routes/raindrops.test.ts` vivait
-  à 430 lignes sans que rien ne le signale ; il est découpé (lecture /
-  écriture). Corollaire : **soldé le même jour** — les erreurs étaient
-  réelles, toutes corrigées, et le typecheck couvre désormais les tests en
-  permanence (`tsconfig.check.json`, trap sauvegarde).
+- ~~**Le cliquet de `scripts/build_app.py` EXCLUT les tests**~~ — il les
+  COMPTE depuis son ré-armement (« tests compris », comme CLAUDE.md ; seuls
+  les harnais `src/test/` et `sidecar/testing/` restent hors compte).
+  `sidecar/api/routes/raindrops.test.ts` vivait à 430 lignes sans que rien
+  ne le signale ; il fut découpé. **Et le gate a été ROUGE sans que personne
+  ne le voie** (audit du 2026-09-23) : à `6f155db`,
+  `ResultatsLiens.test.tsx` faisait 417 lignes — `build:app` s'arrêtait au
+  cliquet, avant même les tests. Un lot commité sans `build:app` n'a pas
+  passé le gate ; `npm test` vert ne le remplace pas.
 
 ## Traps garde de sélection — lot 2026-09-20
 

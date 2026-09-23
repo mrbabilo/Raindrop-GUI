@@ -519,6 +519,35 @@ signet près, y compris croisé avec le filtre de domaine.
 
 ### Corrigé
 
+#### L'audit du 2026-09-23 — suppressions définitives, instantanés faux, pagination (détail : `docs/audit-2026-09-23.md`)
+
+- **Plus aucune suppression définitive hors de la frappe SUPPRIMER.**
+  Déposer un signet déjà en corbeille sur « Corbeille » le supprimait
+  DÉFINITIVEMENT (supprimer depuis la corbeille l'est, chez Raindrop), son
+  origine écrasée ; `DELETE ?from=-99` aussi. Le sidecar refuse désormais,
+  comme `/bulk` refuse un `update` sans ids (il viserait toute la
+  bibliothèque), `tags: []` (retirerait toutes les étiquettes) et un DELETE
+  en -99. La route du nettoyage GLOBAL de collections est retirée.
+- **« Remplacer par l'URL finale » n'est plus proposé sur un lien à
+  vérifier à la main** : la finale d'un 401/403 est souvent une page de
+  connexion — le clic l'écrivait dans le signet.
+- **Une sauvegarde incrémentale n'est plus déclarée valide avec des
+  signets dans leur état d'avant** : après plus de 1 000 modifications (un
+  renommage d'étiquette très portée), elle bascule en balayage complet et
+  le dit.
+- **L'analyse lit la bibliothèque juste** : ni signet lu deux fois (un faux
+  doublon avec lui-même), ni signet sauté pendant qu'on corbeille ; deux
+  scans simultanés ne font plus échouer l'écriture du cache.
+- **Les suivis de job ne restent plus figés** : un job fini avant
+  l'abonnement rejoue son terme ; l'analyse en cours se dit « en cours »,
+  les compteurs se relisent après une annulation.
+- Et une vingtaine de corrections d'interface : la vue sauvegardée garde
+  son surlignage, le composer ne donne plus à une URL le titre de la
+  précédente, la palette et le filtre de domaine n'envoient plus une
+  requête par frappe, la fiche restaurée se relit, changer de jeton vide
+  les données de l'ancien compte, l'export CSV neutralise les formules, le
+  jeton local ne paraît plus dans `ps`.
+
 #### Les états mensongers des vues de Nettoyage (audit du 2026-09-23)
 
 - **« Collections vides (0) » pendant le chargement ou à côté de l'échec** :
