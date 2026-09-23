@@ -136,6 +136,7 @@ export function TopBar() {
                   if (e.key === "Escape") {
                     setSauvegarde(false);
                     setNomVue("");
+                    creerVue.reset();
                   }
                 }}
               />
@@ -148,6 +149,13 @@ export function TopBar() {
               >
                 <Icone nom="coche" />
               </button>
+              {/* Un échec de pose se dit — il laissait le formulaire ouvert
+                  sans un mot (audit UX du 2026-09-23). */}
+              {creerVue.isError && (
+                <span role="alert" className="self-center text-xs text-app-broken">
+                  {t("state.error", { message: creerVue.error.message })}
+                </span>
+              )}
             </>
           )}
           <button

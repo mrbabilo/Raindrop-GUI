@@ -53,6 +53,13 @@ describe("Reglages", () => {
     expect(screen.queryByText("connected")).not.toBeInTheDocument();
   });
 
+  // Audit UX du 2026-09-23 : ni rôle ni nom — un lecteur d'écran ne savait
+  // pas qu'un dialogue s'était ouvert par-dessus l'application.
+  it("est un dialogue modal nommé", () => {
+    render(<Reglages onFermer={vi.fn()} onEtat={vi.fn()} />, { wrapper });
+    expect(screen.getByRole("dialog", { name: "Réglages" })).toHaveAttribute("aria-modal", "true");
+  });
+
   it("un état inconnu ne casse rien — il se tait", () => {
     healthMock.mockReturnValue({ data: undefined });
     render(<Reglages onFermer={vi.fn()} onEtat={vi.fn()} />, { wrapper });

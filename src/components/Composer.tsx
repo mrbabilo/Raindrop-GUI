@@ -94,6 +94,7 @@ export function Composer() {
       }}
     >
       <input
+        aria-label={t("composer.urlAria")}
         className="input flex-1"
         data-testid="composer-input"
         placeholder={t("composer.placeholder")}

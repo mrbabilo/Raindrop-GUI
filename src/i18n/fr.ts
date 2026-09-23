@@ -62,6 +62,8 @@ export const fr = {
   "detail.edit": "Modifier",
   "detail.save": "Enregistrer",
   "detail.cancel": "Annuler",
+  "detail.champExtrait": "Extrait",
+  "detail.champNote": "Note",
   "detail.favorite": "Favori",
   "detail.unfavorite": "Retirer des favoris",
   "detail.trash": "Mettre à la corbeille",
@@ -128,11 +130,14 @@ export const fr = {
   "composer.exists": "Déjà sauvegardé",
   "composer.save": "Sauvegarder",
   "composer.titleAria": "Titre",
+  "composer.urlAria": "URL à sauvegarder",
   "cmdk.placeholder": "Rechercher bookmarks, collections, tags, commandes…",
   "cmdk.hintBookmark": "Bookmark",
   "cmdk.hintCollection": "Collection",
   "cmdk.hintTag": "Tag",
   "cmdk.hintView": "Vue",
+  "cmdk.titre": "Palette de commandes",
+  "cmdk.aucun": "Aucun résultat pour « {q} »",
   "bulk.clear": "Tout désélectionner",
   "cleanup.title": "Nettoyage",
   "cleanup.dead": "Liens morts",
@@ -233,6 +238,7 @@ export const fr = {
   "review.count": "{n} item(s) affecté(s)",
   "review.deselect": "Tout désélectionner",
   "review.filterPlaceholder": "Filtrer dans l'aperçu…",
+  "review.filterAria": "Filtrer dans l'aperçu",
   "review.export": "Exporter en CSV",
   "review.confirmL1": "Je confirme l'action sur {n} item(s)",
   "review.execute": "Exécuter",
@@ -365,24 +371,15 @@ export const fr = {
 
 export type FrKey = keyof typeof fr;
 
-/** Une clé du dictionnaire, rien d'autre : le repli « rend la clé »
- *  masquait les fautes — une chaîne absente s'affichait brute à l'écran
- *  au lieu d'être refusée au typecheck. Les usages DYNAMIQUES (les seuls
- *  à ne pas pouvoir être vérifiés ici) construisent leur objet de clés en
- *  `as const` au lieu de caster (voir NatureChips). */
-/**
- * Une valeur peut porter DEUX formes séparées par `|` — singulier puis
- * pluriel — choisies sur la variable `n` :
+/** Une clé du dictionnaire, rien d'autre : le repli « rend la clé » masquait
+ *  les fautes (une chaîne absente s'affichait brute). Les usages DYNAMIQUES
+ *  construisent leur objet de clés en `as const` (voir NatureChips).
  *
- *     "{n} instantané conservé|{n} instantanés conservés"
- *
- * Règle française, et c'est là qu'elle diffère de l'anglais : **le singulier
- * vaut pour 0 comme pour 1** (« 0 instantané », « 1 instantané »), le pluriel
- * à partir de 2. Sans ce mécanisme on écrivait « 1 instantanés conservés ».
- *
- * Une chaîne à DEUX comptes variables ne s'accorde pas ainsi : elle passe `n`
- * pour celui qui porte l'accord, et garde la forme `(s)` pour l'autre.
- */
+ *  Une valeur peut porter DEUX formes séparées par `|` — singulier puis
+ *  pluriel — choisies sur `n` (« {n} instantané conservé|{n} instantanés
+ *  conservés »). Règle FRANÇAISE : le singulier vaut pour 0 comme pour 1, le
+ *  pluriel à partir de 2. Une chaîne à DEUX comptes passe `n` pour celui qui
+ *  porte l'accord et garde la forme `(s)` pour l'autre. */
 export function t(key: FrKey, vars?: Record<string, string | number>): string {
   const brut: string = fr[key];
   const formes = brut.split("|");

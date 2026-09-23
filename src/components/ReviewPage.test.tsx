@@ -160,6 +160,14 @@ describe("ReviewPage — niveau 1 (corbeille)", () => {
   });
 });
 
+// Audit UX du 2026-09-23 : le filtre n'avait que son placeholder.
+describe("ReviewPage — le filtre de l'aperçu porte un nom", () => {
+  it("nommé", () => {
+    renderReview();
+    expect(screen.getByRole("textbox", { name: "Filtrer dans l'aperçu" })).toBeInTheDocument();
+  });
+});
+
 describe("ReviewPage — niveau 2 (vider la corbeille)", () => {
   const reviewL2: ReviewView = {
     kind: "review",

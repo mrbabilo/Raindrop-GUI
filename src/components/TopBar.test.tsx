@@ -227,6 +227,18 @@ describe("TopBar", () => {
     expect(screen.queryByLabelText("Nom de la vue sauvegardée")).not.toBeInTheDocument();
   });
 
+  // Audit UX du 2026-09-23 : l'échec de la pose ne se disait nulle part —
+  // le formulaire restait ouvert sans un mot, Entrée ne faisait « rien ».
+  it("un échec de pose se dit ; le formulaire reste, nom intact", async () => {
+    sendMock.mockRejectedValueOnce(new Error("disque plein"));
+    renderTop();
+    await userEvent.click(screen.getByText("vue-étiquette"));
+    await userEvent.click(screen.getByRole("button", { name: "Sauvegarder la vue" }));
+    await userEvent.type(screen.getByLabelText("Nom de la vue sauvegardée"), "{Enter}");
+    expect(await screen.findByRole("alert")).toHaveTextContent("disque plein");
+    expect(screen.getByLabelText("Nom de la vue sauvegardée")).toHaveValue("rust");
+  });
+
   it("Échap annule : rien n'est envoyé", async () => {
     renderTop();
     await userEvent.click(screen.getByText("vue-étiquette"));

@@ -54,6 +54,13 @@ describe("Composer", () => {
     etat.view = { kind: "list", collectionId: 101, label: "Dev" };
   });
 
+  // Audit UX du 2026-09-23 : le champ n'avait que son placeholder — qui
+  // n'est un nom qu'en dernier recours, et disparaît dès qu'on saisit.
+  it("le champ d'URL porte un nom", () => {
+    render(<Composer />);
+    expect(screen.getByRole("textbox", { name: "URL à sauvegarder" })).toBeInTheDocument();
+  });
+
   it("parse l'URL collée (préremplissage) et crée dans la collection courante", async () => {
     render(<Composer />);
     await saisir(URL_NEUVE);

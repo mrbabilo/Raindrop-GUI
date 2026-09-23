@@ -262,7 +262,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
       </header>
       <div className="flex items-center gap-2 px-4 py-2">
         <input
-          className="input w-64"
+          aria-label={t("review.filterAria")} className="input w-64"
           placeholder={t("review.filterPlaceholder")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
