@@ -186,4 +186,37 @@ describe("Composer", () => {
     expect(screen.queryByDisplayValue("TITRE PÉRIMÉ")).not.toBeInTheDocument();
     expect(screen.getByDisplayValue("Titre frais")).toBeInTheDocument();
   });
+
+  // Le titre appartient à l'URL qu'il décrit (audit du 2026-09-23) : coller
+  // A, puis B, puis valider avant le parse de B enregistrait B sous le titre
+  // de A — rien ne reliait le titre affiché à son URL.
+  it("valider une URL NEUVE avant son parse n'emporte pas le titre de la précédente", async () => {
+    render(<Composer />);
+    await saisir(URL_NEUVE);
+    // Le geste réel : tout sélectionner, COLLER B par-dessus A — l'URL passe
+    // de A à B d'un coup, sans état intermédiaire vide (un `clear` remettrait
+    // le titre à zéro et rendrait ce test creux).
+    const champ = screen.getByPlaceholderText(COLLER) as HTMLInputElement;
+    champ.focus();
+    champ.setSelectionRange(0, champ.value.length);
+    await userEvent.paste("https://autre.example/b");
+    expect(champ).toHaveValue("https://autre.example/b");
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() =>
+      expect(sendMock).toHaveBeenCalledWith("POST", "/api/raindrops", expect.objectContaining({ link: "https://autre.example/b" })),
+    );
+    const corps = sendMock.mock.calls.find((c) => c[1] === "/api/raindrops")![2] as { title?: string };
+    expect(corps.title).toBeUndefined();
+  });
+
+  it("témoin : un titre ÉDITÉ à la main pour l'URL courante part avec elle", async () => {
+    render(<Composer />);
+    await saisir(URL_NEUVE);
+    const titre = screen.getByLabelText("Titre");
+    await userEvent.clear(titre);
+    await userEvent.type(titre, "Mon titre{Enter}");
+    await waitFor(() =>
+      expect(sendMock).toHaveBeenCalledWith("POST", "/api/raindrops", expect.objectContaining({ link: URL_NEUVE, title: "Mon titre" })),
+    );
+  });
 });

@@ -29,6 +29,10 @@ export function Composer() {
   // pas de collection_id, l'API décide.
   const collectionId = view.kind === "list" && view.collectionId > 0 ? view.collectionId : undefined;
   const seq = useRef(0);
+  // L'URL que le titre DÉCRIT (parse ou saisie à la main) : coller B par-
+  // dessus A puis valider avant le parse de B enregistrait B sous le titre de
+  // A — rien ne les reliait (audit du 2026-09-23).
+  const titrePour = useRef<string | null>(null);
 
   // `seq` écarte la réponse d'une URL dépassée par la saisie suivante :
   // sans lui, un parse lent ferait préremplir le titre de l'ancienne URL.
@@ -39,7 +43,10 @@ export function Composer() {
       api.send<VerifLiens>("POST", "/api/check-urls", { urls: [cible] }).catch(() => null),
     ]);
     if (ticket !== seq.current) return;
-    if (meta?.title) setTitre(meta.title);
+    if (meta?.title) {
+      titrePour.current = cible;
+      setTitre(meta.title);
+    }
     setDoublon(verif?.duplicates?.[0]?.link ?? null);
   }
 
@@ -69,7 +76,7 @@ export function Composer() {
     if (create.isPending) return;
     setErreur(null);
     void create
-      .mutateAsync({ link: url, ...(titre ? { title: titre } : {}), collection_id: collectionId })
+      .mutateAsync({ link: url, ...(titre && titrePour.current === url ? { title: titre } : {}), collection_id: collectionId })
       .then(() => {
         setUrl("");
         setTitre(null);
@@ -98,7 +105,10 @@ export function Composer() {
           aria-label={t("composer.titleAria")}
           className="input w-48"
           value={titre}
-          onChange={(e) => setTitre(e.target.value)}
+          onChange={(e) => {
+            titrePour.current = url; // saisi à la main : il décrit l'URL courante
+            setTitre(e.target.value);
+          }}
         />
       )}
       {doublon !== null && (

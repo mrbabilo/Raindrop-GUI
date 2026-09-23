@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { t } from "../i18n/fr";
 import { api } from "../lib/api";
@@ -30,10 +30,19 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
   const [cursor, setCursor] = useState(0);
 
   // Recherche serveur : `{search, per_page: 8}` tel que contracté au plan.
+  // La recherche SERVEUR attend une pause de saisie (300 ms, comme la TopBar
+  // et le Composer) : une requête par frappe occupait la file séquentielle
+  // à 550 ms — 8 requêtes pour « rustacean » (audit du 2026-09-23). Le
+  // filtre local des collections et étiquettes, lui, reste immédiat.
+  const [qServeur, setQServeur] = useState(initialQuery);
+  useEffect(() => {
+    const id = setTimeout(() => setQServeur(q), 300);
+    return () => clearTimeout(id);
+  }, [q]);
   const bookmarks = useQuery({
-    queryKey: ["cmdk", q],
-    queryFn: () => api.get<{ items: { id: number; title: string }[] }>("/api/raindrops", { search: q, per_page: 8 }),
-    enabled: open && q.length >= 2,
+    queryKey: ["cmdk", qServeur],
+    queryFn: () => api.get<{ items: { id: number; title: string }[] }>("/api/raindrops", { search: qServeur, per_page: 8 }),
+    enabled: open && qServeur.length >= 2,
   });
 
   if (!open) return null;
