@@ -97,7 +97,9 @@ export const useUnrestore = () => {
     // restaurés : l'appelant demande alors une destination et rappelle (§4.2).
     mutationFn: (v: { ids: number[]; toCollectionId?: number }) =>
       api.send<{ restored: number; unknown: number[] }>("POST", "/api/raindrops/unrestore", v),
-    onSuccess: () => invalidate("raindrops", "collections", "tags"),
+    // "raindrop" aussi (le détail) : sans lui, la fiche d'un signet restauré
+    // le montrait encore en corbeille, bouton Restaurer compris (audit 09-23).
+    onSuccess: () => invalidate("raindrops", "raindrop", "collections", "tags"),
   });
 };
 

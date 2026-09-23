@@ -149,7 +149,8 @@ describe("useUnrestore", () => {
     const appel = await jouer(() => useUnrestore(), { ids: [1, 2], toCollectionId: 101 });
     expect(appel?.slice(0, 2)).toEqual(["POST", "/api/raindrops/unrestore"]);
     expect(appel?.[2]).toEqual({ ids: [1, 2], toCollectionId: 101 });
-    expect(invalidees).toEqual(["raindrops", "collections", "tags"]);
+    // Le détail aussi : une fiche restaurée ne se dit plus « en corbeille ».
+    expect(invalidees).toEqual(["raindrops", "raindrop", "collections", "tags"]);
   });
 });
 
