@@ -74,6 +74,16 @@ const bulkBody = z
   })
   .refine((b) => b.operation !== "update" || (b.tags != null || b.important != null), {
     message: "update exige tags ou important",
+  })
+  // Trois gestes que l'API Raindrop rend MASSIFS ou DÉFINITIFS (doc officielle,
+  // relue le 2026-09-23) : sans `ids`, `PUT /raindrops/{c}` vise TOUTE la
+  // collection (0 = la bibliothèque) ; `tags: []` y RETIRE toutes les
+  // étiquettes ; un DELETE en -99 supprime DÉFINITIVEMENT (le vidage a sa
+  // route, niveau 2). Aucun écran ne les émet — l'API locale est le contrat.
+  .refine((b) => b.operation !== "update" || b.ids != null, { message: "update exige ids" })
+  .refine((b) => b.tags == null || b.tags.length > 0, { message: "tags vide : retirerait toutes les étiquettes" })
+  .refine((b) => b.operation !== "delete" || b.collection_id !== -99, {
+    message: "delete depuis -99 est définitif : passer par le vidage de corbeille",
   });
 
 const dedupeBody = z.object({

@@ -103,8 +103,8 @@ export function useDragBookmark(visibles: readonly number[]) {
             // (§4.2 — la restauration à l'origine ne se dégrade jamais).
             return api.send("POST", "/api/raindrops/bulk-trash", { ids: portes });
           case "tag":
-            // L'union se joue côté sidecar : le bulk update de Raindrop
-            // REMPLACE les étiquettes — poser ne doit jamais effacer.
+            // L'union se joue côté sidecar, item par item : l'update PAR ITEM
+            // de Raindrop REMPLACE les étiquettes — poser ne doit jamais effacer.
             return api.send("POST", "/api/raindrops/bulk-tag", { ids: portes, tag: cible.nom });
         }
       })();

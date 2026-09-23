@@ -4,7 +4,7 @@ import { corbeilleEnMasse, marquerEtiquette } from "./bulk.js";
 
 // Les dépôts EN MASSE venus du glisser-déposer : la corbeille mémorise les
 // origines (§4.2 — sans elles, la restauration reviendrait « inconnue »),
-// l'étiquette pose SEULEMENT l'union (le bulk update de Raindrop remplace).
+// l'étiquette pose SEULEMENT l'union (l'update PAR ITEM de Raindrop remplace).
 
 const ok = <T>(data: T): CallOutcome<T> => ({ ok: true, data });
 const ko = (message: string): CallOutcome<never> => ({ ok: false, code: "RAINDROP_API", message });

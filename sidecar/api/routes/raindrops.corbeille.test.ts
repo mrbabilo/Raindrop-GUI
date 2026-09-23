@@ -63,4 +63,25 @@ describe("suppression définitive — les gardes du sidecar", () => {
     expect(appels).toContain("delete_raindrop:2");
     expect(appels).not.toContain("delete_raindrop:1");
   });
+
+  // Doc officielle (relue le 2026-09-23) : sans ids, le bulk vise toute la
+  // collection ; `tags: []` retire toutes les étiquettes ; DELETE en -99 est
+  // définitif. Aucun ne doit passer la porte — rien ne part vers le pont.
+  it.each([
+    ["update sans ids (toute la bibliothèque)", { operation: "update", collection_id: 0, tags: ["x"] }],
+    ["tags vides (toutes les étiquettes retirées)", { operation: "update", collection_id: 0, ids: [1], tags: [] }],
+    ["delete depuis -99 (définitif)", { operation: "delete", collection_id: -99, ids: [1] }],
+  ])("/bulk refuse : %s", async (_nom, corps) => {
+    const { appels, req } = monter({});
+    const res = await req("/api/raindrops/bulk", { method: "POST", body: JSON.stringify(corps) });
+    expect(res.status).toBe(400);
+    expect(appels).toEqual([]);
+  });
+
+  it("témoin : un update ciblé passe", async () => {
+    const { appels, req } = monter({});
+    const res = await req("/api/raindrops/bulk", { method: "POST", body: JSON.stringify({ operation: "update", collection_id: 0, ids: [1], tags: ["x"] }) });
+    expect(res.status).toBe(200);
+    expect(appels).toEqual(["bulk_raindrops:undefined"]);
+  });
 });

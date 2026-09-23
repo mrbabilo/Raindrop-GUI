@@ -143,6 +143,16 @@ les décisions structurantes.
   anciens (`reclasseTransport`, précédent `filtrerGeneriques`). 367 verdicts
   réels changeaient de catégorie le jour du correctif — dont un site actif
   signalé à l'usage.
+- **`PUT /raindrops/{c}` (bulk) AJOUTE les étiquettes, `PUT /raindrop/{id}`
+  les REMPLACE** — doc officielle relue le 2026-09-23 (`raindropio/
+  developer-site`, `v1/raindrops/multiple.md`). Le dépôt affirmait l'inverse
+  pour le bulk ; la route d'union du glisser-déposer reste juste (elle passe
+  par l'update par item). Trois pièges du bulk, refusés par le zod de
+  `/api/raindrops/bulk` : **sans `ids`**, il vise TOUTE la collection (0 = la
+  bibliothèque) ; **`tags: []`** y retire toutes les étiquettes ; un
+  **DELETE en `-99`** supprime DÉFINITIVEMENT (« permanently removed »).
+  Même règle pour un `delete_raindrop` sur un signet DÉJÀ corbeillé :
+  définitif — `corbeilleEnMasse` et `DELETE ?from=-99` le refusent.
 - **Le paramètre `domain` du MCP ne filtre RIEN** — ne jamais le lui passer
   (vérifié en réel le 2026-09-17) : `searchRaindrops` l'envoie en paramètre
   d'URL (`/raindrops/0?domain=…`), or l'API Raindrop n'a pas ce paramètre,

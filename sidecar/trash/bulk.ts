@@ -9,8 +9,10 @@
 //! ne la garde pas) : la sélection tirée ne la transporte pas, et la
 //! restauration à l'origine ne doit jamais se dégrader en « inconnue ».
 //!
-//! L'étiquette pose SEULEMENT l'union : le bulk update de Raindrop REMPLACE
-//! les étiquettes — poser « rust » ne doit jamais effacer « python ».
+//! L'étiquette pose SEULEMENT l'union, item par item : `update_raindrop`
+//! (PUT /raindrop/{id}) REMPLACE les étiquettes — poser « rust » ne doit
+//! jamais effacer « python ». (Le bulk `PUT /raindrops/{c}`, lui, AJOUTE —
+//! doc relue le 2026-09-23 — mais `[]` y retire tout : voir la route /bulk.)
 
 import type { CallOutcome } from "../../shared/errors.js";
 import type { OriginStore } from "./origins.js";
