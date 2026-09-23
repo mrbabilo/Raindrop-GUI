@@ -1,5 +1,5 @@
 import { repertoireTemporaire } from "./testing/tmp.js";
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect } from "vitest";
 import { join } from "node:path";
 import { acquireLock, readLockfile, clearLockfile } from "./lockfile.js";
 

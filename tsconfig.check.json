@@ -5,7 +5,10 @@
   // Chaîné par `npm run typecheck` ; guéri le 2026-09-19 : les 30 erreurs
   // que cette cécité cachait étaient toutes réelles.
   "extends": "./tsconfig.json",
-  "compilerOptions": { "noEmit": true },
+  // noUnusedLocals (2026-09-23) : le dépôt n'a pas d'ESLint, et la passe
+  // manuelle d'après découpage laissait dériver — 4 morts le 2026-09-20,
+  // 5 de plus le 2026-09-23. Ici seulement, pas dans la config de build.
+  "compilerOptions": { "noEmit": true, "noUnusedLocals": true },
   // vite.config.ts n'était couvert par AUCUN tsconfig (2026-09-23) : c'est
   // lui qui porte la config vitest, qu'une faute de clé désarme en silence.
   "include": ["shared/**/*.ts", "sidecar/**/*.ts", "vite.config.ts"],

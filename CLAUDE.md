@@ -319,10 +319,13 @@ couverture, c'est une intention.
   `npx tsc` ad hoc sur un test front, privé des `types` du projet
   (`@testing-library/jest-dom`), produit des **faux positifs** — ne pas le
   faire, lancer le script.
-- **Le dépôt n'a pas d'ESLint** : les imports morts ne sont signalés par rien.
-  Après un découpage de fichier, passer
-  `npx tsc -p tsconfig.front.json --noEmit --noUnusedLocals` — le typecheck
-  ordinaire les laisse passer.
+- ~~**Le dépôt n'a pas d'ESLint** : les imports morts ne sont signalés par rien.~~
+  **GUÉRI le 2026-09-23** : la passe manuelle laissait dériver (4 morts le
+  2026-09-20, 5 de plus côté sidecar le 2026-09-23). `noUnusedLocals` vit
+  désormais dans `tsconfig.front.json` et `tsconfig.check.json` — donc dans
+  `npm run typecheck`/`typecheck:front` et `build:app` — mais PAS dans
+  `tsconfig.json` (config de build du sidecar). ⚠️ Un nom préfixé `_` en est
+  exempté : ne pas s'en servir pour saboter un test du drapeau.
 - **`tauri build` échoue au DMG si un volume DMG est resté monté** d'un build
   précédent interrompu (`bundle_dmg.sh` → « failed to run »). Le `.app`, lui,
   est déjà produit : ce n'est pas une régression du code. `hdiutil info`,

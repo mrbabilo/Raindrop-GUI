@@ -24,7 +24,7 @@ import {
 } from "./decision.js";
 import { lireModifies } from "./incremental.js";
 import { horodatage, verifierJsonl } from "./instantane.js";
-import { makeEnregistreur, type Menage } from "./enregistrement.js";
+import { makeEnregistreur } from "./enregistrement.js";
 import { dernierValide, lireManifeste, type Manifeste } from "./manifeste.js";
 import type { Lecture } from "./lecture.js";
 import { avecReprise } from "./resilience.js";

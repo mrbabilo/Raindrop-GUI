@@ -544,6 +544,16 @@ signet près, y compris croisé avec le filtre de domaine.
   inclusion dans `tsconfig.check.json` : `npm run typecheck` (donc
   `build:app`) la refuse désormais.
 
+#### Les imports morts, signalés en permanence (audit du 2026-09-23)
+
+- **`noUnusedLocals` n'était qu'une passe manuelle**, que les plans devaient
+  penser à lancer — et qui ne couvrait que le front. Côté sidecar, 5
+  déclarations mortes s'étaient accumulées (`caller` dans `deps.test.ts`,
+  `filtrerGeneriques` dans `analysis.test.ts`, le type `Menage` dans
+  `sauvegarde.ts`, deux `afterAll`) : retirées, aucune ne cachait un test
+  vidé de son objet. Le drapeau vit désormais dans `tsconfig.front.json` et
+  `tsconfig.check.json` : le typecheck, donc `build:app`, les refuse.
+
 #### Le bouton invisible, le remplacement qui ne remplaçait pas, les morts qui respirent (2026-09-22)
 
 - **« Remplacer par l'URL finale », « Restaurer » et « Supprimer la

@@ -9,7 +9,6 @@ import { McpConnection } from "../../mcp/connection.js";
 import { JobStore } from "../../jobs/store.js";
 import { AnalysisCache } from "../../analysis/cache.js";
 import { Scanner } from "../../analysis/scanner.js";
-import { filtrerGeneriques } from "../../analysis/duplicates.js";
 import type { LinkCheckResult, RaindropItem } from "../../../shared/types.js";
 
 let conn: McpConnection;
