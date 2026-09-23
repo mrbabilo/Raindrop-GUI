@@ -18,7 +18,7 @@ type BulkAction = Extract<View, { kind: "review" }>["action"];
 // souris, et ces deux contrôles coûtaient la moitié de la largeur d'une barre
 // qui vit dans une colonne rétrécie par les panneaux latéraux.
 export function BulkBar({ items }: { items: RaindropItem[] }) {
-  const { view, selectedIds, go, clearSelection } = useAppState();
+  const { view, selectedIds, go, clearSelection, toggleSelect } = useAppState();
   const unrestore = useUnrestore();
   const [tags, setTags] = useState("");
   // Le compte des corbeillés SANS origine mémorisée : non restaurés par le
@@ -79,15 +79,20 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
         <>
           <button
             type="button"
-            className="rounded border border-app-border px-2 py-1 disabled:opacity-40"
+            className="btn"
             disabled={unrestore.isPending}
             onClick={() =>
               unrestore.mutate(
                 { ids: selected.map((i) => i.id) },
                 {
+                  // Les NON restaurés restent sélectionnés : vider toute la
+                  // sélection démontait la barre, et le message qui les
+                  // compte n'a jamais pu s'afficher (audit UX du 2026-09-23).
                   onSuccess: (res) => {
-                    setNonRestaures((res.unknown ?? []).length);
-                    clearSelection();
+                    const inconnus = new Set(res.unknown ?? []);
+                    setNonRestaures(inconnus.size);
+                    if (inconnus.size === 0) clearSelection();
+                    else for (const i of selected) if (!inconnus.has(i.id)) toggleSelect(i.id);
                   },
                 },
               )
@@ -101,16 +106,22 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
               {t("bulk.restore.unknown", { n: nonRestaures })}
             </span>
           )}
+          {/* R8P-1 : un échec se dit — la sélection reste, prête à réessayer. */}
+          {unrestore.isError && (
+            <span role="alert" className="text-xs text-app-broken">
+              {t("state.error", { message: unrestore.error.message })}
+            </span>
+          )}
         </>
       ) : (
-        <button type="button" className="rounded border border-app-broken px-2 py-1 text-app-broken" onClick={() => build({ op: "trash" })}>
+        <button type="button" className="btn border-app-broken text-app-broken" onClick={() => build({ op: "trash" })}>
           <Icone nom="corbeille" className="inline align-[-2px] mr-1" />
           {t("bulk.trash")}
         </button>
       )}
       {/* L'archive est la seule action qui n'écrit RIEN chez Raindrop : elle
           copie en local ce qui existe déjà côté serveur. */}
-      <button type="button" className="rounded border border-app-border px-2 py-1" onClick={() => build({ op: "archive" })}>
+      <button type="button" className="btn" onClick={() => build({ op: "archive" })}>
         {t("bulk.archive")}
       </button>
       <input aria-label={t("bulk.tagField")} className="input w-40" placeholder={t("bulk.tagPlaceholder")} value={tags} onChange={(e) => setTags(e.target.value)} />
@@ -119,7 +130,7 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
           résulterait effacerait toutes les étiquettes des items sélectionnés. */}
       <button
         type="button"
-        className="rounded border border-app-border px-2 py-1 disabled:opacity-40"
+        className="btn"
         disabled={etiquettesParses.length === 0}
         onClick={() => {
           if (etiquettesParses.length > 0) build({ op: "tag", tags: etiquettesParses });
@@ -130,7 +141,7 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
       {/* Il n'existait AUCUN moyen de défaire une sélection : cinquante
           signets cochés se décochaient un par un. La commande est en fin de
           barre, après les actions — elle défait, elle n'engage rien. */}
-      <button type="button" className="ml-auto rounded border border-app-border px-2 py-1" onClick={clearSelection}>
+      <button type="button" className="btn ml-auto" onClick={clearSelection}>
         {t("bulk.clear")}
       </button>
     </div>

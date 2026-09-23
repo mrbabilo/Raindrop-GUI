@@ -16,7 +16,7 @@ vi.mock("../hooks/useStaticData", () => ({ useCollections: () => ({ data: collec
 // mocké, l'assertion porte sur son corps. vi.hoisted : la factory vi.mock
 // est hissée au-dessus de tout import — une const ordinaire serait lue
 // avant son initialisation (TDZ, piège documenté).
-const sendMock = vi.hoisted(() => vi.fn(async (_m: string, _p: string, _c?: unknown) => ({ restored: 2, unknown: [] })));
+const sendMock = vi.hoisted(() => vi.fn(async (_m: string, _p: string, _c?: unknown) => ({ restored: 2, unknown: [] as number[] })));
 vi.mock("../lib/api", () => ({ api: { send: sendMock, get: vi.fn() } }));
 
 // Spy étendu (R9P-1) : expose la vue ET la sélection — la Revue « consomme »
@@ -229,5 +229,47 @@ describe("BulkBar — en vue corbeille", () => {
     await renderBar([1000, 1001]);
     expect(screen.queryByRole("button", { name: /Restaurer/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Corbeille" })).toBeInTheDocument();
+  });
+});
+
+// Audit UX du 2026-09-23 : le compte « sans origine connue » était posé PUIS
+// la sélection vidée — or la barre se démonte sans sélection : le message
+// n'a jamais pu s'afficher. Et l'échec de la restauration ne se disait pas.
+describe("BulkBar — ce que la restauration n'a pas fait se voit", () => {
+  const AllerCorbeille = () => {
+    const { go } = useAppState();
+    return <button type="button" onClick={() => go({ kind: "list", collectionId: -99, label: "Corbeille" })}>aller-corbeille</button>;
+  };
+  const monter = async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AppStateProvider>
+          <Spy />
+          <AllerCorbeille />
+          <Preselect ids={[1000, 1001]} />
+          <BulkBar items={items} />
+        </AppStateProvider>
+      </QueryClientProvider>,
+    );
+    await userEvent.click(screen.getByText("aller-corbeille"));
+    await userEvent.click(screen.getByText("pre"));
+  };
+
+  it("les non restaurés restent sélectionnés, et le message les compte", async () => {
+    sendMock.mockResolvedValueOnce({ restored: 1, unknown: [1001] });
+    await monter();
+    await userEvent.click(screen.getByRole("button", { name: "Restaurer (2)" }));
+    expect(await screen.findByText("1 élément sans origine connue — non restauré")).toBeInTheDocument();
+    // Le restauré sort de la sélection ; le non restauré y reste, prêt pour
+    // la vue Nettoyage → Corbeille qui choisit sa destination.
+    expect(screen.getByTestId("sel").textContent).toBe("1001");
+  });
+
+  it("un échec de restauration se dit, la sélection reste", async () => {
+    sendMock.mockRejectedValueOnce(new Error("http 502"));
+    await monter();
+    await userEvent.click(screen.getByRole("button", { name: "Restaurer (2)" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("http 502");
+    expect(screen.getByTestId("sel").textContent).toBe("1000,1001");
   });
 });

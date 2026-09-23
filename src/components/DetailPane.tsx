@@ -97,7 +97,7 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
   const enveloppe = (contenu: ReactNode) => (
     <aside className={coque + " text-app-muted"}>
       {onFermer && (
-        <button type="button" className="btn btn-icone mb-2 ml-auto block" aria-label={t("detail.fermer")} onClick={onFermer}>
+        <button type="button" className="btn btn-icone mb-2 ml-auto flex" aria-label={t("detail.fermer")} onClick={onFermer}>
           <Icone nom="croix" />
         </button>
       )}

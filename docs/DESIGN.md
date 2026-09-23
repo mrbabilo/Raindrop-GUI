@@ -261,7 +261,7 @@ zéro. Marquer la ligne est un signal de plus, jamais une garantie de propreté.
 | `hover` survol | `#F5F4F1` | `#252528` |
 | `broken` lien mort | `#A8301C` | `#E06A52` |
 | `moved` redirection | `#8A6410` | `#D4A03C` |
-| `unsure` indéterminé | `#9A9A96` | `#6B6B68` |
+| `unsure` indéterminé | `#858581` | `#767673` |
 
 Couleurs dérivées, en oklch avec la teinte de la thématique :
 
@@ -269,6 +269,14 @@ Couleurs dérivées, en oklch avec la teinte de la thématique :
 |---|---|---|
 | fond d'étiquette / d'icône | `L .94 C .045` / `L .95 C .035` | `L .30 C .05` / `L .32 C .05` |
 | texte d'étiquette / trait d'icône | `L .42 C .11` / `L .62 C .11` | `L .80 C .09` / `L .68 C .11` |
+
+**Un diagnostic tient 3:1 contre ce qui l'entoure** (WCAG 1.4.11 — le filet
+est un indicateur graphique porteur de sens) : sur `surface`, `work`, `sel`
+et `hover`, dans les deux thèmes. `unsure` était à `#9A9A96` / `#6B6B68` :
+**2,46:1** sur une ligne sélectionnée en clair, 2,67:1 en sombre — le plus
+fin des motifs dans la plus faible des teintes, on ne le voyait pas. Relevé
+le 2026-09-23 ; `src/styles.test.ts` recalcule le contraste depuis la
+feuille.
 
 **Pas d'accent de marque.** Dans cet outil, une couleur qui ne signifie rien
 n'existe pas : la sélection se marque par une surface, pas par une teinte.
