@@ -167,6 +167,18 @@ describe("le vol", async () => {
 
   beforeEach(() => statutMock.mockReturnValue({ data: { actif: true, dossier: "/d", instantanes: 1, dernier: null } }));
 
+  // Le job lancé ICI se suit par l'id du POST, pas par l'adoption pollée
+  // (5 s) : un incrémental fini avant n'était jamais vu (audit 2026-09-23).
+  it("le job lancé est suivi par l'id que le POST a rendu", async () => {
+    statutMock.mockReturnValue({ data: { actif: true, dernier: null, instantanes: 0 } });
+    etatMock.mockResolvedValue({ dossier: "/Users/moi/Sauvegardes", introuvable: false });
+    sendMock.mockResolvedValue({ jobId: "j-local" });
+    await rendre();
+    expect(volMock).not.toHaveBeenCalledWith("backup", "j-local"); // témoin : rien avant le geste
+    await userEvent.click(screen.getByRole("button", { name: "Sauvegarder maintenant" }));
+    await waitFor(() => expect(volMock).toHaveBeenLastCalledWith("backup", "j-local"));
+  });
+
   it("un compteur NOMMÉ, et le bouton de lancement devient inerte", async () => {
     volMock.mockReturnValue(enVol({ done: 5300, total: 12210, label: "bookmarks" }));
     await rendre();
