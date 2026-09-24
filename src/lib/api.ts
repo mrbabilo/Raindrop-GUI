@@ -73,7 +73,16 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return (await res.json()) as T;
 }
 
+// Spec §7 : hors ligne, les écritures CHEZ RAINDROP sont « refusées
+// proprement » — avant de partir, avec la raison, plutôt qu'un échec au bout
+// du pont (proposition 6 de l'audit UX). Ce qui reste local (vues
+// sauvegardées, sauvegarde, jobs) passe : le réseau n'y est pour rien.
+const ECRIT_CHEZ_RAINDROP = /^\/api\/(raindrops|collections|tags|maintenance)(\/|\?|$)/;
+
 export const api = {
   get: <T>(path: string, query?: Query) => request<T>("GET", path + qs(query)),
-  send: <T>(method: "POST" | "PATCH" | "DELETE", path: string, body?: unknown) => request<T>(method, path, body),
+  send: <T>(method: "POST" | "PATCH" | "DELETE", path: string, body?: unknown) =>
+    typeof navigator !== "undefined" && navigator.onLine === false && ECRIT_CHEZ_RAINDROP.test(path)
+      ? Promise.reject(new Error(t("erreur.horsLigne")))
+      : request<T>(method, path, body),
 };
