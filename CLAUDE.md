@@ -705,6 +705,33 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   placeholder data-URI ≤ 200 caractères) — jamais observé sur nos archives,
   pas implémenté sans preuve.
 
+## Traps UX/UI — audit du 2026-09-23
+
+- **Une règle HORS `@layer` écrase tout utilitaire Tailwind v4** (les
+  utilitaires vivent dans `@layer utilities` ; une règle hors couche gagne
+  sur toute règle en couche, quelle que soit la spécificité). `.btn` et
+  `.input` étaient hors couche : « Exécuter » de la Revue rendait **28 px sur
+  fond transparent** (mesuré dans Chromium sur le CSS compilé ; DESIGN §8 :
+  38 px sur `sel`), le rouge `border-app-broken text-app-broken` et la
+  bordure rouge du champ SUPPRIMER disparaissaient. Les tests passaient :
+  `toHaveClass` prouve la classe, pas son effet. Toute primitive destinée à
+  être ajustée vit dans `@layer components` (`src/styles.test.ts` le garde).
+- **Le preflight v4 pose `opacity: 1` sur tout bouton désactivé.** Sans
+  `.btn:disabled`, un bouton inerte ressemble trait pour trait à un actif,
+  curseur-main compris.
+- **jsdom ne rend pas de mise en page, mais Chromium headless mesure** :
+  `headless_shell --dump-dom` sur une page minimale qui charge le CSS
+  compilé (`vite build --outDir <scratch>`) et écrit `getComputedStyle` dans
+  le DOM. Ni l'app lancée, ni capture — une sonde de cascade.
+- **Un message posé juste avant un démontage n'existe pas.** BulkBar posait
+  « N sans origine connue » PUIS vidait la sélection, qui démonte la barre :
+  le message n'a jamais pu s'afficher. Chercher le `return null` en amont de
+  tout état « à afficher ensuite ».
+- **`mockRejectedValue` (permanent) sur un `mutate()` sans `onError` a fait
+  échouer un test par rejet non géré** alors que toutes ses assertions
+  passaient ; `mockRejectedValueOnce` règle le cas. Cause exacte non
+  élucidée — à garder en tête avant de soupçonner le composant.
+
 ## Git
 
 Travailler sur `main`. **Pousser uniquement quand l'utilisateur le demande.**

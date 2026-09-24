@@ -62,6 +62,18 @@ leur raisonnement, et un renvoi par lot livré.*
 
 ## Ouvert
 
+### Audit UX du 2026-09-23 — propositions (détail : `docs/audit-ux-2026-09-23.md`)
+
+- [ ] Infobulles (`title`) sur les icônes seules — amendement de DESIGN §9 à décider.
+- [ ] « Annuler » après « Mettre à la corbeille » depuis la fiche (avis qui restaure).
+- [ ] Annoncer le coût d'une analyse de liens (nombre d'URL, durée) avant de la lancer.
+- [ ] ⌘F → recherche ; Échap vide la recherche ; raccourcis découvrables.
+- [ ] Dialogues (palette, Réglages) : focus piégé, puis rendu à l'origine.
+- [ ] Hors ligne : refuser les écritures proprement (écart spec §7).
+- [ ] Composer « Déjà sauvegardé » : ouvrir le signet existant dans la fiche.
+- [ ] Vue Étiquettes : actions de ligne révélées au survol (écart DESIGN §9).
+- [ ] `fr.ts` (398) et `ReviewPage.tsx` (398) au plafond : décider le découpage de `fr.ts` (CLAUDE.md : « un seul fichier »).
+
 ### Audit du 2026-09-23 — ce qui reste (détail : `docs/audit-2026-09-23.md`)
 
 - [ ] **À vérifier en réel (Mac)** : `cargo test` du shell après le passage

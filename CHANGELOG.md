@@ -519,6 +519,25 @@ signet près, y compris croisé avec le filtre de domaine.
 
 ### Corrigé
 
+#### L'audit UX du 2026-09-23 — ce que l'écran montrait mal (détail : `docs/audit-ux-2026-09-23.md`)
+
+- **Les boutons ressemblent à ce qu'ils sont.** « Exécuter » de la Revue
+  rendait 28 px sur fond transparent (le design veut 38 px sur `sel`), le
+  bouton Corbeille perdait son rouge : les primitives `.btn`/`.input`
+  écrasaient tout utilitaire. Un bouton désactivé était identique à un actif.
+- **Le filet « à vérifier » se voit** : son gris passait sous 3:1 sur une
+  ligne sélectionnée.
+- **Rien ne se perd en silence** : « Annuler » dans la fiche jette enfin le
+  brouillon (Échap aussi) ; l'échec de pose d'une vue sauvegardée et celui
+  d'une restauration se disent ; le compte des corbeillés sans origine
+  s'affiche enfin.
+- **Les erreurs disent quoi faire** au lieu de « Load failed » ou « Error:
+  failed to … » ; une liste vidée par un filtre offre de les effacer ; la
+  bannière hors ligne ne promet plus des écritures « désactivées ».
+- **Un mot par chose** : signet, étiquette, « Mettre à la corbeille »,
+  « Retirer de N signets ». Palette ⌘K : les commandes se filtrent, « aucun
+  résultat » se dit. Réglages et palette sont des dialogues nommés.
+
 #### L'audit du 2026-09-23 — suppressions définitives, instantanés faux, pagination (détail : `docs/audit-2026-09-23.md`)
 
 - **Plus aucune suppression définitive hors de la frappe SUPPRIMER.**

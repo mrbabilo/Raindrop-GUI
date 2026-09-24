@@ -421,6 +421,12 @@ irréversibles.
     l'icône liste/mosaïque nomme le mode vers lequel elle bascule, et c'est
     la liste elle-même qui dit celui qu'on regarde. Ne pas y remettre une
     paire de boutons : ce serait deux contrôles pour un geste.
+- **Les primitives se laissent ajuster.** `.btn`, `.input` et `.panel`
+  vivent dans `@layer components` : un utilitaire posé à côté (`bg-app-sel`,
+  `h-[38px]`, `border-app-broken`) l'emporte, comme partout ailleurs. Hors
+  couche, elles l'écrasaient sans bruit (audit UX du 2026-09-23).
+- **Un contrôle inerte se voit inerte** : `.btn:disabled` estompe (0,4) et
+  rend le curseur par défaut.
 - **Pas de cartes pour une liste.** Les cartes gaspillent le vertical et
   transforment un outil de tri en catalogue. La mosaïque est un mode, pas un
   style par défaut.
