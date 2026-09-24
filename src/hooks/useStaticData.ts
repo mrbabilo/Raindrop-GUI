@@ -25,8 +25,11 @@ export const useTags = () =>
     queryFn: () => api.get<{ items: Tag[] }>("/api/tags").then((r) => r.items),
   });
 
+// DEUX créneaux de file (get_user, puis un search pour le total), pour un
+// compte et un total qui ne servent qu'à des ESTIMATIONS : frais dix minutes
+// plutôt que 30 s — il repartait à chaque retour sur le Nettoyage.
 export const useUser = () =>
-  useQuery({ queryKey: ["user"], queryFn: () => api.get<UserInfo>("/api/user") });
+  useQuery({ queryKey: ["user"], queryFn: () => api.get<UserInfo>("/api/user"), staleTime: 10 * 60_000 });
 
 // L'état de la connexion MCP est volatil : rafraîchi toutes les 15 s pour
 // que l'indicateur du shell suive sans action de l'utilisateur.

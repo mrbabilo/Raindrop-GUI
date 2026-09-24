@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 // module mocké, sinon TDZ.
 import { collections, tags } from "../test/fixtures";
 import { useCollections, useTags, useUser, useHealth } from "./useStaticData";
+import { api } from "../lib/api";
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -53,5 +54,27 @@ describe("useStaticData", () => {
     const { result } = renderHook(() => useHealth(), { wrapper });
     await waitFor(() => expect(result.current.data?.mcp).toBe("connected"));
     expect(result.current.data?.status).toBe("ok");
+  });
+});
+
+// Optimisation du 2026-09-24 : `/api/user` coûte DEUX créneaux de file
+// (get_user, puis un search pour le total). Frais 30 s par défaut, il
+// repartait à chaque retour sur le Nettoyage — pour un compte et un total qui
+// ne servent qu'à des ESTIMATIONS. Il reste frais dix minutes.
+describe("useUser — une lecture de compte ne se refait pas à chaque navigation", () => {
+  afterEach(() => vi.useRealTimers());
+  it("remonté une minute plus tard : aucune nouvelle requête", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000 } } });
+    const w = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    const get = vi.mocked(api.get);
+    get.mockClear();
+    const premier = renderHook(() => useUser(), { wrapper: w });
+    await waitFor(() => expect(premier.result.current.data?.bookmarksCount).toBe(5000));
+    premier.unmount();
+    vi.setSystemTime(Date.now() + 60_000); // au-delà des 30 s par défaut
+    const second = renderHook(() => useUser(), { wrapper: w });
+    await waitFor(() => expect(second.result.current.data?.bookmarksCount).toBe(5000));
+    expect(get.mock.calls.filter((c) => c[0] === "/api/user")).toHaveLength(1);
   });
 });
