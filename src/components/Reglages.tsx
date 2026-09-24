@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
@@ -12,6 +12,7 @@ import { SectionVersion } from "./SectionVersion";
 import type { UserInfo } from "../hooks/useStaticData";
 import { nomIcone } from "../design/nomIcone";
 import { SectionRaccourcis } from "./SectionRaccourcis";
+import { useDialogue } from "../hooks/useDialogue";
 
 // Les cinq états de `sidecar/mcp/lifecycle.ts`, traduits — le front ne
 // montre jamais un identifiant interne (« starting » à l'écran serait une
@@ -101,12 +102,18 @@ export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (
     }
   }
 
+  // Modal : le focus reste dedans, et revient au bouton d'origine à la
+  // fermeture (proposition 5 de l'audit UX).
+  const dialogue = useRef<HTMLDivElement>(null);
+  useDialogue(dialogue);
+
   return (
     // `overflow-y-auto` : quatre sections sous un retrait de 96 px dépassent
     // la hauteur minimale de la fenêtre (600 px) — sans défilement, le bas
     // du dialogue (Version, Fermer) sortait de l'écran, inatteignable.
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4 pt-24" onClick={fermer}>
       <div
+        ref={dialogue}
         role="dialog"
         aria-modal="true"
         aria-labelledby="reglages-titre"

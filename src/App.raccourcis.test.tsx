@@ -43,4 +43,21 @@ describe("App — raccourcis", () => {
     render(<App onEtat={vi.fn()} />, { wrapper });
     expect(screen.getByRole("button", { name: "Réglages" })).toHaveAttribute("title", "Réglages (⌘,)");
   });
+
+  // Proposition 5 : un dialogue rend le focus à ce qui l'avait ouvert —
+  // il tombait sur `body`, et le clavier repartait du haut de la fenêtre.
+  it("fermer les Réglages rend le focus au bouton qui les avait ouverts", async () => {
+    render(<App onEtat={vi.fn()} />, { wrapper });
+    const engrenage = screen.getByRole("button", { name: "Réglages" });
+    engrenage.focus();
+    fireEvent.click(engrenage);
+    // Le clic de l'utilisateur met le focus sur « Fermer » AVANT de démonter
+    // le dialogue (fireEvent ne le fait pas — sans cette ligne, le test
+    // passait sans le hook).
+    const fermer = await screen.findByRole("button", { name: "Fermer" });
+    fermer.focus();
+    fireEvent.click(fermer);
+    expect(screen.queryByRole("dialog", { name: "Réglages" })).not.toBeInTheDocument();
+    expect(engrenage).toHaveFocus();
+  });
 });

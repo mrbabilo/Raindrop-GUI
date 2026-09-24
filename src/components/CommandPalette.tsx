@@ -1,10 +1,11 @@
-import { useEffect, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { t } from "../i18n/fr";
 import { api } from "../lib/api";
 import { useCollections, useTags } from "../hooks/useStaticData";
 import { useAppState } from "../state/appState";
 import { vueEtiquette } from "../hooks/filtreEtiquettes";
+import { useDialogue } from "../hooks/useDialogue";
 
 // Une entrée de la palette : `hint` affiche la catégorie (i18n), `run`
 // porte l'action — une navigation via `go`, ou une sélection de fiche via
@@ -28,6 +29,9 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
   const tags = useTags();
   const [q, setQ] = useState(initialQuery);
   const [cursor, setCursor] = useState(0);
+  // Modal : le focus reste dedans et revient à son origine (proposition 5).
+  const dialogue = useRef<HTMLDivElement>(null);
+  useDialogue(dialogue);
 
   // Recherche serveur : `{search, per_page: 8}` tel que contracté au plan.
   // La recherche SERVEUR attend une pause de saisie (300 ms, comme la TopBar
@@ -92,6 +96,7 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
     // lui-même en `work`/`app-panel`.
     <div className="fixed inset-0 z-50 bg-black/40 p-4 pt-24" onClick={onClose}>
       <div
+        ref={dialogue}
         role="dialog"
         aria-modal="true"
         aria-label={t("cmdk.titre")}
