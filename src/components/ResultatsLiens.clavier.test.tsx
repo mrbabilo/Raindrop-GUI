@@ -44,6 +44,7 @@ vi.mock("../hooks/useAnalysis", () => ({
 vi.mock("../hooks/useRaindrops", () => ({ useRaindrops: raindropsMock }));
 vi.mock("../hooks/useBackup", () => ({ useJobsEnVol: () => ({ data: undefined }) }));
 vi.mock("../hooks/useStaticData", () => ({
+  useUser: () => ({ data: undefined }),
   useCollections: collectionsMock,
   useTags: () => ({ data: [] }),
 }));

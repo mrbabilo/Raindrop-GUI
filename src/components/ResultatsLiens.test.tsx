@@ -41,6 +41,7 @@ vi.mock("../hooks/useAnalysis", () => ({
 vi.mock("../hooks/useRaindrops", () => ({ useRaindrops: raindropsMock }));
 vi.mock("../hooks/useBackup", () => ({ useJobsEnVol: () => ({ data: undefined }) }));
 vi.mock("../hooks/useStaticData", () => ({
+  useUser: () => ({ data: undefined }),
   useCollections: collectionsMock,
   useTags: () => ({ data: [] }),
 }));
@@ -276,6 +277,8 @@ describe("les vues de diagnostic distinguent « jamais analysé » de « rien à
     expect(screen.queryByText(/Rien ici/i)).toBeNull();
     expect(screen.getByText(/Aucune analyse n'a encore été lancée/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Lancer l'analyse" }));
+    // Les liens s'annoncent avant de partir (proposition 3) : on confirme.
+    await userEvent.click(screen.getByRole("button", { name: "Lancer la vérification" }));
     expect(scanMock).toHaveBeenCalled();
   });
 

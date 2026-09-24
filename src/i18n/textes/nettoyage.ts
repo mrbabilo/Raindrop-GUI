@@ -45,6 +45,11 @@ export const nettoyage = {
   "cleanup.jamaisAnalyse": "jamais analysé",
   "cleanup.never": "jamais",
   "cleanup.scan": "Lancer l'analyse",
+  // L'annonce avant l'analyse des liens (proposition 3) : ce qui va PARTIR.
+  "scan.annonce": "L'analyse lit la bibliothèque ({duree}, {requetes} requêtes à Raindrop), puis envoie une requête au site de {adresses} adresse à vérifier.|L'analyse lit la bibliothèque ({duree}, {requetes} requêtes à Raindrop), puis envoie une requête au site de chacune des {adresses} adresses à vérifier.",
+  "scan.annonceSansCompte": "L'analyse lit la bibliothèque, puis envoie une requête au site de chaque adresse à vérifier.",
+  "scan.confirmer": "Lancer la vérification",
+  "scan.renoncer": "Ne pas lancer",
   "cleanup.rescan": "Relancer",
   "cleanup.cancel": "Annuler le scan",
   "cleanup.scanRunning": "Analyse en cours",

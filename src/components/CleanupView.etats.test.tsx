@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { CleanupView } from "./CleanupView";
@@ -29,6 +30,7 @@ vi.mock("../hooks/useRaindrops", () => ({ useRaindrops: () => ({ data: undefined
 vi.mock("../hooks/useStaticData", () => ({
   useCollections: collectionsMock,
   useTags: () => ({ data: [] }),
+  useUser: () => ({ data: { bookmarksCount: 1200 } }),
 }));
 
 const wrapper = ({ children }: { children: ReactNode }) => (
@@ -70,6 +72,21 @@ describe("CleanupView — collections vides, arbre absent", () => {
     render(<CleanupView type="empty-collections" />, { wrapper });
     expect(screen.getByText("Chargement…")).toBeInTheDocument();
     expect(screen.queryByText("(0)")).not.toBeInTheDocument();
+  });
+});
+
+// Proposition 3 de l'audit UX : la vue vide lançait l'analyse des liens
+// d'un clic, sans dire qu'elle interroge le serveur de chaque adresse — le
+// même contournement que le tableau de bord, par l'autre porte.
+describe("CleanupView — l'analyse des liens s'annonce avant de partir", () => {
+  it("premier clic : l'annonce chiffrée, rien ne part ; la confirmation lance", async () => {
+    statutMock.mockReturnValue(statut(JAMAIS));
+    render(<CleanupView type="dead" />, { wrapper });
+    await userEvent.click(screen.getByRole("button", { name: "Lancer l'analyse" }));
+    expect(scanMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("note")).toHaveTextContent(/1\s200 adresses à vérifier/);
+    await userEvent.click(screen.getByRole("button", { name: "Lancer la vérification" }));
+    expect(scanMock).toHaveBeenCalledTimes(1);
   });
 });
 

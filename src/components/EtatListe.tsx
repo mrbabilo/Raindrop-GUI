@@ -1,4 +1,5 @@
 import { t } from "../i18n/fr";
+import { LancementAnalyse } from "./LancementAnalyse";
 
 // L'état d'une liste qui charge : chargement, ÉCHEC, ou vide.
 //
@@ -11,7 +12,7 @@ import { t } from "../i18n/fr";
 // L'ordre compte : l'échec prime sur le vide, puisque c'est LUI qui explique
 // le vide.
 export function EtatListe({
-  chargement, erreur, vide, reessayer, jamaisAnalyse, analyser, analyseEnCours, messageVide, issueVide,
+  chargement, erreur, vide, reessayer, jamaisAnalyse, analyser, annonceAnalyse, analyseEnCours, messageVide, issueVide,
 }: {
   chargement: boolean;
   /** Message d'échec, s'il y en a un. */
@@ -32,6 +33,8 @@ export function EtatListe({
   /** L'action qui corrige le vide — §10 : le bouton nomme ce qui va se
    *  produire. Absente, la mention reste informative. */
   analyser?: () => void;
+  /** Ce que l'analyse ENVOIE hors de l'app, dit avant de la lancer. */
+  annonceAnalyse?: string;
   /** L'analyse TOURNE sans avoir jamais abouti (`lastScan` ne se pose qu'à
    *  l'achèvement) : « aucune analyse lancée » mentirait, et le bouton
    *  relancerait ce qui tourne — le sidecar le refuse, en silence. */
@@ -64,9 +67,7 @@ export function EtatListe({
       <p className="flex items-center gap-3 p-4 text-sm text-app-muted">
         <span>{t("state.neverScanned")}</span>
         {analyser !== undefined && (
-          <button type="button" className="btn shrink-0" onClick={analyser}>
-            {t("cleanup.scan")}
-          </button>
+          <LancementAnalyse libelle={t("cleanup.scan")} annonce={annonceAnalyse} lancer={analyser} />
         )}
       </p>
     );
