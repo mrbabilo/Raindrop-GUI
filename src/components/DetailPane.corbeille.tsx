@@ -29,6 +29,9 @@ export function RestaurationCorbeille({ r }: { r: RaindropItem }) {
 
   return (
     <>
+      {/* L'état se DIT : après « Mettre à la corbeille », la fiche reste
+          ouverte et devient l'« Annuler » — c'est ici qu'on restaure. */}
+      <p role="status" className="basis-full text-xs text-app-muted">{t("detail.dansCorbeille")}</p>
       <button
         type="button"
         className="rounded border border-app-border px-2 py-1 text-xs"

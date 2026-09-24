@@ -197,10 +197,23 @@ export function raindropsRoutes(deps: SidecarDeps): Hono {
     // définitive (SOURCES.md) : ce geste appartient au vidage de niveau 2,
     // jamais à ce DELETE (audit du 2026-09-23 — même garde que la fiche).
     if (from.data === -99) return apiError(c, "INVALID_INPUT", "déjà en corbeille : la suppression y serait définitive");
-    // §4.2 : la corbeille ne garde pas l'origine → notée AVANT la suppression.
-    // Le store ne remonte jamais d'erreur (contrat origins.ts) : un échec de
-    // mémorisation dégrade en « destination demandée au front », pas en 500.
-    if (from.data !== undefined) await deps.origins.remember(id, from.data);
+    // L'état se RELIT chez Raindrop avant d'écrire : le `from` du front peut
+    // être périmé (fiche pas encore rafraîchie, double clic) — et supprimer
+    // un signet DÉJÀ corbeillé le détruit. Lecture impossible : on refuse,
+    // on ne supprime jamais à l'aveugle (audit UX du 2026-09-24).
+    const lu = await deps.mcp("get_raindrop", { id });
+    if (!lu.ok) {
+      deps.journal.warn("corbeille refusée", { id, err: lu.message });
+      return apiError(c, lu.code, lu.message, lu.tool);
+    }
+    const cid = (lu.data as { collection?: { $id?: number } }).collection?.$id;
+    if (cid === -99) return apiError(c, "INVALID_INPUT", "déjà en corbeille : la suppression y serait définitive");
+    // §4.2 : la corbeille ne garde pas l'origine → notée AVANT la suppression,
+    // celle que Raindrop rend (le `from` du front en repli). Le store ne
+    // remonte jamais d'erreur (contrat origins.ts) : un échec de mémorisation
+    // dégrade en « destination demandée au front », pas en 500.
+    const origine = cid ?? from.data;
+    if (origine !== undefined) await deps.origins.remember(id, origine);
     const out = await deps.mcp("delete_raindrop", { id });
     if (!out.ok) {
       deps.journal.warn("corbeille refusée", { id, err: out.message });

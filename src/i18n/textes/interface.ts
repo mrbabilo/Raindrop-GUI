@@ -77,6 +77,7 @@ export const interfaceTextes = {
   // Le geste inverse, pour un signet DÉJÀ en corbeille (fiche, vue -99) :
   // re-corbeiller un corbeillé était le seul geste proposé — absurde.
   "detail.restore": "Restaurer",
+  "detail.dansCorbeille": "Dans la corbeille — « Restaurer » le remet à sa place.",
   "detail.highlights": "Surlignages",
   "detail.guest": "Sélectionnez un signet pour voir le détail.",
   "detail.breadcrumb": "Fil d'Ariane",
@@ -112,6 +113,7 @@ export const interfaceTextes = {
   "marque.copiable": "Copie permanente disponible — pas encore archivée en local",
   "composer.placeholder": "Coller une URL à sauvegarder (⌘E)",
   "composer.exists": "Déjà sauvegardé",
+  "composer.existsOuvrir": "Déjà sauvegardé — ouvrir la fiche",
   "composer.save": "Sauvegarder",
   "composer.titleAria": "Titre",
   "composer.urlAria": "URL à sauvegarder",

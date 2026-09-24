@@ -43,10 +43,22 @@ const monter = (collections: Record<number, number>) => {
 };
 
 describe("suppression définitive — les gardes du sidecar", () => {
-  it("témoin : DELETE ?from=42 corbeille bien, origine notée", async () => {
-    const { appels, req } = monter({});
+  it("témoin : DELETE corbeille bien, après LECTURE — l'origine notée est celle que Raindrop rend", async () => {
+    const { appels, req } = monter({ 7: 42 });
     expect((await req("/api/raindrops/7?from=42", { method: "DELETE" })).status).toBe(200);
-    expect(appels).toEqual(["origine:7:42", "delete_raindrop:7"]);
+    expect(appels).toEqual(["get_raindrop:7", "origine:7:42", "delete_raindrop:7"]);
+  });
+
+  // Audit UX du 2026-09-24 : la route croyait le `from` du front. Un double
+  // clic sur « Mettre à la corbeille » (aucune garde de vol) ou la fiche
+  // restée périmée après un premier envoi renvoyait `?from=201` pour un
+  // signet DÉJÀ corbeillé — et `delete_raindrop` le détruisait. La route
+  // relit l'état chez Raindrop avant d'écrire.
+  it("DELETE d'un signet que Raindrop dit DÉJÀ en corbeille : refusé malgré un `from` périmé", async () => {
+    const { appels, req } = monter({ 7: -99 });
+    const res = await req("/api/raindrops/7?from=201", { method: "DELETE" });
+    expect(res.status).toBe(400);
+    expect(appels).toEqual(["get_raindrop:7"]);
   });
 
   it("DELETE ?from=-99 refusé : rien ne part vers le pont", async () => {

@@ -32,8 +32,9 @@ vi.mock("../hooks/useMutations", () => ({
   useCreateRaindrop: () => ({ mutateAsync: (b: unknown) => sendMock("POST", "/api/raindrops", b), isPending: enVol.valeur }),
   useInvalidate: () => vi.fn(),
 }));
+const selectRaindrop = vi.hoisted(() => vi.fn());
 vi.mock("../state/appState", () => ({
-  useAppState: () => ({ view: etat.view, patchList: vi.fn() }),
+  useAppState: () => ({ view: etat.view, patchList: vi.fn(), selectRaindrop }),
 }));
 
 const COLLER = /Coller une URL/;
@@ -81,12 +82,16 @@ describe("Composer", () => {
     await waitFor(() => expect(screen.getByPlaceholderText(COLLER)).toHaveValue(""));
   });
 
-  it("alerte si l'URL existe déjà, avec le lien vers l'existant (R10P-1)", async () => {
+  // Proposition 7 de l'audit UX : l'alerte ouvrait la PAGE web ; ce qu'on
+  // cherche en voyant « déjà sauvegardé », c'est le SIGNET — sa fiche, ses
+  // étiquettes, sa collection. `duplicates` porte son `_id`.
+  it("alerte si l'URL existe déjà — et son clic ouvre la fiche du signet existant", async () => {
+    selectRaindrop.mockClear();
     render(<Composer />);
     await userEvent.type(screen.getByPlaceholderText(COLLER), "https://doublon.example/a");
-    await waitFor(() => expect(screen.getByText("Déjà sauvegardé")).toBeInTheDocument());
-    // duplicates porte {link,_id} : l'alerte mène à l'existant.
-    expect(screen.getByText("Déjà sauvegardé")).toHaveAttribute("href", "https://doublon.example/a");
+    const existant = await screen.findByRole("button", { name: "Déjà sauvegardé — ouvrir la fiche" });
+    await userEvent.click(existant);
+    expect(selectRaindrop).toHaveBeenCalledWith(1265539367);
   });
 
   it("échec de création : erreur inline, brouillon conservé (R8P-1 étendu)", async () => {

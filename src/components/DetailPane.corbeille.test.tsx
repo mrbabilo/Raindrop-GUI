@@ -104,3 +104,39 @@ describe("DetailPane — la fiche d'un signet corbeillé", () => {
     expect(screen.queryByRole("button", { name: "Restaurer" })).not.toBeInTheDocument();
   });
 });
+
+// Audit UX du 2026-09-24 (proposition 2, « Annuler » après la corbeille) :
+// la fiche n'invalidait pas SA requête — elle gardait l'état d'avant et
+// reproposait « Mettre à la corbeille », dont un second envoi, sur un signet
+// déjà corbeillé, le détruisait. Rafraîchie, la fiche devient l'« Annuler » :
+// elle dit « Dans la corbeille » et porte « Restaurer ».
+describe("DetailPane — après « Mettre à la corbeille »", () => {
+  it("la fiche se rafraîchit : « Dans la corbeille », « Restaurer » — plus de re-corbeille", async () => {
+    let enCorbeille = false;
+    getApi.mockImplementation((path: string) =>
+      path === "/api/raindrops/3000" ? Promise.resolve(raindrop({ id: 3000, collectionId: enCorbeille ? -99 : 101 })) : undefined,
+    );
+    sendApi.mockImplementation(async () => {
+      enCorbeille = true;
+      return { deleted: true };
+    });
+    renderDetail();
+    await userEvent.click(await screen.findByRole("button", { name: "Mettre à la corbeille" }));
+    expect(await screen.findByRole("button", { name: "Restaurer" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Dans la corbeille");
+    expect(screen.queryByRole("button", { name: "Mettre à la corbeille" })).not.toBeInTheDocument();
+  });
+
+  it("un double clic n'envoie qu'UNE mise à la corbeille", async () => {
+    getApi.mockImplementation((path: string) =>
+      path === "/api/raindrops/3000" ? Promise.resolve(raindrop({ id: 3000, collectionId: 101 })) : undefined,
+    );
+    let liberer!: () => void;
+    sendApi.mockImplementation(() => new Promise((r) => { liberer = () => r({ deleted: true }); }));
+    renderDetail();
+    const bouton = await screen.findByRole("button", { name: "Mettre à la corbeille" });
+    await userEvent.dblClick(bouton);
+    expect(sendApi).toHaveBeenCalledTimes(1);
+    liberer();
+  });
+});

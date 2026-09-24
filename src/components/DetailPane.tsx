@@ -253,7 +253,11 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
         ) : (
           <button
             type="button"
-            className="rounded border border-app-broken px-2 py-1 text-xs text-app-broken"
+            className="btn border-app-broken text-app-broken"
+            // Garde de vol : un double clic envoyait DEUX mises à la corbeille,
+            // et la seconde tombe sur un signet déjà corbeillé (le sidecar la
+            // refuse désormais — la garde de l'écran évite d'y aller).
+            disabled={trash.isPending}
             onClick={() => void trash.mutateAsync({ id: r.id, from: r.collectionId }).catch(() => { /* inline via trash.isError */ })}
           >
             {t("detail.trash")}
