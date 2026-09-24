@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 // fixtures AVANT DetailPane (TDZ — la factory vi.mock référence `collections`).
-import { raindrop, collections } from "../test/fixtures";
+import { raindrop, collections, tags } from "../test/fixtures";
 import { DetailPane } from "./DetailPane";
 import { AppStateProvider, useAppState } from "../state/appState";
 
@@ -15,7 +15,7 @@ import { AppStateProvider, useAppState } from "../state/appState";
 
 const { getApi, sendApi } = vi.hoisted(() => ({ getApi: vi.fn(), sendApi: vi.fn() }));
 vi.mock("../lib/api", () => ({ api: { get: getApi, send: sendApi } }));
-vi.mock("../hooks/useStaticData", () => ({ useCollections: () => ({ data: collections }) }));
+vi.mock("../hooks/useStaticData", () => ({ useCollections: () => ({ data: collections }), useTags: () => ({ data: tags }) }));
 
 beforeEach(() => {
   getApi.mockReset().mockImplementation((path: string) => {
@@ -78,5 +78,44 @@ describe("DetailPane — l'édition se quitte sans rien garder", () => {
     // Le second Échap, hors édition, referme la fiche (témoin du câblage).
     await userEvent.keyboard("{Escape}");
     expect(onFermer).toHaveBeenCalledTimes(1);
+  });
+
+  // Spec §116 : l'édition inline couvre « titre, extrait, note, TAGS,
+  // COLLECTION ». Les deux derniers manquaient (audit d'ergonomie du
+  // 2026-09-24) : ajouter une étiquette à UN signet coûtait cinq gestes
+  // (cocher, Étiqueter, Revue, confirmer, exécuter) et en RETIRER une
+  // n'était possible nulle part.
+  it("retirer et ajouter des étiquettes : Enregistrer envoie la liste complète", async () => {
+    await monter();
+    await userEvent.click(screen.getByRole("button", { name: "Retirer l'étiquette typescript" }));
+    await userEvent.type(screen.getByRole("combobox", { name: "Ajouter une étiquette" }), "rust{Enter}");
+    await userEvent.type(screen.getByRole("combobox", { name: "Ajouter une étiquette" }), "neuf,");
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(sendApi).toHaveBeenCalledWith("PATCH", "/api/raindrops/1000", expect.objectContaining({ tags: ["rust", "neuf"] }));
+  });
+
+  it("une étiquette déjà posée (casse ignorée) ne s'ajoute pas deux fois", async () => {
+    await monter();
+    await userEvent.type(screen.getByRole("combobox", { name: "Ajouter une étiquette" }), "TypeScript{Enter}");
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    // Rien n'a changé : aucune écriture (le brouillon est vide).
+    expect(sendApi).not.toHaveBeenCalled();
+  });
+
+  it("changer de collection : Enregistrer déplace le signet", async () => {
+    await monter();
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Collection" }), "102");
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(sendApi).toHaveBeenCalledWith("PATCH", "/api/raindrops/1000", expect.objectContaining({ collection_id: 102 }));
+  });
+
+  it("Annuler jette aussi les étiquettes et la collection modifiées", async () => {
+    await monter();
+    await userEvent.click(screen.getByRole("button", { name: "Retirer l'étiquette typescript" }));
+    await userEvent.click(screen.getByRole("button", { name: "Annuler" }));
+    expect(screen.getByText("typescript")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(sendApi).not.toHaveBeenCalled();
   });
 });
