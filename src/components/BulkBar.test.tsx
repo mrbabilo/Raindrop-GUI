@@ -16,7 +16,7 @@ vi.mock("../hooks/useStaticData", () => ({ useCollections: () => ({ data: collec
 // mocké, l'assertion porte sur son corps. vi.hoisted : la factory vi.mock
 // est hissée au-dessus de tout import — une const ordinaire serait lue
 // avant son initialisation (TDZ, piège documenté).
-const sendMock = vi.hoisted(() => vi.fn(async (_m: string, _p: string, _c?: unknown) => ({ restored: 2, unknown: [] })));
+const sendMock = vi.hoisted(() => vi.fn(async (_m: string, _p: string, _c?: unknown) => ({ restored: 2, unknown: [] as number[] })));
 vi.mock("../lib/api", () => ({ api: { send: sendMock, get: vi.fn() } }));
 
 // Spy étendu (R9P-1) : expose la vue ET la sélection — la Revue « consomme »
@@ -72,7 +72,7 @@ describe("BulkBar", () => {
         </AppStateProvider>
       </QueryClientProvider>,
     );
-    expect(screen.queryByRole("button", { name: "Corbeille" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mettre à la corbeille" })).not.toBeInTheDocument();
   });
 
   // R15P-2 : le compteur dit ce que la Revue embarquera — les items de la
@@ -80,12 +80,12 @@ describe("BulkBar", () => {
   // peut déborder la page chargée (ici 999 n'existe pas dans `items`).
   it("compteur honnête : seuls les items de la page embarqués sont comptés (R15P-2)", async () => {
     await renderBar([1000, 999]);
-    expect(screen.getByText("1 sélectionné(s)")).toBeInTheDocument();
+    expect(screen.getByText("1 sélectionné")).toBeInTheDocument();
   });
 
   it("corbeille → vue review avec les items sélectionnés, sélection consommée (R9P-1)", async () => {
     await renderBar([1000, 1001]);
-    await userEvent.click(screen.getByRole("button", { name: "Corbeille" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mettre à la corbeille" }));
     const revue = JSON.parse(screen.getByTestId("view").textContent!);
     expect(revue.items).toEqual([1000, 1001]);
     expect(revue.action).toEqual({ op: "trash" });
@@ -96,7 +96,7 @@ describe("BulkBar", () => {
     // R9P-1 : le clear est chirurgical (après le go), pas général — la
     // sélection est vidée PAR l'action, la barre se démonte d'elle-même.
     expect(screen.getByTestId("sel").textContent).toBe("");
-    expect(screen.queryByRole("button", { name: "Corbeille" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mettre à la corbeille" })).not.toBeInTheDocument();
   });
 
   // « Déplacer » et son sélecteur de destination ont été RETIRÉS : le
@@ -111,13 +111,13 @@ describe("BulkBar", () => {
     expect(screen.queryByRole("button", { name: "Déplacer" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Destination")).not.toBeInTheDocument();
     // Les autres verbes, eux, restent : la barre n'a pas été vidée.
-    expect(screen.getByRole("button", { name: "Corbeille" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Tagger" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mettre à la corbeille" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Étiqueter" })).toBeInTheDocument();
   });
 
   it("tagger → vue review, sélection consommée (R9P-1)", async () => {
     await renderBar([1000, 1001]);
-    const tagger = screen.getByRole("button", { name: "Tagger" });
+    const tagger = screen.getByRole("button", { name: "Étiqueter" });
     expect(tagger).toBeDisabled(); // pas de tags saisis → pas d'action
     await userEvent.type(screen.getByLabelText("Étiquettes à ajouter"), "lutin, elfe");
     await userEvent.click(tagger);
@@ -134,7 +134,7 @@ describe("BulkBar", () => {
   // répètent plus — ni à l'écran, ni pour un lecteur d'écran.
   it("le verbe n'est porté que par son bouton (§9)", async () => {
     await renderBar([1000]);
-    expect(screen.getAllByText("Tagger")).toHaveLength(1);
+    expect(screen.getAllByText("Étiqueter")).toHaveLength(1);
     const champ = screen.getByLabelText("Étiquettes à ajouter");
     expect(champ).toHaveAttribute("placeholder", "séparées par des virgules");
   });
@@ -145,7 +145,7 @@ describe("BulkBar", () => {
   it("« , , » = liste parsée vide → Tagger désactivé (pas d'effacement des étiquettes)", async () => {
     await renderBar([1000]);
     await userEvent.type(screen.getByLabelText("Étiquettes à ajouter"), ", ,");
-    expect(screen.getByRole("button", { name: "Tagger" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Étiqueter" })).toBeDisabled();
   });
 
   // R9P-2 : le snippet du brief utilisait border/text-app-danger — jeton
@@ -157,7 +157,7 @@ describe("BulkBar", () => {
     const { container } = await renderBar([1000, 1001]);
     expect(container.querySelector("[class*='app-danger']")).toBeNull();
     // Non-vacuité du scan : le bouton existe bien, portant le jeton légitime.
-    expect(screen.getByRole("button", { name: "Corbeille" })).toHaveClass("border-app-broken", "text-app-broken");
+    expect(screen.getByRole("button", { name: "Mettre à la corbeille" })).toHaveClass("border-app-broken", "text-app-broken");
   });
 });
 
@@ -173,7 +173,7 @@ describe("BulkBar — défaire, et ne rien proposer sur du vide", () => {
     // démontée — un bouton qui change d'avis sans vider la chose commandée
     // ne prouverait rien (règle des bascules).
     expect(screen.getByTestId("sel")).toHaveTextContent("");
-    expect(screen.queryByRole("button", { name: "Corbeille" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mettre à la corbeille" })).not.toBeInTheDocument();
   });
 
   it("une sélection hors de la page n'affiche AUCUNE barre", async () => {
@@ -183,7 +183,7 @@ describe("BulkBar — défaire, et ne rien proposer sur du vide", () => {
     // en offrant corbeille, archivage et étiquetage sur un ensemble VIDE.
     await renderBar([999]);
     expect(screen.getByTestId("sel")).toHaveTextContent("999");
-    expect(screen.queryByRole("button", { name: "Corbeille" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mettre à la corbeille" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Tout désélectionner" })).not.toBeInTheDocument();
   });
 });
@@ -218,7 +218,7 @@ describe("BulkBar — en vue corbeille", () => {
   it("la sélection propose « Restaurer (n) » qui restaure sans Revue", async () => {
     await renderBarCorbeille([1000, 1001]);
     expect(screen.getByRole("button", { name: "Restaurer (2)" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Corbeille" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mettre à la corbeille" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Restaurer (2)" }));
     expect(sendMock).toHaveBeenCalledWith("POST", "/api/raindrops/unrestore", { ids: [1000, 1001] });
     // Pas de Revue : la restauration s'exécute là, réversible par nature.
@@ -228,6 +228,48 @@ describe("BulkBar — en vue corbeille", () => {
   it("hors corbeille, ni « Restaurer » ni le masque de « Corbeille »", async () => {
     await renderBar([1000, 1001]);
     expect(screen.queryByRole("button", { name: /Restaurer/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Corbeille" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mettre à la corbeille" })).toBeInTheDocument();
+  });
+});
+
+// Audit UX du 2026-09-23 : le compte « sans origine connue » était posé PUIS
+// la sélection vidée — or la barre se démonte sans sélection : le message
+// n'a jamais pu s'afficher. Et l'échec de la restauration ne se disait pas.
+describe("BulkBar — ce que la restauration n'a pas fait se voit", () => {
+  const AllerCorbeille = () => {
+    const { go } = useAppState();
+    return <button type="button" onClick={() => go({ kind: "list", collectionId: -99, label: "Corbeille" })}>aller-corbeille</button>;
+  };
+  const monter = async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AppStateProvider>
+          <Spy />
+          <AllerCorbeille />
+          <Preselect ids={[1000, 1001]} />
+          <BulkBar items={items} />
+        </AppStateProvider>
+      </QueryClientProvider>,
+    );
+    await userEvent.click(screen.getByText("aller-corbeille"));
+    await userEvent.click(screen.getByText("pre"));
+  };
+
+  it("les non restaurés restent sélectionnés, et le message les compte", async () => {
+    sendMock.mockResolvedValueOnce({ restored: 1, unknown: [1001] });
+    await monter();
+    await userEvent.click(screen.getByRole("button", { name: "Restaurer (2)" }));
+    expect(await screen.findByText("1 élément sans origine connue — non restauré")).toBeInTheDocument();
+    // Le restauré sort de la sélection ; le non restauré y reste, prêt pour
+    // la vue Nettoyage → Corbeille qui choisit sa destination.
+    expect(screen.getByTestId("sel").textContent).toBe("1001");
+  });
+
+  it("un échec de restauration se dit, la sélection reste", async () => {
+    sendMock.mockRejectedValueOnce(new Error("http 502"));
+    await monter();
+    await userEvent.click(screen.getByRole("button", { name: "Restaurer (2)" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("http 502");
+    expect(screen.getByTestId("sel").textContent).toBe("1000,1001");
   });
 });

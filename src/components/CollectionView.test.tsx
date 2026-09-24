@@ -129,7 +129,7 @@ describe("CollectionView", () => {
     const section = screen.getByRole("region", { name: "Rust" });
     const cases = section.querySelectorAll('input[type="checkbox"]');
     await userEvent.click(cases[0]!);
-    expect(screen.getByText("1 sélectionné(s)")).toBeInTheDocument();
+    expect(screen.getByText("1 sélectionné")).toBeInTheDocument();
   });
 
   // Régression constatée en étendant le lot a11y : les lignes de cette vue

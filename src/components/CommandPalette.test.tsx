@@ -133,11 +133,11 @@ describe("CommandPalette", () => {
 
   // R15P-5 : la vue tags (T14) est joignable depuis la palette — elle
   // n'avait plus aucune entrée (vue inatteignable depuis T14).
-  it("l'entrée Tags navigue vers la vue tags (R15P-5)", async () => {
-    renderPalette("tags");
-    // Filtre local « tags » : aucune collection ni tag fixtures ne matche —
+  it("l'entrée Étiquettes navigue vers la vue tags (R15P-5)", async () => {
+    renderPalette("étiq");
+    // Filtre local « étiq » : aucune collection ni tag fixtures ne matche —
     // l'entrée de vue est seule (le serveur renvoie vide, sans « rust »).
-    await userEvent.click(screen.getByText("Tags"));
+    await userEvent.click(screen.getByText("Étiquettes"));
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ kind: "tags" });
   });
 
@@ -177,5 +177,19 @@ describe("CommandPalette", () => {
     expect(onClose).toHaveBeenCalled();
     // Aucune navigation déclenchée : la vue initiale est intacte.
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ kind: "list", collectionId: 0 });
+  });
+
+  // Audit UX du 2026-09-23 : la palette n'était pas annoncée comme dialogue,
+  // son champ n'avait pas de nom, et une saisie sans correspondance rendait
+  // une liste vide sans un mot.
+  it("est un dialogue nommé, au champ nommé", () => {
+    renderPalette();
+    expect(screen.getByRole("dialog", { name: "Palette de commandes" })).toHaveAttribute("aria-modal", "true");
+    expect(screen.getByRole("combobox", { name: "Rechercher" })).toBeInTheDocument();
+  });
+
+  it("une saisie sans correspondance le dit", async () => {
+    renderPalette("zzqx");
+    expect(await screen.findByText("Aucun résultat pour « zzqx »")).toBeInTheDocument();
   });
 });

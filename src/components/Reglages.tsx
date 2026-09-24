@@ -100,12 +100,18 @@ export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 p-4 pt-24" onClick={fermer}>
+    // `overflow-y-auto` : quatre sections sous un retrait de 96 px dépassent
+    // la hauteur minimale de la fenêtre (600 px) — sans défilement, le bas
+    // du dialogue (Version, Fermer) sortait de l'écran, inatteignable.
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4 pt-24" onClick={fermer}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reglages-titre"
         className="mx-auto max-w-lg rounded border border-app-border bg-app-panel p-5"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-4 font-medium">{t("reglages.titre")}</h2>
+        <h2 id="reglages-titre" className="mb-4 font-medium">{t("reglages.titre")}</h2>
 
         <p className="mb-1 text-xs uppercase tracking-wide text-app-muted">{t("reglages.connexion")}</p>
         <p className="mb-4 flex justify-between text-sm">

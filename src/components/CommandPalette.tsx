@@ -51,7 +51,7 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
   // serveur `#tag` est prouvé en réel (search=#webdesign → count exact du
   // tag). Sans `search`, listQuery lit view.search absent : « Tous » non
   // filtré. Vues : formes réelles du type View (appState.tsx).
-  const rows: Row[] = [
+  const commandes: Row[] = [
     // R11P-2 : choisir un bookmark sélectionne sa fiche dans le détail —
     // même geste qu'un clic sur une ligne de liste (l'URL y est cliquable) ;
     // pas de changement de vue, l'ouverture externe reste un clic depuis
@@ -71,6 +71,12 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
     { key: "tags", label: t("nav.tags"), hint: t("cmdk.hintView"), run: () => go({ kind: "tags" }) },
     { key: "trash", label: t("nav.trash"), hint: t("cmdk.hintView"), run: () => go({ kind: "list", collectionId: -99, label: t("nav.trash") }) },
   ];
+  // Les commandes de vue se filtrent comme le reste : toujours posées, elles
+  // noyaient chaque recherche sous cinq lignes étrangères — et « aucun
+  // résultat » ne pouvait jamais arriver (audit UX du 2026-09-23).
+  const rows = commandes.filter((r) => r.hint !== t("cmdk.hintView") || r.label.toLowerCase().includes(lower));
+  // Vide ET rien en vol : la recherche serveur attend sa pause, puis répond.
+  const aucun = rows.length === 0 && q.trim() !== "" && q === qServeur && !bookmarks.isFetching;
 
   const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") return onClose();
@@ -86,6 +92,9 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
     // lui-même en `work`/`app-panel`.
     <div className="fixed inset-0 z-50 bg-black/40 p-4 pt-24" onClick={onClose}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("cmdk.titre")}
         className="mx-auto max-w-lg overflow-hidden rounded border border-app-border bg-app-panel"
         onClick={(e) => e.stopPropagation()}
       >
@@ -97,6 +106,7 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
             chaîne figée dont on ne saurait plus si elle est un oubli. */}
         <input
           role="combobox"
+          aria-label={t("search.label")}
           aria-expanded={true}
           aria-controls="cmdk-liste"
           aria-activedescendant={rows.length > 0 ? `cmdk-option-${cursor}` : undefined}
@@ -128,6 +138,7 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
             </li>
           ))}
         </ul>
+        {aucun && <p role="status" className="px-3 py-2 text-sm text-app-muted">{t("cmdk.aucun", { q })}</p>}
       </div>
     </div>
   );

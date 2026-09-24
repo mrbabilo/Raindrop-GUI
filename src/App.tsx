@@ -136,7 +136,7 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
         </button>
         <button
           type="button"
-          className="btn"
+          className="btn btn-icone"
           aria-label={isDark ? t("theme.toLight") : t("theme.toDark")}
           onClick={toggleTheme}
         >

@@ -7,11 +7,11 @@ export const fr = {
   "nav.unsorted": "Non classés",
   "nav.favorites": "Favoris",
   "nav.trash": "Corbeille",
-  "nav.untagged": "Non-taggés",
+  "nav.untagged": "Sans étiquette",
   "nav.collections": "Collections",
   "nav.expand": "Déplier {title}",
   "nav.collapse": "Replier {title}",
-  "nav.tags": "Tags",
+  "nav.tags": "Étiquettes",
   "nav.replier": "Replier la barre latérale",
   "nav.deplier": "Déplier la barre latérale",
   "nav.cleanup": "Nettoyage",
@@ -35,6 +35,10 @@ export const fr = {
   "detail.fermer": "Fermer le détail",
   "drag.count": "{n} signet|{n} signets",
   "list.loadingMore": "…",
+  "list.vide": "Aucun signet ici — collez une URL ci-dessus pour en ajouter un.",
+  "list.videCorbeille": "La corbeille est vide.",
+  "list.videFiltre": "Aucun signet ne correspond à la recherche et aux filtres.",
+  "list.effacerFiltres": "Effacer la recherche et les filtres",
   "filter.sort": "Tri",
   "filter.domain": "Domaine",
   "filter.domainPlaceholder": "domaine",
@@ -62,6 +66,8 @@ export const fr = {
   "detail.edit": "Modifier",
   "detail.save": "Enregistrer",
   "detail.cancel": "Annuler",
+  "detail.champExtrait": "Extrait",
+  "detail.champNote": "Note",
   "detail.favorite": "Favori",
   "detail.unfavorite": "Retirer des favoris",
   "detail.trash": "Mettre à la corbeille",
@@ -73,7 +79,7 @@ export const fr = {
   // jamais confondus avec des restaurés (§5 : l'état se dit tel quel).
   "bulk.restore.unknown": "{n} élément sans origine connue — non restauré|{n} éléments sans origine connue — non restaurés",
   "detail.highlights": "Surlignages",
-  "detail.guest": "Sélectionnez un bookmark pour voir le détail.",
+  "detail.guest": "Sélectionnez un signet pour voir le détail.",
   "detail.breadcrumb": "Fil d'Ariane",
   // Lecture du contenu archivé (spec lecture §3) — chaque état porte SA
   // raison, jamais un « http 404 » nu (§5).
@@ -85,17 +91,12 @@ export const fr = {
   "lecture.tropVolumineuse": "Cette archive dépasse la taille maximale lisible (64 Mo décompressés).",
   "lecture.illisible": "L'archive n'a pas pu être lue — elle est peut-être défectueuse.",
   "lecture.extractionVide": "Aucun texte n'a pu être extrait de cette archive.",
-  // Le temps de lecture, CALCULÉ sur l'extraction (~220 mots/min) — jamais
-  // deviné, jamais en dur.
+  // CALCULÉ sur l'extraction (~220 mots/min) — jamais deviné, jamais en dur.
   "lecture.temps": "≈ {n} min de lecture",
   "lecture.telecharge": "Téléchargement de la copie permanente…",
-  // L'issue de secours des états d'échec (§5) — posée ICI car la vue la
-  // rend dès cette tâche ; les autres gestes de la fiche viennent à la
-  // tâche suivante.
+  // Gestes de la fiche (spec lecture §1, §5) : « Voir la page » est aussi
+  // l'issue de secours des échecs ; « Lire » désactivé nomme ce qui manque.
   "detail.voirPage": "Voir la page",
-  // Les gestes de la fiche (spec lecture §1 et §5) : « Lire » nomme ce qui
-  // manque quand il est désactivé. « Voir la page » est DÉJÀ posé (Task 6 —
-  // la vue lecture l'utilise comme issue de secours).
   "detail.lire": "Lire",
   "detail.lireSansCopie": "Ni archive locale ni copie permanente : rien à lire hors ligne.",
   "detail.lireCopieEchec": "Copie permanente en échec côté Raindrop ({raison}).",
@@ -108,10 +109,10 @@ export const fr = {
   "copie.invalidTimeout": "délai dépassé",
   "copie.invalidSize": "taille invalide",
   "copie.inconnue": "état inconnu",
-  "bulk.selected": "{n} sélectionné(s)",
-  "bulk.trash": "Corbeille",
+  "bulk.selected": "{n} sélectionné|{n} sélectionnés",
+  "bulk.trash": "Mettre à la corbeille",
   "bulk.move": "Déplacer",
-  "bulk.tag": "Tagger",
+  "bulk.tag": "Étiqueter",
   "bulk.selection": "sélection",
   "bulk.destination": "Destination",
   // §9 « un seul point d'entrée par geste » : le verbe reste au bouton — ni
@@ -128,11 +129,14 @@ export const fr = {
   "composer.exists": "Déjà sauvegardé",
   "composer.save": "Sauvegarder",
   "composer.titleAria": "Titre",
-  "cmdk.placeholder": "Rechercher bookmarks, collections, tags, commandes…",
-  "cmdk.hintBookmark": "Bookmark",
+  "composer.urlAria": "URL à sauvegarder",
+  "cmdk.placeholder": "Rechercher signets, collections, étiquettes, commandes…",
+  "cmdk.hintBookmark": "Signet",
   "cmdk.hintCollection": "Collection",
-  "cmdk.hintTag": "Tag",
+  "cmdk.hintTag": "Étiquette",
   "cmdk.hintView": "Vue",
+  "cmdk.titre": "Palette de commandes",
+  "cmdk.aucun": "Aucun résultat pour « {q} »",
   "bulk.clear": "Tout désélectionner",
   "cleanup.title": "Nettoyage",
   "cleanup.dead": "Liens morts",
@@ -145,7 +149,7 @@ export const fr = {
   // double », alors que ce sont 414 groupes pour 1 032 signets concernés.
   "cleanup.duplicatesCount": "{n} groupe · {items} signets|{n} groupes · {items} signets",
   "cleanup.dupDetail": "{items} signet(s) · {retirables} copie retirable|{items} signet(s) · {retirables} copies retirables",
-  "cleanup.untagged": "Non-taggés",
+  "cleanup.untagged": "Sans étiquette",
   "cleanup.empty-collections": "Collections vides",
   "cleanup.trash": "Corbeille",
   "cleanup.lastScan": "Dernier scan",
@@ -218,11 +222,9 @@ export const fr = {
   "tags.delete": "Supprimer",
   "tags.newName": "Nouveau nom",
   "tags.renameField": "Nouveau nom de {name}",
-  "tags.confirm": "Confirmer",
-  // Le ménage des archives, porté jusqu'à l'écran : il tourne pendant une
-  // sauvegarde de fond que l'utilisateur n'a pas demandée, et efface des
-  // copies permanentes qu'il croyait gardées. §5.4 assume qu'une archive
-  // évincée se recrée à la demande — encore faut-il savoir qu'elle a disparu.
+  "tags.confirm": "Retirer de {n} signet|Retirer de {n} signets",
+  // Le ménage des archives se dit : il efface, pendant une sauvegarde de fond,
+  // des copies qu'on croyait gardées (§5.4 — encore faut-il le savoir).
   "sauvegarde.menageOrphelines": "{n} archive devenue inutile effacée|{n} archives devenues inutiles effacées",
   "sauvegarde.menageEvincees": "{n} archive évincée faute de place|{n} archives évincées faute de place",
   // L'archivage s'arrête au budget : ce qui reste n'a pas ÉCHOUÉ, il n'a pas
@@ -230,11 +232,13 @@ export const fr = {
   "review.archive.arret": "{n} signet non traité : {raison}|{n} signets non traités : {raison}",
   "tags.filterSelection": "Filtrer sur cette étiquette|Filtrer sur ces {n} étiquettes",
   "review.title": "Revue de l'action",
-  "review.count": "{n} item(s) affecté(s)",
+  "review.count": "{n} élément concerné|{n} éléments concernés",
   "review.deselect": "Tout désélectionner",
+  "review.reselect": "Tout sélectionner",
   "review.filterPlaceholder": "Filtrer dans l'aperçu…",
+  "review.filterAria": "Filtrer dans l'aperçu",
   "review.export": "Exporter en CSV",
-  "review.confirmL1": "Je confirme l'action sur {n} item(s)",
+  "review.confirmL1": "Je confirme l'action sur {n} élément|Je confirme l'action sur {n} éléments",
   "review.execute": "Exécuter",
   "review.typeDelete": "Tapez SUPPRIMER pour confirmer",
   "review.archive.annonce": "{n} copie(s) à archiver · {deja} déjà archivée(s), ignorée(s) · {sans} sans copie permanente.",
@@ -295,14 +299,22 @@ export const fr = {
   "boot.retrySaisie": "Saisir un autre jeton",
   // Le sidecar ENTIER est injoignable : distinct du crash MCP (le sidecar
   // vit, le pont est tombé) — ici rien ne répond, données et écritures.
-  "banner.unreachable": "Sidecar local injoignable — aucune donnée ne peut être lue",
+  "banner.unreachable": "Service local injoignable — aucune donnée ne peut être lue. S'il ne revient pas, relancez l'application.",
   "banner.crashed": "Connexion Raindrop interrompue",
   "banner.restart": "Redémarrer la connexion",
-  "banner.offline": "Hors-ligne — lecture du cache seule, écritures désactivées",
+  "banner.offline": "Hors ligne — les données affichées peuvent dater, et les modifications échoueront jusqu'au retour du réseau.",
   "state.loading": "Chargement…",
   "state.empty": "Rien ici",
   "state.error": "Erreur : {message}",
   "state.retry": "Réessayer",
+  // Les échecs d'API, dits avec la marche à suivre (§10) — lib/api.ts.
+  "erreur.delaiRaindrop": "Raindrop n'a pas répondu à temps. Réessayez dans un instant.",
+  "erreur.quota": "Trop de requêtes vers Raindrop : patientez une minute, puis réessayez.",
+  "erreur.pont": "La connexion à Raindrop s'est interrompue. Redémarrez-la depuis la bannière, puis réessayez.",
+  "erreur.refus": "Raindrop a refusé l'opération ({detail}).",
+  "erreur.inattendue": "Le service local a répondu par une erreur inattendue ({detail}).",
+  "erreur.injoignable": "Le service local ne répond pas. S'il ne revient pas, relancez l'application.",
+  "erreur.delaiLocal": "Le service local n'a pas répondu à temps. Réessayez dans un instant.",
   "theme.toDark": "Passer au thème sombre",
   "theme.toLight": "Passer au thème clair",
 
@@ -365,24 +377,15 @@ export const fr = {
 
 export type FrKey = keyof typeof fr;
 
-/** Une clé du dictionnaire, rien d'autre : le repli « rend la clé »
- *  masquait les fautes — une chaîne absente s'affichait brute à l'écran
- *  au lieu d'être refusée au typecheck. Les usages DYNAMIQUES (les seuls
- *  à ne pas pouvoir être vérifiés ici) construisent leur objet de clés en
- *  `as const` au lieu de caster (voir NatureChips). */
-/**
- * Une valeur peut porter DEUX formes séparées par `|` — singulier puis
- * pluriel — choisies sur la variable `n` :
+/** Une clé du dictionnaire, rien d'autre : le repli « rend la clé » masquait
+ *  les fautes (une chaîne absente s'affichait brute). Les usages DYNAMIQUES
+ *  construisent leur objet de clés en `as const` (voir NatureChips).
  *
- *     "{n} instantané conservé|{n} instantanés conservés"
- *
- * Règle française, et c'est là qu'elle diffère de l'anglais : **le singulier
- * vaut pour 0 comme pour 1** (« 0 instantané », « 1 instantané »), le pluriel
- * à partir de 2. Sans ce mécanisme on écrivait « 1 instantanés conservés ».
- *
- * Une chaîne à DEUX comptes variables ne s'accorde pas ainsi : elle passe `n`
- * pour celui qui porte l'accord, et garde la forme `(s)` pour l'autre.
- */
+ *  Une valeur peut porter DEUX formes séparées par `|` — singulier puis
+ *  pluriel — choisies sur `n` (« {n} instantané conservé|{n} instantanés
+ *  conservés »). Règle FRANÇAISE : le singulier vaut pour 0 comme pour 1, le
+ *  pluriel à partir de 2. Une chaîne à DEUX comptes passe `n` pour celui qui
+ *  porte l'accord et garde la forme `(s)` pour l'autre. */
 export function t(key: FrKey, vars?: Record<string, string | number>): string {
   const brut: string = fr[key];
   const formes = brut.split("|");

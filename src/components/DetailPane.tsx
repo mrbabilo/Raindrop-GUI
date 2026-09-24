@@ -78,13 +78,23 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
     trash.reset();
   }, [selectedRaindropId]);
 
+  // Quitter l'édition JETTE le brouillon : « Annuler » refermait seulement,
+  // et rouvrir montrait la saisie abandonnée — qu'« Enregistrer » envoyait
+  // ensuite (audit UX du 2026-09-23).
+  const annuler = () => {
+    setEditing(false);
+    setDraft({});
+    update.reset();
+  };
+
   // Échap referme le volet — même idiome que la palette et les Réglages.
   // Écouteur de fenêtre : le volet n'a pas de champ toujours focalisé.
+  // Pendant une édition inline, Échap annule la saisie, et seulement elle.
   useEffect(() => {
-    if (!onFermer) return;
     const surTouche = (e: KeyboardEvent) => {
-      // Pas pendant une édition inline : Échap y annule la saisie.
-      if (e.key === "Escape" && !editing) onFermer();
+      if (e.key !== "Escape") return;
+      if (editing) annuler();
+      else onFermer?.();
     };
     window.addEventListener("keydown", surTouche);
     return () => window.removeEventListener("keydown", surTouche);
@@ -97,7 +107,7 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
   const enveloppe = (contenu: ReactNode) => (
     <aside className={coque + " text-app-muted"}>
       {onFermer && (
-        <button type="button" className="btn btn-icone mb-2 ml-auto block" aria-label={t("detail.fermer")} onClick={onFermer}>
+        <button type="button" className="btn btn-icone mb-2 ml-auto flex" aria-label={t("detail.fermer")} onClick={onFermer}>
           <Icone nom="croix" />
         </button>
       )}
@@ -131,9 +141,9 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
   const champ = (key: Exclude<ChampEdition, "title">, rows: number) =>
     editing ? (
       rows === 1 ? (
-        <input className="w-full rounded border border-app-border bg-app-panel px-2 py-1 text-sm" value={String(draft[key] ?? r[key] ?? "")} onChange={(e) => setChamp(key, e.target.value)} />
+        <input aria-label={t("detail.champExtrait")} className="w-full rounded border border-app-border bg-app-panel px-2 py-1 text-sm" value={String(draft[key] ?? r[key] ?? "")} onChange={(e) => setChamp(key, e.target.value)} />
       ) : (
-        <textarea rows={rows} className="w-full rounded border border-app-border bg-app-panel px-2 py-1 text-sm" value={String(draft[key] ?? r[key] ?? "")} onChange={(e) => setChamp(key, e.target.value)} />
+        <textarea aria-label={t("detail.champNote")} rows={rows} className="w-full rounded border border-app-border bg-app-panel px-2 py-1 text-sm" value={String(draft[key] ?? r[key] ?? "")} onChange={(e) => setChamp(key, e.target.value)} />
       )
     ) : (
       String(r[key] ?? "") !== "" && (
@@ -168,6 +178,7 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
       )}
       {editing ? (
         <input
+          aria-label={t("composer.titleAria")}
           className="titre-fiche w-full rounded border border-app-border bg-app-panel px-2 py-1"
           value={String(draft.title ?? r.title)}
           onChange={(e) => setChamp("title", e.target.value)}
@@ -208,7 +219,7 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
             <button type="button" className="btn btn-icone bg-app-sel" aria-label={t("detail.save")} onClick={enregistrer}>
               <Icone nom="coche" />
             </button>
-            <button type="button" className="btn btn-icone" aria-label={t("detail.cancel")} onClick={() => setEditing(false)}>
+            <button type="button" className="btn btn-icone" aria-label={t("detail.cancel")} onClick={annuler}>
               <Icone nom="croix" />
             </button>
           </>

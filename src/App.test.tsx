@@ -202,7 +202,7 @@ describe("App", () => {
   // aussi le rôle ARIA implicite « combobox ».
   it("⌘K ouvre la palette, Échap la referme", () => {
     render(<App onEtat={vi.fn()} />, { wrapper });
-    const input = () => screen.queryByPlaceholderText("Rechercher bookmarks, collections, tags, commandes…");
+    const input = () => screen.queryByPlaceholderText("Rechercher signets, collections, étiquettes, commandes…");
     expect(input()).not.toBeInTheDocument();
     fireEvent.keyDown(window, { key: "k", metaKey: true });
     expect(input()).toBeInTheDocument();
@@ -214,6 +214,9 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App onEtat={vi.fn()} />, { wrapper });
     const toggle = screen.getByRole("button", { name: "Passer au thème sombre" });
+    // Icône seule : carrée comme ses voisines (§9) — elle seule de l'en-tête
+    // n'avait pas `btn-icone`, donc 10 px de padding de chaque côté.
+    expect(toggle).toHaveClass("btn", "btn-icone");
     await user.click(toggle);
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(

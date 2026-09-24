@@ -65,7 +65,7 @@ describe("Sidebar", () => {
     renderSidebar();
     expect(screen.getByText("Tous")).toBeInTheDocument();
     expect(screen.getByText("Non classés")).toBeInTheDocument();
-    expect(screen.getByText("Non-taggés")).toBeInTheDocument();
+    expect(screen.getByText("Sans étiquette")).toBeInTheDocument();
     expect(screen.getByText("Favoris")).toBeInTheDocument();
     expect(screen.getByText("Corbeille")).toBeInTheDocument();
     expect(screen.getByText("Dev")).toBeInTheDocument();
@@ -332,7 +332,7 @@ describe("Sidebar", () => {
       await userEvent.unhover(entree);
       expect(entree.className).toBe(avant);
     }
-    const nonTaggues = screen.getByText("Non-taggés").closest("button")!;
+    const nonTaggues = screen.getByText("Sans étiquette").closest("button")!;
     const avant = nonTaggues.className;
     await userEvent.hover(nonTaggues);
     expect(nonTaggues.className).toBe(avant);

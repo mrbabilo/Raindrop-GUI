@@ -189,21 +189,21 @@ describe("ListPane", () => {
     };
     renderList();
     expect(screen.getByRole("alert")).toHaveTextContent("réseau perdu");
-    expect(screen.queryByText("Rien ici")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Aucun signet/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Réessayer" }));
     expect(refetch).toHaveBeenCalled();
     // Le composer reste monté : c'est LUI qui crée le premier bookmark.
     expect(screen.getByTestId("composer-input")).toBeInTheDocument();
   });
 
-  it("une collection réellement vide dit « Rien ici »", () => {
+  it("une collection réellement vide le dit (« Aucun signet ici… »)", () => {
     etatListe.valeur = {
       data: { pages: [{ items: [], count: 0, page: 0, perPage: 50 }] },
       isError: false, isFetching: false,
       fetchNextPage: vi.fn(), hasNextPage: false, isFetchingNextPage: false, refetch: vi.fn(),
     };
     renderList();
-    expect(screen.getByText("Rien ici")).toBeInTheDocument();
+    expect(screen.getByText(/Aucun signet ici/)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
@@ -217,7 +217,7 @@ describe("ListPane", () => {
     renderList();
     expect(screen.getByText(/Chargement/i)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(screen.queryByText("Rien ici")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Aucun signet/)).not.toBeInTheDocument();
   });
 });
 

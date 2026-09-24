@@ -17,7 +17,10 @@
      (plein / pointillé large / pointillé fin / double trait). */
   --color-app-broken: #A8301C;
   --color-app-moved: #8A6410;
-  --color-app-unsure: #9A9A96;
+  /* 3:1 au moins sur app, panel, sel et hover (WCAG 1.4.11 — le filet est
+     un indicateur graphique) : #9A9A96 tombait à 2,46:1 sur une ligne
+     sélectionnée. Audit UX du 2026-09-23. */
+  --color-app-unsure: #858581;
 
   /* Clarté et chroma des couleurs dérivées : identiques pour toutes les
      thématiques, seule la teinte varie — aucune ne crie plus fort qu'une autre.
@@ -71,7 +74,7 @@
 
   --color-app-broken: #E06A52;
   --color-app-moved: #D4A03C;
-  --color-app-unsure: #6B6B68;
+  --color-app-unsure: #767673;
 
   --app-tag-l: 0.30;
   --app-tag-c: 0.05;
@@ -322,51 +325,70 @@ body {
 /* Classes utilitaires partagées — DESIGN.md §6 (rayons), §8 (densités),
    §9 (pas d'ombre : la hiérarchie vient de la surface, jamais du relief). */
 
-/* Panneau flottant (popover, menu, ⌘K) : ne repose pas sur un changement de
-   surface avec ce qu'il recouvre, donc un filet — pas d'ombre — le détoure. */
-.panel {
-  background: var(--color-app-panel);
-  border: 1px solid var(--color-app-border);
-  border-radius: 11px;
-}
+/* Les PRIMITIVES (panneau, bouton, champ) vivent dans `@layer components` :
+   Tailwind v4 range ses utilitaires dans `@layer utilities`, et une règle
+   HORS couche l'emporte sur toute règle en couche — `.btn` écrasait donc
+   `h-[38px] bg-app-sel` (« Exécuter » mesuré à 28 px, fond transparent)
+   et le rouge `border-app-broken`. En couche, l'utilitaire AJUSTE la
+   primitive, comme partout ailleurs (audit UX du 2026-09-23). */
+@layer components {
+  /* Panneau flottant (popover, menu, ⌘K) : ne repose pas sur un changement de
+     surface avec ce qu'il recouvre, donc un filet — pas d'ombre — le détoure. */
+  .panel {
+    background: var(--color-app-panel);
+    border: 1px solid var(--color-app-border);
+    border-radius: 11px;
+  }
 
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 7px;
-  border: 1px solid var(--color-app-border);
-  background: transparent;
-  color: var(--color-app-ink);
-  font-size: 13px;
-  line-height: 1;
-  cursor: pointer;
-}
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 7px;
+    border: 1px solid var(--color-app-border);
+    background: transparent;
+    color: var(--color-app-ink);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+  }
 
-/* §9 « une icône par geste » : commande en icône seule — carrée, sans le
-   padding horizontal de .btn, qui écraserait le dessin (constaté au
-   navigateur : 6 px de large pour 15 de haut). Posée ici et non en
-   utilitaires : la cascade ne doit pas décider de la géométrie. */
-.btn-icone {
-  width: 28px;
-  padding: 0;
-}
+  /* §9 « une icône par geste » : commande en icône seule — carrée, sans le
+     padding horizontal de .btn, qui écraserait le dessin (constaté au
+     navigateur : 6 px de large pour 15 de haut). Posée ici et non en
+     utilitaires : la cascade ne doit pas décider de la géométrie. */
+  .btn-icone {
+    width: 28px;
+    padding: 0;
+  }
 
-.btn:hover {
-  background: var(--color-app-hover);
-}
+  .btn:hover {
+    background: var(--color-app-hover);
+  }
 
-.input {
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 7px;
-  border: 1px solid var(--color-app-border);
-  background: var(--color-app-panel);
-  color: var(--color-app-ink);
-  font-size: 13px;
+  /* Le bouton INERTE doit se voir inerte (audit UX du 2026-09-23). Le preflight
+     de Tailwind v4 pose `opacity: 1` sur tout bouton désactivé et `.btn` impose
+     l'encre et le curseur-main : « Exécuter » avant la frappe SUPPRIMER ou
+     « Précédente » en page 1 ressemblaient à des boutons actifs. Après
+     `.btn:hover` (même spécificité) : un inerte ne réagit pas au survol. */
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+    background: transparent;
+  }
+
+  .input {
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 7px;
+    border: 1px solid var(--color-app-border);
+    background: var(--color-app-panel);
+    color: var(--color-app-ink);
+    font-size: 13px;
+  }
 }
 
 /* DESIGN.md §9 : « le focus clavier est un anneau `quiet`, le clic ne montre
@@ -424,9 +446,11 @@ body {
   pointer-events: none;
 }
 
-.input:focus {
-  outline: none;
-  border-color: var(--color-app-muted);
+@layer components {
+  .input:focus {
+    outline: none;
+    border-color: var(--color-app-muted);
+  }
 }
 
 /* §7 : titre de fiche — 26 px, graisse 590, resserré. La Revue de l'action

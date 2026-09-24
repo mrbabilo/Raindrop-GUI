@@ -252,17 +252,17 @@ describe("CleanupView", () => {
 describe("non-taggés — étiqueter en masse", () => {
   const items = () => ({
     data: { pages: [{ items: [
-      { id: 3000, url: "https://n.example/a", title: "Sans étiquette", domain: "n.example", collectionId: 5 },
+      { id: 3000, url: "https://n.example/a", title: "Signet nu", domain: "n.example", collectionId: 5 },
     ], count: 1, page: 0, perPage: 50 }] },
   });
 
   it("cases + étiquettes → Revue op tag", async () => {
     raindropsMock.mockReturnValue(items());
     render(<CleanupView type="untagged" />, { wrapper });
-    await screen.findByText("Sans étiquette");
+    await screen.findByText("Signet nu");
     await userEvent.type(screen.getByLabelText("Étiquettes à ajouter"), "a-lire");
     // La case sélectionne SANS ouvrir la fiche — la ligne, elle, ouvre.
-    await userEvent.click(screen.getByRole("checkbox", { name: "Sélectionner Sans étiquette" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Sélectionner Signet nu" }));
     await userEvent.click(screen.getByRole("button", { name: "Étiqueter (1)" }));
     const vue = JSON.parse(screen.getByTestId("view").textContent ?? "{}") as {
       action: { op: string; tags: string[] };
@@ -279,7 +279,7 @@ describe("non-taggés — étiqueter en masse", () => {
     raindropsMock.mockReturnValue(items());
     render(<CleanupView type="untagged" />, { wrapper });
     const ligne = screen.getByRole("row");
-    const coche = screen.getByRole("checkbox", { name: "Sélectionner Sans étiquette" });
+    const coche = screen.getByRole("checkbox", { name: "Sélectionner Signet nu" });
     // Au repos : la ligne est l'unique arrêt, la case est hors Tab.
     expect(ligne.getAttribute("tabindex")).toBe("0");
     expect(coche.getAttribute("tabindex")).toBe("-1");
@@ -296,7 +296,7 @@ describe("non-taggés — étiqueter en masse", () => {
     // célèbre un état déjà atteint.
     const item = (id: number, titre: string) => ({ id, url: `https://n.example/${id}`, title: titre, domain: "n.example", collectionId: 5 });
     raindropsMock.mockReturnValue({
-      data: { pages: [{ items: [item(3000, "Sans étiquette"), item(3100, "Autre sans étiquette")], count: 2, page: 0, perPage: 50 }] },
+      data: { pages: [{ items: [item(3000, "Signet nu"), item(3100, "Autre sans étiquette")], count: 2, page: 0, perPage: 50 }] },
     });
     render(<CleanupView type="untagged" />, { wrapper });
     const lignes = screen.getAllByRole("row");
@@ -317,8 +317,8 @@ describe("non-taggés — étiqueter en masse", () => {
   it("les non-taggés ont leur corbeille — même contrat Revue que la liste", async () => {
     raindropsMock.mockReturnValue(items());
     render(<CleanupView type="untagged" />, { wrapper });
-    await screen.findByText("Sans étiquette");
-    await userEvent.click(screen.getByRole("checkbox", { name: "Sélectionner Sans étiquette" }));
+    await screen.findByText("Signet nu");
+    await userEvent.click(screen.getByRole("checkbox", { name: "Sélectionner Signet nu" }));
     await userEvent.click(screen.getByRole("button", { name: "Mettre à la corbeille (1)" }));
     const vue = JSON.parse(screen.getByTestId("view").textContent ?? "{}") as {
       action: { op: string };

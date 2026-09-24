@@ -125,7 +125,7 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
               onKeyDown={(e) => e.key === "Escape" && setArmee(false)}
               onClick={() => manage.mutate({ operation: "delete", tags: [tag.name] }, { onSuccess: () => setArmee(false) })}
             >
-              {t("tags.confirm")}
+              {t("tags.confirm", { n: tag.count })}
             </ActionLigne>
           ) : (
             <ActionLigne type="button" className="btn shrink-0" onClick={() => setArmee(true)}>

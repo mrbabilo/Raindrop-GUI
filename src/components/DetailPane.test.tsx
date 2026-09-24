@@ -92,7 +92,7 @@ const renderDetail = (auDessus?: ReactNode) =>
 describe("DetailPane", () => {
   it("sans sélection : message d'invité, aucune requête", () => {
     renderDetail();
-    expect(screen.getByText(/Sélectionnez un bookmark/i)).toBeInTheDocument();
+    expect(screen.getByText(/Sélectionnez un signet/i)).toBeInTheDocument();
     expect(getApi).not.toHaveBeenCalled(); // requêtes enabled:false tant que rien n'est sélectionné
   });
 
