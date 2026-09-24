@@ -14,6 +14,7 @@ import { Glyphe } from "../design/glyphes";
 import { Etoile } from "../design/Etoile";
 import { CarreCollection, PiluleEtiquette } from "../design/Signaux";
 import type { Collection, RaindropItem } from "../../shared/types";
+import { nomIcone } from "../design/nomIcone";
 
 // Les champs éditables de la fiche (tags et emplacement viendront des Tasks
 // 9-11). Les surlignages sont lus directement dans `r.highlights` — déjà
@@ -107,7 +108,7 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
   const enveloppe = (contenu: ReactNode) => (
     <aside className={coque + " text-app-muted"}>
       {onFermer && (
-        <button type="button" className="btn btn-icone mb-2 ml-auto flex" aria-label={t("detail.fermer")} onClick={onFermer}>
+        <button type="button" className="btn btn-icone mb-2 ml-auto flex" {...nomIcone(t("detail.fermer"))} onClick={onFermer}>
           <Icone nom="croix" />
         </button>
       )}
@@ -158,7 +159,7 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
       {/* Le volet s'ouvre sur un clic : il doit pouvoir se refermer sans en
           passer par un autre signet. Échap le referme aussi (voir l'effet). */}
       {onFermer && (
-        <button type="button" className="btn btn-icone self-end" aria-label={t("detail.fermer")} onClick={onFermer}>
+        <button type="button" className="btn btn-icone self-end" {...nomIcone(t("detail.fermer"))} onClick={onFermer}>
           <Icone nom="croix" />
         </button>
       )}
@@ -216,15 +217,15 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
         {editing ? (
           <>
             {/* §6 : l'action primaire se marque par la surface (sel), pas par une teinte. */}
-            <button type="button" className="btn btn-icone bg-app-sel" aria-label={t("detail.save")} onClick={enregistrer}>
+            <button type="button" className="btn btn-icone bg-app-sel" {...nomIcone(t("detail.save"))} onClick={enregistrer}>
               <Icone nom="coche" />
             </button>
-            <button type="button" className="btn btn-icone" aria-label={t("detail.cancel")} onClick={annuler}>
+            <button type="button" className="btn btn-icone" {...nomIcone(t("detail.cancel"))} onClick={annuler}>
               <Icone nom="croix" />
             </button>
           </>
         ) : (
-          <button type="button" className="btn btn-icone" aria-label={t("detail.edit")} onClick={() => setEditing(true)}>
+          <button type="button" className="btn btn-icone" {...nomIcone(t("detail.edit"))} onClick={() => setEditing(true)}>
             <Icone nom="crayon" />
           </button>
         )}
@@ -236,7 +237,7 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
             deux points d'entrée pour un geste (§9). */}
         <button
           type="button"
-          aria-label={r.important ? t("detail.unfavorite") : t("detail.favorite")}
+          {...nomIcone(r.important ? t("detail.unfavorite") : t("detail.favorite"))}
           aria-pressed={r.important}
           className={bouton + " inline-flex items-center" + (r.important ? " bg-app-sel" : "")}
           onClick={() => void update.mutateAsync({ important: !r.important }).catch(() => { /* inline via update.isError */ })}
@@ -252,7 +253,11 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
         ) : (
           <button
             type="button"
-            className="rounded border border-app-broken px-2 py-1 text-xs text-app-broken"
+            className="btn border-app-broken text-app-broken"
+            // Garde de vol : un double clic envoyait DEUX mises à la corbeille,
+            // et la seconde tombe sur un signet déjà corbeillé (le sidecar la
+            // refuse désormais — la garde de l'écran évite d'y aller).
+            disabled={trash.isPending}
             onClick={() => void trash.mutateAsync({ id: r.id, from: r.collectionId }).catch(() => { /* inline via trash.isError */ })}
           >
             {t("detail.trash")}

@@ -10,6 +10,7 @@ import {
 } from "../hooks/useBackup";
 import { annuler, suivreJob } from "../lib/suiviSauvegarde";
 import { BarreProgression } from "./BarreProgression";
+import { nomIcone } from "../design/nomIcone";
 
 /** La borne du sidecar (`POST /api/backup/archive`). Tenue ICI comme un refus
  *  explicite : découper en lots derrière le dos de l'utilisateur
@@ -174,7 +175,7 @@ export function ArchiveJob({
             total: vol.total.toLocaleString("fr-FR"),
           })}
         </span>
-        <button type="button" className="btn btn-icone" aria-label={t("sauvegarde.annuler")} onClick={() => void annuler(vol.jobId)}>
+        <button type="button" className="btn btn-icone" {...nomIcone(t("sauvegarde.annuler"))} onClick={() => void annuler(vol.jobId)}>
           <Icone nom="croix" />
         </button>
       </p>

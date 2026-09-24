@@ -65,7 +65,7 @@ describe("TopBar", () => {
     // contrat : rien avant la pause de saisie, la recherche après 350 ms.
     renderTop();
     const user = userEvent.setup();
-    await user.type(screen.getByPlaceholderText("Rechercher…"), "rust");
+    await user.type(screen.getByPlaceholderText("Rechercher… (⌘F)"), "rust");
     expect(JSON.parse(screen.getByTestId("view").textContent!)).not.toMatchObject({ search: "rust" });
     await act(async () => {
       await new Promise((r) => setTimeout(r, 350));
@@ -122,7 +122,7 @@ describe("TopBar", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Filtres avancés" }));
     await user.type(screen.getByLabelText("Domaine"), "example.com");
-    await user.click(screen.getByPlaceholderText("Rechercher…"));
+    await user.click(screen.getByPlaceholderText("Rechercher… (⌘F)"));
     await user.click(screen.getByRole("button", { name: "Articles" }));
     await user.type(screen.getByLabelText("Depuis"), "2025-01-01");
     await user.type(screen.getByLabelText("Jusqu'à"), "2025-12-31");
@@ -190,6 +190,22 @@ describe("TopBar", () => {
     await user.click(screen.getByRole("button", { name: "Effacer les filtres" }));
     expect(JSON.parse(screen.getByTestId("view").textContent!).domain).toBeUndefined();
     expect(screen.queryByLabelText("Domaine")).not.toBeInTheDocument();
+  });
+
+  // Échap vide une recherche saisie, comme tout champ de recherche macOS —
+  // et ne remonte pas plus haut : la fiche ouverte ne se referme pas avec
+  // (audit UX du 2026-09-23, proposition 4). Champ vide : Échap passe.
+  it("Échap vide la recherche saisie, sans remonter à la fenêtre", async () => {
+    renderTop();
+    await userEvent.click(screen.getByText("vue-recherche"));
+    const champ = screen.getByRole("textbox", { name: "Rechercher" });
+    expect(champ).toHaveValue("affiche");
+    const fenetre = vi.fn();
+    window.addEventListener("keydown", fenetre);
+    await userEvent.type(champ, "{Escape}");
+    window.removeEventListener("keydown", fenetre);
+    expect(champ).toHaveValue("");
+    expect(fenetre).not.toHaveBeenCalled();
   });
 
   // Spec §4 : le geste naît là où la vue existe, et seulement quand un

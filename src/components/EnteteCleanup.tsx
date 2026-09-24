@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { Icone } from "../design/icones";
 import { t } from "../i18n/fr";
 import type { View } from "../state/appState";
+import { nomIcone } from "../design/nomIcone";
 
 export type CleanupType = Extract<View, { kind: "cleanupView" }>["type"];
 
@@ -36,7 +37,7 @@ export function Entete({ label, count, action, retour }: {
   return (
     <header className="flex items-center gap-3 px-4 pt-4">
       {retour && (
-        <button type="button" className="btn btn-icone shrink-0" aria-label={retour.label} onClick={retour.onClick}>
+        <button type="button" className="btn btn-icone shrink-0" {...nomIcone(retour.label)} onClick={retour.onClick}>
           <Icone nom="chevronGauche" />
         </button>
       )}

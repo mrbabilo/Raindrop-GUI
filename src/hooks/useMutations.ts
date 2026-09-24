@@ -41,9 +41,12 @@ export const useTrashRaindrop = () => {
     // pouvoir restaurer à l'origine (spec §4.2, Task 0b). Omis = origine inconnue.
     mutationFn: (v: { id: number; from?: number }) =>
       api.send("DELETE", `/api/raindrops/${v.id}${v.from != null ? `?from=${v.from}` : ""}`),
+    // "raindrop" aussi (la fiche) : sans lui, la fiche gardait l'état d'avant
+    // et reproposait « Mettre à la corbeille » — un second envoi détruisait
+    // le signet déjà corbeillé (audit UX du 2026-09-24).
     onSuccess: (_r, v) => {
       elaguerDoublons([v.id]);
-      invalidate("raindrops", "collections", "tags");
+      invalidate("raindrops", "raindrop", "collections", "tags");
     },
   });
 };

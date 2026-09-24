@@ -49,3 +49,26 @@ describe("le dictionnaire lui-même", () => {
     }
   });
 });
+
+// Le dictionnaire vit en fichiers de DOMAINE fusionnés par `fr.ts` (plafond
+// de 400 lignes, audit UX du 2026-09-23). Un `...spread` écrase en silence :
+// une clé redéfinie dans un second fichier masquerait la première sans que
+// le typecheck ni l'écran ne le disent.
+describe("le dictionnaire fusionné", () => {
+  it("aucune clé n'est définie dans deux fichiers de domaine", async () => {
+    const domaines = import.meta.glob<Record<string, Record<string, string>>>("./textes/*.ts", { eager: true });
+    const vues = new Map<string, string>();
+    for (const [fichier, mod] of Object.entries(domaines)) {
+      for (const table of Object.values(mod)) {
+        for (const cle of Object.keys(table)) {
+          expect(vues.get(cle), `« ${cle} » dans ${fichier} ET ${vues.get(cle)}`).toBeUndefined();
+          vues.set(cle, fichier);
+        }
+      }
+    }
+    // Non-vacuité : chaque clé du dictionnaire vient d'un domaine, et
+    // réciproquement — rien ne vit hors des fichiers de domaine.
+    expect(vues.size).toBe(Object.keys(fr).length);
+    expect(vues.size).toBeGreaterThan(250);
+  });
+});

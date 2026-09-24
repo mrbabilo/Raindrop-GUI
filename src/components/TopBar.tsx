@@ -7,6 +7,7 @@ import { EtiquettesRetenues } from "./EtiquettesRetenues";
 import { Icone } from "../design/icones";
 import { filtreActif, serialiserVue } from "../lib/smartlists";
 import { useCreerSmartList } from "../hooks/useSmartLists";
+import { nomIcone } from "../design/nomIcone";
 
 // Champs : classe .input de styles.css (28 px, rayon 7, 13 px — DESIGN.md
 // §7-§8). Commandes en icône seule : .btn-icone, carrée — sa géométrie vit
@@ -66,10 +67,19 @@ export function TopBar() {
       <div className="flex items-center gap-2 px-3 py-2">
         <input
           aria-label={t("search.label")}
+          data-testid="recherche"
           className="input w-64"
           placeholder={t("search.placeholder")}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          // Échap VIDE une recherche saisie (champ de recherche macOS) — et
+          // s'arrête là : la fiche ouverte ne se referme pas avec. Champ
+          // vide, Échap passe son chemin.
+          onKeyDown={(e) => {
+            if (e.key !== "Escape" || draft === "") return;
+            e.stopPropagation();
+            setDraft("");
+          }}
           onFocus={() => setFocused(true)}
           onBlur={(e) => {
             // Cliquer une puce déplace le focus de l'input vers le bouton :
@@ -96,7 +106,7 @@ export function TopBar() {
         </span>
         <button
           type="button"
-          aria-label={t("filter.advanced")}
+          {...nomIcone(t("filter.advanced"))}
           aria-expanded={reglages || actifs(view)}
           aria-controls="panneau-filtres"
           className={commande}
@@ -113,7 +123,7 @@ export function TopBar() {
           {!sauvegarde && filtreActif(view) && (
             <button
               type="button"
-              aria-label={t("smartlist.saveView")}
+              {...nomIcone(t("smartlist.saveView"))}
               className={commande}
               onClick={() => {
                 setNomVue((view.search?.trim() || view.tags?.[0] || "").trim());
@@ -142,7 +152,7 @@ export function TopBar() {
               />
               <button
                 type="button"
-                aria-label={t("smartlist.pose")}
+                {...nomIcone(t("smartlist.pose"))}
                 className={commande}
                 disabled={creerVue.isPending || nomVue.trim() === ""}
                 onClick={poserVue}
@@ -160,7 +170,7 @@ export function TopBar() {
           )}
           <button
             type="button"
-            aria-label={enMosaique ? t("view.showList") : t("view.showMosaic")}
+            {...nomIcone(enMosaique ? t("view.showList") : t("view.showMosaic"))}
             className={commande}
             onClick={() => patchList({ viewMode: enMosaique ? "list" : "mosaic" })}
           >

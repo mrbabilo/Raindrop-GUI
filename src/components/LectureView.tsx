@@ -10,6 +10,7 @@ import { ArchiveJob } from "./RevueArchive";
 import { useInvalidateSauvegarde, type ResultatArchivage } from "../hooks/useBackup";
 import type { RaindropItem } from "../../shared/types";
 import type { View } from "../state/appState";
+import { nomIcone } from "../design/nomIcone";
 
 // DESIGN §12 (mode lecture) : colonne serif ~66 caractères sur la surface
 // `app`, ligne de tête discrète (provenance · date · temps). Les formules
@@ -216,7 +217,7 @@ export function LectureView({
                 .join(" · ")}
             </p>
           )}
-          <button type="button" className="btn btn-icone ml-auto" aria-label={t("lecture.fermer")} onClick={goBack}>
+          <button type="button" className="btn btn-icone ml-auto" {...nomIcone(t("lecture.fermer"))} onClick={goBack}>
             <Icone nom="croix" />
           </button>
         </div>

@@ -398,9 +398,14 @@ irréversibles.
   - **Le texte est l'exception** — l'identité se dessine (icône, teinte,
     forme) ; le texte n'apparaît que pour ce qui ne se dessine pas :
     états, comptes de la Revue, frappe de confirmation.
-  - **Toute icône seule porte son `aria-label`** (issu de `fr.ts`), et
-    `aria-pressed` quand c'est une bascule d'état. Une épure qui prive un
-    contrôle de son nom accessible n'épure pas, elle déplace la dette.
+  - **Toute icône seule porte son nom ET son infobulle** (issus de
+    `fr.ts`, via `nomIcone`), et `aria-pressed` quand c'est une bascule
+    d'état. Une épure qui prive un contrôle de son nom accessible n'épure
+    pas, elle déplace la dette ; et un `aria-label` seul ne parle qu'au
+    lecteur d'écran — à la souris, un crayon ou un engrenage restaient
+    muets. L'infobulle native (`title`) nomme sans rien poser à l'écran,
+    et c'est elle qui annonce le raccourci (« Réglages (⌘,) ») — amendé
+    le 2026-09-24. Les raccourcis se relisent aussi dans les Réglages.
   - **Bouton-état contre champ** — un contrôle qui *applique* aussitôt et
     nomme l'état courant s'habille en bouton-état (`.etat` : pas de
     bordure de champ, libellé courant, chevron). Un contrôle qui *prépare*

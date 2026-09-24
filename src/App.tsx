@@ -19,6 +19,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { Banners } from "./components/Banners";
 import { Reglages } from "./components/Reglages";
 import { FantomeDrag } from "./components/FantomeDrag";
+import { nomIcone } from "./design/nomIcone";
 
 // Icônes SVG (DESIGN.md §9 : jamais d'emoji), grille 16px, trait 1,7.
 function SunIcon() {
@@ -78,6 +79,15 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
         e.preventDefault();
         setCmdkOpen(true);
       }
+      // ⌘F : la recherche de la vue, comme partout sur macOS. Hors d'une
+      // liste il n'y a pas de champ — la touche passe alors son chemin.
+      if (e.metaKey && e.key === "f") {
+        const recherche = document.querySelector<HTMLInputElement>('[data-testid="recherche"]');
+        if (recherche) {
+          e.preventDefault();
+          recherche.focus();
+        }
+      }
       if (e.metaKey && e.key === ",") {
         e.preventDefault();
         setReglagesOuvert(true);
@@ -117,7 +127,7 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
         <button
           type="button"
           className="btn btn-icone"
-          aria-label={repliee ? t("nav.deplier") : t("nav.replier")}
+          {...nomIcone(repliee ? t("nav.deplier") : t("nav.replier"))}
           aria-pressed={repliee}
           onClick={basculer}
         >
@@ -129,7 +139,7 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
         <button
           type="button"
           className="btn btn-icone ml-auto"
-          aria-label={t("reglages.titre")}
+          {...nomIcone(t("reglages.titre"), "⌘,")}
           onClick={() => setReglagesOuvert(true)}
         >
           <Icone nom="engrenage" />
@@ -137,7 +147,7 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
         <button
           type="button"
           className="btn btn-icone"
-          aria-label={isDark ? t("theme.toLight") : t("theme.toDark")}
+          {...nomIcone(isDark ? t("theme.toLight") : t("theme.toDark"))}
           onClick={toggleTheme}
         >
           {isDark ? <SunIcon /> : <MoonIcon />}

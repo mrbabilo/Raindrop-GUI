@@ -9,6 +9,7 @@ import { ActionLigne, ErreurLigne, Ligne } from "./LigneActivable";
 import { useTags } from "../hooks/useStaticData";
 import { useTagManage } from "../hooks/useMutations";
 import type { Tag } from "../../shared/types";
+import { nomIcone } from "../design/nomIcone";
 
 // Task 14 — la vue Tags : renommer, fusionner, supprimer. La liste suit la
 // densité « entrée de navigation 28 px » (DESIGN.md §8, comme la sidebar) ;
@@ -66,7 +67,7 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
       etat={null}
       balise="li"
       role="listitem"
-      className="flex min-h-7 items-center gap-2 rounded px-2 py-0.5 hover:bg-app-hover "
+      className="group flex min-h-7 items-center gap-2 rounded px-2 py-0.5 hover:bg-app-hover "
     >
       <span ref={ligneRef} className="contents">
       <ActionLigne
@@ -105,10 +106,18 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
             #<span>{tag.name}</span>
           </ActionLigne>
           <span className="text-xs text-app-muted">{tag.count}</span>
+          {/* §9 « révélé, pas posé » : les actions n'existent à l'œil qu'au
+              survol ou au focus de la ligne — posées sur ~317 lignes, elles
+              chargeaient l'écran pour un geste rare. Une suppression ARMÉE
+              reste visible : elle ne doit pas partir hors de la vue. */}
+          <span
+            data-actions
+            className={"flex shrink-0 items-center gap-2 " + (armee ? "" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100")}
+          >
           <ActionLigne
             type="button"
             className="btn btn-icone shrink-0"
-            aria-label={t("tags.rename")}
+            {...nomIcone(t("tags.rename"))}
             onClick={() => {
               setNom("");
               setEdition(true);
@@ -132,6 +141,7 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
               {t("tags.delete")}
             </ActionLigne>
           )}
+          </span>
         </>
       )}
       {manage.isError && <ErreurLigne message={String(manage.error?.message ?? "")} />}

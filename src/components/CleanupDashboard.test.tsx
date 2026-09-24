@@ -15,6 +15,7 @@ const sendMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../lib/api", () => ({ api: { get: getMock, send: sendMock } }));
 vi.mock("../hooks/useStaticData", () => ({
+  useUser: () => ({ data: undefined }),
   useCollections: () => ({ data: collections, isLoading: false }),
   useTags: () => ({ data: [], isLoading: false }),
 }));
@@ -103,6 +104,12 @@ function mockApi(opts: { linksRunning?: boolean; jamais?: boolean; enVol?: unkno
     return Promise.resolve({});
   });
   sendMock.mockReset();
+}
+
+// Lancer l'analyse des liens : annonce, puis confirmation (proposition 3).
+async function lancerLiens(bloc: HTMLElement) {
+  await userEvent.click(within(bloc).getByRole("button", { name: "Lancer l'analyse" }));
+  await userEvent.click(within(bloc).getByRole("button", { name: "Lancer la vérification" }));
 }
 
 const Spy = () => {
@@ -196,6 +203,10 @@ describe("CleanupDashboard", () => {
     renderDashboard();
     const blocLiens = await screen.findByRole("region", { name: "Liens" });
     await userEvent.click(within(blocLiens).getByRole("button", { name: "Lancer l'analyse" }));
+    // Le premier clic ANNONCE (proposition 3 de l'audit UX) : rien ne part.
+    expect(within(blocLiens).getByRole("note")).toBeInTheDocument();
+    expect(sendMock).not.toHaveBeenCalled();
+    await userEvent.click(within(blocLiens).getByRole("button", { name: "Lancer la vérification" }));
     expect(sendMock).toHaveBeenCalledWith("POST", "/api/analysis/scan", { type: "links" });
     expect(await screen.findByText("Analyse en cours… 1/2")).toBeInTheDocument();
   });
@@ -207,7 +218,7 @@ describe("CleanupDashboard", () => {
       p === "/api/analysis/scan" ? { jobId: "job-1" } : { cancelled: true });
     renderDashboard();
     const blocLiens = await screen.findByRole("region", { name: "Liens" });
-    await userEvent.click(within(blocLiens).getByRole("button", { name: "Lancer l'analyse" }));
+    await lancerLiens(blocLiens);
     await screen.findByText("Analyse en cours… 1/2");
     await userEvent.click(screen.getByRole("button", { name: "Annuler le scan" }));
     expect(sendMock).toHaveBeenCalledWith("POST", "/api/jobs/job-1/cancel");
@@ -223,7 +234,7 @@ describe("CleanupDashboard", () => {
       p === "/api/analysis/scan" ? { jobId: "job-1" } : { cancelled: true });
     renderDashboard();
     const blocLiens = await screen.findByRole("region", { name: "Liens" });
-    await userEvent.click(within(blocLiens).getByRole("button", { name: "Lancer l'analyse" }));
+    await lancerLiens(blocLiens);
     await screen.findByText("Analyse en cours… 1/2");
     await userEvent.click(screen.getByRole("button", { name: "Annuler le scan" }));
     // Le suivi s'est refermé (retour au repos) — sans jamais alerter.
@@ -249,7 +260,7 @@ describe("CleanupDashboard", () => {
     });
     const { unmount } = renderDashboard();
     const blocLiens = await screen.findByRole("region", { name: "Liens" });
-    await userEvent.click(within(blocLiens).getByRole("button", { name: "Lancer l'analyse" }));
+    await lancerLiens(blocLiens);
     await within(blocLiens).findByRole("status"); // progression affichée : le suivi est ouvert
     unmount();
     expect(recu?.aborted).toBe(true);
@@ -259,7 +270,7 @@ describe("CleanupDashboard", () => {
     sendMock.mockRejectedValue(new Error("scan links déjà en cours"));
     renderDashboard();
     const blocLiens = await screen.findByRole("region", { name: "Liens" });
-    await userEvent.click(within(blocLiens).getByRole("button", { name: "Lancer l'analyse" }));
+    await lancerLiens(blocLiens);
     expect(await screen.findByRole("alert")).toHaveTextContent("Erreur : scan links déjà en cours");
   });
 
@@ -271,7 +282,7 @@ describe("CleanupDashboard", () => {
       p === "/api/analysis/scan" ? { jobId: "job-1" } : { cancelled: true });
     renderDashboard();
     const blocLiens = await screen.findByRole("region", { name: "Liens" });
-    await userEvent.click(within(blocLiens).getByRole("button", { name: "Lancer l'analyse" }));
+    await lancerLiens(blocLiens);
     expect(await screen.findByRole("alert")).toHaveTextContent("Erreur : bibliothèque injoignable");
   });
 

@@ -85,9 +85,12 @@ describe("useTrashRaindrop", () => {
     expect(appel?.[1]).toBe("/api/raindrops/1000?from=0");
   });
 
-  it("invalide listes, collections et étiquettes", async () => {
+  // "raindrop" (la fiche) : sans lui elle reproposait « Mettre à la
+  // corbeille » sur un signet déjà corbeillé (audit UX du 2026-09-24) — ce
+  // test verrouillait l'omission.
+  it("invalide listes, fiche, collections et étiquettes", async () => {
     await jouer(() => useTrashRaindrop(), { id: 1000 });
-    expect(invalidees).toEqual(["raindrops", "collections", "tags"]);
+    expect(invalidees).toEqual(["raindrops", "raindrop", "collections", "tags"]);
   });
 });
 

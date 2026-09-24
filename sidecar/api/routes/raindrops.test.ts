@@ -140,13 +140,17 @@ describe("routes raindrops", () => {
     expect(res.status).toBe(400);
   });
 
-  it("DELETE /:id?from= mémorise l'origine AVANT la suppression (corbeille aveugle, §4.2)", async () => {
+  // Depuis le 2026-09-24 la route RELIT le signet avant d'écrire (un `from`
+  // périmé détruisait un corbeillé) : l'origine notée est celle que Raindrop
+  // rend, le `from` du front n'étant plus qu'un repli.
+  it("DELETE /:id mémorise l'origine LUE, AVANT la suppression (corbeille aveugle, §4.2)", async () => {
     const journal: string[] = [];
     const list = (await (await req(app, "/api/raindrops?per_page=1")).json()) as Paginated<RaindropItem>;
-    const id = list.items[0]!.id;
+    const { id, collectionId } = list.items[0]!;
+    expect(collectionId).not.toBe(42); // la lecture l'emporte sur un `from` faux
     const res = await req(journalApp(journal), `/api/raindrops/${id}?from=42`, { method: "DELETE" });
     expect(res.status).toBe(200);
-    expect(journal).toEqual([`remember:${id}:42`, "mcp:delete_raindrop"]);
+    expect(journal).toEqual(["mcp:get_raindrop", `remember:${id}:${collectionId}`, "mcp:delete_raindrop"]);
   });
 
   it("DELETE /:id?from= avec écriture du store impossible → la suppression réussit quand même", async () => {
@@ -159,22 +163,18 @@ describe("routes raindrops", () => {
   // `z.coerce.number()("")` rend 0 : une chaîne vide mémorisait l'origine 0
   // (« Tous ») au lieu de rien du tout — un DELETE `?from=` mentait sa
   // provenance en silence.
-  it("DELETE /:id?from= (vide) ne mémorise rien — pas 0", async () => {
-    const journal: string[] = [];
-    const list = (await (await req(app, "/api/raindrops?per_page=1")).json()) as Paginated<RaindropItem>;
-    const id = list.items[0]!.id; // un id qui existe vraiment dans le fake
-    const res = await req(journalApp(journal), `/api/raindrops/${id}?from=`, { method: "DELETE" });
-    expect(res.status).toBe(200);
-    expect(journal).toEqual(["mcp:delete_raindrop"]); // delete sans remember
-  });
-
-  it("DELETE /:id sans from ne mémorise rien", async () => {
-    const journal: string[] = [];
-    const list = (await (await req(app, "/api/raindrops?per_page=1")).json()) as Paginated<RaindropItem>;
-    const res = await req(journalApp(journal), `/api/raindrops/${list.items[0]!.id}`, { method: "DELETE" });
-    expect(res.status).toBe(200);
-    expect(journal).toEqual(["mcp:delete_raindrop"]);
-  });
+  it.each([["?from= (vide)", "?from="], ["sans from", ""]])(
+    "DELETE /:id %s : l'origine est la collection LUE — jamais un 0 inventé",
+    async (_nom, suffixe) => {
+      const journal: string[] = [];
+      const list = (await (await req(app, "/api/raindrops?per_page=1")).json()) as Paginated<RaindropItem>;
+      const { id, collectionId } = list.items[0]!; // un id qui existe vraiment dans le fake
+      expect(collectionId).not.toBe(0);
+      const res = await req(journalApp(journal), `/api/raindrops/${id}${suffixe}`, { method: "DELETE" });
+      expect(res.status).toBe(200);
+      expect(journal).toEqual(["mcp:get_raindrop", `remember:${id}:${collectionId}`, "mcp:delete_raindrop"]);
+    },
+  );
 
   it("DELETE /:id?from=abc → 400 INVALID_INPUT (pas de coerce booléen piégeur, R10)", async () => {
     const res = await req(app, "/api/raindrops/1000?from=abc", { method: "DELETE" });

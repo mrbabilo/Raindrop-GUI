@@ -3,6 +3,7 @@ import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { useCancelJob, useRecheckIndetermine, type ScanEvent } from "../hooks/useAnalysis";
 import { useJobsEnVol } from "../hooks/useBackup";
+import { nomIcone } from "../design/nomIcone";
 
 // La revérification des indéterminés (ROADMAP 2026-09-22) vit DANS la vue
 // « À vérifier à la main » : un bouton qui re-regarde ce qu'on n'a pas su
@@ -46,7 +47,7 @@ export function BlocRecheck({ total }: { total: number }) {
             {t("cleanup.rechecking", { done: vu.done, total: vu.total })}
           </span>
         )}
-        <button type="button" className="btn btn-icone" aria-label={t("cleanup.cancel")} onClick={annuler}>
+        <button type="button" className="btn btn-icone" {...nomIcone(t("cleanup.cancel"))} onClick={annuler}>
           <Icone nom="croix" />
         </button>
       </span>

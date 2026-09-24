@@ -13,7 +13,10 @@ spec et les plans (`docs/superpowers/`) ; ce fichier n'en est que la carte.
   webview en API REST locale (127.0.0.1, auth Bearer éphémère).
 - **Périmètre verrouillé Phase 1** : pas d'IA (Stella/LLM → Phase 2, spec §12),
   highlights en lecture seule, Raindrop reste la seule source de vérité.
-- Interface **en français**, textes externalisés (pas d'i18n, un seul fichier).
+- Interface **en français**, textes externalisés (pas d'i18n, un seul
+  dictionnaire : `src/i18n/fr.ts`, fusionné depuis les fichiers de domaine de
+  `src/i18n/textes/` — une clé ne vit que dans un fichier, `fr.test.ts` le
+  vérifie ; découpé le 2026-09-24, le fichier unique touchait le plafond).
 
 **Avant de toucher au nettoyage, aux vues ou à l'API locale : lire
 `docs/DOMAINE.md`** (vocabulaire métier), **`docs/DESIGN.md`** (apparence) et la **spec**
@@ -731,6 +734,19 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   échouer un test par rejet non géré** alors que toutes ses assertions
   passaient ; `mockRejectedValueOnce` règle le cas. Cause exacte non
   élucidée — à garder en tête avant de soupçonner le composant.
+
+- **Une route d'écriture ne croit pas l'état que le front lui décrit.**
+  `DELETE /api/raindrops/:id?from=201` supprimait sans relire : la fiche
+  périmée (sa requête n'était pas invalidée) ou un double clic renvoyaient
+  la suppression sur un signet DÉJÀ corbeillé — définitive chez Raindrop.
+  La route relit (`get_raindrop`) et refuse le -99 ; lecture impossible →
+  refus. Coût : une requête de file (550 ms) par suppression unitaire.
+- **`toHaveTextContent` normalise les espaces — y compris l'espace fine
+  insécable (U+202F) de `toLocaleString("fr-FR")`** — mais pas la chaîne
+  attendue : comparer un nombre formaté par expression régulière (`/1\s200/`).
+- **`fireEvent.click` ne déplace pas le focus** : un test de restauration de
+  focus passe sans le code qu'il prétend couvrir. Poser le focus à la main
+  sur le bouton cliqué, comme le ferait l'utilisateur.
 
 ## Git
 

@@ -149,3 +149,45 @@ describe("api — une erreur se dit en français, avec la marche à suivre", () 
     expect(err.message).toBe("Le service local n'a pas répondu à temps. Réessayez dans un instant.");
   });
 });
+
+// Spec §7 (hors ligne) : « écritures refusées proprement » — rien ne les
+// refusait : une écriture partait et échouait au bout du pont (proposition 6
+// de l'audit UX). Seules les écritures CHEZ RAINDROP se suspendent ; ce qui
+// reste local (vues sauvegardées, sauvegarde, annulation d'un job) passe.
+describe("api — hors ligne, les écritures vers Raindrop sont refusées avant de partir", () => {
+  const horsLigne = (v: boolean) => Object.defineProperty(navigator, "onLine", { value: !v, configurable: true });
+  afterEach(() => horsLigne(false));
+
+  it.each([
+    ["PATCH", "/api/raindrops/1"],
+    ["DELETE", "/api/raindrops/1?from=3"],
+    ["POST", "/api/raindrops/bulk"],
+    ["DELETE", "/api/collections/9"],
+    ["POST", "/api/tags/manage"],
+    ["POST", "/api/maintenance/empty-trash"],
+  ] as const)("%s %s : refus immédiat, rien n'est envoyé", async (methode, chemin) => {
+    const f = vi.fn(async () => okJson({}));
+    vi.stubGlobal("fetch", f);
+    horsLigne(true);
+    const err = (await api.send(methode, chemin, {}).catch((e) => e)) as Error;
+    expect(err.message).toBe("Hors ligne : la modification n'a pas été envoyée. Réessayez au retour du réseau.");
+    expect(f).not.toHaveBeenCalled();
+  });
+
+  it("les écritures LOCALES et les lectures passent", async () => {
+    const f = vi.fn(async () => okJson({}));
+    vi.stubGlobal("fetch", f);
+    horsLigne(true);
+    await api.send("POST", "/api/smartlists", { label: "x" });
+    await api.send("POST", "/api/jobs/j1/cancel");
+    await api.get("/api/raindrops");
+    expect(f).toHaveBeenCalledTimes(3);
+  });
+
+  it("témoin : en ligne, l'écriture part", async () => {
+    const f = vi.fn(async () => okJson({}));
+    vi.stubGlobal("fetch", f);
+    await api.send("PATCH", "/api/raindrops/1", {});
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+});

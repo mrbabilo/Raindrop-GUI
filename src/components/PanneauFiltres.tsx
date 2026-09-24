@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { useAppState } from "../state/appState";
+import { nomIcone } from "../design/nomIcone";
 
 // DESIGN.md §9 « révélé, pas posé » : domaine et dates servent rarement —
 // posés en permanence, ils alignaient sept contrôles de même poids dans la
@@ -79,7 +80,7 @@ export function PanneauFiltres({ ouvert }: { ouvert: boolean }) {
       {/* §9 « masqué si nul » : rien à effacer, pas de commande — et c'est
           elle qui rend le repli possible quand un filtre est posé. */}
       {actif && (
-        <button type="button" className="btn btn-icone" aria-label={t("filter.clear")} onClick={effacer}>
+        <button type="button" className="btn btn-icone" {...nomIcone(t("filter.clear"))} onClick={effacer}>
           <Icone nom="croix" />
         </button>
       )}

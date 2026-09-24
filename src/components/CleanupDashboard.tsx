@@ -12,6 +12,10 @@ import {
 } from "../hooks/useAnalysis";
 import { useJobsEnVol } from "../hooks/useBackup";
 import { BarreProgression } from "./BarreProgression";
+import { nomIcone } from "../design/nomIcone";
+import { LancementAnalyse } from "./LancementAnalyse";
+import { annonceScanLiens } from "../lib/annonceScan";
+import { useUser } from "../hooks/useStaticData";
 
 // DESIGN.md §6-§9 : compteur posé sur la surface work (rayon 11 px), la
 // valeur en 12 px quiet (§7), survol par la surface dédiée — pas d'ombre,
@@ -70,6 +74,7 @@ function BlocScan({ type, label, lastScan, running, reprise }: {
   // Même règle que la sauvegarde (`suiviSauvegarde.ts`) : le job local prime,
   // il est connu avant que la liste ne le voie.
   const adopte = useJobsEnVol().data?.find((j) => j.type === `scan-${type}`);
+  const signets = useUser().data?.bookmarksCount;
   const start = useStartScan(type, (e: ScanEvent) => {
     if (e.kind === "start") setJob({ jobId: e.jobId, controller: e.controller });
     else setProgress({ done: e.done, total: e.total, label: e.label });
@@ -118,15 +123,20 @@ function BlocScan({ type, label, lastScan, running, reprise }: {
               {t("cleanup.scanning", { done: vu.done, total: vu.total })}
             </span>
           )}
-          <button type="button" className="btn btn-icone" aria-label={t("cleanup.cancel")} onClick={annuler}>
+          <button type="button" className="btn btn-icone" {...nomIcone(t("cleanup.cancel"))} onClick={annuler}>
             <Icone nom="croix" />
           </button>
         </>
       ) : (
         <>
-          <button type="button" className="btn" disabled={start.isPending || running} onClick={lancer}>
-            {running ? t("cleanup.scanRunning") : lastScan ? t("cleanup.rescan") : t("cleanup.scan")}
-          </button>
+          {/* Les LIENS s'annoncent avant de partir (proposition 3 de l'audit
+              UX) : une requête vers le site de chaque adresse, par milliers. */}
+          <LancementAnalyse
+            libelle={running ? t("cleanup.scanRunning") : lastScan ? t("cleanup.rescan") : t("cleanup.scan")}
+            {...(type === "links" ? { annonce: annonceScanLiens({ signets, ...(reprise ? { reprise } : {}) }) } : {})}
+            lancer={lancer}
+            disabled={start.isPending || running}
+          />
           {/* R12P-1 : l'échec de lancement ou du scan ne doit jamais être
               silencieux — inline, brouillon/état non destructif (pattern T8).
               Revue finale : l'AbortError d'une annulation VOLONTAIRE (clic

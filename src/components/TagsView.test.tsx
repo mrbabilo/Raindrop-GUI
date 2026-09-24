@@ -91,6 +91,22 @@ describe("TagsView", () => {
     );
   });
 
+  // DESIGN §9 « révélé, pas posé » (proposition 8 de l'audit UX) : crayon et
+  // « Supprimer » étaient posés à demeure sur ~317 lignes. Au repos ils sont
+  // masqués (révélés au survol ET au focus de la ligne) ; une suppression
+  // ARMÉE reste visible — sinon elle disparaîtrait sous un pointeur qui
+  // s'éloigne, prête à partir sans qu'on la voie.
+  it("les actions de ligne sont révélées, pas posées — sauf la suppression armée", async () => {
+    render(<TagsView />, { wrapper });
+    const actions = () => screen.getAllByRole("button", { name: "Supprimer" })[0]!.closest("[data-actions]")!;
+    expect(actions().className).toMatch(/\bopacity-0\b/);
+    expect(actions().className).toMatch(/group-hover:opacity-100/);
+    expect(actions().className).toMatch(/group-focus-within:opacity-100/);
+    await userEvent.click(screen.getAllByRole("button", { name: "Supprimer" })[0]!);
+    const armee = screen.getByRole("button", { name: "Retirer de 8 signets" }).closest("[data-actions]")!;
+    expect(armee.className).not.toMatch(/\bopacity-0\b/);
+  });
+
   // R8P-1 : tout échec est inline (role="alert"), état conservé — cases et
   // saisie restent en place pour retenter.
   // Le `blur` seul laissait le bouton armé quand le clic ne déplaçait aucun

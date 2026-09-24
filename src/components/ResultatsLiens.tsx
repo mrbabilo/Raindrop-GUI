@@ -10,12 +10,14 @@ import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { EtatListe } from "./EtatListe";
 import { useAppState } from "../state/appState";
-import { useAnalysisResults } from "../hooks/useAnalysis";
-import { useCollections } from "../hooks/useStaticData";
+import { useAnalysisResults, useAnalysisStatus } from "../hooks/useAnalysis";
+import { useCollections, useUser } from "../hooks/useStaticData";
 import { racine } from "../lib/arbre";
 import { DeadRow, RedirectRow } from "./CleanupRows";
 import { Entete, LABELS } from "./EnteteCleanup";
 import { BlocRecheck } from "./BlocRecheck";
+import { nomIcone } from "../design/nomIcone";
+import { annonceScanLiens } from "../lib/annonceScan";
 
 // Pagination des vues de scan (dead/redirect) : page/total côté sidecar.
 // Une seule page = aucun paginateur — du bruit inutile sous une liste courte.
@@ -24,11 +26,11 @@ function Paginateur({ page, total, perPage, onPage }: { page: number; total: num
   if (pages <= 1) return null;
   return (
     <nav className="flex items-center justify-end gap-2 px-4 pb-4 text-xs text-app-muted">
-      <button type="button" className="btn btn-icone" aria-label={t("cleanup.prev")} disabled={page === 0} onClick={() => onPage(page - 1)}>
+      <button type="button" className="btn btn-icone" {...nomIcone(t("cleanup.prev"))} disabled={page === 0} onClick={() => onPage(page - 1)}>
         <Icone nom="chevronGauche" />
       </button>
       <span>{t("cleanup.page", { n: page + 1, total: pages })}</span>
-      <button type="button" className="btn btn-icone" aria-label={t("cleanup.next")} disabled={page + 1 >= pages} onClick={() => onPage(page + 1)}>
+      <button type="button" className="btn btn-icone" {...nomIcone(t("cleanup.next"))} disabled={page + 1 >= pages} onClick={() => onPage(page + 1)}>
         <Icone nom="chevronDroit" />
       </button>
     </nav>
@@ -51,6 +53,13 @@ export function ResultatsLiens({ type, jamaisAnalyse, analyser, analyseEnCours }
 }) {
   const [page, setPage] = useState(0);
   const q = useAnalysisResults("links", type, page);
+  // L'analyse des liens s'annonce avant de partir (proposition 3) — même
+  // calcul que le tableau de bord ; le statut vient du cache, sans requête.
+  const liens = useAnalysisStatus().data?.links;
+  const annonce = annonceScanLiens({
+    signets: useUser().data?.bookmarksCount,
+    ...(liens?.verifies !== undefined && liens.total !== undefined ? { reprise: { verifies: liens.verifies, total: liens.total } } : {}),
+  });
   const arbre = useCollections().data ?? [];
   const { selectedIds, toggleSelect, clearSelection, go } = useAppState();
   const titreRacine = (id: number) => racine(arbre, id)?.title;
@@ -157,7 +166,7 @@ export function ResultatsLiens({ type, jamaisAnalyse, analyser, analyseEnCours }
         reessayer={() => void q.refetch()}
         jamaisAnalyse={jamaisAnalyse === true && items.length === 0}
         analyseEnCours={analyseEnCours === true}
-        {...(analyser ? { analyser } : {})}
+        {...(analyser ? { analyser, annonceAnalyse: annonce } : {})}
       />
       <div className="min-h-0 flex-1 overflow-y-auto">{items.map(ligne)}</div>
       {q.data && <Paginateur page={page} total={q.data.total} perPage={q.data.perPage} onPage={setPage} />}

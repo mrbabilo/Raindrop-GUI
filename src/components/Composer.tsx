@@ -15,11 +15,13 @@ type VerifLiens = { duplicates?: { link: string; _id: number }[] };
 // part dans la collection courante. ⌘E (monté par App) amène le focus ici —
 // le data-testid du champ est le contrat du focus posé par le plan.
 export function Composer() {
-  const { view } = useAppState();
+  const { view, selectRaindrop } = useAppState();
   const create = useCreateRaindrop();
   const [url, setUrl] = useState("");
   const [titre, setTitre] = useState<string | null>(null);
-  const [doublon, setDoublon] = useState<string | null>(null);
+  // Le signet EXISTANT de la même URL : son id ouvre sa fiche (proposition 7
+  // de l'audit UX — l'alerte ouvrait la page web, on y cherche le signet).
+  const [doublon, setDoublon] = useState<number | null>(null);
   // R8P-1 (étendu T10) : l'échec de création n'est ni avalé ni destructeur —
   // message inline (pattern du fix T8 : role="alert" + state.error),
   // brouillon URL + titre intact.
@@ -47,7 +49,7 @@ export function Composer() {
       titrePour.current = cible;
       setTitre(meta.title);
     }
-    setDoublon(verif?.duplicates?.[0]?.link ?? null);
+    setDoublon(verif?.duplicates?.[0]?._id ?? null);
   }
 
   // Parse au repos, même mécanique que la recherche de TopBar (300 ms sans
@@ -115,9 +117,14 @@ export function Composer() {
       {doublon !== null && (
         // R10P-2 : alerte en app-broken (diagnostic §6), pas de jeton fantôme ;
         // le lien mène à l'existant (R10P-1 : duplicates porte {link,_id}).
-        <a className="shrink-0 text-xs text-app-broken underline" href={doublon} target="_blank" rel="noreferrer">
+        <button
+          type="button"
+          aria-label={t("composer.existsOuvrir")}
+          className="shrink-0 cursor-pointer text-xs text-app-broken underline"
+          onClick={() => selectRaindrop(doublon)}
+        >
           {t("composer.exists")}
-        </a>
+        </button>
       )}
       {erreur !== null && (
         <p role="alert" className="shrink-0 text-xs text-app-broken">
