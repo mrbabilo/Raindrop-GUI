@@ -748,6 +748,20 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   focus passe sans le code qu'il prétend couvrir. Poser le focus à la main
   sur le bouton cliqué, comme le ferait l'utilisateur.
 
+## Traps optimisation — lot 2026-09-24
+
+- **Mesurer un `save()` à la taille RÉELLE avant d'en fixer la cadence** :
+  `npx tsx` sur un script `.mts` (le `.ts` sort en CJS et refuse le
+  top-level await) qui remplit un `AnalysisCache` de 12 210 signets et
+  résultats — 6 Mo, 55 ms de boucle d'événements bloquée par écriture. Le
+  « tous les 20 » paraissait anodin ; il valait 611 écritures par scan.
+- **L'instantané partagé des analyses ne vaut que tant que l'app n'écrit
+  pas** : `surveillerEcritures` (analysis/ecritures.ts) enveloppe le MCP des
+  routes et le REST direct dans index.ts ; un outil inconnu compte comme
+  écriture. Toute NOUVELLE voie d'écriture chez Raindrop (hors deps.mcp /
+  deps.direct) doit appeler `scanner.invaliderInstantane()` — sinon les
+  analyses travaillent 10 minutes sur une bibliothèque qui n'existe plus.
+
 ## Git
 
 Travailler sur `main`. **Pousser uniquement quand l'utilisateur le demande.**
