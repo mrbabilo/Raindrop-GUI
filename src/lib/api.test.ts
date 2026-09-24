@@ -54,13 +54,14 @@ describe("api", () => {
     expect((err as ApiError).message).toBe("token invalide");
   });
 
-  it("erreur sans corps JSON → code RAINDROP_API, message http <status>", async () => {
+  it("erreur sans corps JSON → code RAINDROP_API, message humain, statut en détail", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("proxy indisponible", { status: 500 })));
     const err = await api.get("/api/user").catch((e) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).code).toBe("RAINDROP_API");
     expect((err as ApiError).status).toBe(500);
-    expect((err as ApiError).message).toBe("http 500");
+    expect((err as ApiError).message).toBe("Le service local a répondu par une erreur inattendue (http 500).");
+    expect((err as ApiError).detail).toBe("http 500");
   });
 
   it("get sans query ne produit pas de '?'", async () => {
@@ -101,5 +102,50 @@ describe("api", () => {
     expect(init.body).toBeUndefined();
     expect(init.headers).not.toHaveProperty("Content-Type");
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer dev-local-token");
+  });
+});
+
+// Audit UX du 2026-09-23 : l'écran affichait le message TECHNIQUE tel quel —
+// « Erreur : Error: failed to update raindrop », « Load failed », « The
+// operation timed out ». §10 : une erreur dit ce qui s'est passé et comment
+// le corriger. Le texte d'origine reste lisible dans `detail`.
+describe("api — une erreur se dit en français, avec la marche à suivre", () => {
+  const repond = (code: string, message: string, status: number) =>
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: { code, message } }), { status })));
+
+  it.each([
+    ["MCP_TIMEOUT", 504, "Raindrop n'a pas répondu à temps. Réessayez dans un instant."],
+    ["RATE_LIMITED", 429, "Trop de requêtes vers Raindrop : patientez une minute, puis réessayez."],
+    ["MCP_CRASHED", 503, "La connexion à Raindrop s'est interrompue. Redémarrez-la depuis la bannière, puis réessayez."],
+  ])("%s → phrase humaine, détail conservé", async (code, status, attendu) => {
+    repond(code, "Error: brut technique", status);
+    const err = (await api.get("/api/x").catch((e) => e)) as ApiError;
+    expect(err.code).toBe(code);
+    expect(err.message).toBe(attendu);
+    expect(err.detail).toBe("Error: brut technique");
+  });
+
+  it("RAINDROP_API : la phrase garde la raison, sans le préfixe « Error: »", async () => {
+    repond("RAINDROP_API", "Error: failed to update raindrop", 502);
+    const err = (await api.get("/api/x").catch((e) => e)) as ApiError;
+    expect(err.message).toBe("Raindrop a refusé l'opération (failed to update raindrop).");
+  });
+
+  it("un message déjà rédigé par le sidecar (INVALID_INPUT, SCAN_EN_COURS…) passe tel quel", async () => {
+    repond("SCAN_EN_COURS", "une analyse est déjà en cours", 409);
+    const err = (await api.get("/api/x").catch((e) => e)) as ApiError;
+    expect(err.message).toBe("une analyse est déjà en cours");
+  });
+
+  it("le service local injoignable (fetch rejeté) se dit comme tel", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("Load failed"); }));
+    const err = (await api.get("/api/x").catch((e) => e)) as Error;
+    expect(err.message).toBe("Le service local ne répond pas. S'il ne revient pas, relancez l'application.");
+  });
+
+  it("le délai dépassé se dit comme tel", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new DOMException("The operation timed out.", "TimeoutError"); }));
+    const err = (await api.get("/api/x").catch((e) => e)) as Error;
+    expect(err.message).toBe("Le service local n'a pas répondu à temps. Réessayez dans un instant.");
   });
 });

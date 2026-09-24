@@ -93,7 +93,7 @@ describe("ReviewPage — archivage des copies permanentes", () => {
       revueArchive([avecCache(1, { status: "ready" }), avecCache(2, { status: "ready" }), avecCache(3, { status: "ready" })]),
     );
     // 3 cochés, mais 1 seul à archiver : c'est lui que la confirmation porte.
-    expect(screen.getByLabelText("Je confirme l'action sur 1 item(s)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Je confirme l'action sur 1 élément")).toBeInTheDocument();
   });
 
   it("annonce le volume et la durée quand les tailles sont connues", () => {

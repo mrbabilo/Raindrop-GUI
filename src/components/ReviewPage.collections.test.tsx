@@ -49,7 +49,7 @@ describe("ReviewPage — suppression de collections individuelles (niveau 2)", (
   it("la frappe ouvre Exécuter, qui envoie UN DELETE par id — pas le cleanup global", async () => {
     sendMock.mockResolvedValue({});
     renderReview(revue);
-    expect(screen.getByText(/2 item\(s\) affecté\(s\)/)).toBeInTheDocument();
+    expect(screen.getByText(/2 éléments concernés/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Exécuter" })).toBeDisabled();
     await userEvent.type(screen.getByPlaceholderText(/SUPPRIMER/), "SUPPRIMER");
     await userEvent.click(screen.getByRole("button", { name: "Exécuter" }));

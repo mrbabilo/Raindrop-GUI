@@ -97,7 +97,7 @@ describe("TagsView", () => {
     await userEvent.click(screen.getAllByRole("button", { name: "Supprimer" })[0]!);
     expect(screen.getByRole("button", { name: "Confirmer" })).toBeInTheDocument();
     // Un endroit qui ne prend pas le focus : le titre de la vue.
-    await userEvent.click(screen.getByRole("heading", { name: "Tags" }));
+    await userEvent.click(screen.getByRole("heading", { name: "Étiquettes" }));
     expect(screen.queryByRole("button", { name: "Confirmer" })).not.toBeInTheDocument();
     // La ligne est revenue à son état de repos, comme les autres.
     expect(screen.getAllByRole("button", { name: "Supprimer" }).length).toBeGreaterThan(0);

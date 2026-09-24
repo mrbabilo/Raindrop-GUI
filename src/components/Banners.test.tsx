@@ -65,14 +65,14 @@ describe("Banners", () => {
     health("connected");
     vi.stubGlobal("navigator", { onLine: false });
     render(<Banners />, { wrapper });
-    expect(screen.getByText(/Hors-ligne/)).toBeInTheDocument();
+    expect(screen.getByText(/Hors ligne/)).toBeInTheDocument();
     // Hors-ligne, rien à redémarrer : pas de bouton sur cette bannière.
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     act(() => {
       window.dispatchEvent(new Event("online"));
     });
     await waitFor(() =>
-      expect(screen.queryByText(/Hors-ligne/)).not.toBeInTheDocument(),
+      expect(screen.queryByText(/Hors ligne/)).not.toBeInTheDocument(),
     );
   });
 
@@ -80,7 +80,7 @@ describe("Banners", () => {
     health("connected");
     render(<Banners />, { wrapper });
     expect(screen.queryByText(/Connexion Raindrop interrompue/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Hors-ligne/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Hors ligne/)).not.toBeInTheDocument();
   });
 
   // Le grief : le sidecar ENTIER tombé laissait `useHealth` en échec, `data`
@@ -92,7 +92,7 @@ describe("Banners", () => {
     const refetch = vi.fn().mockResolvedValue(undefined);
     healthMock.mockReset().mockReturnValue({ data: undefined, isError: true, refetch });
     render(<Banners />, { wrapper });
-    expect(screen.getByRole("alert")).toHaveTextContent(/Sidecar local injoignable/);
+    expect(screen.getByRole("alert")).toHaveTextContent(/Service local injoignable/);
     expect(screen.queryByRole("button", { name: /Redémarrer/ })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Réessayer" }));
     expect(refetch).toHaveBeenCalled();

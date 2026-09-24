@@ -202,7 +202,7 @@ describe("App", () => {
   // aussi le rôle ARIA implicite « combobox ».
   it("⌘K ouvre la palette, Échap la referme", () => {
     render(<App onEtat={vi.fn()} />, { wrapper });
-    const input = () => screen.queryByPlaceholderText("Rechercher bookmarks, collections, tags, commandes…");
+    const input = () => screen.queryByPlaceholderText("Rechercher signets, collections, étiquettes, commandes…");
     expect(input()).not.toBeInTheDocument();
     fireEvent.keyDown(window, { key: "k", metaKey: true });
     expect(input()).toBeInTheDocument();

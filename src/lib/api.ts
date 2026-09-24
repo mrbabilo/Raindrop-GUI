@@ -1,10 +1,26 @@
 import { getConnection } from "./connection";
+import { t } from "../i18n/fr";
 import type { ErrorCode } from "../../shared/errors";
 
+/** `message` est ce que l'écran affiche ; `detail`, le texte d'origine. */
 export class ApiError extends Error {
-  constructor(public code: ErrorCode, public status: number, message: string) {
+  constructor(public code: ErrorCode, public status: number, message: string, public detail = message) {
     super(message);
   }
+}
+
+// L'écran affichait le message TECHNIQUE tel quel (« Error: failed to update
+// raindrop », « Load failed »). §10 : une erreur dit ce qui s'est passé et
+// comment le corriger — les codes du pont reçoivent leur phrase ; les
+// messages que le sidecar rédige lui-même (INVALID_INPUT, SCAN_EN_COURS,
+// archives…) passent tels quels (audit UX du 2026-09-23).
+function humain(code: ErrorCode, brut: string, sansCorps: boolean): string {
+  if (sansCorps) return t("erreur.inattendue", { detail: brut });
+  if (code === "MCP_TIMEOUT") return t("erreur.delaiRaindrop");
+  if (code === "RATE_LIMITED") return t("erreur.quota");
+  if (code === "MCP_CRASHED") return t("erreur.pont");
+  if (code === "RAINDROP_API") return t("erreur.refus", { detail: brut.replace(/^Error:\s*/, "") });
+  return brut;
 }
 
 type Query = Record<string, string | number | boolean | readonly string[] | undefined>;
@@ -34,16 +50,25 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
     signal: AbortSignal.timeout(70_000), // pire-cas lecture MCP : 2×timeout + retry 2 s (contrainte plan 2)
+  }).catch((e: unknown) => {
+    // Rien n'a répondu : WebKit dit « Load failed », le délai « The operation
+    // timed out » — ni l'un ni l'autre ne dit quoi faire. Une annulation
+    // VOLONTAIRE (AbortError) remonte intacte : ses appelants la taisent.
+    if (e instanceof DOMException && e.name === "TimeoutError") throw new Error(t("erreur.delaiLocal"), { cause: e });
+    if (e instanceof TypeError) throw new Error(t("erreur.injoignable"), { cause: e });
+    throw e;
   });
   if (!res.ok) {
     let code: ErrorCode = "RAINDROP_API";
     let message = `http ${res.status}`;
+    let sansCorps = true;
     try {
       const j = (await res.json()) as { error?: { code?: ErrorCode; message?: string } };
+      sansCorps = j.error === undefined;
       if (j.error?.code) code = j.error.code;
       if (j.error?.message) message = j.error.message;
     } catch { /* corps non JSON */ }
-    throw new ApiError(code, res.status, message);
+    throw new ApiError(code, res.status, humain(code, message, sansCorps), message);
   }
   return (await res.json()) as T;
 }

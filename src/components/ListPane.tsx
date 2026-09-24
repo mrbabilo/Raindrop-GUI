@@ -9,6 +9,7 @@ import { listQueryArgs } from "../hooks/listQuery";
 import { useFiltreEtiquettes } from "../hooks/filtreEtiquettes";
 import { useAppState } from "../state/appState";
 import { useArchives } from "../hooks/useBackup";
+import { filtreActif } from "../lib/smartlists";
 import { useEtatsAnalyse } from "../hooks/useAnalysis";
 import { useOuvrirSignet } from "../hooks/useOuvrirSignet";
 import { useDragBookmark } from "../hooks/useDragBookmark";
@@ -24,7 +25,7 @@ import { Composer } from "./Composer";
 type ListView = Extract<View, { kind: "list" }>;
 
 export function ListPane() {
-  const { view, selectedIds, toggleSelect, selectedRaindropId } = useAppState();
+  const { view, go, selectedIds, toggleSelect, selectedRaindropId } = useAppState();
   // Ce qui est archivé EN LOCAL (spec sélection §4.1). Absent tant qu'aucun
   // dossier n'est configuré : la ligne ne porte alors aucun marqueur, ce qui
   // est exact — il n'y a rien d'archivé.
@@ -135,6 +136,14 @@ export function ListPane() {
             erreur={query.isError ? query.error?.message : null}
             vide={!query.isFetching && !query.isError}
             reessayer={() => void query.refetch()}
+            // Le vide dit POURQUOI (audit UX du 2026-09-23) : vidée par un
+            // filtre, la liste offre de les retirer tous — la collection, le
+            // tri et l'affichage restent ; sinon elle invite à coller une URL.
+            messageVide={filtreActif(view) ? t("list.videFiltre") : q.collectionId === -99 ? t("list.videCorbeille") : t("list.vide")}
+            issueVide={filtreActif(view) ? {
+              libelle: t("list.effacerFiltres"),
+              faire: () => go({ kind: "list", collectionId: q.collectionId, label: q.label, sort: q.sort, viewMode: q.viewMode }),
+            } : undefined}
           />
         </main>
       </div>

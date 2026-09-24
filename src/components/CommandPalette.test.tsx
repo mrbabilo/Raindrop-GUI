@@ -133,11 +133,11 @@ describe("CommandPalette", () => {
 
   // R15P-5 : la vue tags (T14) est joignable depuis la palette — elle
   // n'avait plus aucune entrée (vue inatteignable depuis T14).
-  it("l'entrée Tags navigue vers la vue tags (R15P-5)", async () => {
-    renderPalette("tags");
-    // Filtre local « tags » : aucune collection ni tag fixtures ne matche —
+  it("l'entrée Étiquettes navigue vers la vue tags (R15P-5)", async () => {
+    renderPalette("étiq");
+    // Filtre local « étiq » : aucune collection ni tag fixtures ne matche —
     // l'entrée de vue est seule (le serveur renvoie vide, sans « rust »).
-    await userEvent.click(screen.getByText("Tags"));
+    await userEvent.click(screen.getByText("Étiquettes"));
     expect(JSON.parse(screen.getByTestId("view").textContent!)).toMatchObject({ kind: "tags" });
   });
 

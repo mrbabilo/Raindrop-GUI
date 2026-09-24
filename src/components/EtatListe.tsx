@@ -11,7 +11,7 @@ import { t } from "../i18n/fr";
 // L'ordre compte : l'échec prime sur le vide, puisque c'est LUI qui explique
 // le vide.
 export function EtatListe({
-  chargement, erreur, vide, reessayer, jamaisAnalyse, analyser, analyseEnCours,
+  chargement, erreur, vide, reessayer, jamaisAnalyse, analyser, analyseEnCours, messageVide, issueVide,
 }: {
   chargement: boolean;
   /** Message d'échec, s'il y en a un. */
@@ -36,6 +36,11 @@ export function EtatListe({
    *  l'achèvement) : « aucune analyse lancée » mentirait, et le bouton
    *  relancerait ce qui tourne — le sidecar le refuse, en silence. */
   analyseEnCours?: boolean;
+  /** Ce que le vide VEUT DIRE ici (« aucun signet ne correspond… ») — à
+   *  défaut, « Rien ici ». §10 : un écran vide est une invitation à agir. */
+  messageVide?: string;
+  /** Le geste qui sort du vide, quand il en existe un. */
+  issueVide?: { libelle: string; faire: () => void };
 }) {
   if (erreur != null && erreur !== "") {
     return (
@@ -67,6 +72,16 @@ export function EtatListe({
     );
   }
   // §10 : « Rien ici » dit qu'il n'y a plus rien à traiter, pas un échec.
-  if (vide) return <p className="p-4 text-app-muted">{t("state.empty")}</p>;
+  if (vide)
+    return (
+      <p className="flex items-center gap-3 p-4 text-app-muted">
+        <span>{messageVide ?? t("state.empty")}</span>
+        {issueVide !== undefined && (
+          <button type="button" className="btn shrink-0" onClick={issueVide.faire}>
+            {issueVide.libelle}
+          </button>
+        )}
+      </p>
+    );
   return null;
 }

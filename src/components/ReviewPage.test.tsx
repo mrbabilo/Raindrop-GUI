@@ -58,9 +58,9 @@ afterAll(() => {
 describe("ReviewPage — niveau 1 (corbeille)", () => {
   it("compteur exact + désélection item par item met le compteur à jour", async () => {
     renderReview();
-    expect(screen.getByText(/3 item\(s\) affecté\(s\)/)).toBeInTheDocument();
+    expect(screen.getByText(/3 éléments concernés/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("checkbox", { name: /Beta/ }));
-    expect(screen.getByText(/2 item\(s\) affecté\(s\)/)).toBeInTheDocument();
+    expect(screen.getByText(/2 éléments concernés/)).toBeInTheDocument();
   });
 
   it("la recherche filtre l'aperçu localement", async () => {
@@ -150,9 +150,9 @@ describe("ReviewPage — niveau 1 (corbeille)", () => {
   // partir.
   it("« Tout désélectionner » vide la portée et désarme l'exécution", async () => {
     renderReview();
-    expect(screen.getByText(/3 item\(s\) affecté/)).toBeInTheDocument();
+    expect(screen.getByText(/3 éléments concernés/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Tout désélectionner" }));
-    expect(screen.getByText(/0 item\(s\) affecté/)).toBeInTheDocument();
+    expect(screen.getByText(/0 élément concerné/)).toBeInTheDocument();
     // Même confirmée, une action sans item ne s'exécute pas.
     await userEvent.click(screen.getByRole("checkbox", { name: /Je confirme l'action sur 0/ }));
     expect(screen.getByRole("button", { name: "Exécuter" })).toBeDisabled();
@@ -206,7 +206,7 @@ describe("ReviewPage — niveau 2 (vider la corbeille)", () => {
   // collections supprime tout) — le compteur porte le total serveur.
   it("le compteur porte le total serveur quand la vue l'a fourni (L2)", () => {
     renderReview({ ...reviewL2, totalServer: 5000 });
-    expect(screen.getByText(/5000 item\(s\) affecté\(s\)/)).toBeInTheDocument();
+    expect(screen.getByText(/5000 éléments concernés/)).toBeInTheDocument();
   });
 });
 
@@ -318,7 +318,7 @@ describe("ReviewPage — rulings", () => {
     expect(lignes.filter((l) => l.tabIndex === 0)).toHaveLength(1);
     expect([...document.querySelectorAll<HTMLElement>('[data-index] input')].filter((c) => c.tabIndex === 0)).toHaveLength(0);
 
-    const compteur = () => screen.getByText(/item\(s\) affecté/).textContent;
+    const compteur = () => screen.getByText(/concerné/).textContent;
     const avant = compteur();
     lignes[0]!.focus();
     await userEvent.keyboard(" ");
