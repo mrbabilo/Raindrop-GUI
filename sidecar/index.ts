@@ -19,6 +19,7 @@ import { makeSauvegarde } from "./backup/sauvegarde.js";
 import { makeArchivage } from "./backup/archivage.js";
 import { lireManifeste } from "./backup/manifeste.js";
 import { join } from "node:path";
+import { surveillerEcritures } from "./analysis/ecritures.js";
 
 function fail(msg: string): never {
   console.error(JSON.stringify({ level: "error", msg }));
@@ -110,8 +111,12 @@ const archivage = dossierSauvegarde
     })
   : undefined;
 
+// Toute écriture de l'application chez Raindrop périme l'instantané de
+// bibliothèque que les analyses se partagent (optimisation du 2026-09-24).
+const ecriture = () => scanner.invaliderInstantane();
+
 const deps: SidecarDeps = {
-  mcp: makeMcpCaller(lifecycle, throttle, { timeoutMs: cfg.MCP_TIMEOUT_MS }),
+  mcp: surveillerEcritures(makeMcpCaller(lifecycle, throttle, { timeoutMs: cfg.MCP_TIMEOUT_MS }), ecriture),
   state: () => lifecycle.state,
   restart: () => lifecycle.restart(),
   jobs,
@@ -128,8 +133,8 @@ const deps: SidecarDeps = {
   // REST direct sous la MÊME file que le MCP (550 ms partagées) : les appels
   // unrestore par destination sont espacés par le throttle, pas par un sleep.
   direct: {
-    updateRaindropUrl: (id, url) => throttle.run(() => rest.updateRaindropUrl(id, url)),
-    unrestore: (ids, toCollectionId) => throttle.run(() => rest.unrestore(ids, toCollectionId)),
+    updateRaindropUrl: (id, url) => throttle.run(() => rest.updateRaindropUrl(id, url)).finally(ecriture),
+    unrestore: (ids, toCollectionId) => throttle.run(() => rest.unrestore(ids, toCollectionId)).finally(ecriture),
   },
 };
 
