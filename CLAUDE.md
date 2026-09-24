@@ -735,6 +735,19 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   passaient ; `mockRejectedValueOnce` règle le cas. Cause exacte non
   élucidée — à garder en tête avant de soupçonner le composant.
 
+- **Une route d'écriture ne croit pas l'état que le front lui décrit.**
+  `DELETE /api/raindrops/:id?from=201` supprimait sans relire : la fiche
+  périmée (sa requête n'était pas invalidée) ou un double clic renvoyaient
+  la suppression sur un signet DÉJÀ corbeillé — définitive chez Raindrop.
+  La route relit (`get_raindrop`) et refuse le -99 ; lecture impossible →
+  refus. Coût : une requête de file (550 ms) par suppression unitaire.
+- **`toHaveTextContent` normalise les espaces — y compris l'espace fine
+  insécable (U+202F) de `toLocaleString("fr-FR")`** — mais pas la chaîne
+  attendue : comparer un nombre formaté par expression régulière (`/1\s200/`).
+- **`fireEvent.click` ne déplace pas le focus** : un test de restauration de
+  focus passe sans le code qu'il prétend couvrir. Poser le focus à la main
+  sur le bouton cliqué, comme le ferait l'utilisateur.
+
 ## Git
 
 Travailler sur `main`. **Pousser uniquement quand l'utilisateur le demande.**

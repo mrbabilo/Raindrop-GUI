@@ -519,6 +519,24 @@ signet près, y compris croisé avec le filtre de domaine.
 
 ### Corrigé
 
+#### Les propositions de l'audit UX, implémentées (2026-09-24)
+
+- **Un signet déjà dans la corbeille n'est plus détruit par erreur.** Un
+  double clic sur « Mettre à la corbeille », ou la fiche restée à son ancien
+  état, renvoyait une suppression — et chez Raindrop, supprimer depuis la
+  corbeille est définitif. Le service local relit désormais le signet avant
+  d'agir ; la fiche se rafraîchit et propose « Restaurer ».
+- **L'analyse des liens dit ce qu'elle va envoyer** avant de partir (combien
+  d'adresses, vers leurs sites), et demande confirmation.
+- **Infobulles** sur tous les boutons en icône seule ; **⌘F** pour chercher,
+  **Échap** pour vider la recherche ; les raccourcis sont listés dans les
+  Réglages.
+- **Hors ligne, les modifications ne partent plus** vers Raindrop : elles
+  sont refusées avec la raison.
+- « Déjà sauvegardé » ouvre la fiche du signet existant ; les dialogues
+  gardent et rendent le focus ; la vue Étiquettes ne montre ses actions
+  qu'au survol.
+
 #### L'audit UX du 2026-09-23 — ce que l'écran montrait mal (détail : `docs/audit-ux-2026-09-23.md`)
 
 - **Les boutons ressemblent à ce qu'ils sont.** « Exécuter » de la Revue

@@ -62,17 +62,18 @@ leur raisonnement, et un renvoi par lot livré.*
 
 ## Ouvert
 
-### Audit UX du 2026-09-23 — propositions (détail : `docs/audit-ux-2026-09-23.md`)
+### Audit UX du 2026-09-23 — propositions (soldées le 2026-09-24 ; détail : `docs/audit-ux-2026-09-23.md`)
 
-- [ ] Infobulles (`title`) sur les icônes seules — amendement de DESIGN §9 à décider.
-- [ ] « Annuler » après « Mettre à la corbeille » depuis la fiche (avis qui restaure).
-- [ ] Annoncer le coût d'une analyse de liens (nombre d'URL, durée) avant de la lancer.
-- [ ] ⌘F → recherche ; Échap vide la recherche ; raccourcis découvrables.
-- [ ] Dialogues (palette, Réglages) : focus piégé, puis rendu à l'origine.
-- [ ] Hors ligne : refuser les écritures proprement (écart spec §7).
-- [ ] Composer « Déjà sauvegardé » : ouvrir le signet existant dans la fiche.
-- [ ] Vue Étiquettes : actions de ligne révélées au survol (écart DESIGN §9).
-- [ ] `fr.ts` (398) et `ReviewPage.tsx` (398) au plafond : décider le découpage de `fr.ts` (CLAUDE.md : « un seul fichier »).
+- [x] Infobulles sur les icônes seules (`nomIcone`, DESIGN §9 amendé) — `006ff21`.
+- [x] « Annuler » après la corbeille : la fiche se rafraîchit et porte « Restaurer » — `c490a3e` (et le 🔴 trouvé en chemin : un second DELETE détruisait un signet déjà corbeillé).
+- [x] Coût de l'analyse de liens annoncé avant de la lancer — `d223909`.
+- [x] ⌘F, Échap vide la recherche, section « Raccourcis clavier » — `006ff21`.
+- [x] Dialogues : focus piégé puis rendu — `fa2d789`.
+- [x] Hors ligne : écritures vers Raindrop refusées avant l'envoi (spec §7) — `5172138`.
+- [x] « Déjà sauvegardé » ouvre la fiche du signet existant — `c490a3e`.
+- [x] Vue Étiquettes : actions révélées au survol/focus — `070f6c0`.
+- [x] `fr.ts` découpé par domaine (`textes/`), dédoublonnage sorti de la Revue — `5998bf9`.
+- [ ] **À vérifier en réel** : `navigator.onLine` passe-t-il à `false` hors ligne sous `tauri://localhost` ? (mesuré `true` EN ligne ; la garde hors ligne en dépend).
 
 ### Audit du 2026-09-23 — ce qui reste (détail : `docs/audit-2026-09-23.md`)
 
