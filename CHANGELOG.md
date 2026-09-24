@@ -517,6 +517,21 @@ signet près, y compris croisé avec le filtre de domaine.
   Toute commande réduite à une icône porte son nom accessible : l'épure
   ne déplace pas sa dette vers l'accessibilité.
 
+### Ajouté
+
+#### Ergonomie (2026-09-24 — détail : `docs/audit-ergonomie-2026-09-24.md`)
+
+- **La fiche édite les étiquettes et la collection** d'un signet : ajouter
+  ou retirer une étiquette, changer de collection, sans passer par la
+  sélection et la Revue.
+- **Maj-clic** coche une plage de signets ; « Tout sélectionner » dans la
+  barre de sélection.
+- **Un glisser-déposer se dit** (« 2 signets déplacés »), et se défait d'un
+  clic quand c'est sûr.
+- **Le mode liste/mosaïque et le tri sont retenus** d'une collection à
+  l'autre et d'une session à l'autre ; la recherche dit dans quelle
+  collection elle cherche.
+
 ### Corrigé
 
 #### Optimisation (2026-09-24)

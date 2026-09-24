@@ -762,6 +762,24 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   deps.direct) doit appeler `scanner.invaliderInstantane()` — sinon les
   analyses travaillent 10 minutes sur une bibliothèque qui n'existe plus.
 
+## Traps ergonomie — lot 2026-09-24
+
+- **user-event v14 : chaque appel DIRECT (`userEvent.click`,
+  `userEvent.keyboard`) ouvre une session neuve** — une touche Maj enfoncée
+  par `userEvent.keyboard("{Shift>}")` ne survit pas au `userEvent.click`
+  suivant, et un test de Maj-clic échoue sur du code juste. Une seule
+  instance : `const user = userEvent.setup()`.
+- **Des préférences en localStorage fuient d'un test à l'autre** (jsdom le
+  garde dans le fichier) : `src/test/setup.ts` le vide après chaque test.
+- **Un avis rendu seulement dans la branche « liste pleine » disparaît
+  quand l'action vide la liste** — tout déplacer hors d'une collection
+  emportait l'Annuler. Tout retour d'action se rend dans les DEUX branches
+  (`AvisDepot`).
+- **« Annuler » n'est offert que s'il ne défait QUE ce qu'on a fait** :
+  restaurer après une mise à la corbeille où certains y étaient déjà les
+  sortirait aussi ; retirer une étiquette posée par le geste l'ôterait à
+  ceux qui la portaient avant. Dans le doute, l'avis sans Annuler.
+
 ## Git
 
 Travailler sur `main`. **Pousser uniquement quand l'utilisateur le demande.**
