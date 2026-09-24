@@ -129,6 +129,7 @@ type Action =
   | { type: "patch"; patch: ListPatch }
   | { type: "forgetSmartList"; id: string }
   | { type: "toggleSelect"; id: number }
+  | { type: "selectMany"; ids: number[] }
   | { type: "clearSelection" }
   | { type: "selectRaindrop"; id: number | null };
 
@@ -175,6 +176,7 @@ function reducer(s: State, a: Action): State {
     else selectedIds.add(a.id);
     return { ...s, selectedIds };
   }
+  if (a.type === "selectMany") return { ...s, selectedIds: new Set([...s.selectedIds, ...a.ids]) };
   if (a.type === "clearSelection") return { ...s, selectedIds: new Set<number>() };
   if (a.type === "selectRaindrop") return { ...s, selectedRaindropId: a.id };
   return s;
@@ -200,6 +202,8 @@ const Ctx = createContext<{
   forgetSmartList: (id: string) => void;
   selectedIds: Set<number>;
   toggleSelect: (id: number) => void;
+  /** AJOUTE ces signets à la sélection (Maj-clic, « Tout sélectionner »). */
+  selectMany: (ids: number[]) => void;
   clearSelection: () => void;
   selectedRaindropId: number | null;
   /** `null` FERME le volet détail — il ne s'affiche que sur un signet
@@ -212,6 +216,7 @@ const Ctx = createContext<{
   forgetSmartList: () => undefined,
   selectedIds: new Set<number>(),
   toggleSelect: () => undefined,
+  selectMany: () => undefined,
   clearSelection: () => undefined,
   selectedRaindropId: null,
   selectRaindrop: () => undefined,
@@ -234,6 +239,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         forgetSmartList: (id) => dispatch({ type: "forgetSmartList", id }),
         selectedIds: state.selectedIds,
         toggleSelect: (id) => dispatch({ type: "toggleSelect", id }),
+        selectMany: (ids) => dispatch({ type: "selectMany", ids }),
         clearSelection: () => dispatch({ type: "clearSelection" }),
         selectedRaindropId: state.selectedRaindropId,
         selectRaindrop: (id) => dispatch({ type: "selectRaindrop", id }),

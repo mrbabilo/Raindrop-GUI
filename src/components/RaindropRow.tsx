@@ -35,7 +35,8 @@ export function RaindropRow(props: {
     onPointerDown(e: { clientX: number; clientY: number; button?: number }): void;
     onClick(): void;
   };
-  onToggle(): void;
+  /** `plage` : Maj-clic — la liste coche la plage depuis la dernière case. */
+  onToggle(plage?: boolean): void;
   onTag(name: string): void;
   /** L'étiquette fait-elle partie du filtre courant ? La pilule le montre là
    *  où on la clique : sans cette marque, recliquer une étiquette déjà
@@ -75,7 +76,7 @@ export function RaindropRow(props: {
           ses contrôles — mesuré au navigateur, vingt-neuf lignes montées
           faisaient cent vingt-six arrêts à elles seules. La case reste
           cliquable, et la barre d'espace la coche depuis la ligne active. */}
-      <input type="checkbox" tabIndex={-1} aria-label={t("list.select", { title: r.title })} checked={props.selected} onClick={(e) => e.stopPropagation()} onChange={props.onToggle} />
+      <input type="checkbox" tabIndex={-1} aria-label={t("list.select", { title: r.title })} checked={props.selected} readOnly onClick={(e) => { e.stopPropagation(); props.onToggle(e.shiftKey); }} />
       {/* La poignée : rien n'annonçait qu'une ligne se tirait — on ne le
           découvrait qu'en essayant. Elle ne CAPTE pas le geste (toute la
           ligne reste tirable, comportement d'origine) ; elle le signale, et

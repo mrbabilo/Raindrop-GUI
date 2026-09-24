@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { t } from "../i18n/fr";
 import { useAppState } from "../state/appState";
 import { useDrag, type CibleDepot } from "../state/drag";
-import { useBulk } from "./useMutations";
+import { useBulk, useUnrestore } from "./useMutations";
 import { api } from "../lib/api";
 
 // Déplacer un signet en le tirant sur une collection de la sidebar.
@@ -46,11 +46,20 @@ const rendreSelection = (garde: HTMLStyleElement | null): void => {
  *  VISIBLES — comme la BulkBar, qui n'agit que sur l'intersection. Sans
  *  cette borne, le dépôt déplaçait (ou corbeillait) des signets cochés dans
  *  une autre vue, que rien à l'écran ne montrait (audit du 2026-09-23). */
-export function useDragBookmark(visibles: readonly number[]) {
+export function useDragBookmark(visibles: readonly number[], origines?: ReadonlyMap<number, number>) {
   const { selectedIds, view } = useAppState();
   // Hors du rendu, comme le geste : lue au pointerdown, jamais une dépendance.
   const vus = useRef(visibles);
   vus.current = visibles;
+  // La collection d'où vient chaque signet montré — ce qui rend un
+  // déplacement DÉFAISABLE (audit d'ergonomie du 2026-09-24).
+  const depuis = useRef(origines);
+  depuis.current = origines;
+  const unrestore = useUnrestore();
+  /** Ce qu'a fait le dernier dépôt réussi, et comment le défaire quand c'est
+   *  sûr. Un dépôt réussi ne disait rien : la ligne disparaissait, c'était
+   *  tout. */
+  const [avis, setAvis] = useState<{ texte: string; annuler?: () => void } | null>(null);
   const { ids, commencer, terminer } = useDrag();
   const bulk = useBulk();
   const [erreur, setErreur] = useState<string | null>(null);
@@ -80,6 +89,21 @@ export function useDragBookmark(visibles: readonly number[]) {
       const { ids: portes, cible } = porte;
       if (portes === null || portes.length === 0 || cible === null) return;
       setErreur(null);
+      setAvis(null);
+      const echec = (e: unknown) => setErreur(e instanceof Error ? e.message : String(e));
+      // Défaire un déplacement : chaque signet retourne dans SA collection
+      // d'origine, un bulk par origine, dans l'ordre. Une origine inconnue,
+      // ou une sortie de la corbeille : pas d'Annuler plutôt qu'un faux.
+      const retours = new Map<number, number[]>();
+      for (const id of portes) {
+        const o = depuis.current?.get(id);
+        if (o === undefined || sourceCorbeille) { retours.clear(); break; }
+        retours.set(o, [...(retours.get(o) ?? []), id]);
+      }
+      const defaireDeplacement = async () => {
+        for (const [origine, ids] of retours) await bulk.mutateAsync({ operation: "move", collection_id: 0, ids, to_collection_id: origine });
+        setAvis(null);
+      };
       // La table des sortes : une cible, un verbe. `sourceMove` porte la
       // source du bulk move (0 hors corbeille, -99 dedans) — jamais un
       // marqueur front (R3P).
@@ -108,11 +132,35 @@ export function useDragBookmark(visibles: readonly number[]) {
             return api.send("POST", "/api/raindrops/bulk-tag", { ids: portes, tag: cible.nom });
         }
       })();
-      verbe.catch((e: unknown) => setErreur(e instanceof Error ? e.message : String(e)));
+      verbe.then((res) => {
+        const n = portes.length;
+        switch (cible.sorte) {
+          case "collection":
+          case "tous":
+            setAvis({ texte: t("drag.deplaces", { n }), ...(retours.size > 0 ? { annuler: () => void defaireDeplacement().catch(echec) } : {}) });
+            break;
+          case "favoris":
+            // Pas d'Annuler : on ne sait pas lesquels étaient déjà favoris.
+            setAvis({ texte: t("drag.favoris", { n }) });
+            break;
+          case "corbeille": {
+            const r = res as { corbeille: number; deja: number; echecs: unknown[] };
+            // Annuler restaurerait AUSSI un signet déjà corbeillé avant le
+            // geste — seulement quand tout ce qui a été tiré y est allé.
+            const sur = r.deja === 0 && r.echecs.length === 0 && r.corbeille > 0;
+            const defaire = () => void unrestore.mutateAsync({ ids: portes }).then(() => setAvis(null), echec);
+            setAvis({ texte: t("drag.corbeilles", { n: r.corbeille }), ...(sur ? { annuler: defaire } : {}) });
+            break;
+          }
+          case "tag":
+            // Pas d'Annuler : on ne sait pas qui la portait déjà.
+            setAvis({ texte: t("drag.etiquete", { n: (res as { marques: number }).marques, tag: cible.nom }) });
+        }
+      }, echec);
     },
     // `view` dans les deps : quitter la corbeille doit recalculer la source
     // du move — une closure périmée corbeillerait depuis -99 hors corbeille.
-    [bulk, view],
+    [bulk, view, unrestore],
   );
 
   // Les mouvements s'écoutent sur la FENÊTRE, pas sur la ligne : le pointeur
@@ -201,5 +249,5 @@ export function useDragBookmark(visibles: readonly number[]) {
     [selectedIds],
   );
 
-  return { poignee, enCours: ids !== null, erreur, effacerErreur: () => setErreur(null) };
+  return { poignee, enCours: ids !== null, erreur, effacerErreur: () => setErreur(null), avis, fermerAvis: () => setAvis(null) };
 }

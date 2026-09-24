@@ -13,6 +13,7 @@ import { CarreCollection, teinteCollection } from "../design/Signaux";
 import { RaindropRow } from "./RaindropRow";
 import { SectionCollection } from "./SectionCollection";
 import { BulkBar } from "./BulkBar";
+import { AvisDepot } from "./AvisDepot";
 
 // Vue d'une collection PARENTE (DESIGN.md, design validé 2026-09-17) : ses
 // signets directs, puis une section par sous-collection. Les contrôles sont
@@ -64,7 +65,7 @@ export function CollectionView() {
   const etats = useEtatsAnalyse().data;
   const tous = [...itemsDirects, ...Object.values(parSection).flat()];
   // Après `tous` : la poignée n'embarque que les cochés MONTRÉS ici.
-  const drag = useDragBookmark(tous.map((r) => r.id));
+  const drag = useDragBookmark(tous.map((r) => r.id), new Map(tous.map((r) => [r.id, r.collectionId])));
   const poignee = (r: RaindropItem) => drag.poignee(r.id, () => ouvrir(r), r.title);
 
   if (parent === undefined)
@@ -125,11 +126,7 @@ export function CollectionView() {
           </p>
         )}
       </main>
-      {drag.erreur !== null && (
-        <p role="alert" className="border-t border-app-border px-3 py-2 text-xs text-app-broken">
-          {t("state.error", { message: drag.erreur })}
-        </p>
-      )}
+      <AvisDepot drag={drag} />
       <BulkBar items={tous} />
     </div>
   );

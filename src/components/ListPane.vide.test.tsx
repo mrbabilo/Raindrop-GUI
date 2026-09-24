@@ -19,6 +19,15 @@ vi.mock("../hooks/useRaindrops", () => ({
   }),
 }));
 vi.mock("../hooks/useStaticData", () => ({ useCollections: () => ({ data: collections, isLoading: false }) }));
+// Le geste lui-même est testé dans useDragBookmark.avis.test : ici, seul
+// compte ce que la liste VIDE montre de son dernier résultat.
+const annuler = vi.hoisted(() => vi.fn());
+vi.mock("../hooks/useDragBookmark", () => ({
+  useDragBookmark: () => ({
+    poignee: () => ({}), enCours: false, erreur: null, effacerErreur: vi.fn(),
+    avis: { texte: "2 signets déplacés", annuler }, fermerAvis: vi.fn(),
+  }),
+}));
 
 const Spy = () => {
   const { view } = useAppState();
@@ -56,5 +65,15 @@ describe("ListPane — une liste vide dit pourquoi, et comment en sortir", () =>
   it("la corbeille vide se dit comme telle", async () => {
     await monter({ kind: "list", collectionId: -99, label: "Corbeille" });
     expect(screen.getByText("La corbeille est vide.")).toBeInTheDocument();
+  });
+
+  // Audit d'ergonomie du 2026-09-24 : déplacer TOUS les signets d'une
+  // collection la vide — la branche « liste vide » ne doit pas emporter
+  // l'avis et son Annuler.
+  it("vidée par un dépôt : l'avis et son Annuler restent là", async () => {
+    await monter({ kind: "list", collectionId: 101, label: "Dev" });
+    expect(screen.getByRole("status")).toHaveTextContent("2 signets déplacés");
+    await userEvent.click(screen.getByRole("button", { name: "Annuler" }));
+    expect(annuler).toHaveBeenCalled();
   });
 });
