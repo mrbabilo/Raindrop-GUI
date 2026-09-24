@@ -79,7 +79,10 @@ describe("TagsView", () => {
     render(<TagsView />, { wrapper });
     await userEvent.click(screen.getAllByRole("button", { name: "Supprimer" })[0]!);
     expect(sendMock).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button", { name: "Confirmer" }));
+    // Le second geste NOMME la conséquence (§10) : l'étiquette quitte ses 8
+    // signets, sans corbeille pour la rattraper — « Confirmer » ne le disait
+    // pas (audit UX du 2026-09-23).
+    await userEvent.click(screen.getByRole("button", { name: "Retirer de 8 signets" }));
     await waitFor(() =>
       expect(sendMock).toHaveBeenCalledWith("POST", "/api/tags/manage", {
         operation: "delete",
@@ -95,10 +98,10 @@ describe("TagsView", () => {
   it("un clic hors de la ligne désarme la suppression", async () => {
     render(<TagsView />, { wrapper });
     await userEvent.click(screen.getAllByRole("button", { name: "Supprimer" })[0]!);
-    expect(screen.getByRole("button", { name: "Confirmer" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retirer de 8 signets" })).toBeInTheDocument();
     // Un endroit qui ne prend pas le focus : le titre de la vue.
     await userEvent.click(screen.getByRole("heading", { name: "Étiquettes" }));
-    expect(screen.queryByRole("button", { name: "Confirmer" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retirer de 8 signets" })).not.toBeInTheDocument();
     // La ligne est revenue à son état de repos, comme les autres.
     expect(screen.getAllByRole("button", { name: "Supprimer" }).length).toBeGreaterThan(0);
   });

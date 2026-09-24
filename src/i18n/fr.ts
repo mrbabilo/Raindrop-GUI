@@ -222,7 +222,7 @@ export const fr = {
   "tags.delete": "Supprimer",
   "tags.newName": "Nouveau nom",
   "tags.renameField": "Nouveau nom de {name}",
-  "tags.confirm": "Confirmer",
+  "tags.confirm": "Retirer de {n} signet|Retirer de {n} signets",
   // Le ménage des archives se dit : il efface, pendant une sauvegarde de fond,
   // des copies qu'on croyait gardées (§5.4 — encore faut-il le savoir).
   "sauvegarde.menageOrphelines": "{n} archive devenue inutile effacée|{n} archives devenues inutiles effacées",
@@ -234,6 +234,7 @@ export const fr = {
   "review.title": "Revue de l'action",
   "review.count": "{n} élément concerné|{n} éléments concernés",
   "review.deselect": "Tout désélectionner",
+  "review.reselect": "Tout sélectionner",
   "review.filterPlaceholder": "Filtrer dans l'aperçu…",
   "review.filterAria": "Filtrer dans l'aperçu",
   "review.export": "Exporter en CSV",

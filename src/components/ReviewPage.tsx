@@ -270,8 +270,9 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
         <button type="button" className="btn btn-icone" aria-label={t("review.export")} onClick={() => downloadCsv("revue.csv", toCsv(remaining))}>
           <Icone nom="telecharger" />
         </button>
-        <button type="button" className="btn" onClick={() => setExcluded(new Set(review.items.map((i) => i.id)))}>
-          {t("review.deselect")}
+        {/* Une bascule a son retour : tout décoché, le même bouton recoche tout. */}
+        <button type="button" className="btn" onClick={() => setExcluded(excluded.size > 0 && remaining.length === 0 ? new Set() : new Set(review.items.map((i) => i.id)))}>
+          {excluded.size > 0 && remaining.length === 0 ? t("review.reselect") : t("review.deselect")}
         </button>
         <button
           type="button"

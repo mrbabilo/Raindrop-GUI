@@ -160,6 +160,19 @@ describe("ReviewPage — niveau 1 (corbeille)", () => {
   });
 });
 
+// Audit UX du 2026-09-23 : « Tout désélectionner » n'avait pas de retour —
+// tout décoché, il fallait recocher ligne à ligne (l'aller sans le retour).
+describe("ReviewPage — la désélection globale se défait", () => {
+  it("« Tout désélectionner » devient « Tout sélectionner », qui recoche tout", async () => {
+    renderReview();
+    await userEvent.click(screen.getByRole("button", { name: "Tout désélectionner" }));
+    expect(screen.getAllByRole("checkbox").filter((c) => (c as HTMLInputElement).checked && c.getAttribute("aria-label") !== null)).toHaveLength(0);
+    await userEvent.click(screen.getByRole("button", { name: "Tout sélectionner" }));
+    expect(screen.getByText(/Je confirme l'action sur 3/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tout désélectionner" })).toBeInTheDocument();
+  });
+});
+
 // Audit UX du 2026-09-23 : le filtre n'avait que son placeholder.
 describe("ReviewPage — le filtre de l'aperçu porte un nom", () => {
   it("nommé", () => {
