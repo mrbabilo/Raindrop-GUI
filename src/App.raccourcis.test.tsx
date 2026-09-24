@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { raindrop, collections, tags } from "./test/fixtures";
 import App from "./App";
-import { AppStateProvider } from "./state/appState";
+import { AppStateProvider, useAppState } from "./state/appState";
 import { DragProvider } from "./state/drag";
 
 // Raccourcis macOS attendus (audit UX du 2026-09-23, proposition 4) : ⌘F
@@ -20,6 +20,7 @@ beforeEach(() => {
     if (path === "/api/collections") return Promise.resolve({ items: collections });
     if (path === "/api/tags") return Promise.resolve({ items: tags });
     if (path === "/api/smartlists") return Promise.resolve({ items: [] });
+    if (path === "/api/raindrops/1000") return Promise.resolve(raindrop());
     return Promise.resolve({ status: "ok", mcp: "connected" });
   });
 });
@@ -59,5 +60,56 @@ describe("App — raccourcis", () => {
     fireEvent.click(fermer);
     expect(screen.queryByRole("dialog", { name: "Réglages" })).not.toBeInTheDocument();
     expect(engrenage).toHaveFocus();
+  });
+
+  // Audit d'ergonomie du 2026-09-24 : revenir à la vue précédente, et
+  // relire ce que le site Raindrop a changé, sans quitter le clavier.
+  it("⌘[ recule, ⌘] avance — et ⌘← / ⌘→ hors d'un champ de saisie", async () => {
+    render(<App onEtat={vi.fn()} />, { wrapper });
+    fireEvent.click(await screen.findByText("Design"));
+    const recherche = () => screen.getByRole("textbox", { name: "Rechercher" });
+    expect(recherche()).toHaveAttribute("placeholder", "Rechercher dans « Design »… (⌘F)");
+    fireEvent.keyDown(window, { key: "[", metaKey: true });
+    expect(recherche()).toHaveAttribute("placeholder", "Rechercher… (⌘F)");
+    fireEvent.keyDown(window, { key: "]", metaKey: true });
+    expect(recherche()).toHaveAttribute("placeholder", "Rechercher dans « Design »… (⌘F)");
+    fireEvent.keyDown(window, { key: "ArrowLeft", metaKey: true });
+    expect(recherche()).toHaveAttribute("placeholder", "Rechercher… (⌘F)");
+    // Dans un champ, ⌘→ va en fin de ligne : il n'appartient pas à l'historique.
+    fireEvent.keyDown(recherche(), { key: "ArrowRight", metaKey: true });
+    expect(recherche()).toHaveAttribute("placeholder", "Rechercher… (⌘F)");
+  });
+
+  it("⌘R relit la liste depuis Raindrop", async () => {
+    render(<App onEtat={vi.fn()} />, { wrapper });
+    const lectures = () => getMock.mock.calls.filter(([p]) => p === "/api/raindrops").length;
+    await waitFor(() => expect(lectures()).toBe(1));
+    const avant = lectures();
+    fireEvent.keyDown(window, { key: "r", metaKey: true });
+    await waitFor(() => expect(lectures()).toBe(avant + 1));
+  });
+
+  // La colonne de la fiche suit sa largeur réglable (PoigneeFiche) : la
+  // grille la reçoit en style, plus en classes figées à 320 px.
+  it("la grille reçoit ses colonnes en style : fiche fermée, colonne à zéro", () => {
+    render(<App onEtat={vi.fn()} />, { wrapper });
+    const grille = document.querySelector<HTMLElement>("[data-grille]")!;
+    expect(grille.style.gridTemplateColumns).toBe("240px minmax(0, 1fr) 0px");
+    expect(screen.queryByRole("separator", { name: "Largeur de la fiche" })).not.toBeInTheDocument();
+  });
+
+  it("fiche ouverte : sa colonne prend la largeur retenue, et la poignée est là", async () => {
+    localStorage.setItem("raindrop-gui-largeur-fiche", "400");
+    const Ouvrir = () => {
+      const { selectRaindrop } = useAppState();
+      return <button type="button" onClick={() => selectRaindrop(1000)}>ouvrir</button>;
+    };
+    render(<><Ouvrir /><App onEtat={vi.fn()} /></>, { wrapper });
+    fireEvent.click(screen.getByText("ouvrir"));
+    const poignee = await screen.findByRole("separator", { name: "Largeur de la fiche" });
+    const grille = document.querySelector<HTMLElement>("[data-grille]")!;
+    expect(grille.style.gridTemplateColumns).toBe("240px minmax(0, 1fr) 400px");
+    fireEvent.keyDown(poignee, { key: "ArrowLeft" });
+    expect(grille.style.gridTemplateColumns).toBe("240px minmax(0, 1fr) 416px");
   });
 });

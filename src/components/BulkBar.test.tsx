@@ -18,6 +18,8 @@ vi.mock("../hooks/useStaticData", () => ({ useCollections: () => ({ data: collec
 // avant son initialisation (TDZ, piège documenté).
 const sendMock = vi.hoisted(() => vi.fn(async (_m: string, _p: string, _c?: unknown) => ({ restored: 2, unknown: [] as number[] })));
 vi.mock("../lib/api", () => ({ api: { send: sendMock, get: vi.fn() } }));
+// Les verbes exécutés sans Revue (corbeille, déplacement) : BulkBar.direct.test.
+const agir = vi.fn(async () => true);
 
 // Spy étendu (R9P-1) : expose la vue ET la sélection — la Revue « consomme »
 // la sélection, chaque action doit laisser selectedIds vide. Même pattern
@@ -55,7 +57,7 @@ const renderBar = async (ids: number[]) => {
       <AppStateProvider>
         <Spy />
         <Preselect ids={ids} />
-        <BulkBar items={items} />
+        <BulkBar items={items} agir={agir} />
       </AppStateProvider>
     </QueryClientProvider>,
   );
@@ -68,7 +70,7 @@ describe("BulkBar", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <AppStateProvider>
-          <BulkBar items={items} />
+          <BulkBar items={items} agir={agir} />
         </AppStateProvider>
       </QueryClientProvider>,
     );
@@ -83,37 +85,10 @@ describe("BulkBar", () => {
     expect(screen.getByText("1 sélectionné")).toBeInTheDocument();
   });
 
-  it("corbeille → vue review avec les items sélectionnés, sélection consommée (R9P-1)", async () => {
-    await renderBar([1000, 1001]);
-    await userEvent.click(screen.getByRole("button", { name: "Mettre à la corbeille" }));
-    const revue = JSON.parse(screen.getByTestId("view").textContent!);
-    expect(revue.items).toEqual([1000, 1001]);
-    expect(revue.action).toEqual({ op: "trash" });
-    expect(revue.sourceLabel).toBe("sélection");
-    // R15P-3 : la vue list courante voyage en returnView — le retour après
-    // exécution reviendra ici.
-    expect(revue.returnView).toEqual({ kind: "list", collectionId: 0, label: "Tous" });
-    // R9P-1 : le clear est chirurgical (après le go), pas général — la
-    // sélection est vidée PAR l'action, la barre se démonte d'elle-même.
-    expect(screen.getByTestId("sel").textContent).toBe("");
-    expect(screen.queryByRole("button", { name: "Mettre à la corbeille" })).not.toBeInTheDocument();
-  });
-
-  // « Déplacer » et son sélecteur de destination ont été RETIRÉS : le
-  // glisser-déposer vers une collection fait le même geste, à la souris, et
-  // ces deux contrôles prenaient la moitié d'une barre qui vit dans une
-  // colonne rétrécie par les panneaux latéraux — ses derniers boutons en
-  // sortaient et se faisaient rogner. Le déplacement par sélection multiple
-  // reste couvert par useDragBookmark.test (« tirer un signet coché emmène
-  // toute la sélection »).
-  it("ne propose plus de déplacement : c'est le geste de la souris", async () => {
-    await renderBar([1000, 1001]);
-    expect(screen.queryByRole("button", { name: "Déplacer" })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Destination")).not.toBeInTheDocument();
-    // Les autres verbes, eux, restent : la barre n'a pas été vidée.
-    expect(screen.getByRole("button", { name: "Mettre à la corbeille" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Étiqueter" })).toBeInTheDocument();
-  });
+  // La corbeille et « Déplacer » s'exécutent désormais dans la barre, sans
+  // Revue (spec §4.3 amendée, §115 rétabli — audit d'ergonomie du
+  // 2026-09-24) : BulkBar.direct.test.tsx. Seuls l'étiquetage et
+  // l'archivage construisent encore une Revue.
 
   it("tagger → vue review, sélection consommée (R9P-1)", async () => {
     await renderBar([1000, 1001]);
@@ -204,7 +179,7 @@ describe("BulkBar — en vue corbeille", () => {
           <Spy />
           <AllerCorbeille />
           <Preselect ids={ids} />
-          <BulkBar items={items} />
+          <BulkBar items={items} agir={agir} />
         </AppStateProvider>
       </QueryClientProvider>,
     );
@@ -247,7 +222,7 @@ describe("BulkBar — ce que la restauration n'a pas fait se voit", () => {
           <Spy />
           <AllerCorbeille />
           <Preselect ids={[1000, 1001]} />
-          <BulkBar items={items} />
+          <BulkBar items={items} agir={agir} />
         </AppStateProvider>
       </QueryClientProvider>,
     );

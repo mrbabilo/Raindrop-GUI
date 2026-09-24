@@ -532,6 +532,25 @@ signet près, y compris croisé avec le filtre de domaine.
   l'autre et d'une session à l'autre ; la recherche dit dans quelle
   collection elle cherche.
 
+#### Ergonomie — les propositions implémentées (2026-09-24)
+
+- **« Déplacer » revient dans la barre de sélection** (spec §115) : une
+  destination, un bouton — déplacer plusieurs signets se fait enfin au
+  clavier. Dans la corbeille, il sort les signets vers la collection
+  choisie, y compris ceux dont l'origine est inconnue.
+- **La corbeille et le déplacement depuis la sélection s'exécutent
+  aussitôt**, suivis d'un avis et de son « Annuler » — plus de détour par
+  la Revue pour un geste qui se défait (spec §4.3 amendée). L'étiquetage et
+  l'archivage restent en Revue.
+- **Historique de navigation** : ⌘[ et ⌘] (ou ⌘← et ⌘→ hors d'un champ)
+  pour revenir à la vue précédente et y retourner.
+- **⌘R relit** ce que le site Raindrop a pu changer.
+- **La dernière collection ouverte est rouverte au lancement.**
+- **Touches sur la ligne active** : ⌫ met à la corbeille (avec Annuler),
+  F bascule le favori, E ouvre la fiche en édition.
+- **La fiche se redimensionne** en tirant son bord gauche (ou avec ← et →
+  sur ce bord) ; sa largeur est retenue. Double-clic : largeur d'origine.
+
 ### Corrigé
 
 #### Optimisation (2026-09-24)

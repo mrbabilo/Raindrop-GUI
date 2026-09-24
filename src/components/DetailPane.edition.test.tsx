@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { raindrop, collections, tags } from "../test/fixtures";
 import { DetailPane } from "./DetailPane";
 import { AppStateProvider, useAppState } from "../state/appState";
+import { demanderEdition } from "../lib/demandeEdition";
 
 // L'édition inline de la fiche — ses SORTIES (audit UX du 2026-09-23).
 // « Annuler » refermait l'édition sans jeter le brouillon : rouvrir montrait
@@ -117,5 +118,35 @@ describe("DetailPane — l'édition se quitte sans rien garder", () => {
     await userEvent.click(screen.getByRole("button", { name: "Modifier" }));
     await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
     expect(sendApi).not.toHaveBeenCalled();
+  });
+});
+
+// La touche E de la liste (audit d'ergonomie du 2026-09-24) : la fiche
+// s'ouvre EN ÉDITION — qu'elle soit déjà montée ou non.
+describe("DetailPane — l'édition demandée par la liste", () => {
+  const monterSansCliquer = () =>
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AppStateProvider><Preselect /><DetailPane /></AppStateProvider>
+      </QueryClientProvider>,
+    );
+
+  it("demandée avant l'ouverture : la fiche s'ouvre en édition", async () => {
+    demanderEdition(1000);
+    monterSansCliquer();
+    expect(await screen.findByRole("textbox", { name: "Titre" })).toHaveValue("Article exemple");
+  });
+
+  it("demandée sur la fiche déjà ouverte : elle passe en édition", async () => {
+    monterSansCliquer();
+    await screen.findByRole("button", { name: "Modifier" });
+    act(() => demanderEdition(1000));
+    expect(screen.getByRole("textbox", { name: "Titre" })).toBeInTheDocument();
+  });
+
+  it("témoin : sans demande, la fiche s'ouvre en lecture", async () => {
+    monterSansCliquer();
+    await screen.findByRole("button", { name: "Modifier" });
+    expect(screen.queryByRole("textbox", { name: "Titre" })).not.toBeInTheDocument();
   });
 });

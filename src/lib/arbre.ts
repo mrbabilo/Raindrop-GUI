@@ -89,3 +89,18 @@ export function chaineDe(toutes: readonly Collection[], id: number): number[] {
   descendre(id);
   return chaine;
 }
+
+/** « Dev › Rust » : une sous-collection se nomme par son chemin dans les
+ *  sélecteurs (fiche, barre de sélection) — la liste est triée par titre,
+ *  pas dans l'ordre de l'arbre. Marche bornée (une boucle de parents,
+ *  donnée corrompue, ne tourne pas à l'infini). */
+export function chemin(arbre: readonly Collection[], c: Collection): string {
+  const noms = [c.title];
+  let parent = arbre.find((p) => p.id === c.parentId);
+  for (let i = 0; parent && i < arbre.length; i++) {
+    noms.unshift(parent.title);
+    const suivant = parent.parentId;
+    parent = arbre.find((p) => p.id === suivant);
+  }
+  return noms.join(" › ");
+}

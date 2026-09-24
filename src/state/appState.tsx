@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useReducer, type ReactNode } from "react";
 import { t } from "../i18n/fr";
 import { ecrireAffichage, lireAffichage, type Affichage } from "../lib/affichage";
+import { ecrireDerniereVue, lireDerniereVue } from "../lib/derniereVue";
+import { enregistrer, pas, transitoire, vide, type Historique } from "./historique";
 
 // SPA à un écran, pas de router : cette union porte la vue courante.
 // Extensible : les tasks 7-8 ajouteront des kinds/champs par fusion du
@@ -123,9 +125,12 @@ interface State {
   affichage: Affichage;
   selectedIds: Set<number>;
   selectedRaindropId: number | null;
+  /** ⌘[ / ⌘] — state/historique.ts. */
+  historique: Historique;
 }
 type Action =
   | { type: "go"; view: View }
+  | { type: "pas"; sens: "passe" | "futur" }
   | { type: "patch"; patch: ListPatch }
   | { type: "forgetSmartList"; id: string }
   | { type: "toggleSelect"; id: number }
@@ -138,6 +143,7 @@ const initial: State = {
   affichage: {},
   selectedIds: new Set<number>(),
   selectedRaindropId: null,
+  historique: vide,
 };
 /** Une liste qui ne précise ni mode ni tri prend les préférés — une vue
  *  sauvegardée qui porte son tri le garde. */
@@ -151,7 +157,17 @@ function avecAffichage(view: View, affichage: Affichage): View {
 }
 
 function reducer(s: State, a: Action): State {
-  if (a.type === "go") return { ...s, view: avecAffichage(a.view, s.affichage) };
+  if (a.type === "go") {
+    const view = avecAffichage(a.view, s.affichage);
+    return { ...s, view, historique: enregistrer(s.historique, s.view, view) };
+  }
+  if (a.type === "pas") {
+    // Dans une Revue ou une lecture, reculer, c'est en sortir — par son
+    // propre retour ; l'historique, lui, ne bouge pas.
+    if (transitoire(s.view)) return a.sens === "passe" ? { ...s, view: vueDeRetour(s.view) } : s;
+    const p = pas(s.historique, s.view, a.sens);
+    return p === null ? s : { ...s, view: p.vue, historique: p.h };
+  }
   if (a.type === "patch" && s.view.kind === "list") {
     // Changer de mode ou de tri, c'est aussi dire sa PRÉFÉRENCE.
     const affichage = {
@@ -196,6 +212,10 @@ export function vueDeRetour(v: View): View {
 const Ctx = createContext<{
   view: View;
   go: (v: View) => void;
+  /** ⌘[ : la vue précédente (no-op au bout). */
+  reculer: () => void;
+  /** ⌘] : la vue d'où l'on a reculé (no-op au bout). */
+  avancer: () => void;
   patchList: (p: ListPatch) => void;
   /** Efface la marque de smart list de la vue ouverte si c'est celle-ci —
    *  appelé à la suppression de la vue (Task 7) ; no-op sinon. */
@@ -212,6 +232,8 @@ const Ctx = createContext<{
 }>({
   view: initial.view,
   go: () => undefined,
+  reculer: () => undefined,
+  avancer: () => undefined,
   patchList: () => undefined,
   forgetSmartList: () => undefined,
   selectedIds: new Set<number>(),
@@ -223,18 +245,22 @@ const Ctx = createContext<{
 });
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  // Au lancement, la première vue prend les préférences retenues.
+  // Au lancement : la dernière liste ou collection ouverte, avec les
+  // préférences retenues.
   const [state, dispatch] = useReducer(reducer, initial, (i) => {
     const affichage = lireAffichage();
-    return { ...i, affichage, view: avecAffichage(i.view, affichage) };
+    return { ...i, affichage, view: avecAffichage(lireDerniereVue() ?? i.view, affichage) };
   });
   // Retenues d'une session à l'autre — hors du reducer, qui reste pur.
   useEffect(() => ecrireAffichage(state.affichage), [state.affichage]);
+  useEffect(() => ecrireDerniereVue(state.view), [state.view]);
   return (
     <Ctx.Provider
       value={{
         view: state.view,
         go: (view) => dispatch({ type: "go", view }),
+        reculer: () => dispatch({ type: "pas", sens: "passe" }),
+        avancer: () => dispatch({ type: "pas", sens: "futur" }),
         patchList: (patch) => dispatch({ type: "patch", patch }),
         forgetSmartList: (id) => dispatch({ type: "forgetSmartList", id }),
         selectedIds: state.selectedIds,

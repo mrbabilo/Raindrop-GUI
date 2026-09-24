@@ -62,19 +62,21 @@ leur raisonnement, et un renvoi par lot livré.*
 
 ## Ouvert
 
-### Audit d'ergonomie du 2026-09-24 — à arbitrer (détail : `docs/audit-ergonomie-2026-09-24.md`)
+### Audit d'ergonomie du 2026-09-24 — propositions (soldées le 2026-09-24 ; détail : `docs/audit-ergonomie-2026-09-24.md`)
 
-- [ ] **Écart spec §115 : « Déplacer » manque à la barre de sélection** — au clavier, déplacer plusieurs signets est impossible (sélecteur compact, ou commande ⌘K « Déplacer la sélection vers… »).
-- [ ] Historique de navigation ⌘[ / ⌘].
-- [ ] Touches d'action sur la ligne active (⌫ corbeille, F favori, E éditer).
-- [ ] Corbeille depuis la barre de sélection sans passer par la Revue (l'avis + Annuler suffiraient) — décision de spec (§4.3).
-- [ ] Rouvrir la dernière collection au lancement ; ⌘R pour relire ; colonne de fiche redimensionnable.
+- [x] **Écart spec §115** : « Déplacer » rétabli dans la barre de sélection (destination + bouton, au clavier) — `dc95eea`.
+- [x] Corbeille et déplacement depuis la sélection exécutés sans Revue, avec avis + Annuler — spec §4.3 amendée — `dc95eea`.
+- [x] Historique de navigation ⌘[ / ⌘] (et ⌘← / ⌘→ hors d'un champ) ; ⌘R relit ; dernière vue rouverte au lancement — `bd208a1`.
+- [x] Touches d'action sur la ligne active (⌫ corbeille, F favori, E éditer) — `d0df348`.
+- [x] Colonne de fiche redimensionnable (souris, clavier, largeur retenue) — `73f08f7`.
+- [ ] **À vérifier en réel** : ⌘R n'est pas pris par WKWebView ou par un menu avant le webview (sinon la page se recharge) ; ⌘[ sur AZERTY (Option requise — ⌘← est l'alternative) ; ⌫ sur la ligne active ne part pas en « page précédente » ; le curseur `col-resize` et le tirer de la poignée ; le focus après ⌫ (la ligne disparaît au rafraîchissement : le focus retombe-t-il sur `body` ?).
+- [ ] Les touches ⌫/F/E ne vivent que dans la **liste** (et sa mosaïque) — pas dans la vue d'une collection parente (`CollectionView`), qui n'a pas de ligne active.
 
 ### Optimisation du 2026-09-24 — pistes non prises (à sonder d'abord)
 
 - [ ] **Glisser-déposer vers une étiquette / la corbeille : 2 requêtes par signet** (lecture + écriture, `trash/bulk.ts`). Le `/bulk` le ferait en une — mais il repose sur deux comportements Raindrop NON vérifiés en réel : que l'étiquetage en masse AJOUTE (doc) et qu'un DELETE en masse depuis 0 ignore un signet déjà corbeillé. Sonder (1-3 requêtes sur un signet de test) avant tout changement : une erreur ici efface des étiquettes ou détruit un signet.
 - [ ] **Revenir sur une liste périmée (> 30 s) relit TOUTES ses pages chargées** (react-query v5 refetch des listes infinies) : 10 pages défilées = 10 créneaux. Arbitrage fraîcheur/coût à décider (staleTime des listes, ou ne garder que la première page au retour).
-- [ ] `DetailPane.tsx` à 308 lignes (cible 300) : découper l'édition inline si elle grossit encore.
+- [ ] `DetailPane.tsx` à 314 lignes (cible 300) : découper l'édition inline si elle grossit encore.
 
 ### Audit UX du 2026-09-23 — propositions (soldées le 2026-09-24 ; détail : `docs/audit-ux-2026-09-23.md`)
 

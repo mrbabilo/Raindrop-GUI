@@ -13,6 +13,7 @@ import { filtreActif } from "../lib/smartlists";
 import { useEtatsAnalyse } from "../hooks/useAnalysis";
 import { useOuvrirSignet } from "../hooks/useOuvrirSignet";
 import { useDragBookmark } from "../hooks/useDragBookmark";
+import { useTouchesLigne } from "../hooks/useTouchesLigne";
 import { useIndexClavier } from "../hooks/useIndexClavier";
 import { useRovingFocus } from "../hooks/useRovingFocus";
 import { EtatListe } from "./EtatListe";
@@ -56,6 +57,7 @@ export function ListPane() {
   // fiche l'accompagne ; non lisible → la fiche seule. Une seule décision,
   // partagée par le clavier, la mosaïque et la ligne.
   const ouvrir = useOuvrirSignet();
+  const toucheAction = useTouchesLigne(items, drag.agir);
   // Cliquer une étiquette AJOUTE ou RETIRE un filtre — les étiquettes
   // s'intersectent (recherche.ts) : deux clics valent « les deux à la fois »,
   // et recliquer la même la retire.
@@ -73,7 +75,7 @@ export function ListPane() {
     } else toggleSelect(r.id);
     ancre.current = i;
   };
-  // La fiche vole 320 px à la grille : les colonnes de la mosaïque re-flux
+  // La fiche vole sa largeur (320 px par défaut) à la grille : les colonnes de la mosaïque re-flux
   // et la vignette ouverte pouvait sortir du champ (signalement 2026-09-20).
   // On la ramène AU PLUS PRÈS — « nearest » ne scrolle pas si elle est
   // déjà visible. Exécuté après le layout (effet), au changement de
@@ -173,7 +175,9 @@ export function ListPane() {
       <Composer />
       <main
         ref={parentRef}
-        onKeyDown={q.viewMode === "mosaic" ? mosaique.surTouche : clavier.surTouche}
+        onKeyDown={(e) => {
+          if (!toucheAction(e)) (q.viewMode === "mosaic" ? mosaique.surTouche : clavier.surTouche)(e);
+        }}
         className="min-h-0 flex-1 overflow-y-auto"
       >
         {q.viewMode === "mosaic" ? (
@@ -201,6 +205,7 @@ export function ListPane() {
                 <div
                   key={r.id}
                   {...clavier.ligne(v.index)}
+                  data-signet={r.id}
                   ref={virtual.measureElement}
                   style={{ position: "absolute", top: 0, left: 0, width: "100%", transform: `translateY(${v.start}px)` }}
                 >
@@ -220,7 +225,7 @@ export function ListPane() {
       {/* R8P-1 : un déplacement raté se dit, il ne disparaît pas en silence. */}
       <AvisDepot drag={drag} />
       {/* Invisible sans sélection (rend null) : aucune layout shift au repos. */}
-      <BulkBar items={items} />
+      <BulkBar items={items} agir={drag.agir} />
     </div>
   );
 }

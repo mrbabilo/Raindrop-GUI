@@ -29,3 +29,33 @@ export function useSidebarRepliee(): { repliee: boolean; basculer: () => void } 
   }, []);
   return { repliee, basculer };
 }
+
+// La largeur de la FICHE (audit d'ergonomie du 2026-09-24 : 320 px fixes).
+// Bornée : en deçà de 280, les boutons d'action se replient mal ; au-delà
+// de 560, la liste n'a plus de quoi montrer un titre.
+const CLE_FICHE = "raindrop-gui-largeur-fiche";
+export const FICHE = { defaut: 320, min: 280, max: 560 } as const;
+const borner = (px: number) => Math.round(Math.min(FICHE.max, Math.max(FICHE.min, px)));
+
+function lireLargeur(): number {
+  try {
+    const px = Number(localStorage.getItem(CLE_FICHE));
+    return Number.isFinite(px) && px > 0 ? borner(px) : FICHE.defaut;
+  } catch {
+    return FICHE.defaut;
+  }
+}
+
+export function useLargeurFiche(): { largeur: number; regler: (px: number) => void } {
+  const [largeur, setLargeur] = useState<number>(lireLargeur);
+  const regler = useCallback((px: number) => {
+    const b = borner(px);
+    setLargeur(b);
+    try {
+      localStorage.setItem(CLE_FICHE, String(b));
+    } catch {
+      /* stockage indisponible : la largeur vaut pour la session */
+    }
+  }, []);
+  return { largeur, regler };
+}

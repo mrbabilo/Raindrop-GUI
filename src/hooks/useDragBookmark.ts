@@ -84,10 +84,13 @@ export function useDragBookmark(visibles: readonly number[], origines?: Readonly
   // garde, relâcher au-dessus d'une ligne ouvrirait la fiche en prime.
   const etaitDrag = useRef(false);
 
+  // Rend `true` quand le verbe a abouti : la barre de sélection, qui joue
+  // les mêmes verbes sans le geste (`agir`), ne vide la sélection qu'à ce
+  // prix. Le dépôt, lui, ignore la promesse.
   const deposer = useCallback(
-    (porte: { ids: number[] | null; cible: CibleDepot | null }) => {
+    (porte: { ids: number[] | null; cible: CibleDepot | null }): Promise<boolean> => {
       const { ids: portes, cible } = porte;
-      if (portes === null || portes.length === 0 || cible === null) return;
+      if (portes === null || portes.length === 0 || cible === null) return Promise.resolve(false);
       setErreur(null);
       setAvis(null);
       const echec = (e: unknown) => setErreur(e instanceof Error ? e.message : String(e));
@@ -120,7 +123,7 @@ export function useDragBookmark(visibles: readonly number[], origines?: Readonly
           case "favoris":
             // Non destructeur : `important` est un booléen, la route bulk
             // l'accepte telle quelle.
-            return bulk.mutateAsync({ operation: "update", collection_id: 0, ids: portes, important: true });
+            return bulk.mutateAsync({ operation: "update", collection_id: 0, ids: portes, important: cible.valeur ?? true });
           case "corbeille":
             // La sélection tirée ne transporte pas les origines : le sidecar
             // les LIT, item par item, et les mémorise avant la corbeille
@@ -132,7 +135,7 @@ export function useDragBookmark(visibles: readonly number[], origines?: Readonly
             return api.send("POST", "/api/raindrops/bulk-tag", { ids: portes, tag: cible.nom });
         }
       })();
-      verbe.then((res) => {
+      return verbe.then((res) => {
         const n = portes.length;
         switch (cible.sorte) {
           case "collection":
@@ -141,7 +144,7 @@ export function useDragBookmark(visibles: readonly number[], origines?: Readonly
             break;
           case "favoris":
             // Pas d'Annuler : on ne sait pas lesquels étaient déjà favoris.
-            setAvis({ texte: t("drag.favoris", { n }) });
+            setAvis({ texte: t(cible.valeur === false ? "drag.nonFavoris" : "drag.favoris", { n }) });
             break;
           case "corbeille": {
             const r = res as { corbeille: number; deja: number; echecs: unknown[] };
@@ -156,7 +159,11 @@ export function useDragBookmark(visibles: readonly number[], origines?: Readonly
             // Pas d'Annuler : on ne sait pas qui la portait déjà.
             setAvis({ texte: t("drag.etiquete", { n: (res as { marques: number }).marques, tag: cible.nom }) });
         }
-      }, echec);
+        return true;
+      }, (e) => {
+        echec(e);
+        return false;
+      });
     },
     // `view` dans les deps : quitter la corbeille doit recalculer la source
     // du move — une closure périmée corbeillerait depuis -99 hors corbeille.
@@ -180,7 +187,7 @@ export function useDragBookmark(visibles: readonly number[], origines?: Readonly
       if (g === null) return;
       rendreSelection(g.garde);
       if (!g.franchi) return;
-      deposer(terminer());
+      void deposer(terminer());
     };
     // Le système peut interrompre le geste (changement d'app, geste du
     // trackpad avorté) : sans ce filet, la garde resterait posée et la
@@ -249,5 +256,10 @@ export function useDragBookmark(visibles: readonly number[], origines?: Readonly
     [selectedIds],
   );
 
-  return { poignee, enCours: ids !== null, erreur, effacerErreur: () => setErreur(null), avis, fermerAvis: () => setAvis(null) };
+  // Les verbes du dépôt SANS le geste — la barre de sélection (écart §115 :
+  // déplacer plusieurs signets n'existait qu'à la souris). Mêmes routes, même
+  // avis, même Annuler.
+  const agir = useCallback((ids: number[], cible: CibleDepot) => deposer({ ids, cible }), [deposer]);
+
+  return { poignee, agir, enCours: ids !== null, erreur, effacerErreur: () => setErreur(null), avis, fermerAvis: () => setAvis(null) };
 }

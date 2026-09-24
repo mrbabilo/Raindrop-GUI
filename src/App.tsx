@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { t } from "./i18n/fr";
 import type { Amorce } from "./lib/amorce";
 import { useTheme } from "./lib/theme";
-import { useSidebarRepliee } from "./lib/panneaux";
+import { useLargeurFiche, useSidebarRepliee } from "./lib/panneaux";
 import { useAppState, vueDeRetour } from "./state/appState";
 import { Sidebar } from "./components/Sidebar";
 import { Icone } from "./design/icones";
@@ -19,6 +20,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { Banners } from "./components/Banners";
 import { Reglages } from "./components/Reglages";
 import { FantomeDrag } from "./components/FantomeDrag";
+import { PoigneeFiche } from "./components/PoigneeFiche";
 import { nomIcone } from "./design/nomIcone";
 
 // Icônes SVG (DESIGN.md §9 : jamais d'emoji), grille 16px, trait 1,7.
@@ -49,7 +51,8 @@ function MoonIcon() {
 
 export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
   const { resolved, setMode } = useTheme();
-  const { view, go, selectedRaindropId, selectRaindrop } = useAppState();
+  const { view, go, reculer, avancer, selectedRaindropId, selectRaindrop } = useAppState();
+  const queryClient = useQueryClient();
   // R15P-3 : le retour revient à la vue d'origine portée par la vue (Revue
   // ET Lecture — même règle, une seule définition : vueDeRetour) ; sans
   // origine notée, repli sur « Tous ».
@@ -65,6 +68,7 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
   // ⌘, — le raccourci macOS des réglages, partout dans le système.
   const [reglagesOuvert, setReglagesOuvert] = useState(false);
   const { repliee, basculer } = useSidebarRepliee();
+  const fiche = useLargeurFiche();
   // Spec inversion §4 : la fiche ACCOMPAGNE la lecture (colonne de droite) —
   // l'exclusion de la vue lecture est retirée. La sélection reste posée par
   // le clic (useOuvrirSignet pose view ET selectedRaindropId ensemble).
@@ -92,10 +96,33 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
         e.preventDefault();
         setReglagesOuvert(true);
       }
+      // ⌘[ / ⌘] : l'historique de navigation. ⌘← / ⌘→ aussi (Safari, Finder),
+      // sauf dans un champ, où ils vont en début ou fin de ligne — et parce
+      // que les crochets demandent Option sur un clavier AZERTY.
+      const saisie = e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable='true']") !== null;
+      if (e.metaKey && (e.key === "[" || (e.key === "ArrowLeft" && !saisie))) {
+        e.preventDefault();
+        reculer();
+      }
+      if (e.metaKey && (e.key === "]" || (e.key === "ArrowRight" && !saisie))) {
+        e.preventDefault();
+        avancer();
+      }
+      // ⌘R : relire ce que le site Raindrop a pu changer — l'app ne relit pas
+      // au retour de fenêtre (la file est chère). Les listes repartent de
+      // leur PREMIÈRE page : les invalider relirait chaque page déjà
+      // chargée, une requête de file (550 ms) par page.
+      if (e.metaKey && e.key === "r") {
+        e.preventDefault();
+        void queryClient.resetQueries({ queryKey: ["raindrops"] });
+        void queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "raindrops" });
+      }
     }
     window.addEventListener("keydown", surRaccourci);
     return () => window.removeEventListener("keydown", surRaccourci);
-  }, []);
+    // `reculer`/`avancer` naissent à chaque rendu du provider : le
+    // gestionnaire se repose avec eux, jamais sur une closure périmée.
+  }, [reculer, avancer, queryClient]);
   function toggleTheme() {
     setMode(isDark ? "light" : "dark");
   }
@@ -155,20 +182,14 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
       </header>
 
       {/* Les colonnes latérales sont CONDITIONNELLES : repliée, la barre
-          latérale rend sa largeur à la liste ; fermé, le détail aussi. Les
-          classes sont écrites en toutes lettres — Tailwind ne voit pas les
-          noms construits à l'exécution. */}
+          latérale rend sa largeur à la liste ; fermé, le détail aussi. En
+          STYLE et non en classes : la largeur de la fiche se règle
+          (PoigneeFiche), et Tailwind ne voit pas les noms construits à
+          l'exécution. */}
       <div
-        className={
-          "grid min-h-0 flex-1 grid-rows-[auto_1fr] " +
-          (repliee
-            ? detailOuvert
-              ? "grid-cols-[0px_minmax(0,1fr)_320px]"
-              : "grid-cols-[0px_minmax(0,1fr)_0px]"
-            : detailOuvert
-              ? "grid-cols-[240px_minmax(0,1fr)_320px]"
-              : "grid-cols-[240px_minmax(0,1fr)_0px]")
-        }
+        data-grille
+        className="grid min-h-0 flex-1 grid-rows-[auto_1fr]"
+        style={{ gridTemplateColumns: `${repliee ? 0 : 240}px minmax(0, 1fr) ${detailOuvert ? fiche.largeur : 0}px` }}
       >
         {/* Row 1 col 1 : la cellule que l'en-tête occupait — vide désormais,
             elle ne sert qu'à laisser TopBar en colonne 2. */}
@@ -212,7 +233,15 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
             surlignages (Task 8). Monté SEULEMENT sur un signet ouvert : sa
             colonne est à zéro le reste du temps, et le composant démonté
             n'émet aucune requête. */}
-        {detailOuvert && <DetailPane onFermer={() => selectRaindrop(null)} />}
+        {/* Son bord gauche se tire (et se règle au clavier) : la poignée
+            est posée en absolu, hors du flux — l'enveloppe, étirée par la
+            grille, garde à la fiche sa hauteur et son défilement. */}
+        {detailOuvert && (
+          <div className="relative min-h-0">
+            <PoigneeFiche largeur={fiche.largeur} regler={fiche.regler} />
+            <DetailPane onFermer={() => selectRaindrop(null)} />
+          </div>
+        )}
         {/* Palette ⌘K (Task 11) : overlay fixed, hors flux de la grille. */}
         {cmdkOpen && <CommandPalette open onClose={() => setCmdkOpen(false)} />}
         {/* Réglages ⌘, (spec §6) : monté conditionnellement, comme la

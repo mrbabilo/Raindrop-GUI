@@ -18,17 +18,26 @@ amélioration a un test rouge avant, saboté après.
 | 4 | **La recherche ne disait pas sa portée** | « Rechercher… » dans « Dev » : ne rien trouver se lisait « n'existe pas » | « Rechercher dans « Dev »… » | `4f6c359` |
 | 5 | **Un glisser-déposer réussi ne disait rien** | la ligne disparaissait, c'est tout ; rien ne se défaisait | avis (« 2 signets déplacés ») ; « Annuler » là où c'est sûr : déplacement (retour à chaque collection d'origine), corbeille sans signet déjà corbeillé | `4f6c359` |
 
-## Écart de spécification (non corrigé)
+## Écart de spécification — corrigé le 2026-09-24 (`dc95eea`)
 
 - **Spec §115 : la barre d'actions en masse porte « Déplacer ».** Le geste
-  a été retiré (la largeur de la barre ; « le glisser-déposer fait le même
-  geste »). Conséquence : **au clavier, déplacer plusieurs signets est
-  impossible** — le glisser-déposer est un geste de souris. Le déplacement
-  d'un signet seul existe désormais dans la fiche (#1). À trancher : un
-  sélecteur compact dans la barre, ou une commande de la palette ⌘K
-  (« Déplacer la sélection vers… »).
+  avait été retiré (la largeur de la barre ; « le glisser-déposer fait le
+  même geste »), et **au clavier, déplacer plusieurs signets était
+  impossible**. Rétabli : un sélecteur de destination et son bouton, la
+  barre se repliant sur deux rangées si la colonne est étroite.
 
-## Propositions (non implémentées — arbitrage)
+## Propositions — toutes implémentées le 2026-09-24
+
+| # | Proposition | Commit |
+|---|---|---|
+| 1 | Historique ⌘[ / ⌘] (et ⌘← / ⌘→ hors d'un champ — les crochets demandent Option sur AZERTY) | `bd208a1` |
+| 2 | ⌫ / F / E sur la ligne active | `d0df348` |
+| 3 | Corbeille (et déplacement) depuis la sélection sans Revue, avec avis + Annuler — **spec §4.3 amendée** | `dc95eea` |
+| 4 | Dernière vue rouverte au lancement | `bd208a1` |
+| 5 | ⌘R relit (les listes repartent de leur première page) | `bd208a1` |
+| 6 | Colonne de fiche redimensionnable | `73f08f7` |
+
+Texte d'origine des propositions :
 
 1. **Historique de navigation** (⌘[ / ⌘]) : revenir à la collection
    précédente demande aujourd'hui de la retrouver dans la barre latérale.
@@ -55,3 +64,8 @@ amélioration a un test rouge avant, saboté après.
 - Maj-clic sur une case : WebKit ne sélectionne pas de texte au passage.
 - L'avis de dépôt et son Annuler, sous la liste et sous la vue de
   collection.
+- ⌘R : ni WKWebView ni un menu ne le prennent avant le webview (sinon la
+  page se recharge et l'état de l'app est perdu).
+- ⌘[ au clavier AZERTY ; ⌘← / ⌘→ hors d'un champ.
+- ⌫ sur la ligne active : le focus après la disparition de la ligne.
+- La poignée de la fiche : curseur, tirer, double-clic.
