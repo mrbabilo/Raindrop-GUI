@@ -13,7 +13,10 @@ spec et les plans (`docs/superpowers/`) ; ce fichier n'en est que la carte.
   webview en API REST locale (127.0.0.1, auth Bearer éphémère).
 - **Périmètre verrouillé Phase 1** : pas d'IA (Stella/LLM → Phase 2, spec §12),
   highlights en lecture seule, Raindrop reste la seule source de vérité.
-- Interface **en français**, textes externalisés (pas d'i18n, un seul fichier).
+- Interface **en français**, textes externalisés (pas d'i18n, un seul
+  dictionnaire : `src/i18n/fr.ts`, fusionné depuis les fichiers de domaine de
+  `src/i18n/textes/` — une clé ne vit que dans un fichier, `fr.test.ts` le
+  vérifie ; découpé le 2026-09-24, le fichier unique touchait le plafond).
 
 **Avant de toucher au nettoyage, aux vues ou à l'API locale : lire
 `docs/DOMAINE.md`** (vocabulaire métier), **`docs/DESIGN.md`** (apparence) et la **spec**

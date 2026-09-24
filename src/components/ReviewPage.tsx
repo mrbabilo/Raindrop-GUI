@@ -11,8 +11,7 @@ import { useElaguerDoublons, type ResultatDedupe } from "../hooks/useAnalysis";
 import { AnnonceArchive, ArchiveJob, BORNE_ARCHIVE, porteeArchive } from "./RevueArchive";
 import { RevueDedupeFin } from "./RevueDedupeFin";
 import { BarreProgression } from "./BarreProgression";
-import { api } from "../lib/api";
-import { jobEvents } from "../lib/sse";
+import { lancerDedupe } from "./lancerDedupe";
 
 type ReviewView = Extract<View, { kind: "review" }>;
 
@@ -139,52 +138,8 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
       return;
     }
     if (review.action.op === "dedupe") {
-      // Les paires se reconstruisent des items RESTANTS : une copie
-      // désélectionnée sort de sa paire ; un gardé n'est jamais un item.
-      const parGarde = new Map<number, { id: number; collectionId: number }[]>();
-      for (const i of remaining) {
-        if (!i.dedupeGarde) continue;
-        const arr = parGarde.get(i.dedupeGarde.id) ?? [];
-        arr.push({ id: i.id, collectionId: i.collectionId });
-        parGarde.set(i.dedupeGarde.id, arr);
-      }
       try {
-        const { jobId, total } = await api.send<{ jobId: string; total: number }>(
-          "POST",
-          "/api/raindrops/dedupe",
-          { paires: [...parGarde.entries()].map(([garde, copies]) => ({ garde, copies })) },
-        );
-        setDedupeProgress({ done: 0, total });
-        let resultat: ResultatDedupe | undefined;
-        await new Promise<void>((resolve, reject) => {
-          // Même garde que useStartScan : l'event `error` rejette AVANT le
-          // onDone, sinon l'échec se résoudrait comme une fin normale.
-          let settled = false;
-          void jobEvents(jobId, {
-            onEvent: (e: { kind: string; message?: unknown; progress?: { done?: number } }) => {
-              if (e.kind === "error") {
-                settled = true;
-                reject(new Error(typeof e.message === "string" && e.message ? e.message : "event error sans message"));
-                return;
-              }
-              if (e.kind !== "progress" && e.kind !== "done") return;
-              if (e.kind === "progress") {
-                const p = e.progress;
-                if (p && typeof p.done === "number") setDedupeProgress({ done: p.done, total });
-                return;
-              }
-              // Sur `done`, le sidecar sérialise LE RÉSULTAT à plat (sse.ts) :
-              // retenu pour DIRE le terme — le jeter cachait les échecs.
-              const { kind: _kind, ...reste } = e;
-              resultat = reste as ResultatDedupe;
-            },
-            onDone: () => {
-              if (!settled) resolve();
-            },
-          }, new AbortController().signal).catch((err: unknown) => {
-            if (!settled) reject(err);
-          });
-        });
+        const resultat = await lancerDedupe(remaining, setDedupeProgress);
         // L'élagage ne retire que ce qui est VRAIMENT parti : un id en échec
         // reste vivant chez Raindrop — le sortir de la vue serait un mensonge
         // de plus.
