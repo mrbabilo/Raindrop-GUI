@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { api } from "../lib/api";
@@ -14,6 +14,7 @@ import { Glyphe } from "../design/glyphes";
 import { Etoile } from "../design/Etoile";
 import { CarreCollection, PiluleEtiquette } from "../design/Signaux";
 import type { Collection, RaindropItem } from "../../shared/types";
+import { depuisLesListes } from "../lib/cacheListes";
 import { nomIcone } from "../design/nomIcone";
 
 // Les champs éditables de la fiche (tags et emplacement viendront des Tasks
@@ -57,10 +58,15 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Partial<Pick<RaindropItem, ChampEdition>>>({});
 
+  const queryClient = useQueryClient();
   const detail = useQuery({
     queryKey: ["raindrop", selectedRaindropId],
     queryFn: () => api.get<RaindropItem>(`/api/raindrops/${selectedRaindropId}`),
     enabled: selectedRaindropId != null,
+    // La liste a DÉJÀ ce signet : la fiche s'affiche aussitôt depuis elle,
+    // plutôt qu'un « Chargement… » le temps d'un créneau de file (550 ms,
+    // bien plus si elle est occupée). La lecture complète remplace ensuite.
+    placeholderData: () => (selectedRaindropId == null ? undefined : depuisLesListes(queryClient, selectedRaindropId)),
   });
   const arbre = useCollections().data ?? [];
   // Rien de sélectionné : la fiche ne demande RIEN (contrat de son test).

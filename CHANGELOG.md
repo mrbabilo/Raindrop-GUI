@@ -519,6 +519,18 @@ signet près, y compris croisé avec le filtre de domaine.
 
 ### Corrigé
 
+#### Optimisation (2026-09-24)
+
+- **L'analyse des liens ne fige plus le service local.** Le cache se
+  réécrivait tous les 20 liens vérifiés : mesuré à la taille réelle, 6 Mo et
+  55 ms de blocage à chaque fois — environ 34 s de gel cumulé et 3,6 Go
+  écrits par analyse complète. Il s'écrit au plus toutes les 15 s.
+- **La seconde analyse ne relit plus la bibliothèque** si la première vient
+  de le faire (dans les 10 minutes, sans modification entre-temps) : environ
+  2 min 15 et 245 requêtes épargnées sur 12 000 signets.
+- **La fiche s'ouvre instantanément** depuis la liste, au lieu d'un
+  « Chargement… » ; le compte n'est plus relu à chaque navigation.
+
 #### Les propositions de l'audit UX, implémentées (2026-09-24)
 
 - **Un signet déjà dans la corbeille n'est plus détruit par erreur.** Un

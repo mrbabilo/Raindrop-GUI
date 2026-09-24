@@ -62,6 +62,12 @@ leur raisonnement, et un renvoi par lot livré.*
 
 ## Ouvert
 
+### Optimisation du 2026-09-24 — pistes non prises (à sonder d'abord)
+
+- [ ] **Glisser-déposer vers une étiquette / la corbeille : 2 requêtes par signet** (lecture + écriture, `trash/bulk.ts`). Le `/bulk` le ferait en une — mais il repose sur deux comportements Raindrop NON vérifiés en réel : que l'étiquetage en masse AJOUTE (doc) et qu'un DELETE en masse depuis 0 ignore un signet déjà corbeillé. Sonder (1-3 requêtes sur un signet de test) avant tout changement : une erreur ici efface des étiquettes ou détruit un signet.
+- [ ] **Revenir sur une liste périmée (> 30 s) relit TOUTES ses pages chargées** (react-query v5 refetch des listes infinies) : 10 pages défilées = 10 créneaux. Arbitrage fraîcheur/coût à décider (staleTime des listes, ou ne garder que la première page au retour).
+- [ ] `DetailPane.tsx` à 308 lignes (cible 300) : découper l'édition inline si elle grossit encore.
+
 ### Audit UX du 2026-09-23 — propositions (soldées le 2026-09-24 ; détail : `docs/audit-ux-2026-09-23.md`)
 
 - [x] Infobulles sur les icônes seules (`nomIcone`, DESIGN §9 amendé) — `006ff21`.

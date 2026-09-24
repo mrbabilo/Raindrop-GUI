@@ -1,4 +1,4 @@
-import type { AnalysisType } from "../../shared/types.js";
+import type { AnalysisType, RaindropItem } from "../../shared/types.js";
 import type { CallOutcome } from "../../shared/errors.js";
 import type { JobHandle, JobStore } from "../jobs/store.js";
 import { runJob } from "../jobs/store.js";
@@ -9,6 +9,19 @@ import type { CheckOutcome } from "./linkchecker.js";
 import { findDuplicates } from "./duplicates.js";
 
 const SAVE_EVERY = 20;
+/** Et pas plus d'une persistance par intervalle (optimisation du 2026-09-24) :
+ *  un `save()` sérialise ~6 Mo à la taille réelle et bloque la boucle
+ *  d'événements ~55 ms — tous les 20 résultats, un scan complet en faisait
+ *  611 (~34 s de CPU bloquant, ~3,6 Go écrits). Une coupure perd au plus cet
+ *  intervalle de vérifications, que la reprise (`staleUrls`) refait. */
+const SAVE_INTERVAL_MS = 15_000;
+/** Un instantané COMPLET de la bibliothèque se réutilise d'une analyse à
+ *  l'autre pendant ce délai, tant que l'application n'a rien écrit depuis
+ *  (optimisation du 2026-09-24) : chaque analyse relisait tout — ~245
+ *  requêtes, ~2 min 15 sur 12 210 signets — même juste après l'autre. Une
+ *  modification faite AILLEURS (le site Raindrop) pendant ce délai n'est pas
+ *  vue : c'est le prix, borné à 10 minutes. */
+const REUTILISATION_MS = 10 * 60_000;
 const TTL_JOURS_DEFAUT = 30;
 const TIMEOUT_MS = 10_000;
 
@@ -22,12 +35,41 @@ export interface ScannerDeps {
   /** Timeout par requête HTTP du link checker (LINK_TIMEOUT_MS) — défaut 10 s. */
   timeoutMs?: number;
   ttlDays?: number;
+  /** Horloge (ms) — seam de test du cadençage des persistances. */
+  maintenant?: () => number;
 }
 
 export class Scanner {
   private running = new Set<AnalysisType>();
+  /** Le dernier instantané complet, et quand il a été pris. */
+  private instantane: { items: RaindropItem[]; pris: number } | null = null;
+  /** Avance à chaque écriture de l'application : un instantané lu PENDANT
+   *  une écriture n'est pas retenu (il pourrait la précéder à moitié). */
+  private generation = 0;
 
   constructor(private deps: ScannerDeps) {}
+
+  /** L'application vient d'écrire chez Raindrop : l'instantané partagé ne
+   *  décrit plus la bibliothèque (branché sur deps.mcp/direct, index.ts). */
+  invaliderInstantane(): void {
+    this.instantane = null;
+    this.generation++;
+  }
+
+  /** La bibliothèque entière — relue, ou l'instantané récent réutilisé. */
+  private async lireBibliotheque(j: JobHandle): Promise<{ items: RaindropItem[]; cancelled: boolean }> {
+    const maintenant = this.deps.maintenant ?? Date.now;
+    if (this.instantane && maintenant() - this.instantane.pris <= REUTILISATION_MS) {
+      return { items: this.instantane.items, cancelled: false };
+    }
+    const generation = this.generation;
+    const snap = await fetchLibrarySnapshot(this.deps.mcp, {
+      onProgress: (done, total) => j.progress(done, total, "lecture de la bibliothèque"),
+      isCancelled: () => j.isCancelled(),
+    });
+    if (!snap.cancelled && generation === this.generation) this.instantane = { items: snap.items, pris: maintenant() };
+    return snap;
+  }
 
   isRunning(type: AnalysisType): boolean {
     return this.running.has(type);
@@ -49,10 +91,7 @@ export class Scanner {
     const check = this.deps.check ?? ((url: string) => checkUrl(url, { timeoutMs, retry: 1 }));
 
     const job = runJob(this.deps.jobs, `scan-${type}`, 0, async (j) => {
-      const snap = await fetchLibrarySnapshot(this.deps.mcp, {
-        onProgress: (done, total) => j.progress(done, total, "lecture de la bibliothèque"),
-        isCancelled: () => j.isCancelled(),
-      });
+      const snap = await this.lireBibliotheque(j);
       if (snap.cancelled) return { cancelled: true };
       this.deps.cache.setItemsIndex(snap.items);
 
@@ -155,6 +194,8 @@ export class Scanner {
     let aborted = false;
     let done = 0;
     let sinceSave = 0;
+    const maintenant = this.deps.maintenant ?? Date.now;
+    let dernierSave = maintenant();
     const out = await checkAll(targets, {
       timeoutMs,
       concurrency,
@@ -166,8 +207,9 @@ export class Scanner {
         done++;
         sinceSave++;
         j.progress(done, targets.length, r.url);
-        if (sinceSave >= SAVE_EVERY) {
+        if (sinceSave >= SAVE_EVERY && maintenant() - dernierSave >= SAVE_INTERVAL_MS) {
           sinceSave = 0;
+          dernierSave = maintenant();
           void requestSave(); // persistance périodique (résultats partiels)
         }
       },
@@ -176,7 +218,10 @@ export class Scanner {
       aborted = true;
       throw e;
     });
-    await requestSave(); // attend aussi les saves périodiques déjà en file
+    // ATTENDRE les saves périodiques en vol, sans en demander un de plus :
+    // les deux appelants persistent juste après (markScanDone compris) — le
+    // save final d'ici doublait le leur, 6 Mo sérialisés pour rien.
+    await saving;
     return out;
   }
 }
