@@ -20,6 +20,7 @@ export const nettoyage = {
   "bulk.archive": "Archiver la copie",
   "cleanup.archiver": "Archiver la copie ({n})",
   "bulk.clear": "Tout désélectionner",
+  "bulk.toutSelectionner": "Tout sélectionner ({n})",
   "cleanup.title": "Nettoyage",
   "cleanup.dead": "Liens morts",
   "cleanup.redirects": "Redirections",

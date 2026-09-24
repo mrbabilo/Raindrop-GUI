@@ -21,6 +21,7 @@ export const interfaceTextes = {
   "collection.seeAll": "Voir les {n} →",
   "collection.direct": "Signets de cette collection",
   "search.placeholder": "Rechercher… (⌘F)",
+  "search.placeholderDans": "Rechercher dans « {label} »… (⌘F)",
   // Nom accessible du champ : un placeholder ne fait un nom qu'en dernier
   // recours, et disparaît dès qu'on saisit.
   "search.label": "Rechercher",
@@ -37,6 +38,13 @@ export const interfaceTextes = {
   "list.deplacer": "Déplacer {title}",
   "detail.fermer": "Fermer le détail",
   "drag.count": "{n} signet|{n} signets",
+  // Ce qu'a fait un dépôt réussi (audit d'ergonomie du 2026-09-24).
+  "drag.deplaces": "{n} signet déplacé|{n} signets déplacés",
+  "drag.favoris": "{n} signet ajouté aux favoris|{n} signets ajoutés aux favoris",
+  "drag.corbeilles": "{n} signet mis à la corbeille|{n} signets mis à la corbeille",
+  "drag.etiquete": "« {tag} » posée sur {n} signet|« {tag} » posée sur {n} signets",
+  "drag.annuler": "Annuler",
+  "drag.fermerAvis": "Fermer l'avis",
   "list.loadingMore": "…",
   "list.vide": "Aucun signet ici — collez une URL ci-dessus pour en ajouter un.",
   "list.videCorbeille": "La corbeille est vide.",
@@ -71,6 +79,9 @@ export const interfaceTextes = {
   "detail.cancel": "Annuler",
   "detail.champExtrait": "Extrait",
   "detail.champNote": "Note",
+  "detail.champCollection": "Collection",
+  "detail.ajouterEtiquette": "Ajouter une étiquette",
+  "detail.ajouterEtiquettePlaceholder": "Ajouter une étiquette…",
   "detail.favorite": "Favori",
   "detail.unfavorite": "Retirer des favoris",
   "detail.trash": "Mettre à la corbeille",

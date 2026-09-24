@@ -41,6 +41,7 @@ const Ouvre = () => {
       <button type="button" onClick={() => go({ kind: "list", collectionId: 0, label: "Tous", tags: ["rust"] })}>vue-étiquette</button>
       <button type="button" onClick={() => go({ kind: "list", collectionId: 0, label: "Tous", search: "affiche" })}>vue-recherche</button>
       <button type="button" onClick={() => go({ kind: "list", collectionId: 0, label: "Tous", sort: "title" })}>vue-tri-seul</button>
+      <button type="button" onClick={() => go({ kind: "list", collectionId: 101, label: "Dev" })}>vue-dev</button>
     </>
   );
 };
@@ -206,6 +207,16 @@ describe("TopBar", () => {
     window.removeEventListener("keydown", fenetre);
     expect(champ).toHaveValue("");
     expect(fenetre).not.toHaveBeenCalled();
+  });
+
+  // Audit d'ergonomie du 2026-09-24 : la recherche porte sur la collection
+  // OUVERTE, mais le champ disait « Rechercher… » — dans « Dev », ne rien
+  // trouver se lisait « ce signet n'existe pas ». Le champ nomme sa portée.
+  it("dans une collection, le champ dit où il cherche ; dans Tous, il cherche partout", async () => {
+    renderTop();
+    expect(screen.getByRole("textbox", { name: "Rechercher" })).toHaveAttribute("placeholder", "Rechercher… (⌘F)");
+    await userEvent.click(screen.getByText("vue-dev"));
+    expect(screen.getByRole("textbox", { name: "Rechercher" })).toHaveAttribute("placeholder", "Rechercher dans « Dev »… (⌘F)");
   });
 
   // Spec §4 : le geste naît là où la vue existe, et seulement quand un

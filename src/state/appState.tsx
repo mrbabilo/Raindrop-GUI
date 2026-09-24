@@ -1,5 +1,6 @@
-import { createContext, useContext, useReducer, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useReducer, type ReactNode } from "react";
 import { t } from "../i18n/fr";
+import { ecrireAffichage, lireAffichage, type Affichage } from "../lib/affichage";
 
 // SPA à un écran, pas de router : cette union porte la vue courante.
 // Extensible : les tasks 7-8 ajouteront des kinds/champs par fusion du
@@ -118,6 +119,8 @@ type ListPatch = Partial<Omit<Extract<View, { kind: "list" }>, "kind" | "collect
 // `selectedRaindropId` : l'item ouvert dans le volet détail (Task 8).
 interface State {
   view: View;
+  /** Mode et tri PRÉFÉRÉS : ils suivent la navigation (lib/affichage.ts). */
+  affichage: Affichage;
   selectedIds: Set<number>;
   selectedRaindropId: number | null;
 }
@@ -126,17 +129,37 @@ type Action =
   | { type: "patch"; patch: ListPatch }
   | { type: "forgetSmartList"; id: string }
   | { type: "toggleSelect"; id: number }
+  | { type: "selectMany"; ids: number[] }
   | { type: "clearSelection" }
   | { type: "selectRaindrop"; id: number | null };
 
 const initial: State = {
   view: { kind: "list", collectionId: 0, label: t("nav.all") },
+  affichage: {},
   selectedIds: new Set<number>(),
   selectedRaindropId: null,
 };
+/** Une liste qui ne précise ni mode ni tri prend les préférés — une vue
+ *  sauvegardée qui porte son tri le garde. */
+function avecAffichage(view: View, affichage: Affichage): View {
+  if (view.kind !== "list") return view;
+  return {
+    ...view,
+    ...(view.viewMode === undefined && affichage.viewMode !== undefined ? { viewMode: affichage.viewMode } : {}),
+    ...(view.sort === undefined && affichage.sort !== undefined ? { sort: affichage.sort } : {}),
+  };
+}
+
 function reducer(s: State, a: Action): State {
-  if (a.type === "go") return { ...s, view: a.view };
+  if (a.type === "go") return { ...s, view: avecAffichage(a.view, s.affichage) };
   if (a.type === "patch" && s.view.kind === "list") {
+    // Changer de mode ou de tri, c'est aussi dire sa PRÉFÉRENCE.
+    const affichage = {
+      ...s.affichage,
+      ...(a.patch.viewMode !== undefined ? { viewMode: a.patch.viewMode } : {}),
+      ...(a.patch.sort !== undefined ? { sort: a.patch.sort } : {}),
+    };
+    s = { ...s, affichage };
     // La bascule d'affichage n'est pas un filtre : la vue reste la smart
     // list (spec §5 — la marque ne survit qu'à viewMode).
     const filtreBouge = Object.keys(a.patch).some((k) => k !== "viewMode");
@@ -153,6 +176,7 @@ function reducer(s: State, a: Action): State {
     else selectedIds.add(a.id);
     return { ...s, selectedIds };
   }
+  if (a.type === "selectMany") return { ...s, selectedIds: new Set([...s.selectedIds, ...a.ids]) };
   if (a.type === "clearSelection") return { ...s, selectedIds: new Set<number>() };
   if (a.type === "selectRaindrop") return { ...s, selectedRaindropId: a.id };
   return s;
@@ -178,6 +202,8 @@ const Ctx = createContext<{
   forgetSmartList: (id: string) => void;
   selectedIds: Set<number>;
   toggleSelect: (id: number) => void;
+  /** AJOUTE ces signets à la sélection (Maj-clic, « Tout sélectionner »). */
+  selectMany: (ids: number[]) => void;
   clearSelection: () => void;
   selectedRaindropId: number | null;
   /** `null` FERME le volet détail — il ne s'affiche que sur un signet
@@ -190,13 +216,20 @@ const Ctx = createContext<{
   forgetSmartList: () => undefined,
   selectedIds: new Set<number>(),
   toggleSelect: () => undefined,
+  selectMany: () => undefined,
   clearSelection: () => undefined,
   selectedRaindropId: null,
   selectRaindrop: () => undefined,
 });
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initial);
+  // Au lancement, la première vue prend les préférences retenues.
+  const [state, dispatch] = useReducer(reducer, initial, (i) => {
+    const affichage = lireAffichage();
+    return { ...i, affichage, view: avecAffichage(i.view, affichage) };
+  });
+  // Retenues d'une session à l'autre — hors du reducer, qui reste pur.
+  useEffect(() => ecrireAffichage(state.affichage), [state.affichage]);
   return (
     <Ctx.Provider
       value={{
@@ -206,6 +239,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         forgetSmartList: (id) => dispatch({ type: "forgetSmartList", id }),
         selectedIds: state.selectedIds,
         toggleSelect: (id) => dispatch({ type: "toggleSelect", id }),
+        selectMany: (ids) => dispatch({ type: "selectMany", ids }),
         clearSelection: () => dispatch({ type: "clearSelection" }),
         selectedRaindropId: state.selectedRaindropId,
         selectRaindrop: (id) => dispatch({ type: "selectRaindrop", id }),

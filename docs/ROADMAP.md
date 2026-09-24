@@ -62,6 +62,14 @@ leur raisonnement, et un renvoi par lot livré.*
 
 ## Ouvert
 
+### Audit d'ergonomie du 2026-09-24 — à arbitrer (détail : `docs/audit-ergonomie-2026-09-24.md`)
+
+- [ ] **Écart spec §115 : « Déplacer » manque à la barre de sélection** — au clavier, déplacer plusieurs signets est impossible (sélecteur compact, ou commande ⌘K « Déplacer la sélection vers… »).
+- [ ] Historique de navigation ⌘[ / ⌘].
+- [ ] Touches d'action sur la ligne active (⌫ corbeille, F favori, E éditer).
+- [ ] Corbeille depuis la barre de sélection sans passer par la Revue (l'avis + Annuler suffiraient) — décision de spec (§4.3).
+- [ ] Rouvrir la dernière collection au lancement ; ⌘R pour relire ; colonne de fiche redimensionnable.
+
 ### Optimisation du 2026-09-24 — pistes non prises (à sonder d'abord)
 
 - [ ] **Glisser-déposer vers une étiquette / la corbeille : 2 requêtes par signet** (lecture + écriture, `trash/bulk.ts`). Le `/bulk` le ferait en une — mais il repose sur deux comportements Raindrop NON vérifiés en réel : que l'étiquetage en masse AJOUTE (doc) et qu'un DELETE en masse depuis 0 ignore un signet déjà corbeillé. Sonder (1-3 requêtes sur un signet de test) avant tout changement : une erreur ici efface des étiquettes ou détruit un signet.

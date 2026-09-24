@@ -69,7 +69,9 @@ export function TopBar() {
           aria-label={t("search.label")}
           data-testid="recherche"
           className="input w-64"
-          placeholder={t("search.placeholder")}
+          // La recherche porte sur la collection OUVERTE : le champ le dit —
+          // ne rien trouver dans « Dev » ne veut pas dire « nulle part ».
+          placeholder={view.collectionId === 0 ? t("search.placeholder") : t("search.placeholderDans", { label: view.label })}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           // Échap VIDE une recherche saisie (champ de recherche macOS) — et

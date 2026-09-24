@@ -21,11 +21,12 @@ import { RaindropRow } from "./RaindropRow";
 import { MosaicTile } from "./MosaicTile";
 import { BulkBar } from "./BulkBar";
 import { Composer } from "./Composer";
+import { AvisDepot } from "./AvisDepot";
 
 type ListView = Extract<View, { kind: "list" }>;
 
 export function ListPane() {
-  const { view, go, selectedIds, toggleSelect, selectedRaindropId } = useAppState();
+  const { view, go, selectedIds, toggleSelect, selectMany, selectedRaindropId } = useAppState();
   // Ce qui est archivé EN LOCAL (spec sélection §4.1). Absent tant qu'aucun
   // dossier n'est configuré : la ligne ne porte alors aucun marqueur, ce qui
   // est exact — il n'y a rien d'archivé.
@@ -50,7 +51,7 @@ export function ListPane() {
   // Déplacement d'un signet vers une collection : la ligne porte la poignée,
   // la Sidebar les cibles (useDragBookmark). L'échec s'affiche sous la liste
   // plutôt que de disparaître (R8P-1).
-  const drag = useDragBookmark(items.map((r) => r.id));
+  const drag = useDragBookmark(items.map((r) => r.id), new Map(items.map((r) => [r.id, r.collectionId])));
   // Le clic inverse (spec inversion §3) : lisible → la lecture s'ouvre, la
   // fiche l'accompagne ; non lisible → la fiche seule. Une seule décision,
   // partagée par le clavier, la mosaïque et la ligne.
@@ -60,6 +61,18 @@ export function ListPane() {
   // et recliquer la même la retire.
   const filtreTags = useFiltreEtiquettes();
   const parentRef = useRef<HTMLDivElement>(null);
+  // Maj-clic coche la PLAGE depuis la dernière case (audit d'ergonomie du
+  // 2026-09-24) : cocher trente signets coûtait trente clics.
+  const ancre = useRef<number | null>(null);
+  const cocherLigne = (i: number, plage: boolean) => {
+    const r = items[i];
+    if (r === undefined) return;
+    if (plage && ancre.current !== null && ancre.current < items.length) {
+      const [de, a] = ancre.current < i ? [ancre.current, i] : [i, ancre.current];
+      selectMany(items.slice(de, a + 1).map((x) => x.id));
+    } else toggleSelect(r.id);
+    ancre.current = i;
+  };
   // La fiche vole 320 px à la grille : les colonnes de la mosaïque re-flux
   // et la vignette ouverte pouvait sortir du champ (signalement 2026-09-20).
   // On la ramène AU PLUS PRÈS — « nearest » ne scrolle pas si elle est
@@ -146,6 +159,9 @@ export function ListPane() {
             } : undefined}
           />
         </main>
+        {/* Tout déplacer hors de la collection la vide : l'avis et son
+            Annuler restent là. */}
+        <AvisDepot drag={drag} />
       </div>
     );
 
@@ -193,7 +209,7 @@ export function ListPane() {
                     archive={archives?.has(r.id) === true}
                     etat={etats?.get(r.id) ?? null}
                     poignee={drag.poignee(r.id, () => ouvrir(r), r.title)}
-                    onToggle={() => toggleSelect(r.id)} onTag={filtreTags.bascule} tagActif={filtreTags.estActive} />
+                    onToggle={(plage) => cocherLigne(v.index, plage === true)} onTag={filtreTags.bascule} tagActif={filtreTags.estActive} />
                 </div>
               );
             })}
@@ -202,11 +218,7 @@ export function ListPane() {
         <ChargePlus q={query} />
       </main>
       {/* R8P-1 : un déplacement raté se dit, il ne disparaît pas en silence. */}
-      {drag.erreur !== null && (
-        <p role="alert" className="border-t border-app-border px-3 py-2 text-xs text-app-broken">
-          {t("state.error", { message: drag.erreur })}
-        </p>
-      )}
+      <AvisDepot drag={drag} />
       {/* Invisible sans sélection (rend null) : aucune layout shift au repos. */}
       <BulkBar items={items} />
     </div>

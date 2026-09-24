@@ -16,7 +16,7 @@ vi.mock("../lib/api", () => ({ api: { get: getApi, send: sendApi } }));
 
 // L'arbre sert le fil d'Ariane §4 : mocké comme dans ListPane.test — aucun
 // fetch réseau dans un test de composant.
-vi.mock("../hooks/useStaticData", () => ({ useCollections: () => ({ data: collections }) }));
+vi.mock("../hooks/useStaticData", () => ({ useCollections: () => ({ data: collections }), useTags: () => ({ data: [] }) }));
 
 // État « favori » piloté par les PATCH reçus : la refetch d'invalidation doit
 // refléter la mutation — c'est ainsi que le test prouve le câblage complet

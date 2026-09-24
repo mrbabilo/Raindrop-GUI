@@ -18,7 +18,7 @@ type BulkAction = Extract<View, { kind: "review" }>["action"];
 // souris, et ces deux contrôles coûtaient la moitié de la largeur d'une barre
 // qui vit dans une colonne rétrécie par les panneaux latéraux.
 export function BulkBar({ items }: { items: RaindropItem[] }) {
-  const { view, selectedIds, go, clearSelection, toggleSelect } = useAppState();
+  const { view, selectedIds, go, clearSelection, toggleSelect, selectMany } = useAppState();
   const unrestore = useUnrestore();
   const [tags, setTags] = useState("");
   // Le compte des corbeillés SANS origine mémorisée : non restaurés par le
@@ -71,6 +71,13 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
       {/* R15P-2 : compteur honnête — seuls les items de la page embarqués
           dans la Revue sont comptés (selectedIds peut déborder la page). */}
       <span className="font-medium">{t("bulk.selected", { n: selected.length })}</span>
+      {/* Tout ce qui est CHARGÉ, en un clic — et rien de plus : la sélection
+          ne s'étend pas à des signets que l'écran n'a pas montrés. */}
+      {selected.length < items.length && (
+        <button type="button" className="btn" onClick={() => selectMany(items.map((i) => i.id))}>
+          {t("bulk.toutSelectionner", { n: items.length })}
+        </button>
+      )}
       {/* En vue corbeille, re-corbeiller un corbeillé n'a pas de sens : le
           verbe devient RESTAURER, exécuté là (réversible par nature — pas
           une Revue). Les items à l'origine inconnue restent en liste, la vue

@@ -10,6 +10,8 @@ import { ActionsLecture } from "./ActionsLecture";
 import { useArchives } from "../hooks/useBackup";
 import { useUpdateRaindrop, useTrashRaindrop } from "../hooks/useMutations";
 import { RestaurationCorbeille } from "./DetailPane.corbeille";
+import { EditionClassement } from "./EditionClassement";
+import { Surlignages } from "./Surlignages";
 import { Glyphe } from "../design/glyphes";
 import { Etoile } from "../design/Etoile";
 import { CarreCollection, PiluleEtiquette } from "../design/Signaux";
@@ -56,7 +58,7 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
   const update = useUpdateRaindrop(selectedRaindropId ?? 0);
   const trash = useTrashRaindrop();
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<Partial<Pick<RaindropItem, ChampEdition>>>({});
+  const [draft, setDraft] = useState<Partial<Pick<RaindropItem, ChampEdition | "tags" | "collectionId">>>({});
 
   const queryClient = useQueryClient();
   const detail = useQuery({
@@ -208,6 +210,16 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
       {/* §2 : pilules 21 px en détail, et CLIQUABLES comme celles de la liste
           — une étiquette ressemble partout à la même chose, en rendre la
           moitié inerte fait douter de l'autre. */}
+      {editing ? (
+        // Le classement s'édite aussi (spec §116) ; seul ce qui CHANGE entre
+        // au brouillon — sinon « Enregistrer » écrirait pour rien.
+        <EditionClassement
+          tags={draft.tags ?? r.tags}
+          collectionId={draft.collectionId ?? r.collectionId}
+          onTags={(tags) => setDraft((d) => ({ ...d, tags }))}
+          onCollection={(collectionId) => setDraft((d) => ({ ...d, collectionId }))}
+        />
+      ) : (
       <div className="flex flex-wrap gap-1">
         {r.tags.map((tag) => (
           <PiluleEtiquette
@@ -219,6 +231,7 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
             />
         ))}
       </div>
+      )}
       <div className="flex flex-wrap gap-2">
         {editing ? (
           <>
@@ -290,19 +303,7 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
       ) : r.cache?.status === "ready" ? (
         <p className="text-xs text-app-muted">{t("marque.copiable")}</p>
       ) : null}
-      {/* §9 « masqué si nul » : pas de surlignage, pas de section — le titre
-          seul annoncerait un contenu que la fiche n'a pas. */}
-      {r.highlights.length > 0 && (
-      <section className="flex flex-col gap-2">
-        <h3 className="text-xs font-medium text-app-muted">{t("detail.highlights")}</h3>
-        {r.highlights.map((h) => (
-          <blockquote key={h.id} className="border-l-2 border-app-border pl-2 text-sm">
-            {h.text}
-            {h.note !== "" && <footer className="text-xs text-app-muted">{h.note}</footer>}
-          </blockquote>
-        ))}
-      </section>
-      )}
+      <Surlignages highlights={r.highlights} />
     </aside>
   );
 }
