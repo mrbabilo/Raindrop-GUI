@@ -29,6 +29,7 @@ export function MosaicTile({
       type="button"
       data-nav
       data-testid={`tile-${r.id}`}
+      data-signet={r.id}
       className={"flex w-full flex-col overflow-hidden rounded-[9px] border border-app-border text-left" + (isDetail ? " bg-app-sel" : "")}
       onClick={onOpen}
     >

@@ -18,6 +18,7 @@ import { CarreCollection, PiluleEtiquette } from "../design/Signaux";
 import type { Collection, RaindropItem } from "../../shared/types";
 import { depuisLesListes } from "../lib/cacheListes";
 import { nomIcone } from "../design/nomIcone";
+import { consommerEdition, surDemandeEdition } from "../lib/demandeEdition";
 
 // Les champs éditables de la fiche (tags et emplacement viendront des Tasks
 // 9-11). Les surlignages sont lus directement dans `r.highlights` — déjà
@@ -80,12 +81,16 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
   // Revue finale : les mutations aussi se réarment (reset) — l'état d'échec
   // suit l'observateur, pas la clé : sans lui, l'alerte d'un PATCH raté sur
   // A s'afficherait encore sur B (update.error comme trash.error).
+  // Sauf si la liste a demandé l'édition de CE signet (touche E).
   useEffect(() => {
-    setEditing(false);
+    setEditing(selectedRaindropId != null && consommerEdition(selectedRaindropId));
     setDraft({});
     update.reset();
     trash.reset();
   }, [selectedRaindropId]);
+  useEffect(() => surDemandeEdition(() => {
+    if (selectedRaindropId != null && consommerEdition(selectedRaindropId)) setEditing(true);
+  }), [selectedRaindropId]);
 
   // Quitter l'édition JETTE le brouillon : « Annuler » refermait seulement,
   // et rouvrir montrait la saisie abandonnée — qu'« Enregistrer » envoyait

@@ -41,6 +41,7 @@ export const interfaceTextes = {
   // Ce qu'a fait un dépôt réussi (audit d'ergonomie du 2026-09-24).
   "drag.deplaces": "{n} signet déplacé|{n} signets déplacés",
   "drag.favoris": "{n} signet ajouté aux favoris|{n} signets ajoutés aux favoris",
+  "drag.nonFavoris": "{n} signet retiré des favoris|{n} signets retirés des favoris",
   "drag.corbeilles": "{n} signet mis à la corbeille|{n} signets mis à la corbeille",
   "drag.etiquete": "« {tag} » posée sur {n} signet|« {tag} » posée sur {n} signets",
   "drag.annuler": "Annuler",

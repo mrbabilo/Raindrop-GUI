@@ -123,7 +123,7 @@ export function useDragBookmark(visibles: readonly number[], origines?: Readonly
           case "favoris":
             // Non destructeur : `important` est un booléen, la route bulk
             // l'accepte telle quelle.
-            return bulk.mutateAsync({ operation: "update", collection_id: 0, ids: portes, important: true });
+            return bulk.mutateAsync({ operation: "update", collection_id: 0, ids: portes, important: cible.valeur ?? true });
           case "corbeille":
             // La sélection tirée ne transporte pas les origines : le sidecar
             // les LIT, item par item, et les mémorise avant la corbeille
@@ -144,7 +144,7 @@ export function useDragBookmark(visibles: readonly number[], origines?: Readonly
             break;
           case "favoris":
             // Pas d'Annuler : on ne sait pas lesquels étaient déjà favoris.
-            setAvis({ texte: t("drag.favoris", { n }) });
+            setAvis({ texte: t(cible.valeur === false ? "drag.nonFavoris" : "drag.favoris", { n }) });
             break;
           case "corbeille": {
             const r = res as { corbeille: number; deja: number; echecs: unknown[] };

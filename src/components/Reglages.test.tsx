@@ -65,7 +65,7 @@ describe("Reglages", () => {
   it("liste les raccourcis clavier", () => {
     render(<Reglages onFermer={vi.fn()} onEtat={vi.fn()} />, { wrapper });
     const liste = screen.getByRole("list", { name: "Raccourcis clavier" });
-    for (const touche of ["⌘K", "⌘F", "⌘E", "⌘,", "⌘[", "⌘]", "⌘R", "Échap"]) expect(liste).toHaveTextContent(touche);
+    for (const touche of ["⌘K", "⌘F", "⌘E", "⌘,", "⌘[", "⌘]", "⌘R", "⌫", "F", "E", "Échap"]) expect(liste).toHaveTextContent(touche);
   });
 
   it("un état inconnu ne casse rien — il se tait", () => {

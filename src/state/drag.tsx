@@ -18,7 +18,9 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 export type CibleDepot =
   | { sorte: "collection"; id: number }
   | { sorte: "tous" }
-  | { sorte: "favoris" }
+  // `valeur` : la touche F de la liste bascule (false retire) ; le dépôt,
+  // lui, ne fait que marquer.
+  | { sorte: "favoris"; valeur?: boolean }
   | { sorte: "corbeille" }
   | { sorte: "tag"; nom: string };
 
