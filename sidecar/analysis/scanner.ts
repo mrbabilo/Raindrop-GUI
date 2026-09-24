@@ -9,6 +9,12 @@ import type { CheckOutcome } from "./linkchecker.js";
 import { findDuplicates } from "./duplicates.js";
 
 const SAVE_EVERY = 20;
+/** Et pas plus d'une persistance par intervalle (optimisation du 2026-09-24) :
+ *  un `save()` sérialise ~6 Mo à la taille réelle et bloque la boucle
+ *  d'événements ~55 ms — tous les 20 résultats, un scan complet en faisait
+ *  611 (~34 s de CPU bloquant, ~3,6 Go écrits). Une coupure perd au plus cet
+ *  intervalle de vérifications, que la reprise (`staleUrls`) refait. */
+const SAVE_INTERVAL_MS = 15_000;
 const TTL_JOURS_DEFAUT = 30;
 const TIMEOUT_MS = 10_000;
 
@@ -22,6 +28,8 @@ export interface ScannerDeps {
   /** Timeout par requête HTTP du link checker (LINK_TIMEOUT_MS) — défaut 10 s. */
   timeoutMs?: number;
   ttlDays?: number;
+  /** Horloge (ms) — seam de test du cadençage des persistances. */
+  maintenant?: () => number;
 }
 
 export class Scanner {
@@ -155,6 +163,8 @@ export class Scanner {
     let aborted = false;
     let done = 0;
     let sinceSave = 0;
+    const maintenant = this.deps.maintenant ?? Date.now;
+    let dernierSave = maintenant();
     const out = await checkAll(targets, {
       timeoutMs,
       concurrency,
@@ -166,8 +176,9 @@ export class Scanner {
         done++;
         sinceSave++;
         j.progress(done, targets.length, r.url);
-        if (sinceSave >= SAVE_EVERY) {
+        if (sinceSave >= SAVE_EVERY && maintenant() - dernierSave >= SAVE_INTERVAL_MS) {
           sinceSave = 0;
+          dernierSave = maintenant();
           void requestSave(); // persistance périodique (résultats partiels)
         }
       },
@@ -176,7 +187,10 @@ export class Scanner {
       aborted = true;
       throw e;
     });
-    await requestSave(); // attend aussi les saves périodiques déjà en file
+    // ATTENDRE les saves périodiques en vol, sans en demander un de plus :
+    // les deux appelants persistent juste après (markScanDone compris) — le
+    // save final d'ici doublait le leur, 6 Mo sérialisés pour rien.
+    await saving;
     return out;
   }
 }
