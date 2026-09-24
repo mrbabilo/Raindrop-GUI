@@ -779,6 +779,29 @@ réellement disparu — pas seulement que le bouton a changé d'avis.
   restaurer après une mise à la corbeille où certains y étaient déjà les
   sortirait aussi ; retirer une étiquette posée par le geste l'ôterait à
   ceux qui la portaient avant. Dans le doute, l'avis sans Annuler.
+- **La barre de sélection et le dépôt partagent leurs verbes** : `agir`
+  (useDragBookmark) joue la table des sortes sans le geste, et sa promesse
+  dit si l'action a abouti — la barre ne vide la sélection qu'à ce prix.
+  Un nouveau verbe « exécuté sans Revue » passe par là, pas par une route
+  à côté : l'avis, l'Annuler et l'erreur viennent avec (spec §4.3 amendée).
+- **Une touche d'action sur une ligne ne vise que l'élément qui porte
+  `data-signet`** (l'enveloppe de ligne, la tuile) — jamais `closest()` :
+  un ⌫ né dans la case à cocher remonterait jusqu'à la ligne. Et en
+  corbeille, ⌫ ne fait rien : y renvoyer un signet le détruit.
+- **jsdom n'a pas de `PointerEvent`** : `fireEvent.pointerDown(el,
+  {clientX})` perd `clientX` (repli sur un `Event` nu). Dispatcher un
+  `new MouseEvent("pointerdown", {bubbles, clientX, button})`, comme les
+  tests du glisser-déposer.
+- **Sonde de mise en page : un enfant de hauteur fixe dans une colonne
+  flex défilante RÉTRÉCIT** (`flex-shrink: 1`) — `scrollHeight ===
+  clientHeight`, et la sonde conclut « ne défile pas » sur une mise en page
+  juste. `flex-shrink: 0` sur le contenu de sonde (mesuré le 2026-09-24).
+- **Un état de module en attente (`lib/demandeEdition.ts`) fuit d'un test
+  à l'autre s'il n'est pas consommé** — vu sous sabotage : le témoin du
+  test suivant tombait. Tout test qui en pose une la consomme.
+- **Route absente du mock, troisième occurrence** : `api.get` mocké d'une
+  seule réponse servait `/api/jobs` avec la forme des archives — `useOuvrirSignet`
+  jetait sur `.some`. Un mock d'`api.get` répond PAR CHEMIN.
 
 ## Git
 
