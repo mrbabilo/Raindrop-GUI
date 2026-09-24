@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { raindrop, collections, tags } from "./test/fixtures";
@@ -59,5 +59,32 @@ describe("App — raccourcis", () => {
     fireEvent.click(fermer);
     expect(screen.queryByRole("dialog", { name: "Réglages" })).not.toBeInTheDocument();
     expect(engrenage).toHaveFocus();
+  });
+
+  // Audit d'ergonomie du 2026-09-24 : revenir à la vue précédente, et
+  // relire ce que le site Raindrop a changé, sans quitter le clavier.
+  it("⌘[ recule, ⌘] avance — et ⌘← / ⌘→ hors d'un champ de saisie", async () => {
+    render(<App onEtat={vi.fn()} />, { wrapper });
+    fireEvent.click(await screen.findByText("Design"));
+    const recherche = () => screen.getByRole("textbox", { name: "Rechercher" });
+    expect(recherche()).toHaveAttribute("placeholder", "Rechercher dans « Design »… (⌘F)");
+    fireEvent.keyDown(window, { key: "[", metaKey: true });
+    expect(recherche()).toHaveAttribute("placeholder", "Rechercher… (⌘F)");
+    fireEvent.keyDown(window, { key: "]", metaKey: true });
+    expect(recherche()).toHaveAttribute("placeholder", "Rechercher dans « Design »… (⌘F)");
+    fireEvent.keyDown(window, { key: "ArrowLeft", metaKey: true });
+    expect(recherche()).toHaveAttribute("placeholder", "Rechercher… (⌘F)");
+    // Dans un champ, ⌘→ va en fin de ligne : il n'appartient pas à l'historique.
+    fireEvent.keyDown(recherche(), { key: "ArrowRight", metaKey: true });
+    expect(recherche()).toHaveAttribute("placeholder", "Rechercher… (⌘F)");
+  });
+
+  it("⌘R relit la liste depuis Raindrop", async () => {
+    render(<App onEtat={vi.fn()} />, { wrapper });
+    const lectures = () => getMock.mock.calls.filter(([p]) => p === "/api/raindrops").length;
+    await waitFor(() => expect(lectures()).toBe(1));
+    const avant = lectures();
+    fireEvent.keyDown(window, { key: "r", metaKey: true });
+    await waitFor(() => expect(lectures()).toBe(avant + 1));
   });
 });

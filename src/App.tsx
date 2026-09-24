@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { t } from "./i18n/fr";
 import type { Amorce } from "./lib/amorce";
 import { useTheme } from "./lib/theme";
@@ -49,7 +50,8 @@ function MoonIcon() {
 
 export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
   const { resolved, setMode } = useTheme();
-  const { view, go, selectedRaindropId, selectRaindrop } = useAppState();
+  const { view, go, reculer, avancer, selectedRaindropId, selectRaindrop } = useAppState();
+  const queryClient = useQueryClient();
   // R15P-3 : le retour revient à la vue d'origine portée par la vue (Revue
   // ET Lecture — même règle, une seule définition : vueDeRetour) ; sans
   // origine notée, repli sur « Tous ».
@@ -92,10 +94,33 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
         e.preventDefault();
         setReglagesOuvert(true);
       }
+      // ⌘[ / ⌘] : l'historique de navigation. ⌘← / ⌘→ aussi (Safari, Finder),
+      // sauf dans un champ, où ils vont en début ou fin de ligne — et parce
+      // que les crochets demandent Option sur un clavier AZERTY.
+      const saisie = e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable='true']") !== null;
+      if (e.metaKey && (e.key === "[" || (e.key === "ArrowLeft" && !saisie))) {
+        e.preventDefault();
+        reculer();
+      }
+      if (e.metaKey && (e.key === "]" || (e.key === "ArrowRight" && !saisie))) {
+        e.preventDefault();
+        avancer();
+      }
+      // ⌘R : relire ce que le site Raindrop a pu changer — l'app ne relit pas
+      // au retour de fenêtre (la file est chère). Les listes repartent de
+      // leur PREMIÈRE page : les invalider relirait chaque page déjà
+      // chargée, une requête de file (550 ms) par page.
+      if (e.metaKey && e.key === "r") {
+        e.preventDefault();
+        void queryClient.resetQueries({ queryKey: ["raindrops"] });
+        void queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "raindrops" });
+      }
     }
     window.addEventListener("keydown", surRaccourci);
     return () => window.removeEventListener("keydown", surRaccourci);
-  }, []);
+    // `reculer`/`avancer` naissent à chaque rendu du provider : le
+    // gestionnaire se repose avec eux, jamais sur une closure périmée.
+  }, [reculer, avancer, queryClient]);
   function toggleTheme() {
     setMode(isDark ? "light" : "dark");
   }

@@ -8,6 +8,9 @@ const RACCOURCIS: readonly (readonly [string, FrKey])[] = [
   ["⌘F", "raccourci.recherche"],
   ["⌘E", "raccourci.composer"],
   ["⌘,", "raccourci.reglages"],
+  ["⌘[ ⌘←", "raccourci.reculer"],
+  ["⌘] ⌘→", "raccourci.avancer"],
+  ["⌘R", "raccourci.relire"],
   ["Échap", "raccourci.echap"],
 ];
 
