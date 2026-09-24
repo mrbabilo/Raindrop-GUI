@@ -9,6 +9,7 @@ import { ActionLigne, ErreurLigne, Ligne } from "./LigneActivable";
 import { useTags } from "../hooks/useStaticData";
 import { useTagManage } from "../hooks/useMutations";
 import type { Tag } from "../../shared/types";
+import { nomIcone } from "../design/nomIcone";
 
 // Task 14 — la vue Tags : renommer, fusionner, supprimer. La liste suit la
 // densité « entrée de navigation 28 px » (DESIGN.md §8, comme la sidebar) ;
@@ -108,7 +109,7 @@ function LigneTag({ tag, coche, bascule }: { tag: Tag; coche: boolean; bascule: 
           <ActionLigne
             type="button"
             className="btn btn-icone shrink-0"
-            aria-label={t("tags.rename")}
+            {...nomIcone(t("tags.rename"))}
             onClick={() => {
               setNom("");
               setEdition(true);

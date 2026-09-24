@@ -12,6 +12,7 @@ import { AnnonceArchive, ArchiveJob, BORNE_ARCHIVE, porteeArchive } from "./Revu
 import { RevueDedupeFin } from "./RevueDedupeFin";
 import { BarreProgression } from "./BarreProgression";
 import { lancerDedupe } from "./lancerDedupe";
+import { nomIcone } from "../design/nomIcone";
 
 type ReviewView = Extract<View, { kind: "review" }>;
 
@@ -222,7 +223,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
-        <button type="button" className="btn btn-icone" aria-label={t("review.export")} onClick={() => downloadCsv("revue.csv", toCsv(remaining))}>
+        <button type="button" className="btn btn-icone" {...nomIcone(t("review.export"))} onClick={() => downloadCsv("revue.csv", toCsv(remaining))}>
           <Icone nom="telecharger" />
         </button>
         {/* Une bascule a son retour : tout décoché, le même bouton recoche tout. */}

@@ -12,6 +12,7 @@ import {
 } from "../hooks/useAnalysis";
 import { useJobsEnVol } from "../hooks/useBackup";
 import { BarreProgression } from "./BarreProgression";
+import { nomIcone } from "../design/nomIcone";
 
 // DESIGN.md §6-§9 : compteur posé sur la surface work (rayon 11 px), la
 // valeur en 12 px quiet (§7), survol par la surface dédiée — pas d'ombre,
@@ -118,7 +119,7 @@ function BlocScan({ type, label, lastScan, running, reprise }: {
               {t("cleanup.scanning", { done: vu.done, total: vu.total })}
             </span>
           )}
-          <button type="button" className="btn btn-icone" aria-label={t("cleanup.cancel")} onClick={annuler}>
+          <button type="button" className="btn btn-icone" {...nomIcone(t("cleanup.cancel"))} onClick={annuler}>
             <Icone nom="croix" />
           </button>
         </>

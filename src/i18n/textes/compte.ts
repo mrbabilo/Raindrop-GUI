@@ -34,6 +34,13 @@ export const compte = {
   "reglages.version.dispo": "mise à jour disponible",
   // Le journal consultable (2026-09-20) : une action « qui n'a rien fait »
   // se vérifie là, sans quitter l'application.
+  // Les raccourcis, écrits quelque part : ⌘K n'avait ni bouton ni mention.
+  "reglages.raccourcis": "Raccourcis clavier",
+  "raccourci.palette": "Palette de commandes",
+  "raccourci.recherche": "Rechercher dans la vue",
+  "raccourci.composer": "Sauvegarder une URL",
+  "raccourci.reglages": "Réglages",
+  "raccourci.echap": "Fermer, annuler l'édition, vider la recherche",
   "reglages.journal": "Journal",
   "reglages.journal.vide": "Rien encore aujourd'hui.",
   "reglages.journal.rafraichir": "Rafraîchir",

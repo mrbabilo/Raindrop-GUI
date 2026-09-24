@@ -16,6 +16,7 @@ import { racine } from "../lib/arbre";
 import { DeadRow, RedirectRow } from "./CleanupRows";
 import { Entete, LABELS } from "./EnteteCleanup";
 import { BlocRecheck } from "./BlocRecheck";
+import { nomIcone } from "../design/nomIcone";
 
 // Pagination des vues de scan (dead/redirect) : page/total côté sidecar.
 // Une seule page = aucun paginateur — du bruit inutile sous une liste courte.
@@ -24,11 +25,11 @@ function Paginateur({ page, total, perPage, onPage }: { page: number; total: num
   if (pages <= 1) return null;
   return (
     <nav className="flex items-center justify-end gap-2 px-4 pb-4 text-xs text-app-muted">
-      <button type="button" className="btn btn-icone" aria-label={t("cleanup.prev")} disabled={page === 0} onClick={() => onPage(page - 1)}>
+      <button type="button" className="btn btn-icone" {...nomIcone(t("cleanup.prev"))} disabled={page === 0} onClick={() => onPage(page - 1)}>
         <Icone nom="chevronGauche" />
       </button>
       <span>{t("cleanup.page", { n: page + 1, total: pages })}</span>
-      <button type="button" className="btn btn-icone" aria-label={t("cleanup.next")} disabled={page + 1 >= pages} onClick={() => onPage(page + 1)}>
+      <button type="button" className="btn btn-icone" {...nomIcone(t("cleanup.next"))} disabled={page + 1 >= pages} onClick={() => onPage(page + 1)}>
         <Icone nom="chevronDroit" />
       </button>
     </nav>

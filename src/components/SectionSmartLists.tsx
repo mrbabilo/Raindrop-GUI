@@ -4,6 +4,7 @@ import { useAppState } from "../state/appState";
 import { useSmartLists, useRenommerSmartList, useSupprimerSmartList } from "../hooks/useSmartLists";
 import { vueVersView } from "../lib/smartlists";
 import { Icone } from "../design/icones";
+import { nomIcone } from "../design/nomIcone";
 
 // Mêmes jetons que les entrées de la Sidebar (28 px, §8) : une smart list
 // se lit comme une vue fixe — la surface porte la sélection, jamais une
@@ -70,7 +71,7 @@ export function SectionSmartLists() {
               <button
                 type="button"
                 className="btn btn-icone"
-                aria-label={t("smartlist.renameAria", { name: sl.label })}
+                {...nomIcone(t("smartlist.renameAria", { name: sl.label }))}
                 onClick={() => {
                   setDraft(sl.label);
                   setEdition(sl.id);
@@ -84,7 +85,7 @@ export function SectionSmartLists() {
               <button
                 type="button"
                 className="btn btn-icone"
-                aria-label={t("smartlist.deleteAria", { name: sl.label })}
+                {...nomIcone(t("smartlist.deleteAria", { name: sl.label }))}
                 onClick={() => {
                   supprimer.mutate(sl.id);
                   forgetSmartList(sl.id); // no-op si la vue ouverte n'est pas celle-ci

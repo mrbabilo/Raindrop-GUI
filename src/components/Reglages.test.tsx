@@ -60,6 +60,14 @@ describe("Reglages", () => {
     expect(screen.getByRole("dialog", { name: "Réglages" })).toHaveAttribute("aria-modal", "true");
   });
 
+  // Les raccourcis n'étaient écrits nulle part (proposition 4) : ⌘K n'avait
+  // ni bouton ni mention — une fonction qu'on ne peut pas découvrir.
+  it("liste les raccourcis clavier", () => {
+    render(<Reglages onFermer={vi.fn()} onEtat={vi.fn()} />, { wrapper });
+    const liste = screen.getByRole("list", { name: "Raccourcis clavier" });
+    for (const touche of ["⌘K", "⌘F", "⌘E", "⌘,", "Échap"]) expect(liste).toHaveTextContent(touche);
+  });
+
   it("un état inconnu ne casse rien — il se tait", () => {
     healthMock.mockReturnValue({ data: undefined });
     render(<Reglages onFermer={vi.fn()} onEtat={vi.fn()} />, { wrapper });

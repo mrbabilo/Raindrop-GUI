@@ -22,6 +22,7 @@ import {
 } from "../hooks/useBackup";
 import { annuler, suivreJob, type SauvegardeEnVol } from "../lib/suiviSauvegarde";
 import { BarreProgression } from "./BarreProgression";
+import { nomIcone } from "../design/nomIcone";
 
 /**
  * La sauvegarde locale dans les Réglages (spec sélection §3). Deux sources
@@ -161,7 +162,7 @@ export function SectionSauvegarde({ onEtat }: { onEtat: (a: Amorce) => void }) {
         <button
           type="button"
           className="btn btn-icone"
-          aria-label={dossier?.dossier ? t("sauvegarde.changer") : t("sauvegarde.choisir")}
+          {...nomIcone(dossier?.dossier ? t("sauvegarde.changer") : t("sauvegarde.choisir"))}
           disabled={occupe}
           onClick={() => void geste(choisirDossierSauvegarde)}
         >
@@ -278,7 +279,7 @@ function VolSauvegarde({ vol }: { vol: SauvegardeEnVol }) {
                 quoi,
               })}
       </span>
-      <button type="button" className="btn btn-icone" aria-label={t("sauvegarde.annuler")} onClick={() => void annuler(vol.jobId)}>
+      <button type="button" className="btn btn-icone" {...nomIcone(t("sauvegarde.annuler"))} onClick={() => void annuler(vol.jobId)}>
         <Icone nom="croix" />
       </button>
     </p>

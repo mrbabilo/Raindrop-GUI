@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import type { Collection } from "../../shared/types";
+import { nomIcone } from "../design/nomIcone";
 
 // Un parent et ses enfants dans la sidebar. DESIGN.md §9 « révélé, pas
 // posé » : l'arbre s'explore au pointeur — survoler un parent le déplie,
@@ -95,7 +96,7 @@ export function GroupeCollection({
       // `aria-expanded` continue d'annoncer l'état du groupe.
       tabIndex={-1}
       aria-expanded={deplie}
-      aria-label={t(deplie ? "nav.collapse" : "nav.expand", { title: parent.title })}
+      {...nomIcone(t(deplie ? "nav.collapse" : "nav.expand", { title: parent.title }))}
       className={
         "shrink-0 rounded p-0.5 text-app-muted hover:bg-app-hover " +
         (deplie ? "" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100")

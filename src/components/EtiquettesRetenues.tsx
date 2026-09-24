@@ -2,6 +2,7 @@ import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { PiluleEtiquette } from "../design/Signaux";
 import { useFiltreEtiquettes } from "../hooks/filtreEtiquettes";
+import { nomIcone } from "../design/nomIcone";
 
 /**
  * Les étiquettes du filtre courant, chacune retirable.
@@ -38,7 +39,7 @@ export function EtiquettesRetenues() {
       {/* §9 « masqué si nul » : rien à retirer, pas de commande. Deux
           étiquettes suffisent à rendre le retrait un par un fastidieux. */}
       {actives.length > 1 && (
-        <button type="button" className="btn btn-icone" aria-label={t("filter.clearTags")} onClick={vider}>
+        <button type="button" className="btn btn-icone" {...nomIcone(t("filter.clearTags"))} onClick={vider}>
           <Icone nom="croix" />
         </button>
       )}

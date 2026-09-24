@@ -20,7 +20,7 @@ export const interfaceTextes = {
   "nav.cleanup": "Nettoyage",
   "collection.seeAll": "Voir les {n} →",
   "collection.direct": "Signets de cette collection",
-  "search.placeholder": "Rechercher…",
+  "search.placeholder": "Rechercher… (⌘F)",
   // Nom accessible du champ : un placeholder ne fait un nom qu'en dernier
   // recours, et disparaît dès qu'on saisit.
   "search.label": "Rechercher",

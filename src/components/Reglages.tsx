@@ -10,6 +10,8 @@ import { SectionSauvegarde } from "./SectionSauvegarde";
 import { SectionJournal } from "./SectionJournal";
 import { SectionVersion } from "./SectionVersion";
 import type { UserInfo } from "../hooks/useStaticData";
+import { nomIcone } from "../design/nomIcone";
+import { SectionRaccourcis } from "./SectionRaccourcis";
 
 // Les cinq états de `sidecar/mcp/lifecycle.ts`, traduits — le front ne
 // montre jamais un identifiant interne (« starting » à l'écran serait une
@@ -154,6 +156,8 @@ export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (
             « qui n'a rien fait » se vérifie sans quitter l'application. */}
         <SectionJournal />
 
+        <SectionRaccourcis />
+
         <div className="flex gap-2">
           {!saisie && (
             <button type="button" className="btn" onClick={() => setSaisie(true)}>
@@ -172,7 +176,7 @@ export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (
           >
             {t("reglages.deconnecter")}
           </button>
-          <button type="button" className="btn btn-icone ml-auto" aria-label={t("reglages.fermer")} onClick={fermer}>
+          <button type="button" className="btn btn-icone ml-auto" {...nomIcone(t("reglages.fermer"))} onClick={fermer}>
             <Icone nom="croix" />
           </button>
         </div>
