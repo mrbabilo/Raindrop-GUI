@@ -220,7 +220,7 @@ export function ListPane() {
       {/* R8P-1 : un déplacement raté se dit, il ne disparaît pas en silence. */}
       <AvisDepot drag={drag} />
       {/* Invisible sans sélection (rend null) : aucune layout shift au repos. */}
-      <BulkBar items={items} />
+      <BulkBar items={items} agir={drag.agir} />
     </div>
   );
 }

@@ -127,7 +127,7 @@ export function CollectionView() {
         )}
       </main>
       <AvisDepot drag={drag} />
-      <BulkBar items={tous} />
+      <BulkBar items={tous} agir={drag.agir} />
     </div>
   );
 }

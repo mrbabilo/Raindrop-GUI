@@ -4,21 +4,7 @@ import { Icone } from "../design/icones";
 import { nomIcone } from "../design/nomIcone";
 import { variablesTeinte } from "../design/Signaux";
 import { useCollections, useTags } from "../hooks/useStaticData";
-import type { Collection } from "../../shared/types";
-
-/** « Dev › Rust » : une sous-collection se nomme par son chemin — la liste
- *  est triée par titre, pas dans l'ordre de l'arbre. Marche bornée (une
- *  boucle de parents, donnée corrompue, ne tourne pas à l'infini). */
-function chemin(arbre: readonly Collection[], c: Collection): string {
-  const noms = [c.title];
-  let parent = arbre.find((p) => p.id === c.parentId);
-  for (let i = 0; parent && i < arbre.length; i++) {
-    noms.unshift(parent.title);
-    const suivant = parent.parentId;
-    parent = arbre.find((p) => p.id === suivant);
-  }
-  return noms.join(" › ");
-}
+import { chemin } from "../lib/arbre";
 
 /**
  * Le CLASSEMENT d'un signet dans l'édition de la fiche : ses étiquettes et

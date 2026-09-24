@@ -112,7 +112,7 @@ Ces points sont **contraignants** pour l'implémentation :
 ### 4.1 Vue Bibliothèque (écran principal) — trois panneaux
 
 - **Panneau gauche (navigation)** : collections en arborescence (root + children), liste des tags (avec compteurs), vues fixes : Tous, Favoris, Non-lus, Corbeille. Section repliable.
-- **Panneau central (liste)** : bookmarks virtualisés — titre, domaine, extrait, tags, date. Tri (création, titre, domaine). Recherche serveur en entête avec filtres avancés (domaine, type de média, plage de dates, non-taggés, favoris…). Infinite scroll, 50/requête. Multi-sélection par cases à cocher → **barre d'actions en masse** en pied de liste (Corbeille, Déplacer, Tagger).
+- **Panneau central (liste)** : bookmarks virtualisés — titre, domaine, extrait, tags, date. Tri (création, titre, domaine). Recherche serveur en entête avec filtres avancés (domaine, type de média, plage de dates, non-taggés, favoris…). Infinite scroll, 50/requête. Multi-sélection par cases à cocher → **barre d'actions en masse** en pied de liste (Corbeille, Déplacer, Tagger). *(« Déplacer », retiré un temps au profit du seul glisser-déposer, est rétabli le 2026-09-24 : sans lui, déplacer plusieurs signets était impossible au clavier.)*
 - **Panneau droit (détail, permanent)** : suit la sélection (clic ou flèches clavier). Aperçu, édition inline (titre, extrait, note, tags, collection), lecture des highlights. Actions : favori, ouvrir l'URL, supprimer (→ corbeille).
 - **Palette ⌘K** : recherche universelle (bookmarks, collections, tags, commandes, **accès direct aux vues de nettoyage**), navigation clavier complète (flèches, Entrée, Échap).
 
@@ -153,6 +153,7 @@ Toute action en masse ouvre une **page dédiée** remplaçant la liste :
   - **Niveau 2 — irréversible** (vider la corbeille, supprimer des collections) : **frappe obligatoire du mot « SUPPRIMER »**.
 - Corbeille par défaut : toute suppression passe par la corbeille Raindrop ; seul le vidage de corbeille est définitif.
 - Note assumée : Raindrop n'offre pas d'undo API pour déplacements/tags — **l'aperçu est l'annulation**.
+- **Amendé (2026-09-24, audit d'ergonomie — décision de l'utilisateur)** : depuis la **barre de sélection**, la **mise à la corbeille** et le **déplacement** s'exécutent **sans Revue**, suivis d'un avis qui offre « Annuler » — les mêmes verbes, routes et avis que le glisser-déposer, qui s'en passait déjà. Ils sont défaisables par nous : la corbeille par la restauration à l'origine mémorisée (§4.2), le déplacement en renvoyant chaque signet dans la collection d'où la liste l'a vu venir. « Annuler » n'est offert que s'il ne défait **que** le geste (aucun signet déjà en corbeille ; toutes les origines connues ; pas de sortie de la corbeille). Restent en Revue : l'**étiquetage** (on ne sait pas qui portait déjà l'étiquette — aucun retour arrière sûr), l'archivage, les actions de nettoyage (liens morts, redirections, doublons) et tout le niveau 2.
 
 ### 4.4 Apparence
 

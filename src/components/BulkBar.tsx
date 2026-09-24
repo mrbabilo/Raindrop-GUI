@@ -3,24 +3,39 @@ import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
 import { useAppState, type View } from "../state/appState";
 import { useUnrestore } from "../hooks/useMutations";
+import { useCollections } from "../hooks/useStaticData";
+import { chemin } from "../lib/arbre";
+import type { CibleDepot } from "../state/drag";
 import type { RaindropItem } from "../../shared/types";
 
 // L'action portée par la vue review — dérivée de View, jamais recopiée :
 // R15P-4 l'a étendue (move porte sa destination, tag ses étiquettes).
 type BulkAction = Extract<View, { kind: "review" }>["action"];
 
-// Pied de liste (visible si selectedIds.size > 0) : compteur + les actions
-// qui construisent la vue review. Rien n'exécute ici : la Revue (Task 15)
-// propose, l'utilisateur dispose.
+// Pied de liste (visible si selectedIds.size > 0) : compteur + actions.
 //
-// « Déplacer » et son sélecteur de collection ont été RETIRÉS : le
-// glisser-déposer d'un signet vers une collection fait le même geste, à la
-// souris, et ces deux contrôles coûtaient la moitié de la largeur d'une barre
-// qui vit dans une colonne rétrécie par les panneaux latéraux.
-export function BulkBar({ items }: { items: RaindropItem[] }) {
+// Deux familles (spec §4.3, amendée le 2026-09-24) :
+// - la corbeille et le déplacement S'EXÉCUTENT ici, par `agir` — les verbes
+//   du glisser-déposer (useDragBookmark), avec leur avis et leur Annuler :
+//   défaisables, ils n'ont plus besoin de l'aperçu pour être sûrs ;
+// - l'étiquetage (dont Raindrop n'offre aucun retour arrière : on ne sait
+//   pas qui portait déjà l'étiquette) et l'archivage passent par la Revue.
+//
+// « Déplacer » avait été retiré (la largeur ; « le glisser-déposer fait le
+// même geste ») : déplacer plusieurs signets n'existait plus qu'à la souris
+// — écart spec §115, audit d'ergonomie du 2026-09-24. `flex-wrap` absorbe
+// la largeur.
+export function BulkBar({ items, agir }: {
+  items: RaindropItem[];
+  /** Rend `true` si l'action a abouti — la sélection n'est vidée qu'alors. */
+  agir: (ids: number[], cible: CibleDepot) => Promise<boolean>;
+}) {
   const { view, selectedIds, go, clearSelection, toggleSelect, selectMany } = useAppState();
   const unrestore = useUnrestore();
+  const arbre = useCollections().data ?? [];
   const [tags, setTags] = useState("");
+  const [destination, setDestination] = useState("");
+  const [enVol, setEnVol] = useState(false);
   // Le compte des corbeillés SANS origine mémorisée : non restaurés par le
   // bloc, dit tel quel — jamais confondus avec des restaurés.
   const [nonRestaures, setNonRestaures] = useState(0);
@@ -60,6 +75,15 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
       returnView: view,
     });
     clearSelection();
+  };
+  const executer = (cible: CibleDepot) => {
+    setEnVol(true);
+    void agir(selected.map((i) => i.id), cible).then((ok) => {
+      setEnVol(false);
+      if (!ok) return;
+      setDestination("");
+      clearSelection();
+    });
   };
 
   return (
@@ -121,11 +145,21 @@ export function BulkBar({ items }: { items: RaindropItem[] }) {
           )}
         </>
       ) : (
-        <button type="button" className="btn border-app-broken text-app-broken" onClick={() => build({ op: "trash" })}>
+        <button type="button" className="btn border-app-broken text-app-broken" disabled={enVol} onClick={() => executer({ sorte: "corbeille" })}>
           <Icone nom="corbeille" className="inline align-[-2px] mr-1" />
           {t("bulk.trash")}
         </button>
       )}
+      {/* Hors corbeille, un déplacement ; dedans, une SORTIE vers la
+          destination choisie — la voie des signets sans origine connue. */}
+      <select aria-label={t("bulk.destination")} className="input w-40" value={destination} onChange={(e) => setDestination(e.target.value)}>
+        <option value="">{t("bulk.chooseCollection")}</option>
+        <option value="-1">{t("nav.unsorted")}</option>
+        {arbre.map((c) => <option key={c.id} value={String(c.id)}>{chemin(arbre, c)}</option>)}
+      </select>
+      <button type="button" className="btn" disabled={destination === "" || enVol} onClick={() => executer({ sorte: "collection", id: Number(destination) })}>
+        {t("bulk.move")}
+      </button>
       {/* L'archive est la seule action qui n'écrit RIEN chez Raindrop : elle
           copie en local ce qui existe déjà côté serveur. */}
       <button type="button" className="btn" onClick={() => build({ op: "archive" })}>
