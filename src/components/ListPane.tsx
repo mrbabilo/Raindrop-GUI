@@ -75,7 +75,7 @@ export function ListPane() {
     } else toggleSelect(r.id);
     ancre.current = i;
   };
-  // La fiche vole 320 px à la grille : les colonnes de la mosaïque re-flux
+  // La fiche vole sa largeur (320 px par défaut) à la grille : les colonnes de la mosaïque re-flux
   // et la vignette ouverte pouvait sortir du champ (signalement 2026-09-20).
   // On la ramène AU PLUS PRÈS — « nearest » ne scrolle pas si elle est
   // déjà visible. Exécuté après le layout (effet), au changement de

@@ -37,6 +37,7 @@ export const interfaceTextes = {
   "list.select": "Sélectionner {title}",
   "list.deplacer": "Déplacer {title}",
   "detail.fermer": "Fermer le détail",
+  "detail.largeur": "Largeur de la fiche",
   "drag.count": "{n} signet|{n} signets",
   // Ce qu'a fait un dépôt réussi (audit d'ergonomie du 2026-09-24).
   "drag.deplaces": "{n} signet déplacé|{n} signets déplacés",
