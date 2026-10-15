@@ -2,7 +2,7 @@
   "name": "raindrop-gui",
   "private": true,
   "license": "UNLICENSED",
-  "version": "0.1.0",
+  "version": "0.1.0-pre.21",
   "type": "module",
   "engines": {
     "node": ">=20"
