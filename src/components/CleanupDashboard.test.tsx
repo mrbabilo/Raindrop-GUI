@@ -145,6 +145,15 @@ describe("CleanupDashboard", () => {
     });
   });
 
+  it("distingue les quatre diagnostics par une icône propre", async () => {
+    renderDashboard();
+    await screen.findByTestId("compteur-dead");
+    for (const etat of ["dead", "redirect", "indeterminate", "duplicate"]) {
+      const carte = screen.getByTestId(`compteur-${etat === "duplicate" ? "duplicates" : etat}`).closest("button")!;
+      expect(carte.querySelector(`[data-diagnostic="${etat}"]`)).not.toBeNull();
+    }
+  });
+
   // « 0 lien mort » se lit « bibliothèque saine ». Le sidecar rend
   // honnêtement `total: 0` sur un cache vierge — c'est l'écran qui mentait.
   it("aucune analyse jamais lancée : les compteurs qui en dépendent ne disent PAS zéro", async () => {

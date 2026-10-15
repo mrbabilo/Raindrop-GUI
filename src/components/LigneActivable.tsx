@@ -9,6 +9,7 @@ import {
 } from "react";
 import { t } from "../i18n/fr";
 import { filetEtat, type EtatLien } from "../design/Signaux";
+import { CaseSelection } from "./CaseSelection";
 
 //! La LIGNE ACTIVABLE : une ligne qui est l'unique arrêt de tabulation de sa
 //! zone, et dont les contrôles ne s'ouvrent au clavier qu'une fois qu'on y
@@ -90,6 +91,7 @@ export function Ligne({ etat, children, balise = "div", role = "row", className 
         props.onKeyDown?.(e);
       }}
       className={
+        "interactive-row " +
         (className || "flex min-h-9 items-center gap-2 overflow-hidden border-b border-app-border px-3 ") +
         (sel ? "bg-app-sel " : "") +
         (filet ? "filet " + filet : "")
@@ -127,6 +129,17 @@ export function ActionLigne<T extends BaliseAction = "button">(
   return <Tag tabIndex={active ? 0 : -1} {...props} onClick={enveloppe} />;
 }
 
+/** Case de sélection qui suit l'entrée clavier de Ligne et accepte aussi le
+ * geste peint partagé avec la bibliothèque et la Revue. */
+export function CaseSelectionLigne({ onToggle, ...props }: {
+  checked: boolean;
+  disabled?: boolean;
+  onToggle(plage?: boolean): void;
+} & Omit<ComponentPropsWithoutRef<"input">, "checked" | "disabled" | "onChange" | "onClick" | "onPointerDown" | "onPointerEnter" | "tabIndex" | "type">) {
+  const active = useContext(ContexteLigne);
+  return <CaseSelection tabIndex={active ? 0 : -1} onToggle={onToggle} {...props} />;
+}
+
 // Erreur d'action inline (pattern T8/R12P-1) : ce qui s'est passé, jamais
 // silencieux — brouillon et ligne restent en place.
 export function ErreurLigne({ message }: { message: string }) {
@@ -136,4 +149,3 @@ export function ErreurLigne({ message }: { message: string }) {
     </p>
   );
 }
-

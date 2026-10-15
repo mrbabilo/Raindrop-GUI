@@ -32,6 +32,12 @@ export const nettoyage = {
   // libellé nomme donc ce qu'il reste à faire, pas un verdict.
   "cleanup.indeterminate": "À vérifier à la main",
   "cleanup.duplicates": "Doublons",
+  // Noms courts des pictogrammes diagnostiques. Ils restent au singulier :
+  // l'icône décrit le signet courant, même dans une liste ou un compteur.
+  "etat.dead": "Lien invalide",
+  "etat.redirect": "Redirection",
+  "etat.indeterminate": "À vérifier",
+  "etat.duplicate": "Doublon",
   // Le compteur dit les DEUX nombres : « 414 » seul se lisait « 414 signets en
   // double », alors que ce sont 414 groupes pour 1 032 signets concernés.
   "cleanup.duplicatesCount": "{n} groupe · {items} signets|{n} groupes · {items} signets",

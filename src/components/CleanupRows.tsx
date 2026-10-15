@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
-import { CarreCollection } from "../design/Signaux";
+import { CarreCollection, IconeEtat } from "../design/Signaux";
 // Le patron « ligne activable » a quitté ce fichier le 2026-09-19 : la vue
 // Tags en a eu besoin à son tour (LigneActivable.tsx).
-import { ActionLigne, ErreurLigne, Ligne } from "./LigneActivable";
+import { ActionLigne, CaseSelectionLigne, ErreurLigne, Ligne } from "./LigneActivable";
+import { CaseSelection } from "./CaseSelection";
 import { choisirGarde, copiesDe } from "../lib/doublons";
 import { useUpdateRaindrop, useUnrestore } from "../hooks/useMutations";
 import { useAppState } from "../state/appState";
@@ -54,16 +55,15 @@ export function DeadRow({
       onClick={() => selectRaindrop(r.raindropId)}
     >
       {onToggle !== undefined && (
-        <input
-          type="checkbox"
+        <CaseSelection
           tabIndex={-1}
           className="shrink-0"
           aria-label={r.title}
           checked={selected ?? false}
-          onClick={(e) => e.stopPropagation()}
-          onChange={onToggle}
+          onToggle={onToggle}
         />
       )}
+      <IconeEtat etat="dead" />
       <CarreCollection collectionId={r.collectionId} titre={collectionRacine} />
       <span className="min-w-[8rem] max-w-[40%] flex-1 truncate font-medium">{r.title}</span>
       <span className="url min-w-0 flex-1 truncate text-[11px] text-app-muted">{r.url}</span>
@@ -95,14 +95,16 @@ export function RedirectRow({ r, collectionRacine, onRemplace }: {
   const update = useUpdateRaindrop(r.raindropId);
   const [remplace, setRemplace] = useState(false);
   const { selectRaindrop, selectedRaindropId } = useAppState();
+  const etat = r.status === "indeterminate" ? "indeterminate" : "redirect";
   if (remplace) return null;
   const finale = r.finalUrl;
   return (
     <Ligne
-      etat="redirect"
+      etat={etat}
       sel={selectedRaindropId === r.raindropId}
       onClick={() => selectRaindrop(r.raindropId)}
     >
+      <IconeEtat etat={etat} />
       <CarreCollection collectionId={r.collectionId} titre={collectionRacine} />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5 py-1">
         <span className="flex min-w-0 items-center gap-2">
@@ -196,14 +198,13 @@ export function DuplicateGroupCard({ g, titreRacine, cochees, basculer, definir,
             sel={selectedRaindropId === item.id}
             onClick={() => selectRaindrop(item.id)}
           >
-            <ActionLigne
-              el="input"
-              type="checkbox"
+            <CaseSelectionLigne
               aria-label={t("cleanup.dupCoche", { title: item.title })}
               checked={cochees.has(item.id)}
               disabled={verrouille}
-              onChange={() => basculer(item.id)}
+              onToggle={() => basculer(item.id)}
             />
+            <IconeEtat etat="duplicate" />
             <CarreCollection collectionId={item.collectionId} titre={titreRacine(item.collectionId)} />
             <span className="min-w-[8rem] flex-1 truncate font-medium">{item.title}</span>
             <span className="url shrink-0 text-[11px] text-app-muted">{item.url}</span>

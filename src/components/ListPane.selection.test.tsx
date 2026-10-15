@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 // fixtures AVANT ListPane (TDZ — les factories vi.mock les référencent).
@@ -70,5 +70,34 @@ describe("ListPane — sélectionner plusieurs signets sans les cocher un à un"
     await userEvent.click(screen.getByRole("button", { name: "Tout sélectionner (6)" }));
     expect(selection()).toBe("2000,2001,2002,2003,2004,2005");
     expect(screen.queryByRole("button", { name: /Tout sélectionner/ })).not.toBeInTheDocument();
+  });
+
+  it("peint la sélection en maintenant le bouton principal sur les cases survolées", () => {
+    monter();
+    const cases = [0, 1, 2].map((i) => screen.getByRole("checkbox", { name: `Sélectionner Signet ${i}` }));
+
+    fireEvent.pointerDown(cases[0]!, { button: 0, buttons: 1, pointerId: 7 });
+    fireEvent.pointerEnter(cases[1]!, { buttons: 1, pointerId: 7 });
+    fireEvent.pointerEnter(cases[2]!, { buttons: 1, pointerId: 7 });
+    fireEvent.pointerUp(cases[2]!, { button: 0, buttons: 0, pointerId: 7 });
+
+    expect(selection()).toBe("2000,2001,2002");
+  });
+
+  it("peint aussi la désélection et ignore un simple survol", async () => {
+    monter();
+    await cocher(0);
+    await cocher(1);
+    await cocher(2);
+    const cases = [0, 1, 2, 3].map((i) => screen.getByRole("checkbox", { name: `Sélectionner Signet ${i}` }));
+
+    fireEvent.pointerEnter(cases[3]!, { buttons: 0, pointerId: 8 });
+    expect(selection()).toBe("2000,2001,2002");
+    fireEvent.pointerDown(cases[0]!, { button: 0, buttons: 1, pointerId: 9 });
+    fireEvent.pointerEnter(cases[1]!, { buttons: 1, pointerId: 9 });
+    fireEvent.pointerEnter(cases[2]!, { buttons: 1, pointerId: 9 });
+    fireEvent.pointerUp(cases[2]!, { button: 0, buttons: 0, pointerId: 9 });
+
+    expect(selection()).toBe("");
   });
 });

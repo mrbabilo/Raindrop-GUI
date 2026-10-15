@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -61,6 +61,18 @@ describe("ReviewPage — niveau 1 (corbeille)", () => {
     expect(screen.getByText(/3 éléments concernés/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("checkbox", { name: /Beta/ }));
     expect(screen.getByText(/2 éléments concernés/)).toBeInTheDocument();
+  });
+
+  it("désélectionne plusieurs lignes d'un seul geste peint", () => {
+    renderReview();
+    const cases = ["Alpha", "Beta", "Gamma"].map((nom) => screen.getByRole("checkbox", { name: new RegExp(nom) }));
+
+    fireEvent.pointerDown(cases[0]!, { button: 0, buttons: 1 });
+    fireEvent.pointerEnter(cases[1]!, { buttons: 1 });
+    fireEvent.pointerEnter(cases[2]!, { buttons: 1 });
+    fireEvent.pointerUp(cases[2]!, { button: 0, buttons: 0 });
+
+    expect(screen.getByText(/0 élément concerné/)).toBeInTheDocument();
   });
 
   it("la recherche filtre l'aperçu localement", async () => {

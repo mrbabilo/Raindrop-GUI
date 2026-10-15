@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from "react";
+import { t } from "../i18n/fr";
 import { thematique, teinte } from "./lexique";
 import { ecarterTeintes, teinteDeHex } from "./couleur";
 import type { Collection, LinkStatus } from "../../shared/types";
@@ -188,6 +189,69 @@ export function PiluleEtiquette({
 // d'une vérification HTTP : les Tasks 12-13 pourront passer `result.status`
 // tel quel, sans couche de traduction.
 export type EtatLien = LinkStatus | "duplicate";
+
+const diagnostic = {
+  dead: { classe: "diagnostic-broken", label: t("etat.dead") },
+  redirect: { classe: "diagnostic-moved", label: t("etat.redirect") },
+  indeterminate: { classe: "diagnostic-unsure", label: t("etat.indeterminate") },
+  duplicate: { classe: "diagnostic-duplicate", label: t("etat.duplicate") },
+} as const;
+
+/**
+ * Le filet montre le diagnostic à l'échelle de la ligne ; ce pictogramme le
+ * nomme par une seconde forme, lisible sans couleur et stable entre les vues.
+ * Une carte dont le texte donne déjà le nom peut le rendre décoratif.
+ */
+export function IconeEtat({
+  etat,
+  decorative = false,
+  className = "",
+}: {
+  etat: EtatLien | null | undefined;
+  decorative?: boolean;
+  className?: string;
+}) {
+  if (etat === null || etat === undefined || etat === "ok") return null;
+  const signal = diagnostic[etat];
+  return (
+    <span
+      className={`diagnostic-icon ${signal.classe}${className ? ` ${className}` : ""}`}
+      data-diagnostic={etat}
+      {...(decorative
+        ? { "aria-hidden": true }
+        : { role: "img", "aria-label": signal.label, title: signal.label })}
+    >
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+        {etat === "dead" && (
+          <>
+            <path d="M5.8 5.2 4.6 4a2.2 2.2 0 0 0-3.1 3.1l1.8 1.8a2.2 2.2 0 0 0 3.1 0l.8-.8" />
+            <path d="m10.2 10.8 1.2 1.2a2.2 2.2 0 0 0 3.1-3.1l-1.8-1.8a2.2 2.2 0 0 0-3.1 0l-.8.8" />
+            <path d="m5.2 12.8.5-1.7M10.8 3.2l-.5 1.7M3.2 10.8l1.7-.5M12.8 5.2l-1.7.5" />
+          </>
+        )}
+        {etat === "redirect" && (
+          <>
+            <path d="M2.5 4.5h5A3.5 3.5 0 0 1 11 8v3.5" />
+            <path d="m8.5 9 2.5 2.5L13.5 9" />
+          </>
+        )}
+        {etat === "indeterminate" && (
+          <>
+            <circle cx="8" cy="8" r="6" />
+            <path d="M6.6 6.2a1.6 1.6 0 1 1 2.3 1.5c-.7.4-.9.8-.9 1.4" />
+            <path d="M8 11.7h.01" />
+          </>
+        )}
+        {etat === "duplicate" && (
+          <>
+            <rect x="2.2" y="4.8" width="8.8" height="8.8" rx="1.5" />
+            <path d="M5 4.8V3.9a1.5 1.5 0 0 1 1.5-1.5h5.8a1.5 1.5 0 0 1 1.5 1.5v5.8a1.5 1.5 0 0 1-1.5 1.5H11" />
+          </>
+        )}
+      </svg>
+    </span>
+  );
+}
 
 // Rend LE nom de classe d'état, à composer avec `filet` (liste) ou `coiffe`
 // (mosaïque). Un lien sain ne porte aucune marque — c'est tout l'intérêt :

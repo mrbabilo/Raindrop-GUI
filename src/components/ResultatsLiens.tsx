@@ -115,10 +115,9 @@ export function ResultatsLiens({ type, jamaisAnalyse, analyser, analyseEnCours }
     });
     clearSelection(); // R9P-1 : le clear appartient à l'action
   };
-  // `indeterminate` emprunte la ligne des redirections : DOMAINE.md interdit
-  // de le traiter comme un mort (« jamais classé mort »), donc surtout pas
-  // `DeadRow` et son filet rouge — ces liens attendent une vérification, ils
-  // ne portent aucun verdict.
+  // `indeterminate` emprunte la structure des redirections : DOMAINE.md
+  // interdit de le traiter comme un mort (« jamais classé mort »). La ligne
+  // conserve donc sa marque « à vérifier », distincte du rouge et de l'ambre.
   const ligne = (r: (typeof items)[number]) =>
     type === "dead" ? (
       <DeadRow
@@ -173,4 +172,3 @@ export function ResultatsLiens({ type, jamaisAnalyse, analyser, analyseEnCours }
     </>
   );
 }
-

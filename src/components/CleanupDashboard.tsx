@@ -16,6 +16,7 @@ import { nomIcone } from "../design/nomIcone";
 import { LancementAnalyse } from "./LancementAnalyse";
 import { annonceScanLiens } from "../lib/annonceScan";
 import { useUser } from "../hooks/useStaticData";
+import { IconeEtat, type EtatLien } from "../design/Signaux";
 
 // DESIGN.md §6-§9 : compteur posé sur la surface work (rayon 11 px), la
 // valeur en 12 px quiet (§7), survol par la surface dédiée — pas d'ombre,
@@ -44,6 +45,13 @@ const COMPTEURS = [
 ] as const;
 
 type CompteurType = (typeof COMPTEURS)[number]["type"];
+
+const ETAT_COMPTEUR: Partial<Record<CompteurType, EtatLien>> = {
+  dead: "dead",
+  redirect: "redirect",
+  indeterminate: "indeterminate",
+  duplicates: "duplicate",
+};
 
 // Un bloc de scan par type : fraîcheur + Lancer/Relancer, ou progression +
 // Annuler tant que le job lancé ici vit (résolution 2 : le handle
@@ -185,7 +193,13 @@ export function CleanupDashboard() {
       <div className="cleanup-grid grid grid-cols-2 gap-3 xl:grid-cols-3">
         {COMPTEURS.map((c) => (
           <button key={c.type} type="button" className={compteur} onClick={() => go({ kind: "cleanupView", type: c.type })}>
-            <span className="cleanup-card-label">{c.label}<span aria-hidden="true" className="cleanup-card-arrow">↗</span></span>
+            <span className="cleanup-card-label">
+              <span className="flex items-center gap-2">
+                <IconeEtat etat={ETAT_COMPTEUR[c.type]} decorative />
+                {c.label}
+              </span>
+              <span aria-hidden="true" className="cleanup-card-arrow">↗</span>
+            </span>
             <span className="cleanup-card-value" data-testid={`compteur-${c.type}`}>
               {jamais(c.scan)
                 ? t("cleanup.jamaisAnalyse")

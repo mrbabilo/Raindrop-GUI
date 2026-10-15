@@ -64,6 +64,14 @@ describe("RaindropRow — signalétique (DESIGN.md §2)", () => {
     expect(row()).not.toHaveClass("filet");
   });
 
+  it("nomme aussi le diagnostic par une icône, sans dépendre de la couleur", () => {
+    const { rerender } = ligne({ etat: "dead" });
+    expect(screen.getByRole("img", { name: "Lien invalide" })).toHaveAttribute("data-diagnostic", "dead");
+    const props = { r: raindrop(), selected: false, isDetail: false, poignee: { onPointerDown: noop, onClick: noop }, onToggle: noop, onTag: noop };
+    rerender(<RaindropRow {...props} etat="duplicate" />);
+    expect(screen.getByRole("img", { name: "Doublon" })).toHaveAttribute("data-diagnostic", "duplicate");
+  });
+
   // Les autres assertions de filet ne portent que sur des noms de classe :
   // jsdom ne peint rien, donc aucune ne peut attraper une bande qui s'affiche
   // au mauvais endroit. Celle-ci injecte la règle `.filet` RÉELLE (lue dans

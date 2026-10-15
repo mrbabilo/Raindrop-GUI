@@ -14,6 +14,7 @@ import { RevueDedupeFin } from "./RevueDedupeFin";
 import { BarreProgression } from "./BarreProgression";
 import { lancerDedupe } from "./lancerDedupe";
 import { nomIcone } from "../design/nomIcone";
+import { CaseSelection } from "./CaseSelection";
 
 type ReviewView = Extract<View, { kind: "review" }>;
 
@@ -255,17 +256,16 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
               <label
                 key={i.id}
                 {...clavier.ligne(v.index)}
-                className="absolute left-0 flex h-9 w-full items-center gap-2 border-b border-app-border px-4 text-sm"
+                className="interactive-row absolute left-0 flex h-9 w-full items-center gap-2 border-b border-app-border px-4 text-sm"
                 style={{ transform: `translateY(${v.start}px)` }}
               >
                 {/* C'est la LIGNE qui est l'arrêt de tabulation : la case en
                     sort, et l'espace la coche depuis la ligne active. */}
-                <input
-                  type="checkbox"
+                <CaseSelection
                   tabIndex={-1}
                   aria-label={i.title}
                   checked={!excluded.has(i.id)}
-                  onChange={() => basculer(i.id)}
+                  onToggle={() => basculer(i.id)}
                 />
                 <span className="min-w-0 flex-1 truncate">
                   {i.title}

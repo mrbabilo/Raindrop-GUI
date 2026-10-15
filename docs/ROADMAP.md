@@ -1,9 +1,11 @@
 # Roadmap — Raindrop-GUI
 
-Mise à jour : **15 octobre 2026**, pour la publication de
+Mise à jour : **15 octobre 2026**, après la publication de
 [v0.1.0-pre.22](https://github.com/mrbabilo/Raindrop-GUI/releases/tag/v0.1.0-pre.22).
-La première passe UI et le correctif des doublons introuvables sont intégrés.
-Cette préversion ne clôture ni l’audit ni la généralisation de la charte.
+La première passe UI, le correctif des doublons introuvables et le lot local de
+sélection peinte avec iconographie diagnostique sont intégrés. Cette préversion
+ne clôture ni l’audit ni la généralisation de la charte ; le dernier lot reste
+à publier.
 
 Sources : [audit et constats A01–A13](audits/2026-10-15/README.md),
 [charte v2 proposée](DESIGN-v2-proposition.md),
@@ -19,15 +21,18 @@ reprendre une tâche ; une case cochée ci-dessous ne signifie pas « publié »
 | Bibliothèque, Nettoyage, sauvegarde, lecture, vues sauvegardées | Socle implémenté ; historique dans CHANGELOG et Git |
 | Revérification des indéterminés | Implémentée, commit `6f155db` ; ne pas refaire |
 | Audit transversal | 13 constats documentés ; certains restent à confirmer dynamiquement |
-| Harnais navigateur | 80 tests réussis, Chromium/WebKit, clair 1280×800 et sombre 960×600 |
+| Harnais navigateur | 88 tests réussis sur la branche courante, Chromium/WebKit, clair 1280×800 et sombre 960×600 |
 | Corrections de fiabilité | A02, A04, partie d’A08/A09 et doublons introuvables intégrés jusqu’à pre.22 |
-| Suite complète | 1 275 tests réussis, aucun échec, 2 ignorés |
+| Suite complète | 1 282 tests réussis sur la branche courante, aucun échec, 2 ignorés |
 | Livraison native | pre.22 publiée : DMG et ZIP arm64, empreintes vérifiées, signature ad-hoc ; 73 tests Rust réussis, 2 ignorés |
-| Charte v2 | Première passe pilote incluse dans pre.22 (bibliothèque, Nettoyage, Revue et animations) ; revue utilisateur et généralisation restantes |
+| Charte v2 | Première passe pilote incluse dans pre.22 ; sélection peinte, survols et pictogrammes diagnostiques harmonisés localement ; revue utilisateur et généralisation restantes |
 
 Validation de pre.22 : **80 tests UI**, **1 275 tests Vitest** et **73 tests
 Rust** réussis ; 2 tests Vitest et 2 tests Rust ignorés. Le focus clavier
 intermittent reste suivi, voir [validation](../e2e/VALIDATION.md).
+
+Validation de la branche courante : **88 tests UI** et **1 282 tests Vitest**
+réussis, 2 tests Vitest ignorés. Ce lot n’est pas encore publié.
 
 ## Ordre et dépendances
 
@@ -77,6 +82,15 @@ comparaison. Les captures actuelles ne sont pas des références pixel approuvé
 ## Jalon 3 — Accessibilité et généralisation UI
 
 - [x] Première passe de mouvement : transitions 120 ms, entrées de fiche/dialogue 180 ms, chargement nommé ; animations entièrement coupées selon la préférence système.
+- [x] **Sélection peinte au pointeur :** maintenir le bouton principal sur une
+  case et traverser les suivantes applique le même état dans la bibliothèque,
+  les collections, le Nettoyage, les doublons et la Revue. Conserver clic,
+  Maj-clic, clavier, tactile, réduction des mouvements et garde du dernier
+  doublon ; validation Chromium/WebKit dans les quatre profils du harnais.
+- [x] **Doubler la couleur des diagnostics par une forme :** chaîne rompue,
+  flèche coudée, point d’interrogation et copies superposées dans le Nettoyage,
+  la liste et la mosaïque ; noms accessibles hors libellé adjacent et tests
+  Chromium/WebKit dans les quatre profils.
 
 - [x] **A08, réglages :** dialogue nommé, focus initial/contenu/restitué, Échap exclusif, raccourcis globaux neutralisés et hauteur défilante bornée.
 - [x] **A09, défilement :** maintenir l’option active de la palette dans la zone visible.
@@ -113,7 +127,9 @@ jalons 1–4 sont terminés. La recette native interactive reste ouverte.
 - [ ] Vérifier avec des données de test contrôlées les actions de création/restauration/suppression ; les fixtures HTTP ne prouvent pas le contrat réel Raindrop.
 - [x] Changelog et notes de version préparés ; ZIP et DMG arm64 générés, signature et version du bundle contrôlées, archives vérifiées.
 - [x] Publier pre.22 sur demande explicite : tag `v0.1.0-pre.22` sur `e5d1544`, ZIP, DMG et empreintes publiés puis comparés aux artefacts locaux.
-- [ ] Vérifier installation et lancement depuis les artefacts téléchargés, sur une session macOS utilisateur ; le build et les tests automatisés ne constituent pas cette recette.
+- [x] Vérifier installation et lancement depuis les artefacts téléchargés sur
+  une session macOS utilisateur, ainsi que l’ouverture du doublon périmé et son
+  issue explicite. Les autres parcours natifs détaillés ci-dessus restent ouverts.
 - [ ] Évaluer Developer ID et notarisation si une distribution sans blocage Gatekeeper devient nécessaire.
 
 **Cible de stabilisation :** preuves rattachées à la version candidate, aucun P1 ouvert et aucun

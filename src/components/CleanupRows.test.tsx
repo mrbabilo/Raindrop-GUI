@@ -120,6 +120,7 @@ describe("les lignes de Nettoyage ouvrent la fiche", () => {
 
   it("lien mort : un clic ouvre — le lien Wayback, non", async () => {
     rendu(<DeadRow r={lien()} collectionRacine="Dev" />);
+    expect(screen.getByRole("img", { name: "Lien invalide" })).toBeInTheDocument();
     await userEvent.click(screen.getByText("Lien concerné"));
     expect(detail()).toBe("9");
     await userEvent.click(screen.getByRole("link", { name: /Chercher une copie archivée/ }));
@@ -210,6 +211,7 @@ describe("RedirectRow — un indéterminé ne se remplace pas", () => {
 
   it("indéterminé redirigé vers un 403 : la finale se lit, sans Remplacer", () => {
     rendu(<RedirectRow r={lien({ status: "indeterminate", redirectKind: "temporary", finalUrl: "https://exemple.fr/login?next=/b" })} />);
+    expect(screen.getByRole("img", { name: "À vérifier" })).toHaveAttribute("data-diagnostic", "indeterminate");
     expect(screen.getByText("https://exemple.fr/login?next=/b")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Remplacer par l'URL finale" })).not.toBeInTheDocument();
   });

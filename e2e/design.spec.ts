@@ -44,6 +44,19 @@ test("Bibliothèque : titre, filtres nommés et champ utilisables en fenêtre co
   await capture(page, "bibliotheque-filtres-pilote");
 });
 
+test("Cases : le survol répond en 120 ms et respecte le mouvement réduit", async ({ page, openApp }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await openApp();
+  const checkbox = page.getByRole("checkbox", { name: /Sélectionner Guide de conception accessible/ });
+  const normal = await checkbox.evaluate((el) => getComputedStyle(el).transitionDuration);
+  expect(normal).toContain("0.12s");
+  await checkbox.hover();
+  await expect(checkbox).not.toHaveCSS("transform", "none");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(checkbox).toHaveCSS("transition-duration", "0s");
+});
+
 for (const reducedMotion of ["reduce", "no-preference"] as const) {
   test(`Dialogue : mouvement ${reducedMotion}, focus et état final`, async ({ page, openApp }) => {
     await page.emulateMedia({ reducedMotion });

@@ -3,7 +3,8 @@ import { Icone } from "../design/icones";
 import type { RaindropItem } from "../../shared/types";
 import { Glyphe, libelleNature } from "../design/glyphes";
 import { Etoile } from "../design/Etoile";
-import { CarreCollection, PiluleEtiquette, filetEtat, type EtatLien } from "../design/Signaux";
+import { CarreCollection, IconeEtat, PiluleEtiquette, filetEtat, type EtatLien } from "../design/Signaux";
+import { CaseSelection } from "./CaseSelection";
 
 const dateFr = (iso: string) => new Date(iso).toLocaleDateString("fr-FR");
 
@@ -76,7 +77,7 @@ export function RaindropRow(props: {
           ses contrôles — mesuré au navigateur, vingt-neuf lignes montées
           faisaient cent vingt-six arrêts à elles seules. La case reste
           cliquable, et la barre d'espace la coche depuis la ligne active. */}
-      <input type="checkbox" tabIndex={-1} aria-label={t("list.select", { title: r.title })} checked={props.selected} readOnly onClick={(e) => { e.stopPropagation(); props.onToggle(e.shiftKey); }} />
+      <CaseSelection tabIndex={-1} aria-label={t("list.select", { title: r.title })} checked={props.selected} onToggle={props.onToggle} />
       {/* La poignée : rien n'annonçait qu'une ligne se tirait — on ne le
           découvrait qu'en essayant. Elle ne CAPTE pas le geste (toute la
           ligne reste tirable, comportement d'origine) ; elle le signale, et
@@ -88,6 +89,7 @@ export function RaindropRow(props: {
       >
         <Icone nom="poignee" />
       </span>
+      <IconeEtat etat={props.etat} />
       <CarreCollection collectionId={r.collectionId} titre={props.collectionRacine} />
       <span className="min-w-[8rem] flex-1 truncate font-medium">{r.title}</span>
       {r.important && <span role="img" className="shrink-0 text-app-muted" aria-label={t("detail.favorite")}><Etoile /></span>}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -101,6 +101,31 @@ describe("doublons — la garde, le gardé, et le tri", () => {
     // restera, pas sur le geste.
     await userEvent.click(screen.getByRole("checkbox", { name: /Copie récente/ }));
     expect(screen.getByRole("checkbox", { name: /Ancienne page/ })).toBeEnabled();
+  });
+
+  it("la peinture respecte la garde et laisse toujours un exemplaire", async () => {
+    groupsMock.mockReturnValue({
+      data: {
+        exact: [groupe("exact", [
+          { id: 11, title: "Première", created: "2020-01-01T00:00:00Z" },
+          { id: 12, title: "Deuxième", created: "2021-01-01T00:00:00Z" },
+          { id: 13, title: "Troisième", created: "2022-01-01T00:00:00Z" },
+        ])],
+        normalized: [], fuzzy: [],
+      },
+    });
+    render(<Doublons />, { wrapper });
+    const cases = ["Première", "Deuxième", "Troisième"].map((nom) => screen.getByRole("checkbox", { name: new RegExp(nom) }));
+
+    fireEvent.pointerDown(cases[0]!, { button: 0, buttons: 1 });
+    fireEvent.pointerEnter(cases[1]!, { buttons: 1 });
+    fireEvent.pointerEnter(cases[2]!, { buttons: 1 });
+    fireEvent.pointerUp(cases[2]!, { button: 0, buttons: 0 });
+
+    expect(cases[0]).toBeChecked();
+    expect(cases[1]).toBeChecked();
+    expect(cases[2]).not.toBeChecked();
+    expect(cases[2]).toBeDisabled();
   });
 
   it("« Garder le meilleur » coche la copie, pas l'originale", async () => {

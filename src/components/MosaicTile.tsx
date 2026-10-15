@@ -1,6 +1,6 @@
 import type { RaindropItem } from "../../shared/types";
 import { Glyphe, libelleNature } from "../design/glyphes";
-import { filetEtat, variablesTeinte, type EtatLien } from "../design/Signaux";
+import { IconeEtat, filetEtat, variablesTeinte, type EtatLien } from "../design/Signaux";
 
 // DESIGN.md §8 : tuile de 221 px MINIMUM, vignette au ratio 221:118 (elle
 // grandit avec la tuile — la grille étire les colonnes pour remplir le
@@ -47,6 +47,7 @@ export function MosaicTile({
       </div>
       <span className="line-clamp-2 px-2 pt-1 text-[13px] leading-tight">{r.title}</span>
       <span className="flex items-center gap-1 px-2 pb-1 pt-0.5 text-app-muted">
+        <IconeEtat etat={etat} />
         <Glyphe type={r.type} />
         {/* La nature identifiée EN TOUTES LETTRES (signalement 2026-09-20) :
             le glyphe seul exige de le deviner. */}

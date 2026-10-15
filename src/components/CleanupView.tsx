@@ -10,7 +10,7 @@ import { useCollections } from "../hooks/useStaticData";
 import { collectionsVides, triPourSuppression, chaineDe } from "../lib/arbre";
 import { Icone } from "../design/icones";
 import { EmptyCollectionRow, TrashRow } from "./CleanupRows";
-import { ActionLigne, Ligne } from "./LigneActivable";
+import { ActionLigne, CaseSelectionLigne, Ligne } from "./LigneActivable";
 import { Entete, LABELS, type CleanupType } from "./EnteteCleanup";
 import { ResultatsLiens } from "./ResultatsLiens";
 import { Doublons } from "./ResultatsDoublons";
@@ -112,13 +112,10 @@ function NonTaggues() {
             {/* C'est la LIGNE qui ouvre la fiche ; la case, elle, sélectionne
                 pour l'étiquetage en masse — stopPropagation, sinon cocher
                 ouvrirait la fiche au passage. */}
-            <ActionLigne
-              el="input"
-              type="checkbox"
+            <CaseSelectionLigne
               aria-label={t("list.select", { title: r.title })}
               checked={selectedIds.has(r.id)}
-              onClick={(e) => e.stopPropagation()}
-              onChange={() => toggleSelect(r.id)}
+              onToggle={() => toggleSelect(r.id)}
             />
             {/* Au clavier, le titre est le bouton qui ouvre la fiche — le
                 bubble vers la ligne rejoue selectRaindrop, même id, sans

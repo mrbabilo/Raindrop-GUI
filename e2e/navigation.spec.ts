@@ -33,6 +33,30 @@ test("flèches, sélection et ouverture du détail au clavier", async ({ page, o
   await capture(page, "bibliotheque-detail");
 });
 
+test("maintenir et survoler les cases peint la sélection puis la désélection", async ({ page, openApp }) => {
+  await openApp();
+  const cases = [0, 1, 2].map((i) => page.getByRole("checkbox", { name: `Sélectionner ${i === 0 ? "Guide de conception accessible — navigation, couleurs et interactions" : `Ressource ${String(i + 1).padStart(2, "0")}`}` }));
+  const centres = await Promise.all(cases.map(async (c) => {
+    const box = await c.boundingBox();
+    if (!box) throw new Error("Case de sélection invisible");
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  }));
+
+  await page.mouse.move(centres[0]!.x, centres[0]!.y);
+  await page.mouse.down();
+  await page.mouse.move(centres[1]!.x, centres[1]!.y);
+  await page.mouse.move(centres[2]!.x, centres[2]!.y);
+  await page.mouse.up();
+  for (const checkbox of cases) await expect(checkbox).toBeChecked();
+
+  await page.mouse.move(centres[0]!.x, centres[0]!.y);
+  await page.mouse.down();
+  await page.mouse.move(centres[1]!.x, centres[1]!.y);
+  await page.mouse.move(centres[2]!.x, centres[2]!.y);
+  await page.mouse.up();
+  for (const checkbox of cases) await expect(checkbox).not.toBeChecked();
+});
+
 test("la recherche vide garde une issue vers les résultats", async ({ page, openApp }) => {
   await openApp();
   const search = page.getByRole("textbox", { name: "Rechercher", exact: true });
@@ -69,6 +93,9 @@ test("Nettoyage distingue une analyse absente de zéro problème", async ({ page
   await openApp();
   await page.getByRole("button", { name: "Nettoyage", exact: true }).click();
   await expect(page.getByRole("button", { name: /Liens morts/ })).toContainText(/jamais/i);
+  for (const etat of ["dead", "redirect", "indeterminate", "duplicate"]) {
+    await expect(page.locator(`[data-diagnostic="${etat}"]`).first()).toBeVisible();
+  }
   await capture(page, "nettoyage");
 });
 

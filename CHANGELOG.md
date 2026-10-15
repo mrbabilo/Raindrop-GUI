@@ -5,6 +5,36 @@ versionnement [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+### Ajouté
+
+- Les liens invalides, redirections, résultats à vérifier et doublons ont
+  chacun un pictogramme propre dans les compteurs du Nettoyage, les lignes de
+  résultats et les vues liste/mosaïque. Chaque icône porte un nom accessible ;
+  les cartes qui donnent déjà ce nom évitent de le faire annoncer deux fois.
+- Maintenir le bouton principal sur une case puis survoler d’autres cases
+  applique le même état à toute la traversée. Le geste fonctionne dans la
+  bibliothèque, les collections, le Nettoyage, les doublons et la Revue ; un
+  survol passif ne change rien, Maj-clic conserve la sélection de plage et la
+  garde des doublons laisse toujours un exemplaire.
+
+### Modifié
+
+- La signalétique de diagnostic associe désormais le filet existant à une
+  silhouette distincte : chaîne rompue, flèche de redirection, point
+  d’interrogation ou copies superposées. Un résultat HTTP indéterminé conserve
+  bien sa marque « à vérifier », même lorsqu’il expose une URL finale.
+- Les cases réagissent au survol et à la pression en 120 ms. Les lignes de
+  bibliothèque, Nettoyage et Revue partagent une réponse de surface discrète,
+  sans animer la position des lignes virtualisées. La réduction des mouvements
+  coupe toujours toutes les transitions.
+
+### Validation
+
+- 1 282 tests Vitest et 88 tests navigateur réussis. Le geste de peinture et
+  les quatre diagnostics sont validés sur Chromium et WebKit, dans les thèmes
+  clair et sombre compacts ; les tests couvrent aussi la désélection, le survol
+  passif, Maj-clic, le clic simple et la garde du dernier doublon.
+
 ## [0.1.0-pre.22] — 2026-10-15
 
 [Release GitHub](https://github.com/mrbabilo/Raindrop-GUI/releases/tag/v0.1.0-pre.22)

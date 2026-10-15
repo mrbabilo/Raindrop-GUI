@@ -47,6 +47,11 @@ describe("MosaicTile", () => {
     expect(container.querySelector(".coiffe")).toBeNull();
   });
 
+  it("affiche l'icône nommée du diagnostic dans les métadonnées", () => {
+    render(<MosaicTile r={raindrop()} etat="indeterminate" onOpen={() => undefined} />);
+    expect(screen.getByRole("img", { name: "À vérifier" })).toHaveAttribute("data-diagnostic", "indeterminate");
+  });
+
   // Symétrique du test de `.filet` : la coiffe n'a pas de padding aujourd'hui,
   // mais les deux règles doivent rester honnêtes sur la boîte de référence.
   it("la coiffe se peint depuis le bord de la vignette (§5)", () => {

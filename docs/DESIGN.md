@@ -32,6 +32,11 @@ précisent et remplacent les anciennes valeurs contradictoires pour ces
   fiche en 180 ms, translation de 6–8 px maximum ; apparition des vues en
   opacité. Aucun ressort, délai de focus, animation des colonnes ni maintien
   d’un dialogue fermé pour jouer une sortie. Fermeture immédiate au clavier.
+- **Sélection peinte :** bouton principal maintenu depuis une case, le survol
+  applique aux cases traversées l’état choisi au départ. Un survol passif ne
+  modifie rien ; Maj-clic conserve la plage, le tactile reste un clic et les
+  gardes métier (dernier doublon) restent prioritaires. Les cases répondent en
+  120 ms ; la position des lignes virtualisées ne s’anime jamais.
 - **Chargement :** indicateur rotatif uniquement pendant le chargement réel,
   accompagné de son texte dans un statut accessible ; aucun faux pourcentage.
 - **Préférence système :** `prefers-reduced-motion: reduce` supprime toutes
@@ -269,15 +274,18 @@ liste, teinte de la vignette en mosaïque, fil d'Ariane dans la fiche.
 La **forme** distingue autant que la couleur — un lien mort et une redirection
 restent différenciables sans percevoir le rouge et l'ambre.
 
-| État | Marque | Couleur |
-|---|---|---|
-| sain | *aucune* | — |
-| lien mort | trait plein | `--broken` |
-| redirection | pointillé large (4 px / 4 px) | `--moved` |
-| vérification impossible | pointillé fin (1 px / 2 px) | `--unsure` |
-| doublon | double trait vertical | `--ink` |
+| État | Marque | Icône | Couleur |
+|---|---|---|---|
+| sain | *aucune* | *aucune* | — |
+| lien mort | trait plein | chaîne rompue | `--broken` |
+| redirection | pointillé large (4 px / 4 px) | flèche coudée | `--moved` |
+| vérification impossible | pointillé fin (1 px / 2 px) | point d’interrogation cerclé | `--unsure` |
+| doublon | double trait vertical | copies superposées | `--ink` |
 
-En liste la marque borde la ligne ; en mosaïque elle coiffe la vignette.
+En liste la marque borde la ligne ; en mosaïque elle coiffe la vignette. Le
+pictogramme complète cette marque dans les lignes, les métadonnées de tuile et
+les compteurs du Nettoyage. Sa silhouette répète le sens sans dépendre de la
+couleur ; hors texte adjacent, son nom accessible annonce le diagnostic.
 
 **Une ligne ne porte qu'UNE marque, et « mort » l'emporte sur « doublon ».**
 Un signet peut être les deux — sur la bibliothèque réelle, 1 032 signets sont

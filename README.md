@@ -31,10 +31,13 @@ de la charte et la recette native complète restent ouvertes.
   vignettes, collections imbriquées, palette ⌘K, édition inline, filtres
   (étiquettes, nature, domaine, dates), recherche composée
   (`#tag`, `domain:`, `type:`), **drag & drop** vers les collections, la
-  corbeille, les favoris, « Non classés » et les étiquettes.
+  corbeille, les favoris, « Non classés » et les étiquettes. La sélection
+  multiple se peint aussi en maintenant le bouton principal sur les cases à
+  cocher traversées, pour sélectionner ou désélectionner une série.
 - **Nettoyage** — liens morts, redirections, indéterminés, doublons (tri avec
   consolidation des étiquettes dans le gardé), non-taggés, collections vides,
-  corbeille. **Restauration partout** : fiche, barre de sélection, drag
+  corbeille. Filets et pictogrammes distincts rendent chaque diagnostic lisible
+  sans dépendre de la couleur. **Restauration partout** : fiche, barre de sélection, drag
   depuis la corbeille. Les opérations de nettoyage utilisent une Revue à
   deux niveaux de confirmation ; déplacer ou mettre à la corbeille depuis
   la sélection agit directement, avec un avis et une action Annuler.
