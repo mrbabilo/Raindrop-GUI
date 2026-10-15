@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Raindrop GUI",
-  "version": "0.1.0-pre.22",
+  "version": "0.1.0-pre.23",
   "identifier": "com.babilosapiens.raindrop-gui",
   "build": {
     "beforeDevCommand": "npm run dev",
