@@ -63,12 +63,13 @@ export function TopBar() {
   const enMosaique = view.viewMode === "mosaic";
 
   return (
-    <div ref={containerRef} className="border-b border-app-border">
-      <div className="flex items-center gap-2 px-3 py-2">
+    <div ref={containerRef} className="library-toolbar min-w-0 border-b border-app-border">
+      <h1 className="library-title">{view.label}</h1>
+      <div className="library-controls flex flex-wrap items-center gap-2 px-3 pb-3">
         <input
           aria-label={t("search.label")}
           data-testid="recherche"
-          className="input w-64"
+          className="input library-search"
           // La recherche porte sur la collection OUVERTE : le champ le dit —
           // ne rien trouver dans « Dev » ne veut pas dire « nulle part ».
           placeholder={view.collectionId === 0 ? t("search.placeholder") : t("search.placeholderDans", { label: view.label })}
@@ -111,10 +112,11 @@ export function TopBar() {
           {...nomIcone(t("filter.advanced"))}
           aria-expanded={reglages || actifs(view)}
           aria-controls="panneau-filtres"
-          className={commande}
+          className="btn"
           onClick={() => setReglages((v) => !v)}
         >
           <Icone nom="reglages" />
+          <span>{t("filter.label")}</span>
         </button>
         {/* §9 : un geste, un contrôle. L'icône montre le mode VERS LEQUEL on
             bascule, et son nom accessible le dit — pas d'aria-pressed, ce

@@ -5,8 +5,17 @@ versionnement [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
-Aucun changement produit depuis pre.21. Documentation de publication et suivi
-de roadmap actualisés ; les points ouverts ne sont pas déclarés corrigés.
+### Interface et mouvement — première passe pilote
+
+- Bibliothèque : titre visible, filtre nommé, recherche adaptable ; navigation
+  et fiche sur toute la hauteur, contrôles de 32 px et actions primaires contrastées.
+- Nettoyage : cartes structurées, introduction et analyses distinctes des compteurs.
+- Revue : fiche temporairement masquée, sélection retrouvée au retour et
+  confirmation irréversible explicitée.
+- Transitions de 120 ms, entrées de panneaux/dialogues de 180 ms et indicateur
+  de chargement accessible ; réduction des animations respectée.
+- Tests navigateur de mise en page, contraste, focus et mouvement ajoutés.
+  Les écrans pilotes restent à examiner avant généralisation de la charte.
 
 ## [0.1.0-pre.21] — 2026-10-15
 

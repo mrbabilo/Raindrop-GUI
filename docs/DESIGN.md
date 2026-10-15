@@ -7,6 +7,42 @@
 > Maquette de référence : canvas « Raindrop-GUI — Interface » (six plans :
 > liste, mosaïque, fiche, arborescence, vocabulaire, Revue).
 
+## Passe pilote v2 — 15 octobre 2026
+
+Cette passe implémente la direction demandée sur bibliothèque, Nettoyage et
+Revue, plus les primitives et dialogues communs. Les règles ci-dessous
+précisent et remplacent les anciennes valeurs contradictoires pour ces
+éléments ; la proposition v2 complète n’est pas encore généralisée.
+
+- **Composition :** navigation et fiche occupent toute la hauteur sous
+  l’en-tête. Titre de bibliothèque à 20 px, recherche adaptable et bouton
+  « Filtres » visible. La Revue masque la fiche en conservant sa sélection
+  pour le retour ; sa confirmation reste accessible à 960×600.
+- **Densité :** boutons et champs communs à 32 px, action de Revue à 38 px.
+  Lignes virtualisées conservées à leur densité actuelle ; leur transform
+  de positionnement ne sert jamais à une animation.
+- **Surfaces :** cartes de Nettoyage bordées et arrondies à 12 px, analyses
+  séparées des compteurs. Les états « jamais analysé » restent distincts
+  de zéro. Ombre réservée aux dialogues, rayon 14 px.
+- **Actions :** variante `.btn-primary` en encre sur surface inversée pour
+  Sauvegarder et Exécuter ; aucune nouvelle couleur de marque. Contraste du
+  texte contrôlé dans les deux thèmes. Les contrôles métier et confirmations
+  sont conservés, avec rappel textuel d’irréversibilité en niveau 2.
+- **Mouvement :** réponse des surfaces en 120 ms ; ouverture de dialogue et
+  fiche en 180 ms, translation de 6–8 px maximum ; apparition des vues en
+  opacité. Aucun ressort, délai de focus, animation des colonnes ni maintien
+  d’un dialogue fermé pour jouer une sortie. Fermeture immédiate au clavier.
+- **Chargement :** indicateur rotatif uniquement pendant le chargement réel,
+  accompagné de son texte dans un statut accessible ; aucun faux pourcentage.
+- **Préférence système :** `prefers-reduced-motion: reduce` supprime toutes
+  les animations/transitions, y compris le chargement. Le texte de statut
+  et tous les états restent disponibles.
+
+Implémentation : `src/design/pilotes.css`, primitives dans `src/styles.css`.
+Vérification : `e2e/design.spec.ts` et captures du rapport Playwright. La revue
+visuelle avec l’utilisateur et la généralisation aux autres écrans restent
+au suivi ; les captures ne sont pas des références pixel approuvées.
+
 ## 1. Ce que l'application est
 
 Un outil de **diagnostic et de réparation** pour une bibliothèque de 12 210

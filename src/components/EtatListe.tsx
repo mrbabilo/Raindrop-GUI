@@ -59,7 +59,7 @@ export function EtatListe({
       </p>
     );
   }
-  if (chargement) return <p className="p-4 text-app-muted">{t("state.loading")}</p>;
+  if (chargement) return <p role="status" className="loading-state p-4 text-app-muted"><span aria-hidden="true" className="loading-indicator" />{t("state.loading")}</p>;
   // AVANT le vide : c'est lui qui explique le vide, comme l'échec plus haut.
   if (jamaisAnalyse === true) {
     if (analyseEnCours === true) return <p className="p-4 text-sm text-app-muted">{t("cleanup.scanRunning")}</p>;

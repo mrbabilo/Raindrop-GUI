@@ -134,13 +134,13 @@ describe("Composer", () => {
   // --color-app-broken, couleur d'un diagnostic). Même garde-fou que
   // BulkBar.test : scan DOM + preuve de non-vacuité (sinon le scan passerait
   // à vide sur un composer sans alerte rendue).
-  it("aucun jeton fantôme : alerte en app-broken, bouton primaire en app-sel (R10P-2)", async () => {
+  it("aucun jeton fantôme : alerte en app-broken, bouton primaire contrasté (R10P-2)", async () => {
     const { container } = render(<Composer />);
     await userEvent.type(screen.getByPlaceholderText(COLLER), "https://doublon.example/a");
     await waitFor(() => expect(screen.getByText("Déjà sauvegardé")).toBeInTheDocument());
     expect(container.querySelector("[class*='app-danger'], [class*='app-accent']")).toBeNull();
     expect(screen.getByText("Déjà sauvegardé")).toHaveClass("text-app-broken");
-    expect(screen.getByRole("button", { name: "Sauvegarder" })).toHaveClass("bg-app-sel");
+    expect(screen.getByRole("button", { name: "Sauvegarder" })).toHaveClass("btn-primary");
   });
 
   // Une URL collée depuis une barre d'adresse ou un document peut arriver en

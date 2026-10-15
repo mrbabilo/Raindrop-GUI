@@ -51,6 +51,14 @@ et le contexte de stockage sont isolés entre tests. WebKit Playwright
 approche le moteur de l'application macOS ; il ne remplace pas un test du
 shell Tauri, du trousseau ou des dialogues natifs.
 
+## Écrans pilotes et mouvement
+
+`design.spec.ts` vérifie la largeur de Revue et le retour à la fiche, le titre
+et les filtres de bibliothèque, le contraste des actions primaires et les
+animations de dialogue/chargement avec `reduce` et `no-preference`.
+Les tests existants restent en mouvement réduit pour isoler les régressions
+fonctionnelles. Les captures des pilotes sont jointes au rapport HTML.
+
 ## Ce que les scénarios vérifient
 
 | Parcours | Régression détectée |

@@ -1,10 +1,14 @@
 # Charte UI v2 — proposition à valider
 
 Statut : proposition du 15 octobre 2026, initialement rédigée sur `6f155db`.
+Une première passe pilote est maintenant implémentée sur bibliothèque,
+Nettoyage et Revue, avec animations et primitives partagées. Voir la section
+« Passe pilote v2 » de `DESIGN.md` pour les règles effectivement appliquées.
+La comparaison utilisateur et la généralisation restent à faire.
 Après intégration de GitHub `e78aa8e`, plusieurs améliorations UX existent
 déjà : confronter chaque proposition au DESIGN.md courant avant application. `DESIGN.md` reste la référence
 actuelle jusqu'à validation. Ce document décrit la cible ; il ne prétend
-pas que l'interface l'applique déjà.
+pas que l'ensemble de l'interface l'applique déjà.
 
 ## Intention
 

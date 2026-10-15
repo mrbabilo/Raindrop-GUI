@@ -121,7 +121,7 @@ describe("TopBar", () => {
     // Épure §9 : domaine et dates vivent désormais dans le panneau replié.
     renderTop();
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Filtres avancés" }));
+    await user.click(screen.getByRole("button", { name: "Filtres" }));
     await user.type(screen.getByLabelText("Domaine"), "example.com");
     await user.click(screen.getByPlaceholderText("Rechercher… (⌘F)"));
     await user.click(screen.getByRole("button", { name: "Articles" }));
@@ -143,7 +143,7 @@ describe("TopBar", () => {
   it("une commande en icône seule laisse la place à son icône (§9)", () => {
     injecterRegles(".btn-icone");
     renderTop();
-    const bouton = screen.getByRole("button", { name: "Filtres avancés" });
+    const bouton = screen.getByRole("button", { name: "Afficher en mosaïque" });
     expect(bouton.className).toContain("btn-icone");
     // Aucun utilitaire de padding ou de largeur : la classe suffit, sinon
     // la cascade rejoue contre nous.
@@ -151,7 +151,7 @@ describe("TopBar", () => {
     const style = getComputedStyle(bouton);
     expect(style.paddingLeft).toBe("0px");
     expect(style.paddingRight).toBe("0px");
-    expect(style.width).toBe("28px");
+    expect(style.width).toBe("32px");
   });
 
   // DESIGN.md §9 « révélé, pas posé » : domaine et dates servent rarement —
@@ -163,7 +163,7 @@ describe("TopBar", () => {
     expect(screen.queryByLabelText("Depuis")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Jusqu'à")).not.toBeInTheDocument();
 
-    const reglages = screen.getByRole("button", { name: "Filtres avancés" });
+    const reglages = screen.getByRole("button", { name: "Filtres" });
     expect(reglages).toHaveAttribute("aria-expanded", "false");
     await user.click(reglages);
     expect(reglages).toHaveAttribute("aria-expanded", "true");
@@ -180,12 +180,12 @@ describe("TopBar", () => {
   it("le panneau reste déplié tant qu'un filtre y est actif (§9)", async () => {
     renderTop();
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Filtres avancés" }));
+    await user.click(screen.getByRole("button", { name: "Filtres" }));
     // « Effacer » est masqué tant qu'il n'y a rien à effacer (§9).
     expect(screen.queryByRole("button", { name: "Effacer les filtres" })).not.toBeInTheDocument();
 
     await user.type(screen.getByLabelText("Domaine"), "example.com");
-    await user.click(screen.getByRole("button", { name: "Filtres avancés" }));
+    await user.click(screen.getByRole("button", { name: "Filtres" }));
     expect(screen.getByLabelText("Domaine")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Effacer les filtres" }));

@@ -98,13 +98,13 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
     // que la sidebar et les puces de nature (R6bP-2), « jamais une teinte ».
     // Le `bg-app-panel` du snippet aurait été invisible sur le panneau,
     // lui-même en `work`/`app-panel`.
-    <div className="fixed inset-0 z-50 bg-black/40 p-4 pt-24" onClick={onClose}>
+    <div className="dialog-backdrop fixed inset-0 z-50 bg-black/40 p-4 pt-24" onClick={onClose}>
       <div
         ref={dialogue}
         role="dialog"
         aria-modal="true"
         aria-label={t("cmdk.titre")}
-        className="mx-auto max-w-lg overflow-hidden rounded border border-app-border bg-app-panel"
+        className="dialog-surface mx-auto max-w-lg overflow-hidden rounded border border-app-border bg-app-panel"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Motif combobox d'ARIA 1.2 : le focus ne quitte JAMAIS le champ,

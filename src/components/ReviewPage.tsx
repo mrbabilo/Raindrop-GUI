@@ -211,15 +211,16 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
   const titre = level2 ? actionLabel : `${actionLabel} — ${review.sourceLabel}`;
 
   return (
-    <main className="flex h-full min-h-0 flex-col">
-      <header className="flex flex-col gap-1 px-4 pb-3 pt-5">
+    <main className="review-pilot view-enter flex h-full min-h-0 flex-col">
+      <header className="flex flex-col gap-2 px-5 pb-4 pt-5">
+        <p className="section-eyebrow">{t("review.title")}</p>
         <h1 className="titre-fiche">{titre}</h1>
         <p className="text-xs text-app-muted">{t("review.count", { n: totalAnnonce })}</p>
         {review.action.op === "dedupe" && <p className="text-xs text-app-muted">{t("review.dedupeNote")}</p>}
       </header>
-      <div className="flex items-center gap-2 px-4 py-2">
+      <div className="flex flex-wrap items-center gap-2 px-5 py-3">
         <input
-          aria-label={t("review.filterAria")} className="input w-64"
+          aria-label={t("review.filterAria")} className="input min-w-0 w-56"
           placeholder={t("review.filterPlaceholder")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
@@ -299,13 +300,14 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
         // Un terme dedupe portant un déficit : la Revue tient pour le dire.
         <RevueDedupeFin r={dedupeFin} />
       ) : (
-      <footer className="flex flex-col gap-2 border-t border-app-border bg-app-panel px-4 py-3 text-sm">
+      <footer className="review-footer flex flex-col gap-3 border-t border-app-border bg-app-panel px-5 py-4 text-sm">
         {dedupeProgress !== null && (
           <div className="flex flex-col gap-1">
             <span className="text-xs text-app-muted">{t("review.dedupeEnCours")}</span>
             <BarreProgression done={dedupeProgress.done} total={dedupeProgress.total} cle="dedupe" />
           </div>
         )}
+        {level2 && <p className="review-warning">{t("review.irreversible")}</p>}
         {level2 ? (
           // R15P-1 : le jeton `border-app-danger` du snippet n'existe pas —
           // §6 : le rouge est un diagnostic (app-broken), la garde du niveau 2
@@ -342,7 +344,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
             d'action) — §8 : action engageante 38 px. */}
         <button
           type="button"
-          className="btn ml-auto h-[38px] bg-app-sel px-4 disabled:opacity-40"
+          className="btn btn-primary ml-auto h-[38px] px-4 disabled:opacity-40"
           disabled={!canRun || pending}
           onClick={execute}
         >

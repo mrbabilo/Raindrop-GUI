@@ -92,7 +92,7 @@ export function Composer() {
 
   return (
     <form
-      className="flex items-center gap-2 border-b border-app-border px-3 py-2"
+      className="composer-bar flex flex-wrap items-center gap-2 border-b border-app-border px-3 py-2"
       onSubmit={(e) => {
         e.preventDefault();
         soumettre();
@@ -100,7 +100,7 @@ export function Composer() {
     >
       <input
         aria-label={t("composer.urlAria")}
-        className="input flex-1"
+        className="input min-w-0 flex-1"
         data-testid="composer-input"
         placeholder={t("composer.placeholder")}
         value={url}
@@ -136,7 +136,7 @@ export function Composer() {
         </p>
       )}
       {/* §6 : l'action primaire se marque par la surface (sel), pas par une teinte. */}
-      <button type="submit" className="shrink-0 rounded bg-app-sel px-2 py-1 text-xs font-medium">
+      <button type="submit" disabled={create.isPending || !url.trim()} className="btn btn-primary shrink-0">
         {t("composer.save")}
       </button>
     </form>

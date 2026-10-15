@@ -21,7 +21,7 @@ import { useUser } from "../hooks/useStaticData";
 // valeur en 12 px quiet (§7), survol par la surface dédiée — pas d'ombre,
 // pas de bordure, l'espacement passe par gap.
 const compteur =
-  "flex items-baseline justify-between gap-3 rounded-[11px] bg-app-panel px-4 py-3 text-left hover:bg-app-hover cursor-pointer";
+  "cleanup-card";
 
 // Fraîcheur : lastScan ISO formaté fr, sinon « jamais » (§10 : l'écran vide
 // invite à agir). Libellés fixés par le plan — R6P, on ne les renomme pas.
@@ -99,8 +99,8 @@ function BlocScan({ type, label, lastScan, running, reprise }: {
   // Le suivi effectif : le job local d'abord, l'adopté sinon.
   const vu = progress ?? adopte?.progress ?? null;
   return (
-    <section aria-label={label} className="flex flex-col gap-1">
-      <div className="flex items-center gap-3">
+    <section aria-label={label} className="scan-card flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-3">
       <h2 className="text-sm font-medium">{label}</h2>
       <span className="text-xs text-app-muted">
         {t("cleanup.lastScan")} : {dateFr(lastScan)}
@@ -178,13 +178,15 @@ export function CleanupDashboard() {
     scan !== null && status.data !== undefined && status.data[scan].lastScan === null;
 
   return (
-    <section aria-label={t("cleanup.title")} className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
-      <h1 className="titre-fiche">{t("cleanup.title")}</h1>
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
+    <section aria-label={t("cleanup.title")} className="cleanup-pilot view-enter flex h-full min-h-0 flex-col gap-5 overflow-y-auto p-5">
+      <header><p className="section-eyebrow">{t("cleanup.eyebrow")}</p>
+        <h1 className="titre-fiche">{t("cleanup.title")}</h1>
+        <p className="mt-1 text-sm text-app-muted">{t("cleanup.intro")}</p></header>
+      <div className="cleanup-grid grid grid-cols-2 gap-3 xl:grid-cols-3">
         {COMPTEURS.map((c) => (
           <button key={c.type} type="button" className={compteur} onClick={() => go({ kind: "cleanupView", type: c.type })}>
-            <span>{c.label}</span>
-            <span className="text-xs text-app-muted" data-testid={`compteur-${c.type}`}>
+            <span className="cleanup-card-label">{c.label}<span aria-hidden="true" className="cleanup-card-arrow">↗</span></span>
+            <span className="cleanup-card-value" data-testid={`compteur-${c.type}`}>
               {jamais(c.scan)
                 ? t("cleanup.jamaisAnalyse")
                 : c.type === "duplicates" && counts.duplicatesItems !== undefined && valeur[c.type] !== undefined
@@ -197,7 +199,8 @@ export function CleanupDashboard() {
           </button>
         ))}
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
+        <h2 className="section-eyebrow">{t("cleanup.analyses")}</h2>
         <BlocScan
           type="links"
           label={t("nature.link")}

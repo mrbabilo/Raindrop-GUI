@@ -58,6 +58,7 @@ export const interfaceTextes = {
   "filter.from": "Depuis",
   "filter.to": "Jusqu'à",
   // §9 « révélé, pas posé » : domaine et dates se déplient depuis la barre.
+  "filter.label": "Filtres",
   "filter.advanced": "Filtres avancés",
   "filter.clear": "Effacer les filtres",
   // Le filtre par étiquettes. « Retenue » plutôt que « sélectionnée » : la

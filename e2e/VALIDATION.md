@@ -1,3 +1,49 @@
+# Passe pilote design et animations — 15 octobre 2026
+
+Passe design après `eaa0332`, non incluse dans la release pre.21 publiée.
+
+`npm run test:ui` : **72 réussis**, sur Chromium et WebKit, en clair
+1280 × 800 et sombre 960 × 600. Les 20 exécutions supplémentaires couvrent :
+
+- Revue sur toute la largeur et restauration de la fiche au retour ;
+- titre de bibliothèque, filtres nommés, recherche et absence de débordement ;
+- contraste du bouton primaire actif (au moins 4,5:1) ;
+- animation des réglages, état final, focus et restitution après Échap ;
+- préférence de mouvement réduit et indicateur de chargement.
+
+Captures clair/sombre inspectées : bibliothèque avec détail, Nettoyage et
+Revue. Rapport : `playwright-report/index.html` ; sélection de captures locales :
+`test-results/pilotes/`. Ces fichiers générés sont ignorés par Git.
+La comparaison visuelle avec l'utilisateur et la généralisation restent ouvertes.
+
+Contrôles TypeScript front, sidecar et UI, contrôle de taille et relecture
+indépendante : succès. Les tests de composants ciblés comptent 95 réussites.
+Le premier passage complet, en parallèle des navigateurs, a rencontré deux
+échecs temporels dans `linkchecker.test.ts` et `archives.test.ts` ; ces deux
+fichiers passent isolément (34 tests).
+
+Relance complète sans navigateurs concurrents (`npm test -- --maxWorkers=2`) :
+**1 262 réussis, 1 échec, 2 ignorés**. L'échec concerne
+`ListPane.touches.test.tsx`, « une touche née dans un contrôle de la ligne ne la
+vise pas ». Ce fichier passe ensuite isolément (5/5). Le hook existant
+`useIndexClavier` programme un focus de ligne après propagation du focus d'un
+contrôle : une course avec cette frame est une piste à reproduire, pas un
+diagnostic définitivement validé. Ce passage complet n'était donc pas vert.
+Aucun changement de comportement clavier n'a été ajouté dans cette passe.
+
+Lors du build complet demandé ensuite (`python3 scripts/build_app.py`), la suite
+passe : **1 263 réussis, aucun échec, 2 ignorés**, ainsi que les typechecks front
+et sidecar. Ce passage réussi ne clôture pas le suivi du focus intermittent.
+Build Tauri macOS arm64 réussi : `.app` et `.dmg` dans
+`src-tauri/target/release/bundle/`. Version conservée à 0.1.0-pre.21 pour ce
+build local ; les artefacts de la release publiée restent inchangés. Version,
+signature ad-hoc et présence du sidecar/MCP embarqués vérifiées par le script.
+
+Les réponses HTTP sont simulées. Cette validation ne couvre pas le shell Tauri,
+VoiceOver ou un compte réel ; aucun test Rust n'a été relancé pour cette passe CSS/React.
+
+---
+
 # Résultats du 15 octobre 2026 — intégration GitHub et corrections UI
 
 Base : `e78aa8e`, 61 commits GitHub intégrés depuis `6f155db`, puis

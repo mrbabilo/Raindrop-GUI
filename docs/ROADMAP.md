@@ -24,7 +24,11 @@ reprendre une tâche ; une case cochée ci-dessous ne signifie pas « publié »
 | Corrections publiées | A02, A04 et partie d’A08/A09, intégrées dans pre.21 ; autres apports amont détaillés ci-dessous |
 | Suite complète | 1 263 tests réussis, aucun échec, 2 ignorés après intégration |
 | Livraison native | pre.21 publiée : DMG et ZIP arm64, empreintes vérifiées, signature ad-hoc ; 73 tests Rust réussis, 2 ignorés |
-| Charte v2 | Proposition rédigée, refonte non appliquée ; DESIGN.md reste la référence |
+| Charte v2 | Première passe pilote implémentée après pre.21 (bibliothèque, Nettoyage, Revue et animations) ; revue utilisateur et généralisation restantes |
+
+Passe pilote locale après publication : **72 tests UI réussis** ; dernière
+suite Vitest du build : **1 263 réussis, aucun échec, 2 ignorés** (focus clavier intermittent toujours suivi, voir
+[validation](../e2e/VALIDATION.md)). Les chiffres du tableau décrivent la publication.
 
 ## Ordre et dépendances
 
@@ -50,6 +54,8 @@ reprendre une tâche ; une case cochée ci-dessous ne signifie pas « publié »
 - [x] **A11 : découpage intégré** depuis GitHub (`12acb16`) ; fichier à 340 lignes et contrôle de taille repassé avec succès.
 - [ ] **Stabiliser le test de redémarrage MCP.** La suite intégrée passe, mais le délai reste sensible à la charge. Remplacer l’attente fixe par une condition bornée et vérifier qu’un véritable échec de redémarrage reste détecté.
 
+- [ ] **Reproduire et stabiliser le focus des contrôles de ligne.** Le test `ListPane.touches` échoue dans la suite complète et passe isolément ; vérifier le focus différé de `useIndexClavier` avant toute correction.
+
 **Sortie :** régressions reproduites puis corrigées ; suite complète, typechecks,
 builds front/sidecar et contrôle de taille réussis. Ne pas déclarer A01 résolu
 sur la seule absence d’un échec intermittent. Conserver les preuves dans l’audit.
@@ -57,11 +63,12 @@ sur la seule absence d’un échec intermittent. Conserver les preuves dans l’
 ## Jalon 2 — Charte UI et écrans pilotes
 
 - [x] Rédiger la proposition `DESIGN-v2-proposition.md`.
-- [ ] **Préparer trois écrans comparables :** bibliothèque avec fiche, Nettoyage avec résultats, Revue. Inclure titres longs, nombreuses étiquettes, chargement, erreur et absence de résultat.
+- [ ] **Compléter les trois écrans pilotes déjà implémentés :** bibliothèque avec fiche, Nettoyage avec résultats, Revue. Inclure titres longs, nombreuses étiquettes, chargement, erreur et absence de résultat.
 - [ ] **Comparer lisibilité et densité :** tailles de texte, ligne actuelle face à une ligne de 40 px, espaces, place des actions et intensité des couleurs de collection.
 - [ ] **Définir les composants communs :** boutons principal/secondaire/contextuel, champs avec libellés, focus, opération en cours, erreur et indisponibilité. Séparer les erreurs d’interface des diagnostics de liens.
-- [ ] **A13 : donner sa largeur à la Revue.** Masquer la fiche pendant la Revue en conservant la sélection pour le retour ; vérifier portée, confirmations et action accessibles à 960×600.
-- [ ] **Comparer les captures clair/sombre** aux deux tailles du harnais, puis faire acter la direction sur ces écrans concrets.
+- [x] **A13 : donner sa largeur à la Revue.** Masquer la fiche pendant la Revue en conservant la sélection pour le retour ; vérifier portée, confirmations et action accessibles à 960×600.
+- [x] **Produire et inspecter les captures des écrans pilotes**, clair/sombre à 960×600 et 1280×800 ; contrôler animations normales/réduites et contraste des actions primaires.
+- [ ] **Comparer les captures clair/sombre avec l’utilisateur** aux deux tailles du harnais, puis faire acter la direction sur ces écrans concrets.
 - [ ] **Reporter les règles retenues dans `DESIGN.md`**, documenter les jetons réellement implémentés et les écarts restants.
 
 **Sortie :** trois écrans utilisables et une charte applicable au code. Les
@@ -69,6 +76,8 @@ valeurs de la proposition ne deviennent pas des exigences adoptées sans cette
 comparaison. Les captures actuelles ne sont pas des références pixel approuvées.
 
 ## Jalon 3 — Accessibilité et généralisation UI
+
+- [x] Première passe de mouvement : transitions 120 ms, entrées de fiche/dialogue 180 ms, chargement nommé ; animations entièrement coupées selon la préférence système.
 
 - [x] **A08, réglages :** dialogue nommé, focus initial/contenu/restitué, Échap exclusif, raccourcis globaux neutralisés et hauteur défilante bornée.
 - [x] **A09, défilement :** maintenir l’option active de la palette dans la zone visible.

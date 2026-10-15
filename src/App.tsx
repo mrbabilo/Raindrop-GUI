@@ -72,7 +72,7 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
   // Spec inversion §4 : la fiche ACCOMPAGNE la lecture (colonne de droite) —
   // l'exclusion de la vue lecture est retirée. La sélection reste posée par
   // le clic (useOuvrirSignet pose view ET selectedRaindropId ensemble).
-  const detailOuvert = selectedRaindropId !== null;
+  const detailOuvert = selectedRaindropId !== null && view.kind !== "review";
   useEffect(() => {
     function surRaccourci(e: KeyboardEvent) {
       if (document.querySelector('[aria-modal="true"]')) {
@@ -134,7 +134,7 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
   return (
     // Task 16 : les bannières dégradées (spec §7) vivent au-dessus de la
     // grille — en état sain Banners rend null et la géométrie est inchangée.
-    <div className="flex h-screen min-h-0 flex-col bg-app text-app-ink">
+    <div className="app-shell flex h-screen min-h-0 flex-col bg-app text-app-ink">
       <Banners />
       {/* Ce que l'on transporte pendant un déplacement — au-dessus de tout,
           inerte au pointeur (il ne doit jamais masquer sa propre cible). */}
@@ -195,18 +195,13 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
         className="grid min-h-0 flex-1 grid-rows-[auto_1fr]"
         style={{ gridTemplateColumns: `${repliee ? 0 : 240}px minmax(0, 1fr) ${detailOuvert ? fiche.largeur : 0}px` }}
       >
-        {/* Row 1 col 1 : la cellule que l'en-tête occupait — vide désormais,
-            elle ne sert qu'à laisser TopBar en colonne 2. */}
-        <div aria-hidden="true" className="border-b border-app-border bg-app" />
-        {/* Row 1 col 2 : la barre recherche/filtres/tri de la vue courante
-            (rend une cellule vide hors vue list). */}
-        <TopBar />
-        <div className="border-b border-app-border bg-app" aria-hidden="true" />
-        {/* Repliée, la barre latérale n'est pas RENDUE — et pas seulement
-            réduite à zéro. Une colonne de 0 px laisserait son contenu
-            atteignable au clavier tout en étant invisible : des arrêts de
-            tabulation dans un panneau qu'on ne voit pas. */}
-        {repliee ? <div aria-hidden="true" /> : <Sidebar />}
+        {/* La navigation garde toute sa hauteur, indépendamment du titre et
+            des filtres. La fiche accompagne les deux rangées de travail. */}
+        <div className="col-start-2 row-start-1 min-w-0"><TopBar /></div>
+        <div className="col-start-1 row-span-2 row-start-1 min-h-0 border-r border-app-border">
+          {!repliee && <Sidebar />}
+        </div>
+        <div className="col-start-2 row-start-2 min-h-0 min-w-0">
         {/* Task 12 : la vue cleanup prend la place de la liste — dashboard de
             nettoyage (compteurs, fraîcheur, scans SSE annulables). Task 13 :
             les vues de traitement cleanupView/* qu'il rend joignables.
@@ -233,7 +228,8 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
         ) : (
           <ListPane />
         )}
-        {/* Row 2 col 3 : le détail — aperçu, édition inline, actions,
+        </div>
+        {/* Colonne 3, sur les deux rangées : détail — aperçu, édition inline, actions,
             surlignages (Task 8). Monté SEULEMENT sur un signet ouvert : sa
             colonne est à zéro le reste du temps, et le composant démonté
             n'émet aucune requête. */}
@@ -241,7 +237,7 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
             est posée en absolu, hors du flux — l'enveloppe, étirée par la
             grille, garde à la fiche sa hauteur et son défilement. */}
         {detailOuvert && (
-          <div className="relative min-h-0">
+          <div className="detail-enter relative col-start-3 row-span-2 row-start-1 min-h-0 min-w-0">
             <PoigneeFiche largeur={fiche.largeur} regler={fiche.regler} />
             <DetailPane onFermer={() => selectRaindrop(null)} />
           </div>

@@ -205,13 +205,13 @@ describe("ReviewPage — niveau 2 (vider la corbeille)", () => {
   // R15P-1 : les jetons `app-danger` du snippet n'existent pas dans
   // styles.css — l'input du niveau 2 est en border-app-broken (§6 : le rouge
   // est un diagnostic, pas une teinte d'action ; la frappe SUPPRIMER est la
-  // garde) et le bouton Exécuter prend la surface sel. Même garde-fou que
+  // garde) et le bouton Exécuter prend la variante primaire. Même garde-fou que
   // BulkBar.test (R9P-2), avec preuve de non-vacuité du scan.
-  it("aucun jeton fantôme : garde app-broken, action engageante app-sel (R15P-1)", () => {
+  it("aucun jeton fantôme : garde app-broken, action engageante contrastée (R15P-1)", () => {
     const { container } = renderReview(reviewL2);
     expect(container.querySelector("[class*='app-danger']")).toBeNull();
     expect(screen.getByPlaceholderText(/SUPPRIMER/)).toHaveClass("border-app-broken");
-    expect(screen.getByRole("button", { name: "Exécuter" })).toHaveClass("bg-app-sel");
+    expect(screen.getByRole("button", { name: "Exécuter" })).toHaveClass("btn-primary");
   });
 
   // Revue finale : sur les deux actions L2, l'aperçu chargé NE VAUT PAS la

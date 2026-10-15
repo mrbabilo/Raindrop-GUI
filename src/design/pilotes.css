@@ -1,0 +1,125 @@
+/* Pilotes de la charte v2 : surfaces neutres et mouvement lié aux gestes.
+   Aucun transform sur les lignes virtualisées ni animation de la grille. */
+:root {
+  --ui-fast: 120ms;
+  --ui-enter: 180ms;
+  --ui-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ui-shadow: 0 24px 70px rgb(23 23 26 / 0.18), 0 2px 8px rgb(23 23 26 / 0.08);
+}
+.dark { --ui-shadow: 0 24px 70px rgb(0 0 0 / 0.5), 0 2px 8px rgb(0 0 0 / 0.3); }
+
+@layer components {
+  .btn.btn-primary {
+    background: var(--color-app-ink);
+    border-color: var(--color-app-ink);
+    color: var(--color-app-panel);
+    font-weight: 600;
+  }
+  .btn.btn-primary:hover:not(:disabled) {
+    background: var(--color-app-ink);
+    filter: brightness(0.88);
+  }
+  .btn.btn-primary:disabled {
+    background: var(--color-app-sel);
+    border-color: var(--color-app-border);
+    color: var(--color-app-muted);
+  }
+}
+
+/* Spécificité limitée aux primitives : les utilitaires gardent leur rôle. */
+.app-shell .btn,
+.app-shell .input,
+.app-shell .etat > select {
+  transition: background-color var(--ui-fast) ease-out,
+    border-color var(--ui-fast) ease-out, box-shadow var(--ui-fast) ease-out;
+}
+.app-shell .btn:active:not(:disabled) { box-shadow: inset 0 0 0 2px rgb(128 128 128 / 0.16); }
+.app-shell .input:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-app-muted) 16%, transparent); }
+.app-shell button:focus-visible { outline-offset: 3px; }
+.app-shell > header { min-height: 48px; }
+
+.library-toolbar { background: var(--color-app-panel); }
+.library-title {
+  margin: 0;
+  padding: 16px 12px 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.library-search { flex: 1 1 180px; min-width: 140px; }
+.library-controls > .etat { flex-shrink: 0; }
+.composer-bar { background: var(--color-app-panel); }
+.composer-bar > .input { flex-basis: 180px; }
+.bookmark-row { transition: background-color var(--ui-fast) ease-out; }
+.bookmark-row:hover { background-color: var(--color-app-hover); }
+.bookmark-row.bg-app-sel { background-color: var(--color-app-sel); }
+
+.section-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-app-muted);
+}
+.cleanup-pilot { container-type: inline-size; }
+.cleanup-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 20px;
+  min-width: 0;
+  min-height: 110px;
+  padding: 16px;
+  border: 1px solid var(--color-app-border);
+  border-radius: 12px;
+  background: var(--color-app-panel);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--ui-fast) ease-out, background-color var(--ui-fast) ease-out;
+}
+.cleanup-card:hover { background: var(--color-app-hover); border-color: var(--color-app-muted); }
+.cleanup-card-label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 600; }
+.cleanup-card-arrow { color: var(--color-app-muted); font-size: 16px; }
+.cleanup-card-value { font-size: 13px; line-height: 1.5; color: var(--color-app-muted); font-variant-numeric: tabular-nums; }
+@container (max-width: 460px) { .cleanup-grid { grid-template-columns: minmax(0, 1fr); } }
+.scan-card { padding: 16px; border: 1px solid var(--color-app-border); border-radius: 12px; background: var(--color-app-panel); }
+.review-pilot { background: var(--color-app-panel); }
+.review-pilot > header { background: var(--color-app); border-bottom: 1px solid var(--color-app-border); }
+.review-pilot > header .titre-fiche { line-height: 1.25; }
+.review-footer { flex-shrink: 0; }
+.review-warning { max-width: 65ch; color: var(--color-app-ink); font-size: 13px; line-height: 1.5; }
+
+/* Entrées discrètes, sans attente pour le focus ni pour le démontage. */
+.dialog-backdrop { animation: backdrop-enter var(--ui-fast) ease-out; }
+.dialog-surface {
+  border-radius: 14px;
+  box-shadow: var(--ui-shadow);
+  animation: surface-enter var(--ui-enter) var(--ui-ease);
+}
+.detail-enter { animation: detail-enter var(--ui-enter) var(--ui-ease); }
+.view-enter { animation: view-enter var(--ui-enter) var(--ui-ease); }
+@keyframes backdrop-enter { from { opacity: 0; } to { opacity: 1; } }
+@keyframes surface-enter {
+  from { opacity: 0; transform: translateY(6px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes detail-enter {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes view-enter { from { opacity: 0; } to { opacity: 1; } }
+.loading-state { display: flex; align-items: center; gap: 10px; }
+.loading-indicator {
+  width: 14px; height: 14px; flex-shrink: 0;
+  border: 2px solid var(--color-app-border); border-top-color: var(--color-app-muted);
+  border-radius: 50%; animation: loading-turn 800ms linear infinite;
+}
+@keyframes loading-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
