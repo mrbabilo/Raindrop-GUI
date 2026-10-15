@@ -1,4 +1,4 @@
-# Sélection peinte, survols et diagnostics — branche courante, 15 octobre 2026
+# Validation de v0.1.0-pre.23 — 15 octobre 2026
 
 - **1 282 tests Vitest réussis**, 2 ignorés ; clic simple, Maj-clic, peinture
   de sélection et désélection, survol passif et garde du dernier doublon sont
@@ -14,9 +14,9 @@
   cas indéterminé avec URL finale.
 - Typechecks front, sidecar et UI, build front et contrôle de taille réussis.
 
-Ce lot est postérieur à pre.22 et n’est pas encore publié. Les réponses HTTP du
-harnais restent simulées ; la recette native pre.22 a été confirmée séparément
-par l’utilisateur.
+Ce lot est publié dans pre.23. Les réponses HTTP du harnais restent simulées ;
+la recette native pre.22 a été confirmée séparément par l’utilisateur et les
+nouveaux gestes restent couverts par le navigateur piloté.
 
 ---
 

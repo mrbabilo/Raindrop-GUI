@@ -5,6 +5,11 @@ versionnement [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [0.1.0-pre.23] — 2026-10-15
+
+[Release GitHub](https://github.com/mrbabilo/Raindrop-GUI/releases/tag/v0.1.0-pre.23)
+— préversion macOS Apple Silicon (arm64).
+
 ### Ajouté
 
 - Les liens invalides, redirections, résultats à vérifier et doublons ont

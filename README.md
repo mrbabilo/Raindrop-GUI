@@ -4,26 +4,27 @@ Application macOS pour consulter, organiser et nettoyer une bibliothèque
 Raindrop.io. Shell Tauri, interface React et sidecar Node avec API REST locale
 et pont MCP épinglé. Interface en français.
 
-**Préversion publiée : [v0.1.0-pre.22](https://github.com/mrbabilo/Raindrop-GUI/releases/tag/v0.1.0-pre.22)**
+**Préversion publiée : [v0.1.0-pre.23](https://github.com/mrbabilo/Raindrop-GUI/releases/tag/v0.1.0-pre.23)**
 — 15 octobre 2026, macOS Apple Silicon (arm64).
 
 ## Installer la préversion
 
 Télécharger le **DMG** ou le **ZIP** depuis la page de release, puis copier
-`Raindrop GUI.app` dans Applications. Le fichier `SHA256SUMS-pre.22.txt`
+`Raindrop GUI.app` dans Applications. Le fichier `SHA256SUMS-pre.23.txt`
 permet de vérifier les archives téléchargées.
 
 La signature est **ad-hoc**, sans Developer ID ni notarisation Apple : macOS
 peut bloquer le premier lancement. Le premier démarrage demande un jeton API
 Raindrop, le vérifie et le conserve dans le **trousseau macOS**.
 
-[Notes de version](docs/releases/v0.1.0-pre.22.md) ·
+[Notes de version](docs/releases/v0.1.0-pre.23.md) ·
 [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md)
 
-Cette préversion inclut la première passe de la charte UI v2 sur la bibliothèque,
-Nettoyage et Revue, ainsi que le traitement explicite des doublons devenus
-introuvables. [DESIGN.md](docs/DESIGN.md) reste la référence ; la généralisation
-de la charte et la recette native complète restent ouvertes.
+Cette préversion ajoute la sélection peinte au pointeur, harmonise les survols
+et rend les diagnostics lisibles par une icône autant que par leur couleur.
+Elle inclut aussi la première passe de la charte UI v2 et le traitement explicite
+des doublons devenus introuvables. [DESIGN.md](docs/DESIGN.md) reste la référence ;
+la généralisation de la charte et la recette native complète restent ouvertes.
 
 ## Ce que fait l'application
 
@@ -136,7 +137,7 @@ curl -s -H "Authorization: Bearer dev-local-token" "http://127.0.0.1:$PORT/api/h
 
 ## Tests
 
-Validation de `v0.1.0-pre.22` : **1 275 tests Vitest**, **80 tests navigateur**
+Validation de `v0.1.0-pre.23` : **1 282 tests Vitest**, **88 tests navigateur**
 et **73 tests Rust** réussis ; deux tests Vitest et deux tests Rust ignorés.
 Types, builds, contrôle de taille, signature, ZIP et DMG vérifiés. Les tests
 navigateur utilisent une API simulée ; validation native interactive et tests

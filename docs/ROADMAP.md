@@ -1,11 +1,10 @@
 # Roadmap — Raindrop-GUI
 
 Mise à jour : **15 octobre 2026**, après la publication de
-[v0.1.0-pre.22](https://github.com/mrbabilo/Raindrop-GUI/releases/tag/v0.1.0-pre.22).
-La première passe UI, le correctif des doublons introuvables et le lot local de
-sélection peinte avec iconographie diagnostique sont intégrés. Cette préversion
-ne clôture ni l’audit ni la généralisation de la charte ; le dernier lot reste
-à publier.
+[v0.1.0-pre.23](https://github.com/mrbabilo/Raindrop-GUI/releases/tag/v0.1.0-pre.23).
+La première passe UI, le correctif des doublons introuvables, la sélection
+peinte et l’iconographie diagnostique sont intégrés et publiés. Cette
+préversion ne clôture ni l’audit ni la généralisation de la charte.
 
 Sources : [audit et constats A01–A13](audits/2026-10-15/README.md),
 [charte v2 proposée](DESIGN-v2-proposition.md),
@@ -24,15 +23,15 @@ reprendre une tâche ; une case cochée ci-dessous ne signifie pas « publié »
 | Harnais navigateur | 88 tests réussis sur la branche courante, Chromium/WebKit, clair 1280×800 et sombre 960×600 |
 | Corrections de fiabilité | A02, A04, partie d’A08/A09 et doublons introuvables intégrés jusqu’à pre.22 |
 | Suite complète | 1 282 tests réussis sur la branche courante, aucun échec, 2 ignorés |
-| Livraison native | pre.22 publiée : DMG et ZIP arm64, empreintes vérifiées, signature ad-hoc ; 73 tests Rust réussis, 2 ignorés |
-| Charte v2 | Première passe pilote incluse dans pre.22 ; sélection peinte, survols et pictogrammes diagnostiques harmonisés localement ; revue utilisateur et généralisation restantes |
+| Livraison native | pre.23 publiée : DMG et ZIP arm64, empreintes vérifiées, signature ad-hoc ; 73 tests Rust réussis, 2 ignorés |
+| Charte v2 | Première passe pilote incluse dans pre.22 ; sélection peinte, survols et pictogrammes diagnostiques publiés dans pre.23 ; revue utilisateur et généralisation restantes |
 
 Validation de pre.22 : **80 tests UI**, **1 275 tests Vitest** et **73 tests
 Rust** réussis ; 2 tests Vitest et 2 tests Rust ignorés. Le focus clavier
 intermittent reste suivi, voir [validation](../e2e/VALIDATION.md).
 
-Validation de la branche courante : **88 tests UI** et **1 282 tests Vitest**
-réussis, 2 tests Vitest ignorés. Ce lot n’est pas encore publié.
+Validation de pre.23 : **88 tests UI**, **1 282 tests Vitest** et **73 tests
+Rust** réussis ; 2 tests Vitest et 2 tests Rust ignorés.
 
 ## Ordre et dépendances
 
@@ -116,17 +115,18 @@ aucune perte de navigation ni de sélection. Fixer les budgets de temps de rendu
 
 ## Jalon 5 — Préversion publiée, validation native à compléter
 
-La publication pre.22 porte le périmètre intégré et testé décrit dans les
-[notes de release](releases/v0.1.0-pre.22.md). Elle ne signifie pas que les
+La publication pre.23 porte le périmètre intégré et testé décrit dans les
+[notes de release](releases/v0.1.0-pre.23.md). Elle ne signifie pas que les
 jalons 1–4 sont terminés. La recette native interactive reste ouverte.
 
-- [x] Suite complète, trois typechecks, builds front/sidecar, tests Rust, contrôle de taille et build natif exécutés pour pre.22.
+- [x] Suite complète, trois typechecks, builds front/sidecar, tests Rust, contrôle de taille et build natif exécutés pour pre.23.
 - [ ] Rejouer les parcours UI dans le shell Tauri : démarrage, reconnexion, réglages, sélection de dossier, bibliothèque, nettoyage et lecture.
 - [ ] Terminer la validation réelle des vues sauvegardées : créer depuis un filtre, rouvrir, renommer, supprimer, désactiver la marque lors d’un changement de filtre.
 - [ ] Terminer la validation lecture : 2–3 archives réelles, focus de la fenêtre et isolation IPC du site ouvert, selon la spec lecture §6.
 - [ ] Vérifier avec des données de test contrôlées les actions de création/restauration/suppression ; les fixtures HTTP ne prouvent pas le contrat réel Raindrop.
 - [x] Changelog et notes de version préparés ; ZIP et DMG arm64 générés, signature et version du bundle contrôlées, archives vérifiées.
 - [x] Publier pre.22 sur demande explicite : tag `v0.1.0-pre.22` sur `e5d1544`, ZIP, DMG et empreintes publiés puis comparés aux artefacts locaux.
+- [x] Publier pre.23 : sélection peinte, survols et pictogrammes diagnostiques ; ZIP, DMG et empreintes vérifiés.
 - [x] Vérifier installation et lancement depuis les artefacts téléchargés sur
   une session macOS utilisateur, ainsi que l’ouverture du doublon périmé et son
   issue explicite. Les autres parcours natifs détaillés ci-dessus restent ouverts.
