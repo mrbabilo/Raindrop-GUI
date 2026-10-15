@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import pathlib
 import platform
+import plistlib
 import shutil
 import subprocess
 import sys
@@ -182,6 +183,13 @@ def verifier_bundle(version: str) -> pathlib.Path:
     app = BUNDLE_DIR / "macos" / "Raindrop GUI.app"
     if not app.is_dir():
         erreur(f"{app} introuvable après le build.")
+        raise SystemExit(1)
+    plist = plistlib.loads((app / "Contents" / "Info.plist").read_bytes())
+    if plist.get("CFBundleShortVersionString") != version:
+        erreur("La version du bundle ne correspond pas à la version demandée.")
+        raise SystemExit(1)
+    if lancer(["codesign", "--verify", "--deep", "--strict", str(app)]).returncode != 0:
+        erreur("Signature du bundle invalide — ne pas publier ces artefacts.")
         raise SystemExit(1)
     cote = sum(f.stat().st_size for f in app.rglob("*") if f.is_file())
     entree = app / "Contents" / "Resources" / "ressources" / "dist-sidecar" / "sidecar" / "index.js"

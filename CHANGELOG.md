@@ -5,6 +5,8 @@ versionnement [SemVer](https://semver.org/lang/fr/).
 
 ## [0.1.0-pre.21] — 2026-10-15
 
+- Signature ad-hoc explicitement configurée pour le bundle macOS ; contrôle bloquant de signature et de version avant livraison.
+
 - Intégration des lots de fiabilité, UX et ergonomie publiés sur la branche principale depuis pre.20 : cache d’analyse sérialisé, retours d’erreur, raccourcis/historique, édition du classement et fiche redimensionnable.
 - Préservation du nouveau brouillon après création, verrou synchrone de Revue, focus et Échap des réglages, défilement de la palette ; protection de ⌘R dans les modales.
 - Validation navigateur sur Chromium/WebKit en clair/sombre : 52 scénarios. Audit et roadmap réconciliés avec les évolutions GitHub.
