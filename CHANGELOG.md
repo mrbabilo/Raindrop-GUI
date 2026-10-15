@@ -5,6 +5,11 @@ versionnement [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [0.1.0-pre.22] — 2026-10-15
+
+[Release GitHub](https://github.com/mrbabilo/Raindrop-GUI/releases/tag/v0.1.0-pre.22)
+— préversion macOS Apple Silicon (arm64).
+
 ### Correction — ouverture d’un doublon périmé
 
 - Un HTTP 404 confirmé à l’ouverture d’une fiche affiche « Ce signet n’est plus

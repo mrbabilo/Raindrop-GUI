@@ -1,10 +1,9 @@
 # Roadmap — Raindrop-GUI
 
-Mise à jour : **15 octobre 2026**, après publication de
-[v0.1.0-pre.21](https://github.com/mrbabilo/Raindrop-GUI/releases/tag/v0.1.0-pre.21)
-(commit `5cc3ca8`). Les 61 commits GitHub et les corrections locales sont
-intégrés et poussés. La préversion est disponible ; elle ne clôture ni l’audit
-ni la refonte UI. Cette roadmap organise la suite sans dates ni durées promises.
+Mise à jour : **15 octobre 2026**, pour la publication de
+[v0.1.0-pre.22](https://github.com/mrbabilo/Raindrop-GUI/releases/tag/v0.1.0-pre.22).
+La première passe UI et le correctif des doublons introuvables sont intégrés.
+Cette préversion ne clôture ni l’audit ni la généralisation de la charte.
 
 Sources : [audit et constats A01–A13](audits/2026-10-15/README.md),
 [charte v2 proposée](DESIGN-v2-proposition.md),
@@ -20,15 +19,15 @@ reprendre une tâche ; une case cochée ci-dessous ne signifie pas « publié »
 | Bibliothèque, Nettoyage, sauvegarde, lecture, vues sauvegardées | Socle implémenté ; historique dans CHANGELOG et Git |
 | Revérification des indéterminés | Implémentée, commit `6f155db` ; ne pas refaire |
 | Audit transversal | 13 constats documentés ; certains restent à confirmer dynamiquement |
-| Harnais navigateur | 52 tests réussis, Chromium/WebKit, clair 1280×800 et sombre 960×600 |
-| Corrections publiées | A02, A04 et partie d’A08/A09, intégrées dans pre.21 ; autres apports amont détaillés ci-dessous |
-| Suite complète | 1 263 tests réussis, aucun échec, 2 ignorés après intégration |
-| Livraison native | pre.21 publiée : DMG et ZIP arm64, empreintes vérifiées, signature ad-hoc ; 73 tests Rust réussis, 2 ignorés |
-| Charte v2 | Première passe pilote implémentée après pre.21 (bibliothèque, Nettoyage, Revue et animations) ; revue utilisateur et généralisation restantes |
+| Harnais navigateur | 80 tests réussis, Chromium/WebKit, clair 1280×800 et sombre 960×600 |
+| Corrections de fiabilité | A02, A04, partie d’A08/A09 et doublons introuvables intégrés jusqu’à pre.22 |
+| Suite complète | 1 275 tests réussis, aucun échec, 2 ignorés |
+| Livraison native | pre.22 préparée : DMG et ZIP arm64, signature ad-hoc ; 73 tests Rust réussis, 2 ignorés |
+| Charte v2 | Première passe pilote incluse dans pre.22 (bibliothèque, Nettoyage, Revue et animations) ; revue utilisateur et généralisation restantes |
 
-Passe pilote locale après publication : **72 tests UI réussis** ; dernière
-suite Vitest du build : **1 263 réussis, aucun échec, 2 ignorés** (focus clavier intermittent toujours suivi, voir
-[validation](../e2e/VALIDATION.md)). Les chiffres du tableau décrivent la publication.
+Validation de pre.22 : **80 tests UI**, **1 275 tests Vitest** et **73 tests
+Rust** réussis ; 2 tests Vitest et 2 tests Rust ignorés. Le focus clavier
+intermittent reste suivi, voir [validation](../e2e/VALIDATION.md).
 
 ## Ordre et dépendances
 
@@ -103,17 +102,17 @@ aucune perte de navigation ni de sélection. Fixer les budgets de temps de rendu
 
 ## Jalon 5 — Préversion publiée, validation native à compléter
 
-La publication pre.21 porte le périmètre intégré et testé décrit dans les
-[notes de release](releases/v0.1.0-pre.21.md). Elle ne signifie pas que les
+La publication pre.22 porte le périmètre intégré et testé décrit dans les
+[notes de release](releases/v0.1.0-pre.22.md). Elle ne signifie pas que les
 jalons 1–4 sont terminés. La recette native interactive reste ouverte.
 
-- [x] Suite complète, trois typechecks, builds front/sidecar, tests Rust, contrôle de taille et build natif exécutés pour pre.21.
+- [x] Suite complète, trois typechecks, builds front/sidecar, tests Rust, contrôle de taille et build natif exécutés pour pre.22.
 - [ ] Rejouer les parcours UI dans le shell Tauri : démarrage, reconnexion, réglages, sélection de dossier, bibliothèque, nettoyage et lecture.
 - [ ] Terminer la validation réelle des vues sauvegardées : créer depuis un filtre, rouvrir, renommer, supprimer, désactiver la marque lors d’un changement de filtre.
 - [ ] Terminer la validation lecture : 2–3 archives réelles, focus de la fenêtre et isolation IPC du site ouvert, selon la spec lecture §6.
 - [ ] Vérifier avec des données de test contrôlées les actions de création/restauration/suppression ; les fixtures HTTP ne prouvent pas le contrat réel Raindrop.
 - [x] Changelog et notes de version préparés ; ZIP et DMG arm64 générés, signature et version du bundle contrôlées, archives vérifiées.
-- [x] Publier pre.21 sur demande explicite : main et tag alignés sur `5cc3ca8` au moment de la publication, trois fichiers publiés, empreintes distantes comparées aux fichiers locaux.
+- [ ] Publier pre.22 sur demande explicite : aligner main et tag, publier ZIP, DMG et empreintes, puis comparer les artefacts distants aux fichiers locaux.
 - [ ] Vérifier installation et lancement depuis les artefacts téléchargés, sur une session macOS utilisateur ; le build et les tests automatisés ne constituent pas cette recette.
 - [ ] Évaluer Developer ID et notarisation si une distribution sans blocage Gatekeeper devient nécessaire.
 

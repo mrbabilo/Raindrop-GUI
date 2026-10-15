@@ -1,3 +1,20 @@
+# Validation de v0.1.0-pre.22 — 15 octobre 2026
+
+Contrôles relancés après alignement des versions npm, Cargo et Tauri :
+
+- **1 275 tests Vitest réussis**, 2 ignorés ;
+- **80 tests navigateur réussis** sur Chromium/WebKit, clair 1280 × 800 et
+  sombre 960 × 600 ;
+- **73 tests Rust réussis**, 2 ignorés ;
+- trois typechecks réussis ;
+- build natif complet réussi, `.app` et DMG arm64 en version 0.1.0-pre.22,
+  signature ad-hoc et ressources embarquées vérifiées.
+
+Les parcours navigateur utilisent l’API simulée. La recette dans l’application
+installée et sur un compte Raindrop contrôlé reste manuelle.
+
+---
+
 # Signet introuvable dans les doublons — 15 octobre 2026
 
 Correctif après `99a8756`. Reproduction initiale : fiche d’un signet
