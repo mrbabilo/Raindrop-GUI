@@ -10,6 +10,10 @@ Contrôles relancés après alignement des versions npm, Cargo et Tauri :
 - build natif complet réussi, `.app` et DMG arm64 en version 0.1.0-pre.22,
   signature ad-hoc et ressources embarquées vérifiées.
 
+La préversion GitHub `v0.1.0-pre.22` a été publiée avec ZIP, DMG et
+`SHA256SUMS-pre.22.txt`. Les trois fichiers téléchargés après publication sont
+identiques aux artefacts locaux.
+
 Les parcours navigateur utilisent l’API simulée. La recette dans l’application
 installée et sur un compte Raindrop contrôlé reste manuelle.
 

@@ -22,7 +22,7 @@ reprendre une tâche ; une case cochée ci-dessous ne signifie pas « publié »
 | Harnais navigateur | 80 tests réussis, Chromium/WebKit, clair 1280×800 et sombre 960×600 |
 | Corrections de fiabilité | A02, A04, partie d’A08/A09 et doublons introuvables intégrés jusqu’à pre.22 |
 | Suite complète | 1 275 tests réussis, aucun échec, 2 ignorés |
-| Livraison native | pre.22 préparée : DMG et ZIP arm64, signature ad-hoc ; 73 tests Rust réussis, 2 ignorés |
+| Livraison native | pre.22 publiée : DMG et ZIP arm64, empreintes vérifiées, signature ad-hoc ; 73 tests Rust réussis, 2 ignorés |
 | Charte v2 | Première passe pilote incluse dans pre.22 (bibliothèque, Nettoyage, Revue et animations) ; revue utilisateur et généralisation restantes |
 
 Validation de pre.22 : **80 tests UI**, **1 275 tests Vitest** et **73 tests
@@ -112,7 +112,7 @@ jalons 1–4 sont terminés. La recette native interactive reste ouverte.
 - [ ] Terminer la validation lecture : 2–3 archives réelles, focus de la fenêtre et isolation IPC du site ouvert, selon la spec lecture §6.
 - [ ] Vérifier avec des données de test contrôlées les actions de création/restauration/suppression ; les fixtures HTTP ne prouvent pas le contrat réel Raindrop.
 - [x] Changelog et notes de version préparés ; ZIP et DMG arm64 générés, signature et version du bundle contrôlées, archives vérifiées.
-- [ ] Publier pre.22 sur demande explicite : aligner main et tag, publier ZIP, DMG et empreintes, puis comparer les artefacts distants aux fichiers locaux.
+- [x] Publier pre.22 sur demande explicite : tag `v0.1.0-pre.22` sur `e5d1544`, ZIP, DMG et empreintes publiés puis comparés aux artefacts locaux.
 - [ ] Vérifier installation et lancement depuis les artefacts téléchargés, sur une session macOS utilisateur ; le build et les tests automatisés ne constituent pas cette recette.
 - [ ] Évaluer Developer ID et notarisation si une distribution sans blocage Gatekeeper devient nécessaire.
 
