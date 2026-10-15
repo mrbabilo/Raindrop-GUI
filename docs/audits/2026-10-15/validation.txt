@@ -1,0 +1,61 @@
+SUITE EXISTANTE — npm test -- --maxWorkers=4
+⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node| sidecar/analysis/scanner.test.ts > Scanner — reprise après une analyse interrompue > relancer ne revérifie QUE ce qui manque
+Error: ENOENT: no such file or directory, rename '/var/folders/dx/bh_1blrx49zgv_p5t1ldr_7h0000gn/T/reprise-9xR3MF/analysis.json.tmp' -> '/var/folders/dx/bh_1blrx49zgv_p5t1ldr_7h0000gn/T/reprise-9xR3MF/analysis.json'
+ ❯ Timeout.check [as _onTimeout] sidecar/analysis/scanner.test.ts:142:47
+    140|       if (!s) return reject(new Error("job absent"));
+    141|       if (statuses.includes(s.status)) return resolve(s);
+    142|       if (s.status === "error") return reject(new Error(s.error ?? "jo…
+       |                                               ^
+    143|       setTimeout(check, 10);
+    144|     };
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |node| sidecar/mcp/lifecycle.test.ts > McpLifecycle > redémarre automatiquement après un crash du subprocess
+AssertionError: expected 'restarting' to be 'connected' // Object.is equality
+
+Expected: "connected"
+Received: "restarting"
+
+ ❯ sidecar/mcp/lifecycle.test.ts:49:22
+     47|     // le fixture s'arrête 200 ms après connect → restart auto attendu
+     48|     await new Promise((r) => setTimeout(r, 1500));
+     49|     expect(lc.state).toBe("connected");
+       |                      ^
+     50|     const out = await lc.call<{ id: number }>("get_user", {});
+     51|     expect(out.ok).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 124 passed | 1 skipped (127)
+      Tests  2 failed | 1056 passed | 2 skipped (1060)
+   Start at  13:35:36
+   Duration  104.10s (transform 9.75s, setup 64.12s, collect 46.48s, tests 75.01s, environment 103.55s, prepare 27.99s)
+
+
+RELANCE ISOLÉE MCP
+
+> raindrop-gui@0.1.0 test
+> vitest run sidecar/mcp/lifecycle.test.ts --maxWorkers=1
+
+
+ RUN  v3.2.7 /Users/davidbaudoin/Documents/GitHub/Raindrop-GUI
+
+ ✓ |node| sidecar/mcp/lifecycle.test.ts (4 tests) 6616ms
+   ✓ McpLifecycle > démarre sain : health-check listTools passe  1953ms
+   ✓ McpLifecycle > redémarre automatiquement après un crash du subprocess  3182ms
+   ✓ McpLifecycle > restart() manuel répare un état crashed  1304ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  13:38:47
+   Duration  10.08s (transform 206ms, setup 1.06s, collect 1.51s, tests 6.62s, environment 0ms, prepare 253ms)
+
+
+RUST
+test result: ok. 73 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.82s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

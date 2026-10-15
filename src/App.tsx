@@ -75,6 +75,10 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
   const detailOuvert = selectedRaindropId !== null;
   useEffect(() => {
     function surRaccourci(e: KeyboardEvent) {
+      if (document.querySelector('[aria-modal="true"]')) {
+        if (e.metaKey && e.key === "r") e.preventDefault();
+        return;
+      }
       if (e.metaKey && e.key === "e") {
         e.preventDefault();
         document.querySelector<HTMLInputElement>('[data-testid="composer-input"]')?.focus();
@@ -167,7 +171,7 @@ export default function App({ onEtat }: { onEtat: (a: Amorce) => void }) {
           type="button"
           className="btn btn-icone ml-auto"
           {...nomIcone(t("reglages.titre"), "⌘,")}
-          onClick={() => setReglagesOuvert(true)}
+          onClick={(event) => { event.currentTarget.focus(); setReglagesOuvert(true); }}
         >
           <Icone nom="engrenage" />
         </button>

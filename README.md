@@ -115,5 +115,17 @@ npm run build:sidecar                      # build dist-sidecar/
 cd src-tauri && cargo test                 # le shell Rust (modules purs + contrats)
 ```
 
+Validation UI dans Chromium et WebKit (front compilé, API simulée, sans compte) :
+
+```bash
+npx playwright install chromium webkit
+npm run test:ui           # parcours de non-régression
+npm run test:ui:audit     # régressions issues de l’audit
+npm run test:ui:report    # captures et traces dans le rapport HTML
+```
+
+Matrice clair/sombre, formats de fenêtre, mode visible et limites :
+[e2e/README.md](e2e/README.md).
+
 Veille des sources externes (MCP kud épinglé, API Raindrop, SDK/hono/zod) :
 `python3 tools/check_sources.py` (`--report` / `--update` / `--offline`).

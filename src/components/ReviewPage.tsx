@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useExclusiveAction } from "../hooks/useExclusiveAction";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useIndexClavier } from "../hooks/useIndexClavier";
 import { t } from "../i18n/fr";
@@ -107,8 +108,8 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
   const [dedupeFin, setDedupeFin] = useState<ResultatDedupe | null>(null);
   // Exécuter ET Retour se désactivent pendant TOUTE l'exécution (spec §3 :
   // pas de double émission) — boucle des DELETE de collections comprise.
-  const [enVol, setEnVol] = useState(false);
-  const pending = enVol || bulk.isPending || emptyTrash.isPending || dedupeProgress !== null;
+  const execution = useExclusiveAction();
+  const pending = execution.pending || bulk.isPending || emptyTrash.isPending || dedupeProgress !== null;
 
   // Un DELETE PAR collection, SÉQUENTIELLEMENT dans l'ordre reçu (les ids de
   // delete-empty-collections arrivent déjà triés feuilles d'abord —
@@ -130,7 +131,7 @@ export function ReviewPage({ review, goBack }: { review: ReviewView; goBack(): v
     if (premierEchec !== null) throw premierEchec;
   };
 
-  const execute = () => { setEnVol(true); void executer().finally(() => setEnVol(false)); };
+  const execute = () => { void execution.run(executer); };
   const executer = async () => {
     // L'archivage est un JOB (202 + SSE), pas une mutation : on bascule le
     // pied de page sur son suivi, ArchiveJob poste et s'abonne.

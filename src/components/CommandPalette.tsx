@@ -29,6 +29,10 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
   const tags = useTags();
   const [q, setQ] = useState(initialQuery);
   const [cursor, setCursor] = useState(0);
+  const listRef = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    listRef.current?.querySelector(`[id="cmdk-option-${cursor}"]`)?.scrollIntoView?.({ block: "nearest" });
+  }, [cursor, open]);
   // Modal : le focus reste dedans et revient à son origine (proposition 5).
   const dialogue = useRef<HTMLDivElement>(null);
   useDialogue(dialogue);
@@ -127,15 +131,14 @@ export function CommandPalette({ open, onClose, initialQuery = "" }: { open: boo
             poser ce rôle sur un bouton écrase le rôle d'un élément déjà
             interactif — le champ garde le focus, l'option n'a pas à le
             prendre. */}
-        <ul role="listbox" id="cmdk-liste" className="max-h-80 overflow-y-auto text-sm">
+        <ul ref={listRef} role="listbox" id="cmdk-liste" className="max-h-80 overflow-y-auto text-sm">
           {rows.map((r, i) => (
             <li
               key={r.key}
               id={`cmdk-option-${i}`}
               role="option"
               aria-selected={i === cursor}
-              className={"flex cursor-pointer justify-between px-3 py-2 text-left " + (i === cursor ? "bg-app-sel font-medium" : "")}
-              onMouseEnter={() => setCursor(i)}
+              className={"flex cursor-pointer justify-between px-3 py-2 text-left hover:bg-app-sel " + (i === cursor ? "bg-app-sel font-medium" : "")}
               onClick={() => { r.run(); onClose(); }}
             >
               <span className="truncate">{r.label}</span>

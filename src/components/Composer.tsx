@@ -31,6 +31,7 @@ export function Composer() {
   // pas de collection_id, l'API décide.
   const collectionId = view.kind === "list" && view.collectionId > 0 ? view.collectionId : undefined;
   const seq = useRef(0);
+  const revision = useRef(0);
   // L'URL que le titre DÉCRIT (parse ou saisie à la main) : coller B par-
   // dessus A puis valider avant le parse de B enregistrait B sous le titre de
   // A — rien ne les reliait (audit du 2026-09-23).
@@ -76,10 +77,12 @@ export function Composer() {
     // créent DEUX bookmarks pour la même URL — et c'est une écriture, elle ne
     // se rattrape pas d'un Échap.
     if (create.isPending) return;
+    const submittedRevision = revision.current;
     setErreur(null);
     void create
       .mutateAsync({ link: url, ...(titre && titrePour.current === url ? { title: titre } : {}), collection_id: collectionId })
       .then(() => {
+        if (revision.current !== submittedRevision) return;
         setUrl("");
         setTitre(null);
         setDoublon(null);
@@ -101,7 +104,7 @@ export function Composer() {
         data-testid="composer-input"
         placeholder={t("composer.placeholder")}
         value={url}
-        onChange={(e) => setUrl(e.target.value)}
+        onChange={(e) => { revision.current++; setUrl(e.target.value); }}
       />
       {titre !== null && (
         <input
@@ -109,6 +112,7 @@ export function Composer() {
           className="input w-48"
           value={titre}
           onChange={(e) => {
+            revision.current++;
             titrePour.current = url; // saisi à la main : il décrit l'URL courante
             setTitre(e.target.value);
           }}

@@ -1,199 +1,145 @@
-# ROADMAP — Raindrop-GUI
+# Roadmap — Raindrop-GUI
 
-⚠️ Les cases traînent derrière le code livré : vérifier `git log` avant de
-traiter une tâche « à faire ».
+Mise à jour : **15 octobre 2026**, après intégration de GitHub `e78aa8e` (61 commits). Objectif : fiabiliser les parcours existants,
+améliorer la charte UI et rendre leur validation reproductible avant la
+prochaine livraison. Ordre de travail proposé, sans dates ni durées promises.
 
-*Dernier recalage : 2026-09-22 (lot inversion fiche ↔ lecture). L'historique détaillé vit dans
-`CHANGELOG.md` et `git log` — ici ne restent que les entrées ouvertes, avec
-leur raisonnement, et un renvoi par lot livré.*
+Sources : [audit et constats A01–A13](audits/2026-10-15/README.md),
+[charte v2 proposée](DESIGN-v2-proposition.md),
+[résultats des tests UI](../e2e/VALIDATION.md), [spec produit](superpowers/specs/2026-09-15-raindrop-gui-design.md).
+L’[ancienne roadmap](roadmaps/2026-09-22-roadmap.md) conserve l’historique et
+les motifs techniques des reports. La [roadmap GitHub intégrée](roadmaps/2026-09-24-roadmap-github.md) conserve aussi les lots UX/ergonomie et leurs vérifications restantes. Vérifier le code et `git log` avant de
+reprendre une tâche ; une case cochée ci-dessous ne signifie pas « publié ».
 
-## Soldé (renvois)
+## État de départ
 
-- **Phase 1 — Bibliothèque + Nettoyage** (2026-09-16 → 18) : plan 1/3
-  sidecar (16 tasks), plan 2/3 front React (23 tasks, 311 tests), plan 3/3
-  shell Tauri (13 tasks), Réglages (⌘,), dette cliquet + 30 erreurs TS
-  réparées (`tsconfig.check.json`), runtime Node géré, compilateur
-  (`build_app.py`/`release.py`), icône définitive posée. Détail : CHANGELOG.
-- **Lot sauvegarde et couche de données locale** (2026-09-18 → 19) : spec
-  `2026-09-16-sauvegarde-donnees-locales-design.md` (§1bis contraignant),
-  file à deux rangs, canal REST direct, budget d'archives (27,6 Go pour
-  tout archiver, ~1 600 archives dans les 5 Go), reprise en vol après 429,
-  vues de Nettoyage actionnables, `archiver()` câblé, dossiers orphelins,
-  sémantique de progression, sélecteur du dossier + panneau + archivage
-  (pre.2 → pre.8). Détail : CHANGELOG.
-- **Polissage du plan 2** (2026-09-17 → 19) : vue collection parente,
-  navigation clavier, drag & drop, épure §9, passe design, lot a11y, états
-  d'erreur, Composer/Tags, hygiène tests, sidecar défensif, `FrKey`. Détail :
-  CHANGELOG.
-- **Points fermés** (2026-09-19) : lexique thématique élargi, signalétique
-  d'état jointe à la liste principale.
-- **Audit fichier par fichier** (2026-09-20) : 13 entrées, 10 soldées
-  (SSE aborté, clé de cache `perPage`, `noUnusedLocals`,
-  `refetchOnWindowFocus`, sémantique du « vide », ligne orpheline, garde
-  400 scan, file.run imbriqué, compte front du cliquet, `trousseau.rs`) ;
-  les 3 restantes vivent en « Ouvert » ci-dessous.
-- **Lots d'usage et corrections** (2026-09-20 → 21) : corbeille des
-  doublons réparée (bulk via source 0), journal dans Réglages, drag sans
-  sélection de texte, clic-fiche dans les vues de Nettoyage, dépôt par
-  sortes, restaurations (origine mémorisée ou destination), puces de
-  nature filtrantes (`type:` + vol de focus WebKit), « Non classés » /
-  « Non-taggés », version + changelog dans l'app (pre.9 → pre.16). Détail :
-  CHANGELOG.
-- **Lot lecture et page web** (livré le 2026-09-21, pre.17) : « Lire » dans
-  la fiche, vue lecture pleine largeur (HTML filtré en blocs, jamais
-  d'innerHTML), « Voir la page » (fenêtre du shell à zéro capability),
-  états nommés. Spec
-  `docs/superpowers/specs/2026-09-19-lecture-et-page-web-design.md`.
-  Reste au réel : 2-3 lectures sur vraies archives, concentration de la
-  fenêtre, impuissance IPC du site ouvert (spec lecture §6).
-- **Inversion fiche ↔ lecture** (livré le 2026-09-22) : le clic de
-  bibliothèque ouvre la lecture (lisibilité partagée clic/bouton,
-  « lecture sinon fiche »), la fiche accompagne en colonne, la ligne de
-  tête remplace le rail ; DetailPane découpé (bloc corbeillé). Spec
-  `docs/superpowers/specs/2026-09-22-inversion-fiche-lecture-design.md`.
-  Détail : CHANGELOG.
-- **Vues sauvegardées (« smart lists »)** (2026-09-22) : une vue filtrée
-  nommée dans la barre latérale, qui vit — dépôt JSON local, routes CRUD,
-  `smartlistId` sur la vue (effacé au patch de filtre), section barre
-  latérale, bouton TopBar. Aucune logique propre : `listQueryArgs` reste
-  le seul parser. Spec
-  `docs/superpowers/specs/2026-09-22-smart-lists-design.md`. Détail :
-  CHANGELOG.
+| Élément | État vérifié |
+|---|---|
+| Bibliothèque, Nettoyage, sauvegarde, lecture, vues sauvegardées | Socle implémenté ; historique dans CHANGELOG et Git |
+| Revérification des indéterminés | Implémentée, commit `6f155db` ; ne pas refaire |
+| Audit transversal | 13 constats documentés ; certains restent à confirmer dynamiquement |
+| Harnais navigateur | 52 tests réussis, Chromium/WebKit, clair 1280×800 et sombre 960×600 |
+| Corrections locales | A02, A04 et partie d’A08/A09 ; présentes dans l’arbre, non commitées et non publiées |
+| Suite complète | 1 263 tests réussis, aucun échec, 2 ignorés après intégration |
+| Livraison native | Shell : 73 tests réussis, 2 ignorés ; contrôle de taille vert ; packaging natif non exécuté |
+| Charte v2 | Proposition rédigée, refonte non appliquée ; DESIGN.md reste la référence |
 
-## Ouvert
+## Ordre et dépendances
 
-### Audit d'ergonomie du 2026-09-24 — propositions (soldées le 2026-09-24 ; détail : `docs/audit-ergonomie-2026-09-24.md`)
+| Jalon | Priorité | Dépendance | Résultat attendu |
+|---|---|---|---|
+| 1. Fiabilité et contrôles | Immédiate | Socle existant | Écritures cohérentes, saisies préservées, contrôles verts |
+| 2. Charte UI et trois écrans pilotes | Haute | Peut commencer pendant le jalon 1 | Direction visuelle concrète, comparée puis adoptée |
+| 3. Accessibilité et généralisation UI | Haute | Règles visuelles retenues au jalon 2 ; corrections clavier possibles avant | Parcours clavier cohérents et composants harmonisés |
+| 4. Performance et flux | Moyenne | Géométrie des tuiles stabilisée pour la mosaïque | DOM borné, flux robustes, mesures conservées |
+| 5. Validation native et livraison | Obligatoire avant publication | Jalons 1–4 et critères ci-dessous | Version vérifiée et artefacts prêts à livrer |
 
-- [x] **Écart spec §115** : « Déplacer » rétabli dans la barre de sélection (destination + bouton, au clavier) — `dc95eea`.
-- [x] Corbeille et déplacement depuis la sélection exécutés sans Revue, avec avis + Annuler — spec §4.3 amendée — `dc95eea`.
-- [x] Historique de navigation ⌘[ / ⌘] (et ⌘← / ⌘→ hors d'un champ) ; ⌘R relit ; dernière vue rouverte au lancement — `bd208a1`.
-- [x] Touches d'action sur la ligne active (⌫ corbeille, F favori, E éditer) — `d0df348`.
-- [x] Colonne de fiche redimensionnable (souris, clavier, largeur retenue) — `73f08f7`.
-- [ ] **À vérifier en réel** : ⌘R n'est pas pris par WKWebView ou par un menu avant le webview (sinon la page se recharge) ; ⌘[ sur AZERTY (Option requise — ⌘← est l'alternative) ; ⌫ sur la ligne active ne part pas en « page précédente » ; le curseur `col-resize` et le tirer de la poignée ; le focus après ⌫ (la ligne disparaît au rafraîchissement : le focus retombe-t-il sur `body` ?).
-- [ ] Les touches ⌫/F/E ne vivent que dans la **liste** (et sa mosaïque) — pas dans la vue d'une collection parente (`CollectionView`), qui n'a pas de ligne active.
+## Jalon 1 — Fiabilité et contrôles
 
-### Optimisation du 2026-09-24 — pistes non prises (à sonder d'abord)
+- [x] **A02 : verrouiller toute l’exécution de Revue**, y compris les suppressions séquentielles. Verrou synchrone et tests de libération après erreur.
+- [x] **A04 : préserver le brouillon suivant** quand la création précédente réussit. Scénario navigateur avec réponse retenue.
+- [x] **A01, persistance : sérialisation intégrée depuis GitHub** (`e736b04`), avec tests concurrents.
+- [ ] **A01, annulation : vérifier la durée du verrou jusqu’à l’arrêt effectif des workers.** Tester annuler/relancer et échec disque ; ne pas confondre la sérialisation des écritures avec l’absence de chevauchement des workers.
+- [x] **A03, envoi : titre associé à son URL** via `titrePour`, intégré depuis GitHub (`ac240f7`) et testé.
+- [ ] **A03, affichage : vérifier l’invalidation immédiate du parse précédent et la priorité du titre manuel** lorsque les réponses arrivent en retard.
+- [ ] **A05 : réserver la navigation au dernier clic valide.** Tester réponses inversées, démontage et changement de vue ; conserver le repli vers la fiche si l’inventaire échoue.
+- [ ] **A06 : publier une vue sauvegardée en mémoire après sa persistance réussie.** Tester ajout/renommage/suppression en échec et mutations concurrentes ; une écriture refusée ne réapparaît pas au prochain succès.
+- [ ] **A07 : rendre visibles les restaurations refusées.** Confirmer le défaut avec un test de contrat ; vérifier succès, origine inconnue, destination connue en échec et actualisation de la fiche. L’invalidation de la fiche est déjà intégrée (`fe2d09b`) ; reste le bilan partiel refusé.
+- [x] **A11 : découpage intégré** depuis GitHub (`12acb16`) ; fichier à 340 lignes et contrôle de taille repassé avec succès.
+- [ ] **Stabiliser le test de redémarrage MCP.** La suite intégrée passe, mais le délai reste sensible à la charge. Remplacer l’attente fixe par une condition bornée et vérifier qu’un véritable échec de redémarrage reste détecté.
 
-- [ ] **Glisser-déposer vers une étiquette / la corbeille : 2 requêtes par signet** (lecture + écriture, `trash/bulk.ts`). Le `/bulk` le ferait en une — mais il repose sur deux comportements Raindrop NON vérifiés en réel : que l'étiquetage en masse AJOUTE (doc) et qu'un DELETE en masse depuis 0 ignore un signet déjà corbeillé. Sonder (1-3 requêtes sur un signet de test) avant tout changement : une erreur ici efface des étiquettes ou détruit un signet.
-- [ ] **Revenir sur une liste périmée (> 30 s) relit TOUTES ses pages chargées** (react-query v5 refetch des listes infinies) : 10 pages défilées = 10 créneaux. Arbitrage fraîcheur/coût à décider (staleTime des listes, ou ne garder que la première page au retour).
-- [ ] `DetailPane.tsx` à 314 lignes (cible 300) : découper l'édition inline si elle grossit encore.
+**Sortie :** régressions reproduites puis corrigées ; suite complète, typechecks,
+builds front/sidecar et contrôle de taille réussis. Ne pas déclarer A01 résolu
+sur la seule absence d’un échec intermittent. Conserver les preuves dans l’audit.
 
-### Audit UX du 2026-09-23 — propositions (soldées le 2026-09-24 ; détail : `docs/audit-ux-2026-09-23.md`)
+## Jalon 2 — Charte UI et écrans pilotes
 
-- [x] Infobulles sur les icônes seules (`nomIcone`, DESIGN §9 amendé) — `006ff21`.
-- [x] « Annuler » après la corbeille : la fiche se rafraîchit et porte « Restaurer » — `c490a3e` (et le 🔴 trouvé en chemin : un second DELETE détruisait un signet déjà corbeillé).
-- [x] Coût de l'analyse de liens annoncé avant de la lancer — `d223909`.
-- [x] ⌘F, Échap vide la recherche, section « Raccourcis clavier » — `006ff21`.
-- [x] Dialogues : focus piégé puis rendu — `fa2d789`.
-- [x] Hors ligne : écritures vers Raindrop refusées avant l'envoi (spec §7) — `5172138`.
-- [x] « Déjà sauvegardé » ouvre la fiche du signet existant — `c490a3e`.
-- [x] Vue Étiquettes : actions révélées au survol/focus — `070f6c0`.
-- [x] `fr.ts` découpé par domaine (`textes/`), dédoublonnage sorti de la Revue — `5998bf9`.
-- [ ] **À vérifier en réel** : `navigator.onLine` passe-t-il à `false` hors ligne sous `tauri://localhost` ? (mesuré `true` EN ligne ; la garde hors ligne en dépend).
+- [x] Rédiger la proposition `DESIGN-v2-proposition.md`.
+- [ ] **Préparer trois écrans comparables :** bibliothèque avec fiche, Nettoyage avec résultats, Revue. Inclure titres longs, nombreuses étiquettes, chargement, erreur et absence de résultat.
+- [ ] **Comparer lisibilité et densité :** tailles de texte, ligne actuelle face à une ligne de 40 px, espaces, place des actions et intensité des couleurs de collection.
+- [ ] **Définir les composants communs :** boutons principal/secondaire/contextuel, champs avec libellés, focus, opération en cours, erreur et indisponibilité. Séparer les erreurs d’interface des diagnostics de liens.
+- [ ] **A13 : donner sa largeur à la Revue.** Masquer la fiche pendant la Revue en conservant la sélection pour le retour ; vérifier portée, confirmations et action accessibles à 960×600.
+- [ ] **Comparer les captures clair/sombre** aux deux tailles du harnais, puis faire acter la direction sur ces écrans concrets.
+- [ ] **Reporter les règles retenues dans `DESIGN.md`**, documenter les jetons réellement implémentés et les écarts restants.
 
-### Audit du 2026-09-23 — ce qui reste (détail : `docs/audit-2026-09-23.md`)
+**Sortie :** trois écrans utilisables et une charte applicable au code. Les
+valeurs de la proposition ne deviennent pas des exigences adoptées sans cette
+comparaison. Les captures actuelles ne sont pas des références pixel approuvées.
 
-- [ ] **À vérifier en réel (Mac)** : `cargo test` du shell après le passage
-      du jeton de la sonde sur stdin (`curl -H @-`) ; l'opérateur de dates
-      `created:>=` / `<=` (une requête de métadonnées) ; l'export CSV sous
-      WKWebView (aucun gestionnaire de téléchargement) ; le `modified` de la
-      réponse `PUT /raindrops/-99` (le compte de restaurés est `ids.length`).
-- [ ] **Liens morts sur la foi du HEAD seul** — seuls 405/501 déclenchent
-      le repli GET (spec §5.1 : « GET si 405/ambigu »). Mesurer d'abord :
-      revérifier en GET 10-20 morts réels, puis trancher.
-- [ ] **Écart de spécification : le 3e niveau de collections est
-      invisible** (barre latérale et `CollectionView` : deux niveaux ; DESIGN
-      §4 en compte trois). Chantier de design, pas un correctif local.
-- [ ] **CSP désactivée** (`"csp": null`) — proposition dans le rapport
-      d'audit, à éprouver en réel (port dynamique, GitHub, images `https:`).
-- [ ] **Dette de taille** : `ReviewPage.tsx` 397 (à découper AVANT tout
-      ajout — frontière : le pied d'exécution et `supprimerCollections`),
-      `i18n/fr.ts` 395, `raindrops.test.ts` 394.
+## Jalon 3 — Accessibilité et généralisation UI
 
-### Nettoyage / analyse
+- [x] **A08, réglages :** dialogue nommé, focus initial/contenu/restitué, Échap exclusif, raccourcis globaux neutralisés et hauteur défilante bornée.
+- [x] **A09, défilement :** maintenir l’option active de la palette dans la zone visible.
+- [ ] **Compléter A08 pour la palette :** GitHub apporte déjà rôle modal et confinement via `useDialogue` ; vérifier focus initial/restitution, Échap sans fermeture de la fiche et interaction avec les autres superpositions.
+- [ ] **Compléter A09 pour les réponses tardives :** conserver l’identité de l’option active, recaler une option disparue, distinguer chargement/erreur/vide ; Entrée ne doit pas choisir une autre cible silencieusement.
+- [ ] **Généraliser la charte adoptée :** bibliothèque, lecture, Nettoyage, Revue, réglages, Tags et vues sauvegardées. Actions métier lisibles, filtres découvrables et retours utilisateur cohérents.
+- [ ] **Vérifier clavier, zoom et VoiceOver**, accès aux actions de survol et alternative au glisser-déposer. Vérifier aussi visuellement l’étoile partagée en grille.
+- [ ] **Mesurer les contrastes rendus** des deux thèmes selon les objectifs internes de la charte : texte courant 4,5:1, focus et signes essentiels 3:1.
+- [ ] **Étendre Playwright** aux nouveaux parcours et ajouter des comparaisons visuelles après adoption des références ; conserver traces et captures en cas d’échec.
 
-- [x] **Revérifier les indéterminés** (2026-09-22) — `POST /api/analysis/recheck`
-      → job `recheck-indeterminate` : les URLs distinctes que la vue montre
-      (reclassement transport compris), sans balayage ni TTL, garde commune
-      avec le scan de liens, `markScanDone` non posé. Bouton dans la vue,
-      progression et annulation comme un scan, adoption en vol.
-- [ ] **Redirections en masse** — remplacement de l'URL finale par lot via
-      une op de Revue (`replace-url`, boucle REST directe en job) ;
-      différé volontairement : écritures multiples d'un coup.
-- [ ] **Dette : découper `CleanupRows.tsx`** (310 lignes, cible 300) —
-      `TrashRow` en est la frontière naturelle (`CleanupRows.corbeille.tsx`,
-      son test suit) ; franchi par la ligne de redirection à trois lignes
-      du 2026-09-22.
-- [ ] **Reprise après REDÉMARRAGE du processus** — différée, et pour une
-      raison plutôt que par oubli (spec §1ter n°1b). `ouvrirJsonl` tronque
-      toujours. Reprendre à la page N suppose une pagination inchangée depuis :
-      dans une même exécution la fenêtre est de 2 min 20 et les trois signaux
-      de réconciliation la couvrent, mais à travers un redémarrage l'écart est
-      **non borné**, ce qui rend la « LIMITE ADMISE » (suppression + création
-      dans le même intervalle → saut invisible) d'autant plus probable. La
-      rendre saine demanderait de la conditionner à un écart court ET à un
-      `count` inchangé — pour économiser 2 min 20 de travail de fond. Si
-      quelqu'un la reprend : le point de reprise sûr est
-      `floor(lignes / PAR_PAGE)`, et il faut **tronquer** la page partielle
-      avant d'ajouter, jamais se contenter d'ouvrir en ajout — sinon ses items
-      sont écrits deux fois, `ids` (un Set) masque le doublon, `lignes` le
-      compte, et le balayage se plaint « des lignes ont été écrites sans
-      identifiant numérique ». Un bug de reprise se dénoncerait comme une
-      anomalie de données.
+**Sortie :** matrice Chromium/WebKit verte, contrôles manuels consignés et écarts
+explicites. Un résultat automatisé vert ne vaut pas certification d’accessibilité.
 
-### UX / interface
+## Jalon 4 — Performance et robustesse des flux
 
-- [ ] **Hors ligne** (consultation + file d'opérations simples) : après le
-      plan 2, sur le socle posé par le lot sauvegarde. Inclut : écritures
-      refusées proprement hors ligne (aujourd'hui les échecs remontent en
-      `fetch failed` brut — jeton `broken` mal employé pour l'interruption
-      MCP, voir polissage).
-- [ ] **La Revue hérite de la colonne détail (320 px) si une fiche est
-      ouverte** — depuis l'inversion (2026-09-22), `detailOuvert =
-      selectedRaindropId !== null` : la fiche accompagne TOUTES les vues,
-      la Revue comprise — DESIGN §9 en fait « le seul écran aéré ». À
-      arbitrer : fermer la fiche à l'entrée en Revue, au coût de rouvrir
-      au retour.
-- [ ] **Mosaïque : non virtualisée** (`ListPane.tsx:141`) — qui traverse
-      « Tous » en mosaïque finit à 12 210 tuiles DOM. **Patch immédiat
-      posé le 2026-09-20** (`loading="lazy"` + `decoding="async"` sur le
-      `<img>` — les vignettes ne partent plus hors champ) ; le vrai fix,
-      le fenêtrage de la grille, reste ouvert.
-- [ ] **Divergence des deux étoiles** — la fix wave a livré `Etoile`
-      partagé (la divergence de fond est réglée) ; reste à vérifier
-      visuellement la grille 13 px héritée. Micro-tâche.
-- [ ] **Drag & drop de fusion d'étiquettes** dans la vue Tags — le geste
-      attendu là où notre fusion est un formulaire.
+- [ ] **A10 : virtualiser la mosaïque par rangées.** Mesurer avant/après sur 12 000 signets simulés ; le nombre de tuiles DOM doit dépendre de la fenêtre et de sa marge, pas du total chargé. Conserver sélection, clavier, glisser-déposer et position de retour.
+- [ ] **A12 : corriger le parseur SSE incrémental.** Tester CRLF séparé entre chunks, UTF-8 fragmenté, fin normale et fermeture prématurée ; le sidecar actuel émet du LF.
+- [ ] **Découper `CleanupRows.tsx`** selon ses responsabilités, notamment la corbeille, si le lot y touche. Cible 300 lignes, plafond dur 400 pour code et tests ; `ReviewPage.tsx` est à 355 après intégration.
 
-### Perf / dette
+**Sortie :** mesures reproductibles et conservées, régressions navigateur vertes,
+aucune perte de navigation ni de sélection. Fixer les budgets de temps de rendu
+à partir des mesures initiales, sans inventer un gain de performance.
 
-- [ ] **Compteur doublons = payload complet** (dette « à surveiller »
-      déjà notée) : remède = compteur dédié côté sidecar — chantier, pas
-      patch ; coût actuel borné (414 groupes / 1 032 signets). **Moitié
-      soldée le 2026-09-20** : dashboard et vue partagent UNE clé
-      (`CLE_GROUPES`) — un exemplaire de cache au lieu de deux ; le
-      payload complet reste.
-- [ ] **Classifieur de qualité d'extraction** du lecteur (bonne/mauvaise avec
-      raisons, à la Karakeep — leur `readerViewAssessment.ts` montre que le
-      frais existe) — au-delà du binaire « vide / pas vide » de notre spec
-      lecture §3.
-- [ ] **Restes des revues du lot inversion + lecture (2026-09-22)** —
-      ~~amendements de specs~~, ~~tests retour-de-lecture~~,
-      ~~course au chargement du clic~~ (décision asynchrone : appel direct
-      à `chargerInventaire` au clic, repli sûr), ~~garde Nettoyage
-      élargie~~ (corbeille + Non-taggés), ~~cosmétiques~~ — **soldé le
-      2026-09-22**. Reste : warning React `act` préexistant
-      (`ListPane.test`, bruit de sortie à solder un jour).
+## Jalon 5 — Validation native et livraison
 
-## Veille
+- [ ] Exécuter suite complète, trois typechecks, builds front/sidecar, tests Rust et contrôles de packaging ; documenter les résultats de la version candidate.
+- [ ] Rejouer les parcours UI dans le shell Tauri : démarrage, reconnexion, réglages, sélection de dossier, bibliothèque, nettoyage et lecture.
+- [ ] Terminer la validation réelle des vues sauvegardées : créer depuis un filtre, rouvrir, renommer, supprimer, désactiver la marque lors d’un changement de filtre.
+- [ ] Terminer la validation lecture : 2–3 archives réelles, focus de la fenêtre et isolation IPC du site ouvert, selon la spec lecture §6.
+- [ ] Vérifier avec des données de test contrôlées les actions de création/restauration/suppression ; les fixtures HTTP ne prouvent pas le contrat réel Raindrop.
+- [ ] Préparer changelog, notes de version et artefacts natifs ; vérifier installation et lancement de la version candidate.
+- [ ] Publier uniquement sur demande explicite. Aucun push ni publication n’est déclenché par cette roadmap.
 
-`python3 tools/check_sources.py` — 7 sources, aucune n'a bougé au 2026-09-16.
-Le pont MCP épinglé reste **archivé en amont** ; son candidat de reprise
-(`adeze/raindrop-mcp`) est évalué en spec §10.1, sans migration décidée.
+**Sortie :** preuves rattachées à la version candidate, aucun P1 ouvert et aucun
+contrôle obligatoire rouge. Toute réduction du périmètre doit être documentée
+avant livraison ; les tests ne sont pas ignorés pour obtenir un résultat vert.
 
-## Phase 2 (aperçu — spec §12, hors périmètre présent)
+## Backlog après stabilisation
 
-Agent IA avec plan validé via la Revue de l'action, moteur de règles,
-exclusions d'audit, spike Stella, packaging du sidecar en binaire autonome,
-E2E (Playwright), écriture des highlights, OAuth2 à la place du token collé,
-formats d'export élargis. Spec séparée à venir.
+| Sujet | Condition de reprise / validation attendue |
+|---|---|
+| Redirections en masse | Spec d’écriture par lot via Revue, bilan partiel et reprise explicites avant implémentation |
+| Fusion d’étiquettes par glisser-déposer | Conserver le formulaire et une alternative clavier ; confirmer portée et résultat |
+| Consultation hors ligne | Refus des écritures déjà intégré (`5172138`) ; vérifier `navigator.onLine` sous Tauri. Définir consultation des archives et éventuelle file avec stratégie de conflits |
+| Compteur de doublons dédié | Mesurer le coût du payload complet avant de changer le contrat ; clé de cache déjà partagée |
+| Qualité d’extraction du lecteur | Définir des exemples bons/mauvais et des raisons visibles au-delà du simple vide/non-vide |
+| Reprise d’analyse après redémarrage | Différée : pagination potentiellement modifiée ; conserver les contraintes de réconciliation et troncature de l’ancienne roadmap |
+| Bruit des tests | Traiter les avertissements React `act` restants sans masquer les assertions |
+| Veille des dépendances | Actualiser le registre de sources et l’évaluation du successeur MCP ; aucune migration décidée |
+
+
+### Vérifications héritées de GitHub à conserver
+
+- [x] Historique de navigation, dernière vue persistée, ⌘R, touches ⌫/F/E, largeur de fiche redimensionnable : intégrés, pas à réimplémenter.
+- [ ] Vérifier ces raccourcis sous WKWebView/AZERTY, le focus après disparition d’une ligne et la poignée de redimensionnement à la souris/clavier.
+- [ ] Vérifier les dates `created:>=` / `<=`, l’export CSV natif et le bilan réel de restauration (`modified`), avec sondes limitées et données contrôlées.
+- [ ] Arbitrer l’accès au troisième niveau de collections et les touches d’action dans `CollectionView`.
+- [ ] Évaluer une CSP compatible avec le port local dynamique, GitHub et les images ; la CSP reste désactivée.
+- [ ] Mesurer les faux positifs HEAD avant de modifier le repli GET, sans lancer de vérification massive du compte.
+- [ ] Évaluer le coût de relecture des listes périmées et les deux appels par signet en glisser-déposer. Ne pas basculer vers `/bulk` sans vérifier ajout d’étiquettes et protection des signets déjà corbeillés.
+
+## Phase 2 — Hors périmètre de cette remise à niveau
+
+Agent IA avec plan validé via Revue, moteur de règles, exclusions d’audit,
+spike Stella, sidecar en binaire autonome, écriture des highlights, OAuth2,
+formats d’export élargis : specs séparées avant réalisation. Les tests E2E
+Playwright ne sont plus reportés en phase 2 : leur socle est déjà opérationnel.
+
+## Méthode de suivi
+
+Pour chaque tâche : reproduire le défaut ou fixer le critère observable,
+implémenter, vérifier, puis mettre à jour cette roadmap et le constat associé.
+Utiliser les skills existants de diagnostic, conception et validation ; créer
+un skill spécifique seulement si une procédure répétée manque réellement.
+Distinguer systématiquement **implémenté localement**, **validé** et **publié**.
+Ne pas lancer d’analyse massive de liens réels pour exécuter cette roadmap.

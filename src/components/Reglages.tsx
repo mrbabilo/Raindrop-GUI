@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { t } from "../i18n/fr";
 import { Icone } from "../design/icones";
@@ -12,7 +12,7 @@ import { SectionVersion } from "./SectionVersion";
 import type { UserInfo } from "../hooks/useStaticData";
 import { nomIcone } from "../design/nomIcone";
 import { SectionRaccourcis } from "./SectionRaccourcis";
-import { useDialogue } from "../hooks/useDialogue";
+import { useModalFocus } from "../hooks/useModalFocus";
 
 // Les cinq états de `sidecar/mcp/lifecycle.ts`, traduits — le front ne
 // montre jamais un identifiant interne (« starting » à l'écran serait une
@@ -58,16 +58,6 @@ export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (
   const fermer = () =>
     refuse === null ? onFermer() : onEtat({ ecran: "panne", detail: refuse });
 
-  // Échap ferme, comme la Palette. Écouteur de fenêtre plutôt que onKeyDown :
-  // l'overlay n'a pas de champ toujours focalisé sur lequel l'accrocher.
-  useEffect(() => {
-    const surTouche = (e: KeyboardEvent) => {
-      if (e.key === "Escape") fermer();
-    };
-    window.addEventListener("keydown", surTouche);
-    return () => window.removeEventListener("keydown", surTouche);
-  });
-
   const etatMcp = data?.mcp && data.mcp in ETAT_MCP
     ? t(ETAT_MCP[data.mcp as keyof typeof ETAT_MCP])
     : t("reglages.mcp.inconnu");
@@ -104,8 +94,7 @@ export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (
 
   // Modal : le focus reste dedans, et revient au bouton d'origine à la
   // fermeture (proposition 5 de l'audit UX).
-  const dialogue = useRef<HTMLDivElement>(null);
-  useDialogue(dialogue);
+  const dialogue = useModalFocus(fermer);
 
   return (
     // `overflow-y-auto` : quatre sections sous un retrait de 96 px dépassent
@@ -114,10 +103,11 @@ export function Reglages({ onFermer, onEtat }: { onFermer: () => void; onEtat: (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4 pt-24" onClick={fermer}>
       <div
         ref={dialogue}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="reglages-titre"
-        className="mx-auto max-w-lg rounded border border-app-border bg-app-panel p-5"
+        className="mx-auto max-h-[calc(100dvh-7rem)] max-w-lg overflow-y-auto rounded border border-app-border bg-app-panel p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="reglages-titre" className="mb-4 font-medium">{t("reglages.titre")}</h2>
