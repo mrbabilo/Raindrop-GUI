@@ -3,14 +3,47 @@
 Format [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 versionnement [SemVer](https://semver.org/lang/fr/).
 
+## [Unreleased]
+
+Aucun changement produit depuis pre.21. Documentation de publication et suivi
+de roadmap actualisés ; les points ouverts ne sont pas déclarés corrigés.
+
 ## [0.1.0-pre.21] — 2026-10-15
 
-- Signature ad-hoc explicitement configurée pour le bundle macOS ; contrôle bloquant de signature et de version avant livraison.
+[Release GitHub](https://github.com/mrbabilo/Raindrop-GUI/releases/tag/v0.1.0-pre.21)
+— commit `5cc3ca8`, préversion macOS Apple Silicon (arm64).
 
-- Intégration des lots de fiabilité, UX et ergonomie publiés sur la branche principale depuis pre.20 : cache d’analyse sérialisé, retours d’erreur, raccourcis/historique, édition du classement et fiche redimensionnable.
-- Préservation du nouveau brouillon après création, verrou synchrone de Revue, focus et Échap des réglages, défilement de la palette ; protection de ⌘R dans les modales.
-- Validation navigateur sur Chromium/WebKit en clair/sombre : 52 scénarios. Audit et roadmap réconciliés avec les évolutions GitHub.
-- Charte UI v2 encore au stade de proposition ; les constats restants sont suivis dans `docs/ROADMAP.md`.
+### Ajouté
+
+- Harnais Playwright : 52 scénarios sur Chromium/WebKit, thèmes clair/sombre,
+  formats 1280×800 et 960×600, captures et traces de diagnostic.
+- Audit transversal, proposition de charte UI v2 et roadmap réconciliée avec
+  les 61 commits GitHub intégrés depuis la base locale `6f155db`.
+- Lots amont depuis pre.20 : historique et raccourcis de navigation, édition
+  du classement, fiche redimensionnable, actions directes avec Annuler.
+
+### Corrigé
+
+- Le succès d’une création conserve le brouillon saisi pendant l’envoi.
+- Toute l’exécution de Revue est protégée par un verrou synchrone, y compris
+  les suppressions séquentielles de collections.
+- Les réglages reçoivent et contiennent le focus, le rendent au déclencheur
+  et interceptent Échap sans fermer la fiche ; ⌘R natif est bloqué en modale.
+- La palette fait défiler son option active pendant la navigation clavier.
+- Correctifs amont intégrés : persistance du cache d’analyse sérialisée,
+  titre associé à son URL, fiche actualisée après restauration, erreurs
+  explicites et découpage des tests au-delà du plafond de taille.
+- Signature ad-hoc du bundle macOS explicitement configurée ; le build refuse
+  une signature invalide ou une version de bundle incohérente.
+
+### Publication et validation
+
+- DMG, ZIP et fichier d’empreintes SHA-256 publiés et vérifiés.
+- 1 263 tests Vitest, 52 tests navigateur et 73 tests Rust réussis ; deux tests
+  Vitest et deux tests Rust ignorés. Typechecks et build natif complet réussis.
+- Signature ad-hoc, sans Developer ID ni notarisation Apple. La charte v2
+  reste une proposition ; les validations natives manuelles et les autres
+  constats ouverts restent dans la [roadmap](docs/ROADMAP.md).
 
 ## Historique des lots précédents
 

@@ -1,8 +1,10 @@
 # Roadmap — Raindrop-GUI
 
-Mise à jour : **15 octobre 2026**, après intégration de GitHub `e78aa8e` (61 commits). Objectif : fiabiliser les parcours existants,
-améliorer la charte UI et rendre leur validation reproductible avant la
-prochaine livraison. Ordre de travail proposé, sans dates ni durées promises.
+Mise à jour : **15 octobre 2026**, après publication de
+[v0.1.0-pre.21](https://github.com/mrbabilo/Raindrop-GUI/releases/tag/v0.1.0-pre.21)
+(commit `5cc3ca8`). Les 61 commits GitHub et les corrections locales sont
+intégrés et poussés. La préversion est disponible ; elle ne clôture ni l’audit
+ni la refonte UI. Cette roadmap organise la suite sans dates ni durées promises.
 
 Sources : [audit et constats A01–A13](audits/2026-10-15/README.md),
 [charte v2 proposée](DESIGN-v2-proposition.md),
@@ -11,7 +13,7 @@ L’[ancienne roadmap](roadmaps/2026-09-22-roadmap.md) conserve l’historique e
 les motifs techniques des reports. La [roadmap GitHub intégrée](roadmaps/2026-09-24-roadmap-github.md) conserve aussi les lots UX/ergonomie et leurs vérifications restantes. Vérifier le code et `git log` avant de
 reprendre une tâche ; une case cochée ci-dessous ne signifie pas « publié ».
 
-## État de départ
+## État après publication
 
 | Élément | État vérifié |
 |---|---|
@@ -19,9 +21,9 @@ reprendre une tâche ; une case cochée ci-dessous ne signifie pas « publié »
 | Revérification des indéterminés | Implémentée, commit `6f155db` ; ne pas refaire |
 | Audit transversal | 13 constats documentés ; certains restent à confirmer dynamiquement |
 | Harnais navigateur | 52 tests réussis, Chromium/WebKit, clair 1280×800 et sombre 960×600 |
-| Corrections locales | A02, A04 et partie d’A08/A09 ; présentes dans l’arbre, non commitées et non publiées |
+| Corrections publiées | A02, A04 et partie d’A08/A09, intégrées dans pre.21 ; autres apports amont détaillés ci-dessous |
 | Suite complète | 1 263 tests réussis, aucun échec, 2 ignorés après intégration |
-| Livraison native | Shell : 73 tests réussis, 2 ignorés ; contrôle de taille vert ; packaging natif non exécuté |
+| Livraison native | pre.21 publiée : DMG et ZIP arm64, empreintes vérifiées, signature ad-hoc ; 73 tests Rust réussis, 2 ignorés |
 | Charte v2 | Proposition rédigée, refonte non appliquée ; DESIGN.md reste la référence |
 
 ## Ordre et dépendances
@@ -32,7 +34,7 @@ reprendre une tâche ; une case cochée ci-dessous ne signifie pas « publié »
 | 2. Charte UI et trois écrans pilotes | Haute | Peut commencer pendant le jalon 1 | Direction visuelle concrète, comparée puis adoptée |
 | 3. Accessibilité et généralisation UI | Haute | Règles visuelles retenues au jalon 2 ; corrections clavier possibles avant | Parcours clavier cohérents et composants harmonisés |
 | 4. Performance et flux | Moyenne | Géométrie des tuiles stabilisée pour la mosaïque | DOM borné, flux robustes, mesures conservées |
-| 5. Validation native et livraison | Obligatoire avant publication | Jalons 1–4 et critères ci-dessous | Version vérifiée et artefacts prêts à livrer |
+| 5. Validation native et livraison | Préversion publiée ; validation complète encore ouverte | Contrôles automatisés réalisés ; validation manuelle et jalons 1–4 à poursuivre | Préparer la prochaine version et achever la stabilisation |
 
 ## Jalon 1 — Fiabilité et contrôles
 
@@ -90,17 +92,23 @@ explicites. Un résultat automatisé vert ne vaut pas certification d’accessib
 aucune perte de navigation ni de sélection. Fixer les budgets de temps de rendu
 à partir des mesures initiales, sans inventer un gain de performance.
 
-## Jalon 5 — Validation native et livraison
+## Jalon 5 — Préversion publiée, validation native à compléter
 
-- [ ] Exécuter suite complète, trois typechecks, builds front/sidecar, tests Rust et contrôles de packaging ; documenter les résultats de la version candidate.
+La publication pre.21 porte le périmètre intégré et testé décrit dans les
+[notes de release](releases/v0.1.0-pre.21.md). Elle ne signifie pas que les
+jalons 1–4 sont terminés. La recette native interactive reste ouverte.
+
+- [x] Suite complète, trois typechecks, builds front/sidecar, tests Rust, contrôle de taille et build natif exécutés pour pre.21.
 - [ ] Rejouer les parcours UI dans le shell Tauri : démarrage, reconnexion, réglages, sélection de dossier, bibliothèque, nettoyage et lecture.
 - [ ] Terminer la validation réelle des vues sauvegardées : créer depuis un filtre, rouvrir, renommer, supprimer, désactiver la marque lors d’un changement de filtre.
 - [ ] Terminer la validation lecture : 2–3 archives réelles, focus de la fenêtre et isolation IPC du site ouvert, selon la spec lecture §6.
 - [ ] Vérifier avec des données de test contrôlées les actions de création/restauration/suppression ; les fixtures HTTP ne prouvent pas le contrat réel Raindrop.
-- [ ] Préparer changelog, notes de version et artefacts natifs ; vérifier installation et lancement de la version candidate.
-- [ ] Publier uniquement sur demande explicite. Aucun push ni publication n’est déclenché par cette roadmap.
+- [x] Changelog et notes de version préparés ; ZIP et DMG arm64 générés, signature et version du bundle contrôlées, archives vérifiées.
+- [x] Publier pre.21 sur demande explicite : main et tag alignés sur `5cc3ca8` au moment de la publication, trois fichiers publiés, empreintes distantes comparées aux fichiers locaux.
+- [ ] Vérifier installation et lancement depuis les artefacts téléchargés, sur une session macOS utilisateur ; le build et les tests automatisés ne constituent pas cette recette.
+- [ ] Évaluer Developer ID et notarisation si une distribution sans blocage Gatekeeper devient nécessaire.
 
-**Sortie :** preuves rattachées à la version candidate, aucun P1 ouvert et aucun
+**Cible de stabilisation :** preuves rattachées à la version candidate, aucun P1 ouvert et aucun
 contrôle obligatoire rouge. Toute réduction du périmètre doit être documentée
 avant livraison ; les tests ne sont pas ignorés pour obtenir un résultat vert.
 

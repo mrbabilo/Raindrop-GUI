@@ -1,11 +1,29 @@
 # Raindrop-GUI
 
-GUI desktop macOS pour Raindrop.io — **Phase 1 livrée** : shell Tauri
-(fenêtre, cycle de vie du sidecar, trousseau macOS), front React
-(bibliothèque, nettoyage, palette, Revue) et sidecar Node (pont MCP épinglé,
-API REST locale, moteur d'analyse). L'application se construit et
-s'empaquete depuis ce dépôt. Conventions et décisions structurantes :
-`CLAUDE.md` et la spec (`docs/superpowers/specs/2026-09-15-raindrop-gui-design.md`).
+Application macOS pour consulter, organiser et nettoyer une bibliothèque
+Raindrop.io. Shell Tauri, interface React et sidecar Node avec API REST locale
+et pont MCP épinglé. Interface en français.
+
+**Préversion publiée : [v0.1.0-pre.21](https://github.com/mrbabilo/Raindrop-GUI/releases/tag/v0.1.0-pre.21)**
+— 15 octobre 2026, macOS Apple Silicon (arm64).
+
+## Installer la préversion
+
+Télécharger le **DMG** ou le **ZIP** depuis la page de release, puis copier
+`Raindrop GUI.app` dans Applications. Le fichier `SHA256SUMS-pre.21.txt`
+permet de vérifier les archives téléchargées.
+
+La signature est **ad-hoc**, sans Developer ID ni notarisation Apple : macOS
+peut bloquer le premier lancement. Le premier démarrage demande un jeton API
+Raindrop, le vérifie et le conserve dans le **trousseau macOS**.
+
+[Notes de version](docs/releases/v0.1.0-pre.21.md) ·
+[Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md)
+
+Cette préversion inclut les corrections de fiabilité et d’ergonomie intégrées
+sur GitHub et les tests UI pilotables. La refonte visuelle reste à réaliser :
+la [charte v2](docs/DESIGN-v2-proposition.md) est une proposition et
+[DESIGN.md](docs/DESIGN.md) reste la référence. L’audit n’est pas entièrement clos.
 
 ## Ce que fait l'application
 
@@ -17,21 +35,30 @@ s'empaquete depuis ce dépôt. Conventions et décisions structurantes :
 - **Nettoyage** — liens morts, redirections, indéterminés, doublons (tri avec
   consolidation des étiquettes dans le gardé), non-taggés, collections vides,
   corbeille. **Restauration partout** : fiche, barre de sélection, drag
-  depuis la corbeille. Les actions de masse passent par une Revue à deux
-  niveaux de confirmation.
+  depuis la corbeille. Les opérations de nettoyage utilisent une Revue à
+  deux niveaux de confirmation ; déplacer ou mettre à la corbeille depuis
+  la sélection agit directement, avec un avis et une action Annuler.
 - **Sauvegarde locale** — balayage complet et incrémental de la bibliothèque
   (instantanés JSONL datés, reprise en vol après coupure), archivage des
   copies permanentes Pro avec budget géré et éviction annoncée.
+- **Lecture et organisation** — lecture des archives, vues filtrées sauvegardées,
+  édition des étiquettes et de la collection, historique de navigation et
+  fiche redimensionnable.
 - **Journal** — écritures, jobs et erreurs du jour, lisibles dans les
   Réglages (⌘,), copiables pour un rapport.
 - **Version et changelog** — l'app affiche sa version et signale une
   publication plus récente (API GitHub du dépôt), notes incluses.
 - **Sur le métier** : analyse locale (jamais de requête massive contre des
-  tiers sans geste explicite), suppression toujours réversible par la
-  corbeille, interface en français. Analyse d'inspiration produit :
+  tiers sans geste explicite), mise à la corbeille des signets avant suppression
+  définitive. Vider la corbeille ou supprimer des collections est irréversible
+  et exige la confirmation prévue par la Revue. Analyse d'inspiration produit :
   `docs/KARAKEEP.md`. Ce qui reste : `docs/ROADMAP.md`.
 
 ## Construire l'application
+
+Prérequis de développement : Node ≥ 20, npm, Rust/Cargo et outils de compilation
+macOS. Installer les dépendances avec `npm ci`. Conventions : [CLAUDE.md](CLAUDE.md)
+et [spec produit](docs/superpowers/specs/2026-09-15-raindrop-gui-design.md).
 
 ```bash
 npm run build:app     # vérifications, tests, cliquet de tailles, .app + .dmg
@@ -40,16 +67,15 @@ npm run release       # build complet, puis archives dans bundles/ (envoi GitHub
 
 `build_app.py` échoue tôt et clairement (épinglage MCP 1.3.1 contrôlé dans
 `package.json` ET `package-lock.json`, Node ≥ 20 résolu, cargo présent,
-plafond de 400 lignes par fichier), puis contrôle le résultat : le sidecar
-est-il VRAIMENT embarqué dans le `.app`, le MCP à la bonne version dedans.
+plafond de 400 lignes par fichier), puis contrôle le résultat :
+le sidecar embarqué, la version du MCP, la version déclarée dans le bundle et
+l’intégrité de sa signature. La signature ad-hoc est explicitement configurée
+pour macOS dans `tauri.conf.json`.
 
-La signature est **ad-hoc** (pas de Developer ID) : au premier lancement,
-Gatekeeper met l'app en quarantaine —
-`xattr -dr com.apple.quarantine "Raindrop GUI.app"` la lève.
-
-Au premier lancement, l'app demande le jeton d'API Raindrop, le vérifie
-auprès de l'API (le compte détecté s'affiche) et le range au **trousseau
-macOS** — le même enregistrement que le développement ci-dessous.
+Le script `release.py` prépare les archives et propose leur envoi. Pour une
+nouvelle publication, incrémenter les versions npm/Cargo/Tauri, vérifier les
+artefacts et rédiger les notes avant de créer une release. `pre.21` est déjà
+publiée : ne pas réutiliser son tag ni remplacer ses fichiers.
 
 ## Développement — l'application complète
 
@@ -107,6 +133,13 @@ curl -s -H "Authorization: Bearer dev-local-token" "http://127.0.0.1:$PORT/api/h
 
 ## Tests
 
+Validation de `v0.1.0-pre.21` : **1 263 tests Vitest**, **52 tests navigateur**
+et **73 tests Rust** réussis ; deux tests Vitest et deux tests Rust ignorés.
+Types, builds, contrôle de taille, signature, ZIP et DMG vérifiés. Les tests
+navigateur utilisent une API simulée ; validation native interactive et tests
+sur un compte réel restent au suivi. Voir les [résultats UI](e2e/VALIDATION.md).
+
+
 ```bash
 npm test                                   # tout (fakes in-process, réseau local only)
 RAINDROP_TEST_TOKEN=<token> npm test       # + intégration réelle (sidecar/integration.test.ts)
@@ -119,7 +152,8 @@ Validation UI dans Chromium et WebKit (front compilé, API simulée, sans compte
 
 ```bash
 npx playwright install chromium webkit
-npm run test:ui           # parcours de non-régression
+npm run typecheck:ui      # types du harnais navigateur
+npm run test:ui           # tous les parcours, régressions d’audit incluses
 npm run test:ui:audit     # régressions issues de l’audit
 npm run test:ui:report    # captures et traces dans le rapport HTML
 ```
