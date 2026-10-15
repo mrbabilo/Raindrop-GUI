@@ -43,6 +43,15 @@ Vérification : `e2e/design.spec.ts` et captures du rapport Playwright. La revue
 visuelle avec l’utilisateur et la généralisation aux autres écrans restent
 au suivi ; les captures ne sont pas des références pixel approuvées.
 
+### Fiche inaccessible depuis les doublons
+
+Un HTTP 404 confirmé affiche un message d’indisponibilité du signet, sans
+prétendre connaître la cause de sa disparition. La fiche conserve sa fermeture
+et une action « Réessayer ». Dans les résultats de doublons, elle explique que
+l’analyse peut être périmée et propose « Actualiser les doublons » : lancement
+explicite, bouton désactivé pendant l’analyse, état d’attente et erreurs visibles.
+Aucune suppression ni analyse automatique à l’ouverture de la fiche.
+
 ## 1. Ce que l'application est
 
 Un outil de **diagnostic et de réparation** pour une bibliothèque de 12 210

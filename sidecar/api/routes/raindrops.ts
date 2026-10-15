@@ -155,7 +155,15 @@ export function raindropsRoutes(deps: SidecarDeps): Hono {
   app.get("/:id", async (c) => {
     const id = Number(c.req.param("id"));
     if (!Number.isInteger(id)) return apiError(c, "INVALID_INPUT", "id invalide");
-    const out = await deps.mcp("get_raindrop", { id });
+    let out = await deps.mcp("get_raindrop", { id });
+    // MCP v1.3.1 dit « not found » pour TOUT échec HTTP/réseau.
+    // Seule une lecture directe peut confirmer le 404 sans masquer une panne.
+    if (!out.ok && out.code === "RAINDROP_API"
+      && out.message.replace(/^Error:\s*/, "") === `raindrop ${id} not found`
+      && deps.direct.getRaindrop) {
+      out = await deps.direct.getRaindrop(id);
+      if (!out.ok && out.code === "SIGNET_INTROUVABLE") deps.scanner.invaliderInstantane();
+    }
     if (!out.ok) return apiError(c, out.code, out.message, out.tool);
     return c.json(toRaindropItem(out.data as RawRaindrop));
   });

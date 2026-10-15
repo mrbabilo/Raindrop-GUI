@@ -10,6 +10,7 @@ export type ErrorCode =
   | "ARCHIVE_ABSENTE" // spec lecture §5 : l'archive a disparu entre le marqueur et le clic
   | "ARCHIVE_TROP_VOLUMINEUSE" // garde de décompression 64 Mo (spec lecture §3)
   | "ARCHIVE_ILLISIBLE" // gzip défectueux : les contrôles à froid n'ont pas tout attrapé
+  | "SIGNET_INTROUVABLE" // HTTP 404 confirmé chez Raindrop, jamais inféré du texte MCP
   | "NOT_FOUND" // ressource locale inconnue (ex. id de smart list) — v1 : seules les smart lists l'émettent
   | "STOCKAGE"; // le dépôt local (app-data) n'a pas pu être écrit — la mémoire de l'utilisateur se signale, jamais un succès inventé
 
@@ -28,6 +29,7 @@ const STATUS_BY_CODE: Record<ErrorCode, 400 | 404 | 409 | 413 | 429 | 500 | 502 
   ARCHIVE_TROP_VOLUMINEUSE: 413,
   ARCHIVE_ILLISIBLE: 500,
   NOT_FOUND: 404,
+  SIGNET_INTROUVABLE: 404,
   STOCKAGE: 500,
 };
 

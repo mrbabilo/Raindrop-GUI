@@ -5,6 +5,16 @@ versionnement [SemVer](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+### Correction — ouverture d’un doublon périmé
+
+- Un HTTP 404 confirmé à l’ouverture d’une fiche affiche « Ce signet n’est plus
+  accessible dans votre compte Raindrop ». Le message ambigu du connecteur MCP
+  est vérifié par une lecture REST ciblée ; une panne réseau/serveur n’est jamais
+  assimilée à une disparition.
+- Depuis les doublons, « Actualiser les doublons » relance l’analyse sur demande,
+  avec attente et erreurs visibles. L’instantané périmé n’est pas réutilisé après
+  le 404 confirmé. Aucun signet n’est supprimé automatiquement.
+
 ### Interface et mouvement — première passe pilote
 
 - Bibliothèque : titre visible, filtre nommé, recherche adaptable ; navigation

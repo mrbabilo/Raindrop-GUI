@@ -133,6 +133,7 @@ const deps: SidecarDeps = {
   // REST direct sous la MÊME file que le MCP (550 ms partagées) : les appels
   // unrestore par destination sont espacés par le throttle, pas par un sleep.
   direct: {
+    getRaindrop: (id) => throttle.run(() => rest.getRaindrop(id)),
     updateRaindropUrl: (id, url) => throttle.run(() => rest.updateRaindropUrl(id, url)).finally(ecriture),
     unrestore: (ids, toCollectionId) => throttle.run(() => rest.unrestore(ids, toCollectionId)).finally(ecriture),
   },

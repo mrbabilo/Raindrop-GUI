@@ -53,6 +53,8 @@ export interface SidecarDeps {
    *  MCP v1.3.1 n'expose pas `url` ; unrestore — MCP n'expose pas la
    *  restauration, Task 0b). Throttled en prod comme les appels MCP. */
   direct: {
+    /** Secours de lecture : conserve le statut HTTP perdu par MCP. */
+    getRaindrop?: import("../direct/raindropRest.js").RaindropRestClient["getRaindrop"];
     updateRaindropUrl(id: number, url: string): Promise<CallOutcome<{ id: number }>>;
     /** Destination OBLIGATOIRE : la route /unrestore résout l'origine. */
     unrestore(ids: number[], toCollectionId: number): Promise<CallOutcome<{ restored: number }>>;

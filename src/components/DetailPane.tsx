@@ -6,6 +6,7 @@ import { api } from "../lib/api";
 import { useAppState } from "../state/appState";
 import { useFiltreEtiquettes } from "../hooks/filtreEtiquettes";
 import { useCollections } from "../hooks/useStaticData";
+import { ErreurDetail } from "./DetailPane.erreur";
 import { ActionsLecture } from "./ActionsLecture";
 import { useArchives } from "../hooks/useBackup";
 import { useUpdateRaindrop, useTrashRaindrop } from "../hooks/useMutations";
@@ -131,7 +132,7 @@ export function DetailPane({ onFermer }: { onFermer?: () => void }) {
 
   if (selectedRaindropId == null) return enveloppe(t("detail.guest"));
   const r = detail.data;
-  if (detail.isError) return enveloppe(t("state.error", { message: detail.error.message }));
+  if (detail.isError) return enveloppe(<ErreurDetail key={selectedRaindropId} error={detail.error} retry={() => { void detail.refetch(); }} fetching={detail.isFetching} />);
   if (!r) return enveloppe(t("state.loading"));
 
   const setChamp = (key: ChampEdition, value: string) => setDraft((d) => ({ ...d, [key]: value }));

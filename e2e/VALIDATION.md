@@ -1,3 +1,35 @@
+# Signet introuvable dans les doublons — 15 octobre 2026
+
+Correctif après `99a8756`. Reproduction initiale : fiche d’un signet
+présent dans les résultats d’analyse, alors que Raindrop retourne HTTP 404.
+Le texte MCP « not found » seul n’est pas une preuve : le connecteur l’émet
+également sur une panne réseau ou HTTP.
+
+- Suite Vitest complète : **1 275 réussis, 2 ignorés**, aucun échec.
+- `e2e/signet-absent.spec.ts` : **8 réussis** sur Chromium/WebKit, clair/sombre.
+  Scénarios : doublon périmé, absence de lancement automatique, refus de scan
+  visible, attente avec bouton désactivé, rechargement des résultats à la fin,
+  panne de lecture réessayable sans message de disparition.
+- Tests serveur : distinction 404/401/403/429/500/réseau, lecture retrouvée,
+  réponse invalide, invalidation de l’instantané uniquement sur 404 confirmé.
+- Typechecks front/sidecar/UI, build front du harnais et contrôle de taille : succès.
+- Tests de régression exécutés en échec avant implémentation (lecture de secours
+  absente et message/action non affichés), puis réussis après correction.
+
+Les tests utilisent des réponses simulées. Aucune analyse du compte réel ni
+écriture distante n’a été lancée pour implémenter ce correctif.
+
+Build complet `python3 scripts/build_app.py` réussi ensuite : les 1 275 tests
+passent à nouveau (2 ignorés), contrôles TypeScript et bundle réussis. Le nouveau
+`.app` et le DMG arm64 dans `src-tauri/target/release/bundle/` contiennent le
+correctif ; version locale conservée à 0.1.0-pre.21, signature ad-hoc vérifiée.
+La release GitHub pre.21 publiée reste inchangée. Le parcours dans l’application
+installée reste à vérifier manuellement : ouverture du doublon périmé, message,
+puis actualisation explicite. Le scénario équivalent est testé dans les deux
+moteurs navigateur avec réponses simulées.
+
+---
+
 # Passe pilote design et animations — 15 octobre 2026
 
 Passe design après `eaa0332`, non incluse dans la release pre.21 publiée.

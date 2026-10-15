@@ -1,8 +1,10 @@
+import type { RawRaindrop } from "../api/mappers.js";
 import type { CallOutcome } from "../../shared/errors.js";
 
 const API_BASE = "https://api.raindrop.io/rest/v1";
 
 export interface RaindropRestClient {
+  getRaindrop(id: number): Promise<CallOutcome<RawRaindrop>>;
   updateRaindropUrl(id: number, url: string): Promise<CallOutcome<{ id: number }>>;
   /** Destination OBLIGATOIRE à ce niveau : c'est la route (Task 0b) qui
    *  résout l'origine mémorisée. POST /raindrops/unrestore n'existe pas
@@ -16,6 +18,24 @@ export function makeRestClient(
   const base = opts.baseUrl ?? API_BASE;
   const f = opts.fetchImpl ?? fetch;
   return {
+    async getRaindrop(id) {
+      try {
+        const res = await f(`${base}/raindrop/${id}`, {
+          headers: { Authorization: `Bearer ${opts.token}` },
+          signal: AbortSignal.timeout(opts.timeoutMs ?? 30_000),
+        });
+        if (res.status === 404) return { ok: false, code: "SIGNET_INTROUVABLE", message: "Signet inaccessible chez Raindrop." };
+        if (res.status === 429) return { ok: false, code: "RATE_LIMITED", message: "raindrop api http 429" };
+        if (!res.ok) return { ok: false, code: "RAINDROP_API", message: `raindrop api http ${res.status}` };
+        const body = await res.json() as { result?: boolean; item?: RawRaindrop };
+        if (body.result !== true || body.item?._id !== id) {
+          return { ok: false, code: "RAINDROP_API", message: "réponse de lecture Raindrop invalide" };
+        }
+        return { ok: true, data: body.item };
+      } catch (e) {
+        return { ok: false, code: "RAINDROP_API", message: e instanceof Error ? e.message : String(e) };
+      }
+    },
     async updateRaindropUrl(id, url) {
       try {
         const res = await f(`${base}/raindrop/${id}`, {
